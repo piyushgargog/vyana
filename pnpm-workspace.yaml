@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Expo and Next must share one React copy, otherwise hooks from @vyana/shared break.
+# Pinned to the version Expo SDK 57 expects.
+overrides:
+  react: 19.2.3
+  react-dom: 19.2.3
+
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+  esbuild: true
