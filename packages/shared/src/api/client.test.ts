@@ -71,6 +71,11 @@ describe("createApiClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("trims any number of trailing slashes from the base URL", () => {
+    const api = createApiClient({ baseUrl: "https://api.example.com///", getAccessToken: async () => null });
+    expect(api.chatUrl).toBe("https://api.example.com/api/assistant/chat");
+  });
+
   it("exposes the chat URL and auth headers for the chat transport", async () => {
     const api = client(vi.fn());
     expect(api.chatUrl).toBe("https://api.example.com/api/assistant/chat");

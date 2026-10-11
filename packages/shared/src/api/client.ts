@@ -74,7 +74,8 @@ const STATUS_CODES: Record<number, string> = {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createApiClient(opts: ApiClientOptions): ApiClient {
-  const baseUrl = opts.baseUrl.replace(/\/+$/, "");
+  let baseUrl = opts.baseUrl;
+  while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
   const doFetch = opts.fetch ?? ((input, init) => globalThis.fetch(input, init));
   const [minDelay, maxDelay] = opts.mockDelayMs ?? [800, 2500];
 
