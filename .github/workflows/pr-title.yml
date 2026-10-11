@@ -26,5 +26,5 @@ jobs:
             ci
             style
             perf
-          subjectPattern: ^(?![A-Z]).+$
-          subjectPatternError: Start the subject with a lowercase letter, e.g. "feat(api): add medicines compare route".
+          subjectPattern: '^(?![A-Z]).+$'
+          subjectPatternError: 'Start the subject with a lowercase letter, e.g. "feat(api): add medicines compare route".'
