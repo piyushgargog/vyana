@@ -173,6 +173,12 @@ importers:
       turbo:
         specifier: ^2
         version: 2.11.7
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   apps/mobile:
     dependencies:
