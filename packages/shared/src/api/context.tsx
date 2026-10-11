@@ -1,3 +1,5 @@
+"use client";
+
 // React context that hands the API client to the hooks in hooks/api.
 // AppProviders (providers/) renders <ApiProvider client={...}> and re-exports useApi.
 import { createContext, useContext, type ReactNode } from "react";
