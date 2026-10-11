@@ -28,3 +28,6 @@ Thumbs.db
 
 # Team plan: shared privately, never committed
 PLAN.md
+
+# Private backend docs: never committed (see docs/README.md)
+docs/
