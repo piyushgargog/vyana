@@ -2,7 +2,7 @@
 
 > *The breath that reaches every corner.*
 
-**Vyana is your online one-stop solution for complete healthcare.** Prescriptions, medicine reminders and best prices, lab reports, verified doctors and appointments, emergency help, and a personal AI health assistant: all in one place, on web and mobile.
+**Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, get your medicines delivered at the best price straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
 
 The name comes from Ayurveda. **Vyana** is the prana that starts at the heart and spreads through the whole body, carrying life to every part of it. The app works the same way. Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the live web (pharmacies, labs, the NMC medical register, hospitals) and bring back what your health needs.
 
@@ -14,14 +14,17 @@ The name comes from Ayurveda. **Vyana** is the prana that starts at the heart an
 
 | | Feature | What it does |
 |---|---|---|
-| 🤖 | **AI health assistant** | Chat that knows your medicines, reports and conditions; answers cite trusted sources |
-| 💊 | **Prescription scan + reminders** | Snap a prescription, medicines are extracted, and reminders are scheduled with adherence tracking |
-| 🛒 | **Medicine price compare** | Live prices from 1mg, PharmEasy, Netmeds and Apollo, plus a Jan Aushadhi generic alternative |
-| 🧪 | **Lab reports + test prices** | Upload a report and get flagged values, a plain-language summary and trends; compare test prices across labs |
-| 🚑 | **Emergency SOS** | One tap calls 108, shares your live location with your contacts and lists the nearest emergency hospitals |
-| 🩺 | **Verified doctors + appointments** | Doctors are verified against the NMC Indian Medical Register; book slots and receive e-prescriptions |
-| 📈 | **Disease tracking + nutrition** | Track vitals and conditions, log meals, get a diet plan with sources |
-| 🔔 | **Drug safety alerts** | Watches CDSCO quality alerts and notifies you if one of your medicines is affected |
+| 💊 | **Prescriptions, reminders and refills** | Scan a prescription or receive one from your doctor, review it, and get dose reminders with adherence tracking. Vyana warns you before a medicine runs out |
+| 🛒 | **Medicines delivered from your prescription** | Prices your **whole prescription** live on 1mg, PharmEasy, Netmeds and Apollo, plus a Jan Aushadhi generic basket, then hands you off to the cheapest pharmacy to order |
+| 🏥 | **Hospital appointments with a token** | Pick a hospital, department and date and get a token number, like the government ORS portal; see OPD timings fetched from the web |
+| 🩺 | **Verified doctors and e-prescriptions** | Doctors are checked against the NMC Indian Medical Register and write e-prescriptions with a diagnosis |
+| 📋 | **Care plan after a diagnosis** | What to do, what to avoid, what to eat, warning signs and follow-up tests, from trusted health sources and **approved by your doctor** |
+| 🧪 | **Reports and health timeline** | Upload a lab report and get flagged values and a plain-language summary; every prescription, report and visit in one timeline you can share with a doctor |
+| 🤖 | **AI health assistant** | Chat in English, Hindi or Hinglish; it knows your medicines and reports and cites trusted sources |
+| 🚑 | **Emergency** | One tap calls 108, shares your live location, opens Blinkit Ambulance where available, lists nearby emergency hospitals, and shows your medical ID QR |
+| 👨‍👩‍👧 | **Caregiver mode** | Family members can follow a patient's medicines and get an alert when a dose is missed |
+| ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions and a symptom check that points you to the right department, or to 108 |
+| 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
 ## How TinyFish is used
 
@@ -29,11 +32,21 @@ Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 | Feature | TinyFish API |
 |---|---|
-| Medicine and lab price compare | **Agent**, run in parallel across pharmacy and lab sites |
+| Prescription basket price compare (delivery) | **Agent**: one agent per pharmacy prices the whole basket, all four in parallel |
 | Doctor verification | **Agent** on the NMC Indian Medical Register |
-| Nearby emergency hospitals | **Search** + **Fetch** |
-| AI assistant citations, diet plans | **Search** + **Fetch** on trusted health domains |
-| Drug safety alerts | **Monitor** + **Search** + **Fetch** |
+| Hospital OPD timings, nearby emergency hospitals | **Search** + **Fetch** |
+| Care plans, interaction checks, assistant answers | **Search** + **Fetch** on trusted health domains, with citations |
+| Medicine quality alerts | **Monitor** + **Search** + **Fetch** |
+
+## AI you can trust
+
+Health decisions can't rest on a guess. Vyana's AI never invents a dose, a price, a lab value or a source:
+- Extracted values must appear in the original document, and anything uncertain is flagged for you to review.
+- Citations are checked against the pages actually read.
+- Warning signs are caught by fixed rules before any AI runs.
+- Care plans for a diagnosis are approved by the doctor.
+
+Details: [`ARCHITECTURE.md`](ARCHITECTURE.md#ai-safety).
 
 ## Tech stack
 

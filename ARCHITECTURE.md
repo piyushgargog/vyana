@@ -54,38 +54,51 @@ flowchart LR
 
 | Feature | TinyFish API | What happens |
 |---|---|---|
-| Medicine price compare | **Agent** ×4 in parallel, Search, Fetch | Agents open 1mg, PharmEasy, Netmeds and Apollo, find the matching product and return its price as structured JSON; a Jan Aushadhi generic is looked up alongside |
-| Lab test price compare | **Agent** ×4 | Same pattern on Healthians, Redcliffe, Thyrocare and 1mg Labs |
+| Prescription basket → delivery | **Agent** ×4 in parallel, Search, Fetch | One agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) finds every medicine on the prescription and returns prices as structured JSON; totals, missing items and savings are computed in code; a Jan Aushadhi generic basket is looked up alongside; the user orders on the cheapest pharmacy |
 | Doctor verification | **Agent** | Searches the NMC Indian Medical Register for a registration number and returns the official record |
-| Nearby emergency hospitals | **Search** + **Fetch** | Finds hospitals with emergency/ICU care near the user and extracts names, addresses and phone numbers |
-| Assistant citations, diet plans | **Search** + **Fetch** | Restricted to trusted health domains; sources are shown with every answer |
+| Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
+| Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
+| Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
 | Medicine quality alerts | **Monitor** + **Search** + **Fetch** | A monitor watches CDSCO quality alerts and calls a webhook; matches against users' medicines become push notifications |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
 
-## Medicine compare, step by step
+## Prescription basket, step by step
 
 ```mermaid
 sequenceDiagram
   participant App
-  participant API as POST /api/medicines/compare
+  participant API as POST /api/prescriptions/basket
   participant Cache as web_cache
-  participant Agents as TinyFish agents ×4
-  App->>API: { medicine, strength } + Bearer token
-  API->>Cache: lookup (24 h)
+  participant Agents as TinyFish agents (1 per pharmacy)
+  App->>API: { prescription_id } + Bearer token
+  API->>Cache: lookup (24 h, keyed by the sorted medicine list)
   alt cached
     Cache-->>API: result
   else not cached
     par 1mg · PharmEasy · Netmeds · Apollo
-      API->>Agents: find product + price (90 s each)
+      API->>Agents: price every medicine in the basket
     end
-    API->>API: sort by price, pick cheapest, add generic
+    API->>API: check every price and link, total each basket, sort, savings
     API->>Cache: store
   end
-  API-->>App: quotes, per-source status, cheapest, generic
+  API-->>App: baskets, missing items, cheapest pharmacy, generic basket, savings
 ```
 
-If some pharmacies time out, the response still succeeds with the rest, and each source's status is reported.
+If a pharmacy times out or lacks a medicine, the response still succeeds and says so per pharmacy.
+
+## AI safety
+
+Vyana treats AI output as a draft that must be proven, never as fact:
+
+| Rule | How it is enforced |
+|---|---|
+| No invented doses, prices, values or links | Extracted fields carry the exact text they came from, and the server checks that text appears in the document; prices must come from the pharmacy's own page and pass range checks; links must be pages the server actually fetched |
+| Code decides, AI explains | Lab flags come from reference ranges in code; emergency warning signs come from fixed rules that run before any model; totals and savings are computed in code |
+| Structured output only | Every model call returns a schema-validated object at temperature 0; invalid output is retried once, then the user is asked to enter it manually |
+| A human confirms | Patients review every scanned prescription before reminders are set; doctors approve care plans for their diagnoses |
+| Say "I don't know" | Missing or conflicting sources mean the app says so and points to a doctor or 108; it never diagnoses and never calls a combination "safe" |
+| Traceable | Each AI result is stored with the model, prompt version and sources; users can report a mistake |
 
 ## Contracts
 
