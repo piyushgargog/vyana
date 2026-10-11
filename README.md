@@ -25,6 +25,8 @@ The name comes from Ayurveda. **Vyana** is the prana that starts at the heart an
 
 ## How TinyFish is used
 
+Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 | Feature | TinyFish API |
 |---|---|
 | Medicine and lab price compare | **Agent**, run in parallel across pharmacy and lab sites |
@@ -65,6 +67,16 @@ pnpm dev:mobile    # Expo dev server (scan the QR code with Expo Go)
 ```
 
 Environment variables: copy `apps/web/.env.example` and `apps/mobile/.env.example` to `.env.local` / `.env` and fill them in.
+
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | How the apps, API, database and web agents fit together |
+| [`apps/web/openapi.yaml`](apps/web/openapi.yaml) | HTTP API reference (OpenAPI 3.1, generated from the contracts) |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed and when |
+| [`apps/web/tests/README.md`](apps/web/tests/README.md) | How the backend is tested |
+| [`AGENTS.md`](AGENTS.md) | Rules for AI coding agents working in this repo |
 
 ## Contributing
 
