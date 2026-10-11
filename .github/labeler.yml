@@ -1,0 +1,31 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/web/app/(public)/**"
+          - "apps/web/app/(app)/**"
+          - "apps/web/components/**"
+          - "apps/mobile/src/app/**"
+          - "apps/mobile/src/components/**"
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "supabase/**"
+          - "packages/shared/src/db/**"
+          - "packages/shared/src/hooks/db/**"
+          - "packages/shared/src/providers/**"
+          - "apps/web/lib/supabase/**"
+          - "apps/mobile/src/lib/**"
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/web/app/api/**"
+          - "apps/web/lib/server/**"
+          - "packages/shared/src/contracts/**"
+          - "packages/shared/src/api/**"
+          - "packages/shared/src/mocks/**"
+ci:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**"]
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ["**/*.md"]
