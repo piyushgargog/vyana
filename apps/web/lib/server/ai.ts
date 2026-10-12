@@ -97,6 +97,27 @@ async function recordRun(input: RunRecord, model: string, object: unknown, statu
   }
 }
 
+/**
+ * For streamed output (the assistant): the `ai_runs` row is created before streaming, so its id can go to the
+ * client for "Report a mistake", then completed by `finishAiRun`.
+ */
+export async function startAiRun(input: RunRecord, kind: ModelKind): Promise<string | null> {
+  return recordRun(input, modelName(kind), null, "ok");
+}
+
+export async function finishAiRun(runId: string | null, result: { output: unknown; sources: SourceLink[]; status: AiRunStatus }): Promise<void> {
+  if (!runId) return;
+  try {
+    const { error } = await supabaseAdmin()
+      .from("ai_runs")
+      .update({ output_json: result.output, sources: result.sources, status: result.status })
+      .eq("id", runId);
+    if (error) throw error;
+  } catch {
+    log({ event: "ai_run_update_failed" });
+  }
+}
+
 export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
   const started = Date.now();
   const model = modelName(input.kind);

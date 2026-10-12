@@ -52,3 +52,22 @@ export function isOnDomain(url: string, domain: string): boolean {
     return false;
   }
 }
+
+/**
+ * The only sites the assistant may search or open (PLAN §6.4, ADR-043): public-health bodies and medical
+ * libraries. Every link the assistant shows comes from one of these.
+ */
+export const TRUSTED_HEALTH_DOMAINS: readonly string[] = [
+  "who.int",
+  "mohfw.gov.in",
+  "medlineplus.gov",
+  "nhs.uk",
+  "cdc.gov",
+  "ncbi.nlm.nih.gov",
+  "icmr.gov.in",
+  "cdsco.gov.in",
+];
+
+export function isTrustedHealthUrl(url: string): boolean {
+  return TRUSTED_HEALTH_DOMAINS.some((d) => isOnDomain(url, d));
+}

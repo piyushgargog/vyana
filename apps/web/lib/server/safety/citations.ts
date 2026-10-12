@@ -34,7 +34,7 @@ export function isAllowedUrl(url: string, allowed: Set<string>): boolean {
 const TRAILING_PUNCTUATION = new Set([".", ",", ";", ":", "!", "?", "'", '"', ")", "]", "}", ">"]);
 
 /** Finds http(s) URLs in free text. A linear scan (no backtracking regex) so long model output stays cheap. */
-function findUrls(text: string): { start: number; end: number; url: string }[] {
+export function findUrls(text: string): { start: number; end: number; url: string }[] {
   const found: { start: number; end: number; url: string }[] = [];
   const lower = text.toLowerCase();
   let i = 0;
