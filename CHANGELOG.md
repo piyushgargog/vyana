@@ -10,6 +10,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Backend foundations: one error format for every API route, bearer-token sign-in checks with roles, a shared cache for public web results, and `apps/web/.env.example`.
 - Prescription basket pricing: `POST /api/prescriptions/basket` starts one web agent per pharmacy in the background and `GET /api/prescriptions/basket/{job_id}` reports progress; every price must appear on the pharmacy's product page before it counts, and totals, ordering and savings are computed by the server. `pnpm smoke:basket` runs the whole pipeline live.
 - Live web layer: a TinyFish client for Search, Fetch, browser agents (with live progress, time limits and a per-minute run limit) and Monitors, the agent start pages for each pharmacy and the medical register, offline fixtures, and `pnpm smoke:tinyfish` to check everything against the live sites.
+- Prescription and lab report reading:
+  - `POST /api/prescriptions/extract` and `POST /api/reports/analyze` read an uploaded photo or PDF. A PDF's own text is used when it has one. Personal details are removed before extraction, and every value must quote the document text, otherwise it is cleared and flagged for review.
+  - Lab flags are computed in code. Report summaries are written from the verified values only and checked for diagnosis or dose wording.
+  - Photos go to a model only after a provider's data terms are approved.
 - Emergency and hospital routes:
   - `POST /api/emergency/nearby` finds hospitals with emergency care near a location. Every name, address and phone number must appear on the fetched page; the route never fails, so the SOS screen always works.
   - `POST /api/emergency/sos` records the request, returns emergency contacts, nearby hospitals and a ready SMS, then updates the ambulance status (simulated).
