@@ -23,7 +23,6 @@ import {
   LabsCompareReq,
   LabsCompareRes,
   MedicinesCompareReq,
-  MedicinesCompareRes,
   MeExportRes,
   OkRes,
   PmjayHospitalsReq,
@@ -61,7 +60,8 @@ export type ApiClientOptions = {
 };
 
 export type ApiClient = {
-  medicines: { compare(body: MedicinesCompareReq): Promise<MedicinesCompareRes> };
+  /** A one-item basket job: poll `basket.job(job_id)` like a basket. */
+  medicines: { compare(body: MedicinesCompareReq): Promise<BasketCompareRes> };
   /** `compare` starts a basket job; poll `job(job_id)` until `status === "done"`. */
   basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes>; job(jobId: string): Promise<BasketCompareRes> };
   labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes> };
@@ -158,7 +158,16 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
 
   return {
-    medicines: { compare: (body) => post("/api/medicines/compare", MedicinesCompareReq, MedicinesCompareRes, body, mocks.medicinesCompareMock) },
+    medicines: {
+      compare: (body) => {
+        const req = MedicinesCompareReq.safeParse(body);
+        if (!req.success) {
+          return Promise.reject(new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400));
+        }
+        const item = req.data.strength ? { medicine: req.data.medicine, strength: req.data.strength } : { medicine: req.data.medicine };
+        return post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, { items: [item] }, mocks.singleMedicineJobMock);
+      },
+    },
     basket: {
       compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketJobRunningMock),
       job: (jobId) => {

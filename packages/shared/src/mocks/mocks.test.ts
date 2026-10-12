@@ -12,7 +12,6 @@ import {
   HospitalInfoRes,
   InteractionsRes,
   LabsCompareRes,
-  MedicinesCompareRes,
   PmjayHospitalsRes,
   PrescriptionExtractRes,
   ReportAnalyzeRes,
@@ -23,6 +22,7 @@ import {
   alertsCheckMock,
   basketCompareMock,
   basketJobRunningMock,
+  singleMedicineJobMock,
   carePlanMock,
   doctorsVerifyMock,
   emergencyNearbyMock,
@@ -30,7 +30,6 @@ import {
   hospitalInfoMock,
   interactionsMock,
   labsCompareMock,
-  medicinesCompareMock,
   pmjayHospitalsMock,
   prescriptionsExtractMock,
   reportsAnalyzeMock,
@@ -40,7 +39,6 @@ import {
 } from ".";
 
 const cases: [string, ZodType, unknown][] = [
-  ["medicines/compare", MedicinesCompareRes, medicinesCompareMock],
   ["labs/compare", LabsCompareRes, labsCompareMock],
   ["emergency/nearby", EmergencyNearbyRes, emergencyNearbyMock],
   ["emergency/sos", EmergencySosRes, emergencySosMock],
@@ -50,6 +48,7 @@ const cases: [string, ZodType, unknown][] = [
   ["alerts/check", AlertsCheckRes, alertsCheckMock],
   ["prescriptions/basket", BasketCompareRes, basketCompareMock],
   ["prescriptions/basket (running)", BasketCompareRes, basketJobRunningMock],
+  ["single medicine (one-item basket)", BasketCompareRes, singleMedicineJobMock],
   ["care-plan", GenerateCarePlanRes, carePlanMock],
   ["medicines/interactions", InteractionsRes, interactionsMock],
   ["triage", TriageRes, triageMock],
@@ -68,7 +67,7 @@ describe("mock fixtures", () => {
   });
 
   it("price quotes are sorted by price with unknown prices last", () => {
-    for (const res of [medicinesCompareMock, labsCompareMock]) {
+    for (const res of [labsCompareMock]) {
       const prices = res.quotes.map((q) => q.price ?? Number.POSITIVE_INFINITY);
       expect(prices).toEqual([...prices].sort((a, b) => a - b));
       expect(res.cheapest).toEqual(res.quotes[0]);

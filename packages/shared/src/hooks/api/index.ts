@@ -24,7 +24,6 @@ import type {
   LabsCompareReq,
   LabsCompareRes,
   MedicinesCompareReq,
-  MedicinesCompareRes,
   MeExportRes,
   OkRes,
   PmjayHospitalsReq,
@@ -43,7 +42,8 @@ export { QUERY_ROOTS } from "./query-roots";
 
 export function useCompareMedicine() {
   const api = useApi();
-  return useMutation<MedicinesCompareRes, ApiError, MedicinesCompareReq>({
+  // A one-item basket job (ADR-038): poll the returned job_id with useBasketJob.
+  return useMutation<BasketCompareRes, ApiError, MedicinesCompareReq>({
     mutationKey: ["medicines", "compare"],
     mutationFn: (body) => api.medicines.compare(body),
   });

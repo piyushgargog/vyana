@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { basketCompareMock, medicinesCompareMock, shareMock } from "../mocks";
+import { basketCompareMock, shareMock, singleMedicineJobMock } from "../mocks";
 import { ApiError, createApiClient, type ApiClientOptions } from "./client";
 
 const json = (status: number, body: unknown) =>
@@ -12,20 +12,21 @@ function client(fetchImpl: ApiClientOptions["fetch"], token: string | null = "to
 
 describe("createApiClient", () => {
   it("posts JSON with the bearer token and returns the validated response", async () => {
-    const fetchMock = vi.fn(async () => json(200, medicinesCompareMock));
+    const fetchMock = vi.fn(async () => json(200, singleMedicineJobMock));
     const res = await client(fetchMock).medicines.compare({ medicine: "Dolo", strength: "650" });
 
-    expect(res).toEqual(medicinesCompareMock);
+    expect(res).toEqual(singleMedicineJobMock);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://api.example.com/api/medicines/compare");
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
-    expect(JSON.parse(init.body as string)).toEqual({ medicine: "Dolo", strength: "650" });
+    // A single medicine is a one-item basket job (ADR-038).
+    expect(JSON.parse(init.body as string)).toEqual({ items: [{ medicine: "Dolo", strength: "650" }] });
   });
 
   it("omits the Authorization header when signed out", async () => {
-    const fetchMock = vi.fn(async () => json(200, medicinesCompareMock));
+    const fetchMock = vi.fn(async () => json(200, singleMedicineJobMock));
     await client(fetchMock, null).medicines.compare({ medicine: "Dolo" });
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
@@ -45,6 +46,7 @@ describe("createApiClient", () => {
 
   it("rejects a response that does not match the schema", async () => {
     const fetchMock = vi.fn(async () => json(200, { query: "dolo 650" }));
+    // (an old single-compare response is not a basket job)
     await expect(client(fetchMock).medicines.compare({ medicine: "Dolo" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
@@ -66,8 +68,8 @@ describe("createApiClient", () => {
     const api = createApiClient({ baseUrl: "", getAccessToken: async () => null, useMocks: true, mockDelayMs: [0, 0], fetch: fetchMock });
     const res = await api.medicines.compare({ medicine: "Dolo 650" });
 
-    expect(res).toEqual(medicinesCompareMock);
-    expect(res).not.toBe(medicinesCompareMock);
+    expect(res).toEqual(singleMedicineJobMock);
+    expect(res).not.toBe(singleMedicineJobMock);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

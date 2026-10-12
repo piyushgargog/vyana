@@ -57,7 +57,7 @@ export function toErrorResponse(err: unknown, requestId: string): Response {
  * Wraps a route handler: catches errors, maps them to `ApiErrorBody` and writes one log line per request.
  *
  * ```ts
- * export const POST = withRoute("medicines/compare", async (req, ctx) => { ... });
+ * export const POST = withRoute("prescriptions/basket", async (req, ctx) => { ... });
  * ```
  */
 export function withRoute<P = unknown>(route: string, handler: Handler<P>) {

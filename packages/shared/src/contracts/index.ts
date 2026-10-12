@@ -74,17 +74,9 @@ export const DrugAlert = z.object({
 
 export const SourceLink = z.object({ title: z.string(), url: z.string() });
 
-// ---------- POST /api/medicines/compare ----------
+// ---------- single-medicine price check ----------
+// No route of its own (ADR-038): medicines.compare posts a one-item basket and returns BasketCompareRes.
 export const MedicinesCompareReq = z.object({ medicine: z.string().min(2), strength: z.string().optional() });
-export const MedicinesCompareRes = z.object({
-  query: z.string(),                     // normalized, e.g. "dolo 650"
-  quotes: z.array(PriceQuote),           // sorted by price asc, nulls last
-  sources: z.array(SourceStatus),        // one per pharmacy tried
-  cheapest: PriceQuote.nullable(),
-  generic: PriceQuote.nullable(),        // Jan Aushadhi alternative (best effort)
-  generic_salt: z.string().nullable(),   // e.g. "Paracetamol 650 mg"
-  cached: z.boolean(),
-});
 
 // ---------- POST /api/labs/compare ----------
 export const LabsCompareReq = z.object({ test_name: z.string().min(2), city: z.string().min(2) });
@@ -315,7 +307,6 @@ export type LabValue = z.infer<typeof LabValue>;
 export type DrugAlert = z.infer<typeof DrugAlert>;
 export type SourceLink = z.infer<typeof SourceLink>;
 export type MedicinesCompareReq = z.infer<typeof MedicinesCompareReq>;
-export type MedicinesCompareRes = z.infer<typeof MedicinesCompareRes>;
 export type LabsCompareReq = z.infer<typeof LabsCompareReq>;
 export type LabsCompareRes = z.infer<typeof LabsCompareRes>;
 export type EmergencyNearbyReq = z.infer<typeof EmergencyNearbyReq>;

@@ -61,3 +61,24 @@ export const basketJobRunningMock: BasketCompareRes = {
   baskets: [basketCompareMock.baskets[0], basketCompareMock.baskets[1], pending("netmeds"), pending("apollo")],
   savings_vs_highest: 14.2,
 };
+
+const dolo = (source: PharmacyBasket["source"], price: number, url: string, home: string): PharmacyBasket => ({
+  source, status: "ok", total: price, missing: [], checkout_url: home,
+  lines: [line("Dolo", "650 mg", "Dolo 650 Tablet", "strip of 15 tablets", price, url)],
+});
+
+/** A single-medicine check (a one-item basket) while two pharmacies are still working. */
+export const singleMedicineJobMock: BasketCompareRes = {
+  job_id: MOCK_JOB_ID,
+  status: "running",
+  baskets: [
+    dolo("pharmeasy", 28.9, "https://pharmeasy.in/online-medicine-order/dolo-650", "https://pharmeasy.in"),
+    dolo("1mg", 30.5, "https://www.1mg.com/drugs/dolo-650-tablet", "https://www.1mg.com"),
+    pending("netmeds"),
+    pending("apollo"),
+  ],
+  cheapest_source: "pharmeasy",
+  generic: null,
+  savings_vs_highest: 1.6,
+  cached: false,
+};

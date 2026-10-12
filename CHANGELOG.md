@@ -21,6 +21,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
 
 ### Changed
+- **API contract:** a single-medicine price check is now a one-item basket job. `POST /api/medicines/compare` and `MedicinesCompareRes` are removed; `medicines.compare` / `useCompareMedicine` keep their names, post to `/api/prescriptions/basket` and return `BasketCompareRes` (poll with `useBasketJob`).
 - **API contract:** basket pricing is now a job. `BasketCompareRes` gains `job_id` and `status`, baskets can be `pending`, and lines carry `price_verified`; new client method `basket.job()` and hook `useBasketJob()`.
 - ARCHITECTURE documents privacy before AI and the verified interaction table.
 
