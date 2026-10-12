@@ -78,8 +78,16 @@ on conflict (id) do nothing;
 -- 8. Prescriptions and Items
 insert into public.prescriptions (id, patient_id, doctor_id, appointment_id, source, doctor_name, diagnosis, notes, issued_on)
 values
-  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'doctor', 'Dr. Rajesh Mehta', 'Type 2 Diabetes Mellitus & Primary Hypertension', 'Continue diet plan. Avoid sugary foods. Drink 3L water.', current_date - 14)
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'doctor', 'Dr. Rajesh Mehta', null, 'Continue diet plan. Avoid sugary foods. Drink 3L water.', current_date - 14)
 on conflict (id) do nothing;
+
+-- A doctor's diagnosis creates the patient's condition (trigger on prescriptions). The demo patient's
+-- Type 2 Diabetes condition already exists, so link it to this prescription first and set the diagnosis
+-- after: the trigger then finds it instead of adding a second one.
+update public.conditions set prescription_id = '11111111-1111-1111-1111-111111111111'
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc' and prescription_id is null;
+update public.prescriptions set diagnosis = 'Type 2 Diabetes'
+  where id = '11111111-1111-1111-1111-111111111111' and diagnosis is distinct from 'Type 2 Diabetes';
 
 insert into public.prescription_items (id, prescription_id, patient_id, medicine_name, strength, form, dose, frequency, times, with_food, duration_days, start_date, active)
 values
