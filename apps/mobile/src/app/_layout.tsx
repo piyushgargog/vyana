@@ -1,18 +1,35 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import React, { useEffect } from 'react';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
+import { MobileAppProviders } from '@/components/providers';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <MobileAppProviders>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: '#0F766E' },
+            headerTintColor: '#FFFFFF',
+            headerTitleStyle: { fontWeight: '700' },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)/login" options={{ title: 'Sign In · Vyana' }} />
+          <Stack.Screen name="(auth)/signup" options={{ title: 'Create Account · Vyana' }} />
+          <Stack.Screen name="consent" options={{ title: 'DPDP Health Data Consent' }} />
+          <Stack.Screen name="onboarding" options={{ title: 'Complete Onboarding' }} />
+        </Stack>
+      </ThemeProvider>
+    </MobileAppProviders>
   );
 }
