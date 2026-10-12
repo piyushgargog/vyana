@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Medicine quality alerts: `POST /api/alerts/check` looks for government (CDSCO) quality alerts and recalls that name the patient's medicines, and `POST /api/webhooks/tinyfish-monitor` saves new ones from a TinyFish Monitor for every patient they concern. A fixed rule decides (the medicine by brand or salt, plus alert wording), with no AI; news and other sites are ignored.
 - Ayushman Bharat (PM-JAY) hospital finder: `POST /api/schemes/pmjay-hospitals` lists hospitals near a location that a government page lists as empanelled, with their address and specialities as written on that page. Third-party lists are never used; when nothing official is found, the app links to the official site.
 - Booking: a patient can hold only one active OPD token per department and day, so nobody can use up a department's daily tokens. Cancelling a token frees the slot; the cancelled number is never given out again.
 - A doctor's e-prescription with a diagnosis now creates the patient's condition automatically (one per prescription, an edited diagnosis updates it), so the care plan draft can start from it. Doctors still cannot insert conditions themselves.

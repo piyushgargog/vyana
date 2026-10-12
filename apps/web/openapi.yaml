@@ -331,7 +331,7 @@ paths:
         - Wellness
       summary: Check the user's medicines for quality alerts
       description: |-
-        Searches recent CDSCO quality alerts and recalls for each active medicine and keeps only the genuinely relevant ones.
+        Searches recent CDSCO quality alerts and recalls for each active medicine (up to 10). A fixed rule keeps a result only when it is on a government page, names the medicine (brand or salt) and uses alert wording; no AI is involved. Returns all of the patient's alerts, newest first. Alerts usually concern specific batches: the app tells the patient to check the batch with a pharmacist.
 
         **Who can call it:** patient.
 
