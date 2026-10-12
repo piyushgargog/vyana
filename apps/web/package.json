@@ -11,7 +11,8 @@
     "test": "vitest run",
     "smoke:tinyfish": "tsx --conditions=react-server ../../scripts/smoke-tinyfish.mts",
     "smoke:basket": "tsx --conditions=react-server ../../scripts/smoke-basket.mts",
-    "verify:interactions": "tsx --conditions=react-server ../../scripts/verify-interactions.mts"
+    "verify:interactions": "tsx --conditions=react-server ../../scripts/verify-interactions.mts",
+    "verify:red-flags": "tsx --conditions=react-server ../../scripts/verify-red-flags.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
