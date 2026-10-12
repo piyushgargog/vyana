@@ -27,8 +27,8 @@ export default function MobileReportsTab() {
       flag: (item.flag as 'low' | 'normal' | 'high' | null) ?? 'normal',
     }));
 
-  const refLow = hba1cHistory[0]?.ref_low ?? 4.0;
-  const refHigh = hba1cHistory[0]?.ref_high ?? 5.6;
+  const refLow = hba1cHistory[0]?.ref_low ?? null;
+  const refHigh = hba1cHistory[0]?.ref_high ?? null;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>

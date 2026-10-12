@@ -9,8 +9,10 @@ import {
 import { useRouter } from 'expo-router';
 import {
   DEFAULT_TIMES,
+  parseCarePlanJson,
   useActiveItems,
   useAdherence,
+  useCarePlans,
   useConditions,
   useDoseLogs,
   useDrugAlerts,
@@ -22,16 +24,22 @@ import {
 import { useVyanaMobile } from '@/components/providers';
 import {
   computeItemRefill,
+  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 
 export default function PatientHomeScreen() {
   const router = useRouter();
-  const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
+  const { useMocks, setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
   const { data: activeItems = [], isLoading: itemsLoading } = useActiveItems();
   const { data: conditions = [] } = useConditions();
+  const { data: carePlans = [] } = useCarePlans();
+  const activeCarePlan = parseCarePlanJson(
+    carePlans[0]?.plan_json,
+    useMocks
+  );
 
   const now = new Date();
   const startOfDay = new Date(
@@ -420,6 +428,46 @@ export default function PatientHomeScreen() {
           <Text style={styles.sectionSub}>No upcoming OPD tokens booked.</Text>
         )}
       </View>
+
+      {/* Active Chronic Care Plan (Contract: do, dont, diet, follow_up_tests) */}
+      {activeCarePlan && (
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>
+                Care Plan · {activeCarePlan.condition}
+              </Text>
+              <Text style={styles.sectionSub}>{activeCarePlan.summary}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open full Care Plan"
+              onPress={() => router.push(carePlanHref as never)}
+            >
+              <Text style={styles.linkText}>Full Plan →</Text>
+            </Pressable>
+          </View>
+          <MobileAiSafetyBanner feature="care_plan" />
+          <Text style={styles.doseMeta}>
+            Do: {activeCarePlan.do.join(' · ')}
+          </Text>
+          <Text style={styles.doseMeta}>
+            Avoid: {activeCarePlan.dont.join(' · ')}
+          </Text>
+          <Text style={styles.doseMeta}>
+            Eat more: {activeCarePlan.diet.eat_more.join(', ')} | Limit:{' '}
+            {activeCarePlan.diet.limit.join(', ')}
+          </Text>
+          {activeCarePlan.follow_up_tests.length > 0 && (
+            <Text style={styles.doseMeta}>
+              Follow-up tests:{' '}
+              {activeCarePlan.follow_up_tests
+                .map((ft) => `${ft.test} (every ${ft.every_days}d)`)
+                .join(' · ')}
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* Complete Healthcare Quick-Action Grid */}
       <View style={styles.sectionCard}>

@@ -66,7 +66,14 @@ export default function MobileTabsLayout() {
     router,
   ]);
 
-  if (sessionLoading || !user) {
+  if (
+    sessionLoading ||
+    !user ||
+    consentLoading ||
+    profileLoading ||
+    consentRecord === null ||
+    !profile?.onboarded
+  ) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#0D9488" />

@@ -44,6 +44,18 @@ export default function AppShellLayout({
       pathname !== "/consent"
     ) {
       router.replace("/onboarding");
+      return;
+    }
+    if (pathname?.startsWith("/admin") && profile.role !== "admin") {
+      router.replace(profile.role === "doctor" ? "/doctor" : "/dashboard");
+      return;
+    }
+    if (
+      pathname?.startsWith("/doctor") &&
+      profile.role !== "doctor" &&
+      profile.role !== "admin"
+    ) {
+      router.replace("/dashboard");
     }
   }, [
     sessionLoading,
@@ -62,7 +74,28 @@ export default function AppShellLayout({
     router.replace("/login");
   };
 
-  if (sessionLoading || !user) {
+  const isUnauthorizedRoute =
+    Boolean(profile) &&
+    ((pathname?.startsWith("/admin") && profile?.role !== "admin") ||
+      (pathname?.startsWith("/doctor") &&
+        profile?.role !== "doctor" &&
+        profile?.role !== "admin"));
+
+  const isGatedRoute =
+    (!consentRecord && pathname !== "/consent") ||
+    (Boolean(consentRecord) &&
+      !profile?.onboarded &&
+      pathname !== "/onboarding" &&
+      pathname !== "/consent") ||
+    isUnauthorizedRoute;
+
+  if (
+    sessionLoading ||
+    !user ||
+    consentLoading ||
+    profileLoading ||
+    isGatedRoute
+  ) {
     return (
       <div className="min-h-screen flex flex-col bg-slate-50">
         <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-12">

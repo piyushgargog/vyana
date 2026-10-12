@@ -1,10 +1,20 @@
 import { DEFAULT_TIMES, type FrequencyType } from "./constants";
 import { CarePlan } from "./contracts";
 import type { DbPrescriptionItem } from "./db/types";
+import { carePlanMock } from "./mocks/care-plan";
 
-export function parseCarePlanJson(planJson: unknown): CarePlan | null {
+export function parseCarePlanJson(
+  planJson: unknown,
+  useMocks: boolean = false
+): CarePlan | null {
   const parsed = CarePlan.safeParse(planJson);
-  return parsed.success ? parsed.data : null;
+  if (parsed.success) {
+    return parsed.data;
+  }
+  if (useMocks && (planJson === null || planJson === undefined)) {
+    return carePlanMock.plan;
+  }
+  return null;
 }
 
 export function computeItemRefill(

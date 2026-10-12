@@ -20,8 +20,27 @@ interface VyanaWebContextValue {
 
 const VyanaWebContext = createContext<VyanaWebContextValue | null>(null);
 
+function getBrowserSupabaseClient(): SupabaseClient<Database> {
+  if (typeof window !== "undefined") {
+    return createClient();
+  }
+  if (
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return createClient();
+  }
+  return new Proxy({} as SupabaseClient<Database>, {
+    get(_target, prop) {
+      return Reflect.get(createClient(), prop);
+    },
+  });
+}
+
 export function WebAppProviders({ children }: { children: React.ReactNode }) {
-  const [supabase] = useState<SupabaseClient<Database>>(() => createClient());
+  const [supabase] = useState<SupabaseClient<Database>>(() =>
+    getBrowserSupabaseClient()
+  );
   const [useMocks, setUseMocks] = useState<boolean>(
     process.env.NEXT_PUBLIC_USE_MOCKS === "true"
   );
