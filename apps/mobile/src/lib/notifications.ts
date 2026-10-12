@@ -31,6 +31,12 @@ export const NOTIFICATION_CHANNELS: Record<ReminderKind, string> = {
   follow_up: "follow-ups",
 };
 
+/**
+ * The Android channel of pushes sent to a caregiver (a missed dose). The server names it in the push, and
+ * Android needs it to exist on the phone, so `setupNotifications` creates it.
+ */
+export const CAREGIVER_CHANNEL = "caregiver-alerts";
+
 /** The identifiers we schedule start with these, so we never touch another notification. */
 const OWN_PREFIXES = ["dose:", "refill:", "followup:"];
 
@@ -70,6 +76,11 @@ export async function setupNotifications(): Promise<void> {
     await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNELS.follow_up, {
       name: "Check-up test reminders",
       importance: Notifications.AndroidImportance.DEFAULT,
+    });
+    await Notifications.setNotificationChannelAsync(CAREGIVER_CHANNEL, {
+      name: "Alerts about people you look after",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
     });
   }
 }
