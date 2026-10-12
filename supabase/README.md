@@ -11,6 +11,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
 | `migrations/0005_data_layer.sql` | What the query functions need: `doctor_directory()`, `my_caregivers()`, `department_tokens()`, `create_doctor_prescription()` (one transaction), the AI mistake note, and a stricter dose log update |
 | `migrations/0006_diagnosis_condition.sql` | A doctor's diagnosis on an e-Rx creates the patient's condition (one per prescription; an edited diagnosis updates it) |
 | `migrations/0007_one_token_per_day.sql` | `book_appointment` gives a patient at most one active token per department and day (a unique index backs it) |
+| `migrations/0008_missed_dose_cron.sql` | pg_cron calls `POST /api/cron/missed-doses` every 15 minutes through `run_missed_dose_check()` (address and secret come from the Vault) |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |
@@ -48,6 +49,21 @@ Users are created only through the admin API, which also writes `auth.identities
 - **People and more:** two conditions, two appointments, vitals, two emergency contacts, a caregiver (`caregiver@vyana.test`), and accepted consents.
 
 Run the seed again at any time: it replaces the dose logs and vitals and leaves the rest as it is.
+
+## Missed-dose alerts (pg_cron)
+
+Every 15 minutes the database calls `POST {app_url}/api/cron/missed-doses` with the header `x-cron-secret`. The route
+finds doses that were due 60+ minutes ago and never logged, for patients with an active caregiver, and pushes each
+caregiver phone once (`missed_dose_alerts` keeps it to once). Set the address and the secret once per project (the
+secret is the value of `CRON_SECRET` on the server):
+
+```sql
+select vault.create_secret('https://<your-app>.vercel.app', 'app_url');
+select vault.create_secret('<the value of CRON_SECRET>', 'cron_secret');
+```
+
+Until both exist the job logs a warning and does nothing. To see the runs: `select * from cron.job_run_details order by start_time desc limit 5;`.
+To run one by hand: `select public.run_missed_dose_check();`.
 
 ## Tests
 

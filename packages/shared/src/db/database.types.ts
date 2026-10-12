@@ -1515,6 +1515,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      run_missed_dose_check: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
