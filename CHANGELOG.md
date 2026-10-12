@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Reminders on the phone: dose reminders for the next days (a dose already logged gets none), a refill alert at 9:00 for each medicine that is running out (units left from the quantity dispensed and the doses taken), and a reminder for each follow-up test of an approved care plan. The phone also saves its push token. What to remind of and when is planned by tested pure functions in `@vyana/shared` (`getRefillStatus`, `planDoseReminders`, `planRefillAlerts`, `planFollowUpReminders`).
 - Doctor verification: `POST /api/doctors/verify` checks a doctor on the NMC Indian Medical Register.
   - A web agent only reads the register; the server decides.
   - A doctor is verified only when the registration number, council, surname and name match (initials allowed), and the year too when both give one. A fake or borrowed number never verifies.
