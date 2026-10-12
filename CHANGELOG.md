@@ -5,6 +5,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Medicine interaction check: `POST /api/medicines/interactions` checks the patient's active medicines (or one prescription).
+  - Brand names are mapped to salts from a reviewed list of 44 common Indian brands, each checked against its pharmacy page (`pnpm verify:brands`), or from a salt written in brackets. Medicines that can't be mapped are listed as not checked (`not_checked`).
+  - The reviewed interaction table is checked first. Other pairs are looked up on trusted medicine pages: the server picks the sentences that name both medicines, the AI only confirms that a sentence states an interaction, and the sentence is shown word for word. Severity comes from the sentence's own words.
+  - Each interaction says which layer found it (`layer`). An empty result lists the sources checked and never says a combination is safe.
 - Symptom triage: `POST /api/triage` suggests how soon to see a doctor and which hospital department to book.
   - Emergency warning signs (English, Hindi, Hinglish) go straight to "call 108 / press SOS" without any AI.
   - Otherwise the AI only picks the urgency and up to 2 departments from the hospital list. The advice, warning signs and disclaimer are fixed text in the user's language, so no AI-written sentence reaches the user, and it never names a disease.
