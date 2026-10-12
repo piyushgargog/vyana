@@ -71,3 +71,14 @@ export const TRUSTED_HEALTH_DOMAINS: readonly string[] = [
 export function isTrustedHealthUrl(url: string): boolean {
   return TRUSTED_HEALTH_DOMAINS.some((d) => isOnDomain(url, d));
 }
+
+/** Government pages only: a third party's list can't say a hospital is empanelled (ADR-048). */
+export function isGovUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return (u.protocol === "https:" || u.protocol === "http:") && (host.endsWith(".gov.in") || host.endsWith(".nic.in"));
+  } catch {
+    return false;
+  }
+}

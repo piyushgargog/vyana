@@ -23,6 +23,7 @@ import { evidenceFound, normalizeText } from "../safety/verbatim";
 import { supabaseAdmin } from "../supabase-admin";
 import { type CallCounter, fetchPages, search } from "./client";
 import { registerMockPage } from "./fixtures";
+import { isGovUrl } from "./sources";
 
 /**
  * Hospitals from the live web (SPEC §5, §16). The model only reads the fetched pages; every value it returns is
@@ -265,16 +266,7 @@ export async function hospitalOpdInfo(
 
 // ---------------------------------------------------------------- PM-JAY (SPEC §17, ADR-048)
 
-/** Government pages only: a third party's list can't say a hospital is empanelled (ADR-048). */
-export function isGovUrl(url: string): boolean {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    return (u.protocol === "https:" || u.protocol === "http:") && (host.endsWith(".gov.in") || host.endsWith(".nic.in"));
-  } catch {
-    return false;
-  }
-}
+export { isGovUrl } from "./sources";
 
 export const PmjayLlm = z.object({
   hospitals: z.array(z.object({ name: z.string(), address: z.string().nullable(), specialities: z.array(z.string()), page: z.number().int() })),
