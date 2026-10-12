@@ -1458,6 +1458,24 @@ export type Database = {
         }
       }
       create_care_invite: { Args: Record<PropertyKey, never>; Returns: string }
+      doctor_directory: {
+        Args: { p_department?: string; p_hospital?: string; p_id?: string }
+        Returns: {
+          availability: Json
+          clinic_address: string
+          clinic_name: string
+          consultation_fee: number
+          department_id: string
+          full_name: string
+          hospital_id: string
+          id: string
+          reg_no: string
+          specialization: string
+          state_council: string
+          verified_at: string
+          year_of_registration: number
+        }[]
+      }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_caregiver_of: { Args: { p: string }; Returns: boolean }
       is_doctor_of: { Args: { p: string }; Returns: boolean }
