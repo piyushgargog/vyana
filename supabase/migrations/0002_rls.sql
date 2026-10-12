@@ -351,6 +351,7 @@ revoke update, delete on public.consents from authenticated;
 
 -- ============================================================================
 -- ENABLE RLS ON ALL TABLES
+-- Policies read the user as (select auth.uid()) so Postgres evaluates it once per query, not once per row.
 -- ============================================================================
 
 alter table public.profiles enable row level security;
@@ -391,7 +392,7 @@ alter table public.tinyfish_monitors enable row level security;
 
 create policy "profiles_select" on public.profiles
   for select to authenticated using (
-    auth.uid() = id
+    (select auth.uid()) = id
     or public.is_doctor_of(id)
     or public.is_caregiver_of(id)
     or public.is_admin()
@@ -399,13 +400,13 @@ create policy "profiles_select" on public.profiles
 
 create policy "profiles_insert" on public.profiles
   for insert to authenticated
-  with check (public.is_admin() or (auth.uid() = id and role in ('patient', 'doctor')));
+  with check (public.is_admin() or ((select auth.uid()) = id and role in ('patient', 'doctor')));
 
 -- a role change is blocked by trg_prevent_role_change for everyone but an admin
 create policy "profiles_update" on public.profiles
   for update to authenticated
-  using (auth.uid() = id or public.is_admin())
-  with check (auth.uid() = id or public.is_admin());
+  using ((select auth.uid()) = id or public.is_admin())
+  with check ((select auth.uid()) = id or public.is_admin());
 
 create policy "profiles_delete" on public.profiles
   for delete to authenticated using (public.is_admin());
@@ -431,22 +432,22 @@ create policy "departments_admin" on public.departments
 create policy "doctors_select" on public.doctors
   for select to authenticated using (
     verification_status = 'verified'
-    or auth.uid() = id
+    or (select auth.uid()) = id
     or public.is_admin()
   );
 
 -- only a profile with the doctor role may create a doctors row
 create policy "doctors_insert" on public.doctors
   for insert to authenticated with check (
-    (auth.uid() = id and exists (select 1 from public.profiles where id = auth.uid() and role = 'doctor'))
+    ((select auth.uid()) = id and exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'doctor'))
     or public.is_admin()
   );
 
 -- verification_*, hospital_id and department_id are guarded by trg_check_doctor_verification_update
 create policy "doctors_update" on public.doctors
   for update to authenticated
-  using (auth.uid() = id or public.is_admin())
-  with check (auth.uid() = id or public.is_admin());
+  using ((select auth.uid()) = id or public.is_admin())
+  with check ((select auth.uid()) = id or public.is_admin());
 
 create policy "doctors_delete" on public.doctors
   for delete to authenticated using (public.is_admin());
@@ -457,67 +458,67 @@ create policy "doctors_delete" on public.doctors
 
 -- emergency_contacts: patient CRUD, doctor and admin read
 create policy "emergency_contacts_select" on public.emergency_contacts
-  for select to authenticated using (auth.uid() = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
 create policy "emergency_contacts_insert" on public.emergency_contacts
-  for insert to authenticated with check (auth.uid() = patient_id);
+  for insert to authenticated with check ((select auth.uid()) = patient_id);
 create policy "emergency_contacts_update" on public.emergency_contacts
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "emergency_contacts_delete" on public.emergency_contacts
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- conditions: a patient adds their own; doctor-sourced rows are written by the server
 create policy "conditions_select" on public.conditions
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 create policy "conditions_insert" on public.conditions
   for insert to authenticated
-  with check (auth.uid() = patient_id and source = 'patient' and diagnosed_by is null and prescription_id is null);
+  with check ((select auth.uid()) = patient_id and source = 'patient' and diagnosed_by is null and prescription_id is null);
 create policy "conditions_update" on public.conditions
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "conditions_delete" on public.conditions
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- vitals
 create policy "vitals_select" on public.vitals
-  for select to authenticated using (auth.uid() = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
 create policy "vitals_insert" on public.vitals
-  for insert to authenticated with check (auth.uid() = patient_id);
+  for insert to authenticated with check ((select auth.uid()) = patient_id);
 create policy "vitals_update" on public.vitals
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "vitals_delete" on public.vitals
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- meal_logs
 create policy "meal_logs_select" on public.meal_logs
-  for select to authenticated using (auth.uid() = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_doctor_of(patient_id) or public.is_admin());
 create policy "meal_logs_insert" on public.meal_logs
-  for insert to authenticated with check (auth.uid() = patient_id);
+  for insert to authenticated with check ((select auth.uid()) = patient_id);
 create policy "meal_logs_update" on public.meal_logs
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "meal_logs_delete" on public.meal_logs
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- dose_logs: a patient logs doses of their own medicines only
 create policy "dose_logs_select" on public.dose_logs
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 create policy "dose_logs_insert" on public.dose_logs
   for insert to authenticated with check (
-    auth.uid() = patient_id
-    and exists (select 1 from public.prescription_items i where i.id = item_id and i.patient_id = auth.uid())
+    (select auth.uid()) = patient_id
+    and exists (select 1 from public.prescription_items i where i.id = item_id and i.patient_id = (select auth.uid()))
   );
 create policy "dose_logs_update" on public.dose_logs
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "dose_logs_delete" on public.dose_logs
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- ============================================================================
 -- 5. APPOINTMENTS
@@ -526,8 +527,8 @@ create policy "dose_logs_delete" on public.dose_logs
 
 create policy "appointments_select" on public.appointments
   for select to authenticated using (
-    auth.uid() = patient_id
-    or auth.uid() = doctor_id
+    (select auth.uid()) = patient_id
+    or (select auth.uid()) = doctor_id
     or department_id = public.my_verified_department()
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
@@ -535,13 +536,13 @@ create policy "appointments_select" on public.appointments
 
 create policy "appointments_update_patient" on public.appointments
   for update to authenticated
-  using (auth.uid() = patient_id)
-  with check (auth.uid() = patient_id and status = 'cancelled');
+  using ((select auth.uid()) = patient_id)
+  with check ((select auth.uid()) = patient_id and status = 'cancelled');
 
 create policy "appointments_update_doctor" on public.appointments
   for update to authenticated
-  using (auth.uid() = doctor_id or department_id = public.my_verified_department())
-  with check (auth.uid() = doctor_id or department_id = public.my_verified_department());
+  using ((select auth.uid()) = doctor_id or department_id = public.my_verified_department())
+  with check ((select auth.uid()) = doctor_id or department_id = public.my_verified_department());
 
 create policy "appointments_update_admin" on public.appointments
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
@@ -552,7 +553,7 @@ create policy "appointments_update_admin" on public.appointments
 
 create policy "prescriptions_select" on public.prescriptions
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
@@ -561,27 +562,27 @@ create policy "prescriptions_select" on public.prescriptions
 -- a patient uploads (source 'upload', no doctor); a doctor writes for their own patients
 create policy "prescriptions_insert" on public.prescriptions
   for insert to authenticated with check (
-    (auth.uid() = patient_id and source = 'upload' and doctor_id is null)
-    or (doctor_id = auth.uid() and source = 'doctor' and public.is_doctor_of(patient_id))
+    ((select auth.uid()) = patient_id and source = 'upload' and doctor_id is null)
+    or (doctor_id = (select auth.uid()) and source = 'doctor' and public.is_doctor_of(patient_id))
   );
 
 create policy "prescriptions_update" on public.prescriptions
   for update to authenticated
   using (
-    (auth.uid() = patient_id and source = 'upload')
-    or (doctor_id = auth.uid() and public.is_doctor_of(patient_id))
+    ((select auth.uid()) = patient_id and source = 'upload')
+    or (doctor_id = (select auth.uid()) and public.is_doctor_of(patient_id))
   )
   with check (
-    (auth.uid() = patient_id and source = 'upload' and doctor_id is null)
-    or (doctor_id = auth.uid() and source = 'doctor' and public.is_doctor_of(patient_id))
+    ((select auth.uid()) = patient_id and source = 'upload' and doctor_id is null)
+    or (doctor_id = (select auth.uid()) and source = 'doctor' and public.is_doctor_of(patient_id))
   );
 
 create policy "prescriptions_delete" on public.prescriptions
-  for delete to authenticated using (auth.uid() = patient_id and source = 'upload');
+  for delete to authenticated using ((select auth.uid()) = patient_id and source = 'upload');
 
 create policy "prescription_items_select" on public.prescription_items
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
@@ -595,8 +596,8 @@ create policy "prescription_items_insert" on public.prescription_items
       select 1 from public.prescriptions p
       where p.id = prescription_id and p.patient_id = prescription_items.patient_id
         and (
-          (p.source = 'upload' and p.patient_id = auth.uid())
-          or (p.source = 'doctor' and p.doctor_id = auth.uid())
+          (p.source = 'upload' and p.patient_id = (select auth.uid()))
+          or (p.source = 'doctor' and p.doctor_id = (select auth.uid()))
         )
     )
   );
@@ -605,17 +606,17 @@ create policy "prescription_items_insert" on public.prescription_items
 create policy "prescription_items_update" on public.prescription_items
   for update to authenticated
   using (
-    auth.uid() = patient_id
-    or exists (select 1 from public.prescriptions p where p.id = prescription_id and p.doctor_id = auth.uid())
+    (select auth.uid()) = patient_id
+    or exists (select 1 from public.prescriptions p where p.id = prescription_id and p.doctor_id = (select auth.uid()))
   )
   with check (
-    auth.uid() = patient_id
-    or exists (select 1 from public.prescriptions p where p.id = prescription_id and p.doctor_id = auth.uid())
+    (select auth.uid()) = patient_id
+    or exists (select 1 from public.prescriptions p where p.id = prescription_id and p.doctor_id = (select auth.uid()))
   );
 
 create policy "prescription_items_delete" on public.prescription_items
   for delete to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     and exists (select 1 from public.prescriptions p where p.id = prescription_id and p.source = 'upload')
   );
 
@@ -625,23 +626,23 @@ create policy "prescription_items_delete" on public.prescription_items
 
 create policy "lab_reports_select" on public.lab_reports
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 create policy "lab_reports_delete" on public.lab_reports
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 create policy "lab_values_select" on public.lab_values
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 create policy "lab_values_delete" on public.lab_values
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 -- ============================================================================
 -- 8. CARE PLANS
@@ -651,7 +652,7 @@ create policy "lab_values_delete" on public.lab_values
 
 create policy "care_plans_select" on public.care_plans
   for select to authenticated using (
-    (auth.uid() = patient_id and status in ('approved', 'patient_generated'))
+    ((select auth.uid()) = patient_id and status in ('approved', 'patient_generated'))
     or public.is_doctor_of(patient_id)
     or (public.is_caregiver_of(patient_id) and status = 'approved')
     or public.is_admin()
@@ -663,7 +664,7 @@ create policy "care_plans_update_doctor" on public.care_plans
   with check (
     public.is_doctor_of(patient_id)
     and status in ('draft', 'approved')
-    and (reviewed_by is null or reviewed_by = auth.uid())
+    and (reviewed_by is null or reviewed_by = (select auth.uid()))
   );
 
 create policy "care_plans_admin" on public.care_plans
@@ -675,20 +676,20 @@ create policy "care_plans_admin" on public.care_plans
 -- ============================================================================
 
 create policy "care_invites_select" on public.care_invites
-  for select to authenticated using (auth.uid() = patient_id or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_admin());
 create policy "care_invites_delete" on public.care_invites
-  for delete to authenticated using (auth.uid() = patient_id or public.is_admin());
+  for delete to authenticated using ((select auth.uid()) = patient_id or public.is_admin());
 
 -- only the patient (or an admin) changes a link, so a revoked caregiver cannot switch it back on;
 -- the caregiver can leave by deleting it
 create policy "care_links_select" on public.care_links
-  for select to authenticated using (auth.uid() = patient_id or auth.uid() = caregiver_id or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or (select auth.uid()) = caregiver_id or public.is_admin());
 create policy "care_links_update" on public.care_links
   for update to authenticated
-  using (auth.uid() = patient_id or public.is_admin())
-  with check (auth.uid() = patient_id or public.is_admin());
+  using ((select auth.uid()) = patient_id or public.is_admin())
+  with check ((select auth.uid()) = patient_id or public.is_admin());
 create policy "care_links_delete" on public.care_links
-  for delete to authenticated using (auth.uid() = patient_id or auth.uid() = caregiver_id or public.is_admin());
+  for delete to authenticated using ((select auth.uid()) = patient_id or (select auth.uid()) = caregiver_id or public.is_admin());
 
 -- missed_dose_alerts, care_invite_attempts: server only (RLS on, no policy)
 
@@ -697,63 +698,63 @@ create policy "care_links_delete" on public.care_links
 -- ============================================================================
 
 create policy "share_links_select" on public.share_links
-  for select to authenticated using (auth.uid() = patient_id or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_admin());
 create policy "share_links_insert" on public.share_links
-  for insert to authenticated with check (auth.uid() = patient_id);
+  for insert to authenticated with check ((select auth.uid()) = patient_id);
 create policy "share_links_update" on public.share_links
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 create policy "share_links_delete" on public.share_links
-  for delete to authenticated using (auth.uid() = patient_id);
+  for delete to authenticated using ((select auth.uid()) = patient_id);
 
 create policy "interaction_checks_select" on public.interaction_checks
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_doctor_of(patient_id)
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 
 create policy "consents_select" on public.consents
-  for select to authenticated using (auth.uid() = user_id or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = user_id or public.is_admin());
 create policy "consents_insert" on public.consents
-  for insert to authenticated with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 
 create policy "ai_runs_select" on public.ai_runs
   for select to authenticated using (
-    auth.uid() = user_id
+    (select auth.uid()) = user_id
     or public.is_doctor_of(user_id)
     or public.is_admin()
   );
 -- "Report a mistake": the user may only flip their own run to reported
 create policy "ai_runs_report_own" on public.ai_runs
   for update to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id and status = 'reported');
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id and status = 'reported');
 
 -- ============================================================================
 -- 11. ASSISTANT CHAT
 -- ============================================================================
 
 create policy "chat_sessions_select" on public.chat_sessions
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 create policy "chat_sessions_insert" on public.chat_sessions
-  for insert to authenticated with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 create policy "chat_sessions_update" on public.chat_sessions
-  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "chat_sessions_delete" on public.chat_sessions
-  for delete to authenticated using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 create policy "chat_messages_select" on public.chat_messages
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 create policy "chat_messages_insert" on public.chat_messages
   for insert to authenticated with check (
-    auth.uid() = user_id
-    and exists (select 1 from public.chat_sessions s where s.id = session_id and s.user_id = auth.uid())
+    (select auth.uid()) = user_id
+    and exists (select 1 from public.chat_sessions s where s.id = session_id and s.user_id = (select auth.uid()))
   );
 create policy "chat_messages_update" on public.chat_messages
-  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "chat_messages_delete" on public.chat_messages
-  for delete to authenticated using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- ============================================================================
 -- 12. EMERGENCY, WEB DATA, PUSH
@@ -761,30 +762,30 @@ create policy "chat_messages_delete" on public.chat_messages
 
 create policy "emergency_requests_select" on public.emergency_requests
   for select to authenticated using (
-    auth.uid() = patient_id
+    (select auth.uid()) = patient_id
     or public.is_caregiver_of(patient_id)
     or public.is_admin()
   );
 create policy "emergency_requests_cancel" on public.emergency_requests
   for update to authenticated
-  using (auth.uid() = patient_id)
-  with check (auth.uid() = patient_id and status = 'cancelled');
+  using ((select auth.uid()) = patient_id)
+  with check ((select auth.uid()) = patient_id and status = 'cancelled');
 
 create policy "price_quotes_select" on public.price_quotes
   for select to authenticated using (true);
 
 create policy "drug_alerts_select" on public.drug_alerts
-  for select to authenticated using (auth.uid() = patient_id or public.is_admin());
+  for select to authenticated using ((select auth.uid()) = patient_id or public.is_admin());
 create policy "drug_alerts_update" on public.drug_alerts
-  for update to authenticated using (auth.uid() = patient_id) with check (auth.uid() = patient_id);
+  for update to authenticated using ((select auth.uid()) = patient_id) with check ((select auth.uid()) = patient_id);
 
 create policy "push_tokens_select" on public.push_tokens
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 create policy "push_tokens_insert" on public.push_tokens
-  for insert to authenticated with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 create policy "push_tokens_update" on public.push_tokens
-  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "push_tokens_delete" on public.push_tokens
-  for delete to authenticated using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- web_cache, tinyfish_monitors: server only (RLS on, no policy)

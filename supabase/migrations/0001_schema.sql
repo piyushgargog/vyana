@@ -190,6 +190,8 @@ create table public.prescription_items (
 );
 create index idx_prescription_items_prescription_id on public.prescription_items(prescription_id);
 create index idx_prescription_items_patient_id on public.prescription_items(patient_id);
+-- the quality-alert webhook matches active medicines by name
+create index idx_prescription_items_active_medicine on public.prescription_items(active, medicine_name);
 
 create table public.dose_logs (
   id uuid primary key default gen_random_uuid(),
@@ -448,6 +450,8 @@ create table public.web_cache (
   fetched_at timestamptz not null default now(),
   expires_at timestamptz not null
 );
+-- for the cache cleanup job
+create index idx_web_cache_expires_at on public.web_cache(expires_at);
 
 create table public.tinyfish_monitors (
   id uuid primary key default gen_random_uuid(),
@@ -455,3 +459,18 @@ create table public.tinyfish_monitors (
   query text not null,
   created_at timestamptz not null default now()
 );
+
+-- ============================================================================
+-- 11. INDEXES FOR FOREIGN KEYS (the Supabase advisor flags a foreign key without one)
+-- ============================================================================
+
+create index idx_doctors_hospital_id on public.doctors(hospital_id);
+create index idx_appointments_hospital_id on public.appointments(hospital_id);
+create index idx_prescriptions_doctor_id on public.prescriptions(doctor_id);
+create index idx_prescriptions_appointment_id on public.prescriptions(appointment_id);
+create index idx_conditions_prescription_id on public.conditions(prescription_id);
+create index idx_conditions_diagnosed_by on public.conditions(diagnosed_by);
+create index idx_care_plans_condition_id on public.care_plans(condition_id);
+create index idx_care_plans_reviewed_by on public.care_plans(reviewed_by);
+create index idx_care_invites_used_by on public.care_invites(used_by);
+create index idx_chat_messages_user_id on public.chat_messages(user_id);
