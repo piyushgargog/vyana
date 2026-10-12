@@ -1,9 +1,10 @@
 // packages/shared/src/db/queries/prescriptions.ts
 // Owner: Vaibhav Parmar
 
+import { DEFAULT_TIMES, type FrequencyType } from "../../constants";
 import type { TablesInsert } from "../database.types";
 import type { DbPrescription, DbPrescriptionItem } from "../types";
-import { requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
+import { DbError, requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
 
 export type PrescriptionWithItems = DbPrescription & { prescription_items: DbPrescriptionItem[] };
 
@@ -28,6 +29,28 @@ export type CreateDoctorPrescriptionResult = {
   condition_id: string | null;
 };
 
+const TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Checks the medicines of an e-prescription before anything is written, and fills in the reminder
+ * times of the frequency (`DEFAULT_TIMES`) when the doctor gave none. A prescription saved without
+ * its medicines cannot be undone by a doctor, so a bad item must stop the whole call first.
+ */
+export function prepareDoctorItems(items: DoctorPrescriptionItem[]): DoctorPrescriptionItem[] {
+  if (items.length === 0) throw new DbError("A prescription needs at least one medicine", "invalid_prescription");
+  return items.map((item, i) => {
+    const label = `Medicine ${i + 1}`;
+    const fail = (why: string) => new DbError(`${label}: ${why}`, "invalid_prescription");
+    if (!item.medicine_name || item.medicine_name.trim() === "") throw fail("the name is missing");
+    if (!(item.frequency in DEFAULT_TIMES)) throw fail(`unknown frequency "${item.frequency}"`);
+    const times = item.times && item.times.length > 0 ? item.times : DEFAULT_TIMES[item.frequency as FrequencyType];
+    for (const t of times) if (!TIME_FORMAT.test(t)) throw fail(`"${t}" is not a time like 09:00`);
+    if (item.quantity_total != null && item.quantity_total <= 0) throw fail("the quantity must be more than 0");
+    if (item.refill_alert_days != null && item.refill_alert_days < 0) throw fail("refill_alert_days cannot be negative");
+    return { ...item, medicine_name: item.medicine_name.trim(), times };
+  });
+}
+
 /** The signed-in patient's prescriptions with their medicines, newest first. A doctor passes `patientId`. */
 export async function listPrescriptions(sb: Sb, patientId?: string): Promise<PrescriptionWithItems[]> {
   const query = sb.from("prescriptions").select("*, prescription_items(*)").order("issued_on", { ascending: false }).order("created_at", { ascending: false });
@@ -45,7 +68,7 @@ export async function getPrescription(sb: Sb, id: string): Promise<PrescriptionW
  * patient of their department.
  */
 export async function createDoctorPrescription(sb: Sb, input: CreateDoctorPrescriptionInput): Promise<CreateDoctorPrescriptionResult> {
-  if (input.items.length === 0) throw new Error("A prescription needs at least one medicine");
+  const items = prepareDoctorItems(input.items);
   const doctorId = await requireUserId(sb);
 
   const prescription = unwrap(
@@ -63,15 +86,15 @@ export async function createDoctorPrescription(sb: Sb, input: CreateDoctorPrescr
       .single()
   );
 
-  const items = unwrap(
+  const saved = unwrap(
     await sb
       .from("prescription_items")
-      .insert(input.items.map((item) => ({ ...item, prescription_id: prescription.id, patient_id: input.patient_id })))
+      .insert(items.map((item) => ({ ...item, prescription_id: prescription.id, patient_id: input.patient_id })))
       .select()
   );
 
   const condition = unwrapOrNull(await sb.from("conditions").select("id").eq("prescription_id", prescription.id).limit(1).maybeSingle());
-  return { prescription, items, condition_id: condition?.id ?? null };
+  return { prescription, items: saved, condition_id: condition?.id ?? null };
 }
 
 /** Switches a medicine on or off (the patient may do this even on a doctor's prescription). */
