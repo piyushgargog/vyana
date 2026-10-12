@@ -46,7 +46,9 @@ The tests sign in as real roles (`authenticated`, `anon`) with a JWT subject and
 - appointments exist only through `book_appointment` (tokens 1, 2, ...)
 - a caregiver reads but never writes, and a revoked caregiver cannot switch back on
 - invite codes are rate limited (5 wrong tries per 15 minutes)
-- a patient never sees an unreviewed AI care plan
+- a patient never sees an unreviewed AI care plan; a doctor edits and approves it and the patient sees it
+- the e-Rx flow: a doctor prescribes only for patients of their own department and only in their own name
+- admin access, share link revoke, and a caregiver who leaves by deleting the link
 - storage: a user reaches only their own folder, and both buckets are private
 - every foreign key has an index, and every `security definer` function sets its `search_path`
 
