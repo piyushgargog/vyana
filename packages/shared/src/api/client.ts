@@ -6,22 +6,35 @@ import {
   AlertsCheckReq,
   AlertsCheckRes,
   ApiErrorBody,
+  BasketCompareReq,
+  BasketCompareRes,
   DoctorVerifyReq,
   DoctorVerifyRes,
   EmergencyNearbyReq,
   EmergencyNearbyRes,
   EmergencySosReq,
   EmergencySosRes,
+  GenerateCarePlanReq,
+  GenerateCarePlanRes,
+  HospitalInfoReq,
+  HospitalInfoRes,
+  InteractionsReq,
+  InteractionsRes,
   LabsCompareReq,
   LabsCompareRes,
   MedicinesCompareReq,
   MedicinesCompareRes,
-  NutritionPlanReq,
-  NutritionPlanRes,
+  MeExportRes,
+  OkRes,
+  PmjayHospitalsReq,
+  PmjayHospitalsRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
   ReportAnalyzeRes,
+  ShareRes,
+  TriageReq,
+  TriageRes,
 } from "../contracts";
 import * as mocks from "../mocks";
 
@@ -49,13 +62,21 @@ export type ApiClientOptions = {
 
 export type ApiClient = {
   medicines: { compare(body: MedicinesCompareReq): Promise<MedicinesCompareRes> };
+  basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes> };
   labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
+  hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
+  schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
   reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes> };
-  nutrition: { plan(body: NutritionPlanReq): Promise<NutritionPlanRes> };
+  carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
+  interactions: { check(body: InteractionsReq): Promise<InteractionsRes> };
+  triage: { assess(body: TriageReq): Promise<TriageRes> };
   alerts: { check(): Promise<AlertsCheckRes> };
+  /** Public, token-based read of a shared medical ID / timeline. Sends no auth header. */
+  share: { get(token: string): Promise<ShareRes> };
+  me: { exportData(): Promise<MeExportRes>; deleteAccount(): Promise<OkRes> };
   /** `${baseUrl}/api/assistant/chat`, for the AI SDK chat transport. */
   chatUrl: string;
   /** Authorization header for the chat transport (empty when signed out). */
@@ -73,6 +94,15 @@ const STATUS_CODES: Record<number, string> = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+type RequestSpec<Res> = {
+  method: "GET" | "POST" | "DELETE";
+  path: string;
+  resSchema: ZodType<Res>;
+  mock: Res;
+  body?: { schema: ZodType<unknown>; value: unknown };
+  auth?: boolean;
+};
+
 export function createApiClient(opts: ApiClientOptions): ApiClient {
   let baseUrl = opts.baseUrl;
   while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
@@ -84,10 +114,14 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async function post<Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, body: Req, mock: Res): Promise<Res> {
-    const req = reqSchema.safeParse(body);
-    if (!req.success) {
-      throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
+  async function request<Res>({ method, path, resSchema, mock, body, auth = true }: RequestSpec<Res>): Promise<Res> {
+    let payload: unknown;
+    if (body) {
+      const req = body.schema.safeParse(body.value);
+      if (!req.success) {
+        throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
+      }
+      payload = req.data;
     }
 
     if (opts.useMocks) {
@@ -96,13 +130,12 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       return resSchema.parse(JSON.parse(JSON.stringify(mock)));
     }
 
+    const headers: Record<string, string> = { Accept: "application/json", ...(auth ? await authHeaders() : {}) };
+    if (body) headers["Content-Type"] = "application/json";
+
     let res: Response;
     try {
-      res = await doFetch(`${baseUrl}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) },
-        body: JSON.stringify(req.data),
-      });
+      res = await doFetch(`${baseUrl}${path}`, { method, headers, body: body ? JSON.stringify(payload) : undefined });
     } catch {
       throw new ApiError("NETWORK_ERROR", "Could not reach the server. Check your internet connection.", 0);
     }
@@ -120,18 +153,36 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return parsed.data;
   }
 
+  const post = <Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, value: Req, mock: Res) =>
+    request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
+
   return {
     medicines: { compare: (body) => post("/api/medicines/compare", MedicinesCompareReq, MedicinesCompareRes, body, mocks.medicinesCompareMock) },
+    basket: { compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketCompareMock) },
     labs: { compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsCompareMock) },
     emergency: {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
       sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
     },
+    hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, mocks.hospitalInfoMock) },
+    schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
     reports: { analyze: (body) => post("/api/reports/analyze", ReportAnalyzeReq, ReportAnalyzeRes, body, mocks.reportsAnalyzeMock) },
-    nutrition: { plan: (body) => post("/api/nutrition/plan", NutritionPlanReq, NutritionPlanRes, body, mocks.nutritionPlanMock) },
+    carePlans: { generate: (body) => post("/api/care-plan", GenerateCarePlanReq, GenerateCarePlanRes, body, mocks.carePlanMock) },
+    interactions: { check: (body) => post("/api/medicines/interactions", InteractionsReq, InteractionsRes, body, mocks.interactionsMock) },
+    triage: { assess: (body) => post("/api/triage", TriageReq, TriageRes, body, mocks.triageMock) },
     alerts: { check: () => post("/api/alerts/check", AlertsCheckReq, AlertsCheckRes, {}, mocks.alertsCheckMock) },
+    share: {
+      get: (token) => {
+        if (!token.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "token: missing", 400));
+        return request({ method: "GET", path: `/api/share/${encodeURIComponent(token)}`, resSchema: ShareRes, mock: mocks.shareMock, auth: false });
+      },
+    },
+    me: {
+      exportData: () => request({ method: "GET", path: "/api/me/export", resSchema: MeExportRes, mock: { profiles: [] } }),
+      deleteAccount: () => request({ method: "DELETE", path: "/api/me", resSchema: OkRes, mock: { ok: true as const } }),
+    },
     chatUrl: `${baseUrl}/api/assistant/chat`,
     authHeaders,
   };

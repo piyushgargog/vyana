@@ -1,28 +1,41 @@
 "use client";
 
-// React Query mutations for every API route. Each one reads the client from useApi().
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+// React Query hooks for every API route. Each one reads the client from useApi().
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { ApiError } from "../../api/client";
 import { useApi } from "../../api/context";
 import type {
   AlertsCheckRes,
+  BasketCompareReq,
+  BasketCompareRes,
   DoctorVerifyReq,
   DoctorVerifyRes,
   EmergencyNearbyReq,
   EmergencyNearbyRes,
   EmergencySosReq,
   EmergencySosRes,
+  GenerateCarePlanReq,
+  GenerateCarePlanRes,
+  HospitalInfoReq,
+  HospitalInfoRes,
+  InteractionsReq,
+  InteractionsRes,
   LabsCompareReq,
   LabsCompareRes,
   MedicinesCompareReq,
   MedicinesCompareRes,
-  NutritionPlanReq,
-  NutritionPlanRes,
+  MeExportRes,
+  OkRes,
+  PmjayHospitalsReq,
+  PmjayHospitalsRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
   ReportAnalyzeRes,
+  ShareRes,
+  TriageReq,
+  TriageRes,
 } from "../../contracts";
 import { QUERY_ROOTS } from "./query-roots";
 
@@ -33,6 +46,14 @@ export function useCompareMedicine() {
   return useMutation<MedicinesCompareRes, ApiError, MedicinesCompareReq>({
     mutationKey: ["medicines", "compare"],
     mutationFn: (body) => api.medicines.compare(body),
+  });
+}
+
+export function useBasketCompare() {
+  const api = useApi();
+  return useMutation<BasketCompareRes, ApiError, BasketCompareReq>({
+    mutationKey: ["prescriptions", "basket"],
+    mutationFn: (body) => api.basket.compare(body),
   });
 }
 
@@ -62,6 +83,24 @@ export function useSos() {
   });
 }
 
+export function useHospitalInfo() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation<HospitalInfoRes, ApiError, HospitalInfoReq>({
+    mutationKey: ["hospitals", "info"],
+    mutationFn: (body) => api.hospitals.info(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.hospitals] }),
+  });
+}
+
+export function usePmjayHospitals() {
+  const api = useApi();
+  return useMutation<PmjayHospitalsRes, ApiError, PmjayHospitalsReq>({
+    mutationKey: ["schemes", "pmjay"],
+    mutationFn: (body) => api.schemes.pmjayHospitals(body),
+  });
+}
+
 export function useVerifyDoctor() {
   const api = useApi();
   const qc = useQueryClient();
@@ -82,6 +121,7 @@ export function useExtractPrescription() {
       Promise.all([
         qc.invalidateQueries({ queryKey: [QUERY_ROOTS.prescriptions] }),
         qc.invalidateQueries({ queryKey: [QUERY_ROOTS.activeItems] }),
+        qc.invalidateQueries({ queryKey: [QUERY_ROOTS.interactions] }),
       ]),
   });
 }
@@ -100,14 +140,32 @@ export function useAnalyzeReport() {
   });
 }
 
-// Named "Generate" so it never clashes with the DB hook useNutritionPlan (reads the latest saved plan).
-export function useGenerateNutritionPlan() {
+// Named "Generate" so it never clashes with the DB hook useCarePlan (reads a saved plan).
+export function useGenerateCarePlan() {
   const api = useApi();
   const qc = useQueryClient();
-  return useMutation<NutritionPlanRes, ApiError, NutritionPlanReq>({
-    mutationKey: ["nutrition", "plan"],
-    mutationFn: (body) => api.nutrition.plan(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.nutritionPlan] }),
+  return useMutation<GenerateCarePlanRes, ApiError, GenerateCarePlanReq>({
+    mutationKey: ["care-plans", "generate"],
+    mutationFn: (body) => api.carePlans.generate(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.carePlans] }),
+  });
+}
+
+export function useCheckInteractions() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation<InteractionsRes, ApiError, InteractionsReq>({
+    mutationKey: ["interactions", "check"],
+    mutationFn: (body) => api.interactions.check(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.interactions] }),
+  });
+}
+
+export function useTriage() {
+  const api = useApi();
+  return useMutation<TriageRes, ApiError, TriageReq>({
+    mutationKey: ["triage"],
+    mutationFn: (body) => api.triage.assess(body),
   });
 }
 
@@ -118,5 +176,35 @@ export function useCheckAlerts() {
     mutationKey: ["alerts", "check"],
     mutationFn: () => api.alerts.check(),
     onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.drugAlerts] }),
+  });
+}
+
+/** Read-only shared record for the public share page. Disabled until a token is present. */
+export function useSharedRecord(token: string | null | undefined) {
+  const api = useApi();
+  return useQuery<ShareRes, ApiError>({
+    queryKey: [QUERY_ROOTS.sharedRecord, token],
+    queryFn: () => api.share.get(token as string),
+    enabled: Boolean(token),
+    retry: false,
+  });
+}
+
+export function useExportMyData() {
+  const api = useApi();
+  return useMutation<MeExportRes, ApiError, void>({
+    mutationKey: ["me", "export"],
+    mutationFn: () => api.me.exportData(),
+  });
+}
+
+/** Deletes the account; clears every cached query on success. */
+export function useDeleteAccount() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation<OkRes, ApiError, void>({
+    mutationKey: ["me", "delete"],
+    mutationFn: () => api.me.deleteAccount(),
+    onSuccess: () => qc.clear(),
   });
 }

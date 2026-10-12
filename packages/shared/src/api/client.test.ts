@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { medicinesCompareMock } from "../mocks";
+import { basketCompareMock, medicinesCompareMock, shareMock } from "../mocks";
 import { ApiError, createApiClient, type ApiClientOptions } from "./client";
 
 const json = (status: number, body: unknown) =>
@@ -80,5 +80,53 @@ describe("createApiClient", () => {
     const api = client(vi.fn());
     expect(api.chatUrl).toBe("https://api.example.com/api/assistant/chat");
     await expect(api.authHeaders()).resolves.toEqual({ Authorization: "Bearer tok-123" });
+  });
+
+  it("posts a basket compare request and validates the response", async () => {
+    const fetchMock = vi.fn(async () => json(200, basketCompareMock));
+    const res = await client(fetchMock).basket.compare({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4" });
+    expect(res.cheapest_source).toBe("pharmeasy");
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket");
+  });
+
+  it("rejects a basket request with both prescription_id and items before sending", async () => {
+    const fetchMock = vi.fn();
+    await expect(
+      client(fetchMock).basket.compare({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4", items: [{ medicine: "Dolo" }] }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reads a share link with GET, an encoded token and NO auth header", async () => {
+    const fetchMock = vi.fn(async () => json(200, shareMock));
+    await client(fetchMock).share.get("ab/c d");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/share/ab%2Fc%20d");
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
+  it("rejects an empty share token without calling the server", async () => {
+    const fetchMock = vi.fn();
+    await expect(client(fetchMock).share.get("  ")).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes the account with DELETE + auth and expects {ok:true}", async () => {
+    const fetchMock = vi.fn(async () => json(200, { ok: true }));
+    await expect(client(fetchMock).me.deleteAccount()).resolves.toEqual({ ok: true });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/me");
+    expect(init.method).toBe("DELETE");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+  });
+
+  it("exports data with GET + auth", async () => {
+    const fetchMock = vi.fn(async () => json(200, { profiles: [{ id: "x" }] }));
+    await expect(client(fetchMock).me.exportData()).resolves.toEqual({ profiles: [{ id: "x" }] });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.method).toBe("GET");
   });
 });
