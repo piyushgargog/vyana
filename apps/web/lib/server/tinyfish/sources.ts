@@ -11,15 +11,17 @@ export interface PharmacySource {
   name: string;
   /** Registrable domain: every product URL an agent returns must be on this host or a subdomain of it. */
   domain: string;
+  /** Where the user goes to order: we never log in or add to cart for them. */
+  homeUrl: string;
   searchUrl: (query: string) => string;
 }
 
 export const PHARMACIES: readonly PharmacySource[] = [
-  { source: "1mg", name: "Tata 1mg", domain: "1mg.com", searchUrl: (q) => `https://www.1mg.com/search/all?name=${encodeURIComponent(q)}` },
-  { source: "pharmeasy", name: "PharmEasy", domain: "pharmeasy.in", searchUrl: (q) => `https://pharmeasy.in/search/all?name=${encodeURIComponent(q)}` },
+  { source: "1mg", name: "Tata 1mg", domain: "1mg.com", homeUrl: "https://www.1mg.com/", searchUrl: (q) => `https://www.1mg.com/search/all?name=${encodeURIComponent(q)}` },
+  { source: "pharmeasy", name: "PharmEasy", domain: "pharmeasy.in", homeUrl: "https://pharmeasy.in/", searchUrl: (q) => `https://pharmeasy.in/search/all?name=${encodeURIComponent(q)}` },
   // The old /catalogsearch/result/{q}/all path returns 404 since the site moved.
-  { source: "netmeds", name: "Netmeds", domain: "netmeds.com", searchUrl: (q) => `https://www.netmeds.com/products?q=${encodeURIComponent(q)}` },
-  { source: "apollo", name: "Apollo Pharmacy", domain: "apollopharmacy.in", searchUrl: (q) => `https://www.apollopharmacy.in/search-medicines/${encodeURIComponent(q)}` },
+  { source: "netmeds", name: "Netmeds", domain: "netmeds.com", homeUrl: "https://www.netmeds.com/", searchUrl: (q) => `https://www.netmeds.com/products?q=${encodeURIComponent(q)}` },
+  { source: "apollo", name: "Apollo Pharmacy", domain: "apollopharmacy.in", homeUrl: "https://www.apollopharmacy.in/", searchUrl: (q) => `https://www.apollopharmacy.in/search-medicines/${encodeURIComponent(q)}` },
 ];
 
 export const NMC_REGISTER_URL = "https://www.nmc.org.in/information-desk/indian-medical-register/";

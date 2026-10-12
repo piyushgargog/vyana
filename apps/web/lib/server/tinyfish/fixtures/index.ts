@@ -19,6 +19,13 @@ export function mockSearch(params: SearchParams): SearchResponse {
   return { query: params.query, results, total_results: results.length, page: 0 };
 }
 
+/** Page text that mock Fetch returns for a URL (e.g. a mock product page showing its price). */
+const mockPages = new Map<string, string>();
+
+export function registerMockPage(url: string, text: string) {
+  mockPages.set(url, text);
+}
+
 export function mockFetch(params: FetchParams): FetchResponse {
   return {
     results: params.urls.map((url) => ({
@@ -27,7 +34,7 @@ export function mockFetch(params: FetchParams): FetchResponse {
       title: `[mock] ${url}`,
       description: null,
       language: "en",
-      text: `# [mock] Page\n\nFixture text for ${url}. No real content was fetched.`,
+      text: mockPages.get(url) ?? `# [mock] Page\n\nFixture text for ${url}. No real content was fetched.`,
       ...(params.highlights ? { highlights: [{ text: `[mock] passage about ${params.highlights.query}`, rank: 1 }] } : {}),
       latency_ms: 0,
       format: params.format ?? "markdown",
