@@ -10,6 +10,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
 | `migrations/0004_realtime.sql` | Live tables: `emergency_requests`, `appointments`, `drug_alerts`, `care_plans` |
 | `migrations/0005_data_layer.sql` | What the query functions need: `doctor_directory()`, `my_caregivers()`, `department_tokens()`, `create_doctor_prescription()` (one transaction), the AI mistake note, and a stricter dose log update |
 | `migrations/0006_diagnosis_condition.sql` | A doctor's diagnosis on an e-Rx creates the patient's condition (one per prescription; an edited diagnosis updates it) |
+| `migrations/0007_one_token_per_day.sql` | `book_appointment` gives a patient at most one active token per department and day (a unique index backs it) |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |

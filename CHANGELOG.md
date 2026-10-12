@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Booking: a patient can hold only one active OPD token per department and day, so nobody can use up a department's daily tokens. Cancelling a token frees the slot; the cancelled number is never given out again.
 - A doctor's e-prescription with a diagnosis now creates the patient's condition automatically (one per prescription, an edited diagnosis updates it), so the care plan draft can start from it. Doctors still cannot insert conditions themselves.
 - AI safety test suite: case files for every safety check (emergencies, redaction, prices, interactions, care plans, no diagnosis, no dose advice, citations). The checks that need no AI model run on every change.
 

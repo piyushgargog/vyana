@@ -27,8 +27,9 @@ export type QueueEntry = DbAppointment & {
 
 /**
  * Books a token through the `book_appointment` function (the only way to create an appointment).
- * It raises 'OPD is closed on that day', 'no tokens left for that day', 'date is in the past' and
- * 'doctor is not in this department' as a DbError.
+ * It raises 'OPD is closed on that day', 'no tokens left for that day', 'date is in the past',
+ * 'doctor is not in this department' and 'you already have a token for this department on that day'
+ * (one active token per patient, department and day; cancelling frees it) as a DbError.
  */
 export async function bookAppointment(sb: Sb, input: BookAppointmentInput): Promise<DbAppointment> {
   // The generated argument types are not nullable; the SQL function accepts null for both.
