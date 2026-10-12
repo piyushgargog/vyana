@@ -6,6 +6,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ### Added
 - Backend foundations: one error format for every API route, bearer-token sign-in checks with roles, a shared cache for public web results, and `apps/web/.env.example`.
+- Live web layer: a TinyFish client for Search, Fetch, browser agents (with live progress, time limits and a per-minute run limit) and Monitors, the agent start pages for each pharmacy and the medical register, offline fixtures, and `pnpm smoke:tinyfish` to check everything against the live sites.
 - AI safety checks: extracted values must quote text found in the document, links are limited to pages the server actually fetched, and emergency warning signs (English, Hindi, Hinglish) are detected by fixed rules before any model runs.
 - API contracts, mocks, client methods and hooks for prescription basket pricing, care plans, interaction checks, symptom triage, hospital OPD info, PM-JAY hospitals, share links, data export and account deletion.
 - AI safety fields in the contracts: every AI response carries model and prompt metadata, and extracted prescription items and lab values carry their source text and a `needs_review` flag.
