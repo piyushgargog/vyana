@@ -41,6 +41,19 @@ Every function throws a `DbError` with `message` and `code` (the Postgres code):
 `acceptCareInvite` returns `null` (not an error) for a wrong or expired code: show "invalid or expired code".
 After 5 wrong codes in 15 minutes it throws `too many attempts`.
 
+## What other people's data looks like to a patient
+
+A patient cannot read other people's rows, so a few things come through database functions that return only what a
+screen needs: `listVerifiedDoctors` / `getDoctor` (names and public fields of verified doctors), `listMyCaregivers`
+(name, relation and link id, never the caregiver's phone, dob or allergies) and `getTokensLeft` (a count of free
+OPD tokens, never anyone's appointment). Booking is by token, so there are no time slots to list.
+
+## Saving an e-prescription
+
+`createDoctorPrescription` calls one database function that saves the prescription and all its medicines in a single
+transaction: if a medicine is refused, nothing is saved. The medicines are checked first (`prepareDoctorItems`) and get
+the reminder times of their frequency when the doctor gave none.
+
 ## Adherence
 
 `getAdherence(days)` / `useAdherence(days)` counts a dose that was due and never logged as missed once it is overdue by
@@ -64,9 +77,9 @@ A test checks this; follow it when you add a hook.
 | File | Functions | Hooks |
 | --- | --- | --- |
 | `profile` | `getMyProfile`, `updateMyProfile`, `completeOnboarding` | `useMyProfile`, `useUpdateProfile`, `useCompleteOnboarding` |
-| `doctors` | `listVerifiedDoctors`, `getDoctor`, `upsertMyDoctorProfile`, `getMyDoctorProfile`, `listAllDoctors`, `getFreeSlots` | `useDoctors`, `useDoctor`, `useUpsertDoctorProfile`, `useMyDoctorProfile`, `useFreeSlots` |
+| `doctors` | `listVerifiedDoctors`, `getDoctor`, `upsertMyDoctorProfile`, `getMyDoctorProfile`, `listAllDoctors` | `useDoctors`, `useDoctor`, `useUpsertDoctorProfile`, `useMyDoctorProfile` |
 | `hospitals` | `listHospitals`, `getHospital`, `listDepartments` | `useHospitals`, `useHospital`, `useDepartments` |
-| `appointments` | `bookAppointment`, `listMyAppointments`, `listDoctorQueue`, `updateAppointmentStatus` | `useBookAppointment`, `useMyAppointments`, `useDoctorQueue`, `useUpdateAppointment` |
+| `appointments` | `bookAppointment`, `listMyAppointments`, `listDoctorQueue`, `updateAppointmentStatus`, `getTokensLeft` | `useBookAppointment`, `useMyAppointments`, `useDoctorQueue`, `useUpdateAppointment`, `useTokensLeft` |
 | `prescriptions` | `listPrescriptions`, `getPrescription`, `createDoctorPrescription`, `setItemActive`, `listActiveItems` | `usePrescriptions`, `usePrescription`, `useCreateDoctorPrescription`, `useSetItemActive`, `useActiveItems` |
 | `doses` | `logDose`, `listDoseLogs`, `getAdherence` | `useLogDose`, `useDoseLogs`, `useAdherence` |
 | `reports` | `listLabReports`, `getLabReport`, `listLabValueHistory` | `useLabReports`, `useLabReport`, `useLabValueHistory` |
