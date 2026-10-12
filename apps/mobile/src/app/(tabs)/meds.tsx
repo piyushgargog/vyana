@@ -145,7 +145,8 @@ export default function MobileMedsTab() {
             <Text style={styles.cardTitle}>Drug–Drug Interaction Check</Text>
             <Text style={styles.cardSub}>
               Checks active medicines ({allActiveMedNames.join(', ') || 'None'})
-              against openFDA, DailyMed & ICMR tables
+              against a reviewed list of known interactions and trusted medicine
+              sites (MedlinePlus, NIH, NHS)
             </Text>
           </View>
           <Pressable
@@ -184,6 +185,13 @@ export default function MobileMedsTab() {
                       Severity: {inter.severity.toUpperCase()}
                     </Text>
                   </View>
+                  {inter.layer && (
+                    <Text style={styles.interactionSources}>
+                      {inter.layer === 'table'
+                        ? 'From the reviewed list'
+                        : 'From a trusted source'}
+                    </Text>
+                  )}
                   <Text style={styles.interactionEffect}>{inter.effect}</Text>
                   <Text style={styles.interactionAdvice}>
                     Guidance: {inter.advice}
@@ -200,6 +208,13 @@ export default function MobileMedsTab() {
                 </View>
               ))
             )}
+            {interactionsMutation.data.not_checked &&
+              interactionsMutation.data.not_checked.length > 0 && (
+                <Text style={styles.cardSub}>
+                  Not checked:{' '}
+                  {interactionsMutation.data.not_checked.join(', ')}
+                </Text>
+              )}
           </View>
         )}
       </View>
