@@ -6,9 +6,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useReportAiMistake } from '@vyana/shared';
-import { generateQrMatrix } from './health-helpers';
+import {
+  computeItemRefill,
+  generateQrMatrix,
+  parseCarePlanJson,
+  useReportAiMistake,
+} from '@vyana/shared';
 import { useVyanaMobile } from './providers';
+
+export { computeItemRefill, generateQrMatrix, parseCarePlanJson };
 
 export function MobileQrGrid({
   data,
@@ -139,11 +145,12 @@ export function MobileTrendChart({
 }
 
 export function MobileAiSafetyBanner({
-  feature,
   contextId,
+  aiRunId,
 }: {
-  feature: string;
+  feature?: string;
   contextId?: string;
+  aiRunId?: string | null;
 }) {
   const reportMutation = useReportAiMistake();
   const { showToast } = useVyanaMobile();
@@ -151,19 +158,25 @@ export function MobileAiSafetyBanner({
   const [note, setNote] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
+  const resolvedRunId = aiRunId ?? contextId;
+
   const handleSubmit = async () => {
+    if (!resolvedRunId) return;
     try {
       await reportMutation.mutateAsync({
-        ai_run_id: contextId ?? feature,
-        note: note.trim() || 'User reported AI inaccuracy on mobile',
+        ai_run_id: resolvedRunId,
+        note: note.trim() || undefined,
       });
-    } catch {
-      // Acknowledge in demo/offline mode as well
+      setSubmitted(true);
+      setOpen(false);
+      setNote('');
+      showToast('Mistake report logged for review', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not submit mistake report',
+        'error'
+      );
     }
-    setSubmitted(true);
-    setOpen(false);
-    setNote('');
-    showToast('Mistake report logged for review', 'success');
   };
 
   return (
@@ -172,20 +185,22 @@ export function MobileAiSafetyBanner({
         <Text style={styles.aiBannerLabel}>
           AI-generated, verify with your doctor
         </Text>
-        {submitted ? (
-          <Text style={styles.aiReportedBadge}>Report recorded</Text>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Report an AI mistake"
-            onPress={() => setOpen((v) => !v)}
-          >
-            <Text style={styles.aiReportBtnText}>Report a mistake</Text>
-          </Pressable>
-        )}
+        {resolvedRunId ? (
+          submitted ? (
+            <Text style={styles.aiReportedBadge}>Report recorded</Text>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Report an AI mistake"
+              onPress={() => setOpen((v) => !v)}
+            >
+              <Text style={styles.aiReportBtnText}>Report a mistake</Text>
+            </Pressable>
+          )
+        ) : null}
       </View>
 
-      {open && (
+      {open && resolvedRunId && (
         <View style={styles.aiReportForm}>
           <Text style={styles.inputLabel}>Describe what the AI got wrong</Text>
           <TextInput
@@ -198,10 +213,13 @@ export function MobileAiSafetyBanner({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Submit AI mistake report"
+            disabled={reportMutation.isPending}
             onPress={handleSubmit}
             style={styles.aiSubmitBtn}
           >
-            <Text style={styles.aiSubmitBtnText}>Submit Report</Text>
+            <Text style={styles.aiSubmitBtnText}>
+              {reportMutation.isPending ? 'Sending…' : 'Submit Report'}
+            </Text>
           </Pressable>
         </View>
       )}

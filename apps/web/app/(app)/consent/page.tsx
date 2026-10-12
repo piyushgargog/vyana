@@ -6,33 +6,42 @@ import {
   CONSENT_VERSION,
   useAcceptConsent,
   useConsent,
+  useMyProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 
 export default function ConsentPage() {
   const router = useRouter();
-  const { consentedVersion, grantLocalConsent, onboarded } = useVyanaWeb();
-  const { data: remoteHasConsented } = useConsent(CONSENT_VERSION);
+  const { showToast } = useVyanaWeb();
+  const { data: consentRecord } = useConsent(CONSENT_VERSION);
+  const { data: profile } = useMyProfile();
   const grantConsentMutation = useAcceptConsent();
 
   const [checkedPurpose, setCheckedPurpose] = useState(true);
   const [checkedAiNotice, setCheckedAiNotice] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const alreadyConsented =
-    Boolean(remoteHasConsented) || consentedVersion === CONSENT_VERSION;
+  const alreadyConsented = Boolean(consentRecord);
 
   const handleAcceptConsent = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       await grantConsentMutation.mutateAsync(CONSENT_VERSION);
-    } catch {
-      // Fallback to local state when in demo/unauthenticated mode
-    }
-    grantLocalConsent(CONSENT_VERSION);
-    if (!onboarded) {
-      router.push("/onboarding");
-    } else {
-      router.push("/dashboard");
+      showToast(`Consent recorded (${CONSENT_VERSION}) under DPDP Act 2023`, "success");
+      if (!profile?.onboarded) {
+        router.push("/onboarding");
+      } else if (profile.role === "doctor") {
+        router.push("/doctor");
+      } else if (profile.role === "admin") {
+        router.push("/admin/doctors");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to record consent"
+      );
     }
   };
 
@@ -52,6 +61,15 @@ export default function ConsentPage() {
             Version: {CONSENT_VERSION}
           </span>
         </div>
+
+        {errorMsg && (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"
+          >
+            {errorMsg}
+          </div>
+        )}
 
         {alreadyConsented && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-medium text-emerald-900">

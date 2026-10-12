@@ -3,16 +3,22 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/browser";
-import { useVyanaWeb, type DemoRole } from "@/components/providers";
+import { getMyProfile } from "@vyana/shared";
+import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+
+const SEEDED_TEST_ACCOUNTS = [
+  { label: "Patient", email: "patient@vyana.test" },
+  { label: "Doctor", email: "doctor@vyana.test" },
+  { label: "Caregiver", email: "caregiver@vyana.test" },
+  { label: "Admin", email: "admin@vyana.test" },
+] as const;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { hasLiveSupabaseEnv, setDemoRole, showToast } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<DemoRole>("patient");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -22,23 +28,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (hasLiveSupabaseEnv && email && password) {
-        const supabase = createClient();
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
       }
-      setDemoRole(selectedRole);
-      showToast(`Signed in as ${selectedRole}`, "success");
-      if (selectedRole === "doctor") {
+
+      const profile = await getMyProfile(supabase);
+      showToast(`Signed in as ${profile.full_name || email.trim()}`, "success");
+
+      if (!profile.onboarded) {
+        router.push("/onboarding");
+      } else if (profile.role === "doctor") {
         router.push("/doctor");
-      } else if (selectedRole === "admin") {
+      } else if (profile.role === "admin") {
         router.push("/admin/doctors");
       } else {
         router.push("/dashboard");
@@ -47,18 +54,6 @@ export default function LoginPage() {
       setErrorMsg(err instanceof Error ? err.message : "Unable to sign in");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleQuickDemo = (role: DemoRole) => {
-    setDemoRole(role);
-    showToast(`Signed in with ${role} demo account`, "success");
-    if (role === "doctor") {
-      router.push("/doctor");
-    } else if (role === "admin") {
-      router.push("/admin/doctors");
-    } else {
-      router.push("/dashboard");
     }
   };
 
@@ -115,7 +110,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="asha.devi@example.com"
+                placeholder="patient@vyana.test"
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
@@ -138,26 +133,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="login-role"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                Portal Role
-              </label>
-              <select
-                id="login-role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as DemoRole)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
-              >
-                <option value="patient">Patient / Family Member</option>
-                <option value="doctor">Doctor (Hospital OPD Portal)</option>
-                <option value="caregiver">Caregiver</option>
-                <option value="admin">Admin (Doctor Registry)</option>
-              </select>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -167,25 +142,26 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="border-t border-slate-200 pt-4 space-y-2.5">
+          <div className="border-t border-slate-200 pt-4 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Instant Demo Accounts (Seeded Profiles)
+              Seeded Test Emails (enter your SEED_PASSWORD above)
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("patient")}
-                className="rounded-xl border border-teal-200 bg-teal-50/70 px-3 py-2 text-xs font-semibold text-teal-900 hover:bg-teal-100 cursor-pointer"
-              >
-                Patient: Asha Devi
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("doctor")}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 cursor-pointer"
-              >
-                Doctor: Dr. Priya Sharma
-              </button>
+              {SEEDED_TEST_ACCOUNTS.map((acct) => (
+                <button
+                  key={acct.email}
+                  type="button"
+                  onClick={() => setEmail(acct.email)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-800 hover:bg-teal-50 hover:border-teal-200 cursor-pointer"
+                >
+                  <span className="block font-bold text-slate-900">
+                    {acct.label}
+                  </span>
+                  <span className="text-[11px] text-slate-600">
+                    {acct.email}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 

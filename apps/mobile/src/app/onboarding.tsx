@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,213 +9,186 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  CONSENT_VERSION,
   useAddCondition,
   useAddContact,
+  useCompleteOnboarding,
+  useConditions,
+  useConsent,
   useDepartments,
+  useEmergencyContacts,
   useHospitals,
-  useUpdateProfile,
+  useMyDoctorProfile,
+  useMyProfile,
+  useSession,
   useUpsertDoctorProfile,
 } from '@vyana/shared';
-import { DEMO_HOSPITALS } from '@/components/health-helpers';
-import { useVyanaMobile, type MobileRole } from '@/components/providers';
+import { useVyanaMobile } from '@/components/providers';
 
 export default function MobileOnboardingScreen() {
   const router = useRouter();
-  const {
-    profile,
-    role,
-    setRole,
-    updateLocalProfile,
-    conditions,
-    addLocalCondition,
-    emergencyContacts,
-    addLocalEmergencyContact,
-    setOnboarded,
-    showToast,
-  } = useVyanaMobile();
+  const { showToast } = useVyanaMobile();
 
-  const updateProfileMutation = useUpdateProfile();
+  const { user, loading: sessionLoading } = useSession();
+  const { data: consentRecord, isLoading: consentLoading } =
+    useConsent(CONSENT_VERSION);
+  const { data: profile } = useMyProfile();
+  const { data: conditions = [] } = useConditions();
+  const { data: emergencyContacts = [] } = useEmergencyContacts();
+  const { data: doctorProfile } = useMyDoctorProfile();
+  const { data: hospitals = [] } = useHospitals();
+
+  const completeOnboardingMutation = useCompleteOnboarding();
   const addConditionMutation = useAddCondition();
   const addEmergencyContactMutation = useAddContact();
   const upsertDoctorMutation = useUpsertDoctorProfile();
-  const { data: liveHospitals } = useHospitals();
 
-  const hospitals =
-    liveHospitals && liveHospitals.length > 0 ? liveHospitals : DEMO_HOSPITALS;
-
-  const [selectedRole, setSelectedRole] = useState<MobileRole>(role);
-  const [fullName, setFullName] = useState(profile.full_name || '');
-  const [phone, setPhone] = useState(profile.phone || '');
-  const [dob, setDob] = useState(profile.dob || '1968-04-12');
-  const [bloodGroup, setBloodGroup] = useState(profile.blood_group || 'B+');
-  const [city, setCity] = useState(profile.city || 'New Delhi');
-  const [pincode, setPincode] = useState('110029');
-  const [preferredLang, setPreferredLang] = useState(
-    profile.preferred_language || 'en'
-  );
-  const [allergiesStr, setAllergiesStr] = useState(
-    (profile.allergies ?? []).join(', ')
-  );
+  const [fullNameOverride, setFullName] = useState<string | null>(null);
+  const [phoneOverride, setPhone] = useState<string | null>(null);
+  const [dobOverride, setDob] = useState<string | null>(null);
+  const [bloodGroupOverride, setBloodGroup] = useState<string | null>(null);
+  const [cityOverride, setCity] = useState<string | null>(null);
+  const [preferredLangOverride, setPreferredLang] = useState<string | null>(null);
+  const [allergiesStrOverride, setAllergiesStr] = useState<string | null>(null);
   const [newCondition, setNewCondition] = useState('');
-  const [ecName, setEcName] = useState(emergencyContacts[0]?.name || '');
-  const [ecPhone, setEcPhone] = useState(emergencyContacts[0]?.phone || '');
-  const [ecRel, setEcRel] = useState(
-    emergencyContacts[0]?.relation || 'Family'
-  );
+  const [ecName, setEcName] = useState('');
+  const [ecPhone, setEcPhone] = useState('');
+  const [ecRel, setEcRel] = useState('Family');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fullName = fullNameOverride ?? profile?.full_name ?? '';
+  const phone = phoneOverride ?? profile?.phone ?? '';
+  const dob = dobOverride ?? profile?.dob ?? '';
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? 'B+';
+  const city = cityOverride ?? profile?.city ?? '';
+  const preferredLang =
+    preferredLangOverride ?? profile?.preferred_language ?? 'en';
+  const allergiesStr =
+    allergiesStrOverride ?? (profile?.allergies ?? []).join(', ');
 
   // Doctor onboarding fields (hospital + department + reg no)
-  const [hospitalId, setHospitalId] = useState(
-    hospitals[0]?.id ?? 'hosp-aiims-delhi'
+  const [hospitalIdOverride, setHospitalId] = useState('');
+  const hospitalId = hospitalIdOverride || hospitals[0]?.id || '';
+  const { data: departments = [] } = useDepartments(hospitalId || undefined);
+  const [departmentNameOverride, setDepartmentName] = useState('');
+  const departmentName = departmentNameOverride || departments[0]?.name || '';
+  const [regNoOverride, setRegNo] = useState<string | null>(null);
+  const [stateCouncilOverride, setStateCouncil] = useState<string | null>(null);
+  const [specializationOverride, setSpecialization] = useState<string | null>(
+    null
   );
-  const { data: liveDepartments } = useDepartments(hospitalId);
-  const [departmentName, setDepartmentName] = useState(
-    'General Medicine OPD'
-  );
-  const [regNo, setRegNo] = useState('DMC-45892');
-  const [stateCouncil, setStateCouncil] = useState('Delhi Medical Council');
-  const [specialization, setSpecialization] = useState(
-    'General Medicine & Diabetology'
-  );
+
+  const regNo = regNoOverride ?? doctorProfile?.reg_no ?? '';
+  const stateCouncil =
+    stateCouncilOverride ?? doctorProfile?.state_council ?? '';
+  const specialization =
+    specializationOverride ?? doctorProfile?.specialization ?? '';
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user) {
+      router.replace('/(auth)/login');
+      return;
+    }
+    if (!consentLoading && consentRecord === null) {
+      router.replace('/consent');
+    }
+  }, [sessionLoading, user, consentLoading, consentRecord, router]);
+
+  const role = profile?.role ?? 'patient';
 
   const handleAddCondition = async () => {
     const trimmed = newCondition.trim();
     if (!trimmed) return;
+    setErrorMsg(null);
     try {
       await addConditionMutation.mutateAsync({
         name: trimmed,
       });
-    } catch {
-      // Demo fallback
+      setNewCondition('');
+      showToast(`Condition added: ${trimmed}`, 'success');
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : 'Failed to add condition'
+      );
     }
-    addLocalCondition(trimmed);
-    setNewCondition('');
-    showToast(`Condition added: ${trimmed}`, 'success');
   };
 
   const handleSaveOnboarding = async () => {
+    setErrorMsg(null);
     const parsedAllergies = allergiesStr
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
 
     try {
-      await updateProfileMutation.mutateAsync({
+      await completeOnboardingMutation.mutateAsync({
         full_name: fullName.trim(),
-        phone: phone.trim(),
-        dob,
-        blood_group: bloodGroup,
-        city: city.trim(),
+        phone: phone.trim() || null,
+        dob: dob.trim() || null,
+        blood_group: bloodGroup.trim() || null,
+        city: city.trim() || null,
         preferred_language: preferredLang,
         allergies: parsedAllergies,
       });
-    } catch {
-      // Demo fallback
-    }
 
-    if (selectedRole === 'doctor') {
-      try {
+      if (role === 'doctor') {
         const selectedHosp = hospitals.find((h) => h.id === hospitalId);
         await upsertDoctorMutation.mutateAsync({
-          specialization: specialization.trim() || departmentName,
+          specialization:
+            specialization.trim() || departmentName || 'General Medicine',
           reg_no: regNo.trim(),
           state_council: stateCouncil.trim(),
-          year_of_registration: 2010,
-          clinic_name: `${selectedHosp?.name ?? 'AIIMS'} · ${departmentName}`,
+          year_of_registration: null,
+          clinic_name: selectedHosp
+            ? `${selectedHosp.name}${departmentName ? ` · ${departmentName}` : ''}`
+            : departmentName || null,
         });
-      } catch {
-        // Demo fallback
       }
-    }
 
-    if (ecName.trim() && ecPhone.trim()) {
-      try {
+      if (
+        ecName.trim() &&
+        ecPhone.trim() &&
+        !emergencyContacts.some((c) => c.phone === ecPhone.trim())
+      ) {
         await addEmergencyContactMutation.mutateAsync({
           name: ecName.trim(),
           phone: ecPhone.trim(),
           relation: ecRel.trim() || 'Family',
         });
-      } catch {
-        // Demo fallback
       }
-      if (!emergencyContacts.some((c) => c.phone === ecPhone.trim())) {
-        addLocalEmergencyContact({
-          name: ecName.trim(),
-          phone: ecPhone.trim(),
-          relation: ecRel.trim() || 'Family',
-        });
-      }
+
+      showToast('Onboarding completed!', 'success');
+      router.replace('/(tabs)');
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : 'Could not complete onboarding'
+      );
     }
-
-    setRole(selectedRole);
-    updateLocalProfile({
-      role: selectedRole,
-      full_name: fullName.trim(),
-      phone: phone.trim(),
-      dob,
-      blood_group: bloodGroup,
-      city: city.trim(),
-      preferred_language: preferredLang,
-      allergies: parsedAllergies,
-    });
-    setOnboarded(true);
-    showToast('Onboarding completed!', 'success');
-    router.replace('/(tabs)');
   };
-
-  const deptOptions =
-    liveDepartments && liveDepartments.length > 0
-      ? liveDepartments.map((d) => d.name)
-      : [
-          'General Medicine OPD',
-          'Endocrinology & Diabetes',
-          'Cardiology OPD',
-          'Obstetrics & Gynaecology',
-        ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={styles.stepTag}>Step 2 of 2 · Health Profile</Text>
+        <Text style={styles.stepTag}>
+          Account Role: {role.toUpperCase()} · Health Profile Setup
+        </Text>
         <Text style={styles.title}>Complete Your Vyana Setup</Text>
 
-        <Text style={styles.label}>Primary Role</Text>
-        <View style={styles.row}>
-          {(['patient', 'doctor', 'caregiver'] as const).map((r) => (
-            <Pressable
-              key={r}
-              accessibilityRole="button"
-              accessibilityState={{ selected: selectedRole === r }}
-              accessibilityLabel={`Select ${r} role`}
-              onPress={() => setSelectedRole(r)}
-              style={[
-                styles.chip,
-                selectedRole === r && styles.chipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selectedRole === r && styles.chipTextActive,
-                ]}
-              >
-                {r === 'patient'
-                  ? 'Patient'
-                  : r === 'doctor'
-                  ? 'Doctor'
-                  : 'Caregiver'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {errorMsg && (
+          <View accessibilityRole="alert" style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
-        {selectedRole === 'doctor' ? (
+        {role === 'doctor' ? (
           <View style={styles.docBox}>
             <Text style={styles.docTitle}>
               Doctor Onboarding · Hospital, Department & NMC Registration
             </Text>
             <Text style={styles.label}>Hospital</Text>
             <View style={styles.tagsWrap}>
-              {hospitals.slice(0, 3).map((h) => (
+              {hospitals.map((h) => (
                 <Pressable
                   key={h.id}
                   accessibilityRole="button"
@@ -239,23 +212,23 @@ export default function MobileOnboardingScreen() {
 
             <Text style={styles.label}>Department</Text>
             <View style={styles.tagsWrap}>
-              {deptOptions.map((dept) => (
+              {departments.map((dept) => (
                 <Pressable
-                  key={dept}
+                  key={dept.id}
                   accessibilityRole="button"
-                  onPress={() => setDepartmentName(dept)}
+                  onPress={() => setDepartmentName(dept.name)}
                   style={[
                     styles.chip,
-                    departmentName === dept && styles.chipActive,
+                    departmentName === dept.name && styles.chipActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      departmentName === dept && styles.chipTextActive,
+                      departmentName === dept.name && styles.chipTextActive,
                     ]}
                   >
-                    {dept}
+                    {dept.name}
                   </Text>
                 </Pressable>
               ))}
@@ -266,7 +239,7 @@ export default function MobileOnboardingScreen() {
               accessibilityLabel="NMC Registration Number"
               value={regNo}
               onChangeText={setRegNo}
-              placeholder="DMC-45892"
+              placeholder="e.g., DMC-45892"
               style={styles.input}
             />
 
@@ -275,7 +248,7 @@ export default function MobileOnboardingScreen() {
               accessibilityLabel="State Medical Council"
               value={stateCouncil}
               onChangeText={setStateCouncil}
-              placeholder="Delhi Medical Council"
+              placeholder="e.g., Delhi Medical Council"
               style={styles.input}
             />
 
@@ -284,7 +257,7 @@ export default function MobileOnboardingScreen() {
               accessibilityLabel="Doctor Specialization"
               value={specialization}
               onChangeText={setSpecialization}
-              placeholder="General Medicine & Diabetology"
+              placeholder="e.g., General Medicine"
               style={styles.input}
             />
           </View>
@@ -314,6 +287,7 @@ export default function MobileOnboardingScreen() {
               accessibilityLabel="Date of Birth"
               value={dob}
               onChangeText={setDob}
+              placeholder="1980-01-15"
               style={styles.input}
             />
           </View>
@@ -328,27 +302,13 @@ export default function MobileOnboardingScreen() {
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Text style={styles.label}>City</Text>
-            <TextInput
-              accessibilityLabel="City"
-              value={city}
-              onChangeText={setCity}
-              style={styles.input}
-            />
-          </View>
-          <View style={styles.half}>
-            <Text style={styles.label}>PIN Code</Text>
-            <TextInput
-              accessibilityLabel="PIN Code"
-              keyboardType="numeric"
-              value={pincode}
-              onChangeText={setPincode}
-              style={styles.input}
-            />
-          </View>
-        </View>
+        <Text style={styles.label}>City</Text>
+        <TextInput
+          accessibilityLabel="City"
+          value={city}
+          onChangeText={setCity}
+          style={styles.input}
+        />
 
         <Text style={styles.label}>Preferred Language</Text>
         <View style={styles.row}>
@@ -385,7 +345,7 @@ export default function MobileOnboardingScreen() {
           accessibilityLabel="Known Allergies"
           value={allergiesStr}
           onChangeText={setAllergiesStr}
-          placeholder="Penicillin, Sulfa drugs"
+          placeholder="e.g., Penicillin, Peanuts"
           style={styles.input}
         />
 
@@ -408,6 +368,7 @@ export default function MobileOnboardingScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add condition"
+            disabled={addConditionMutation.isPending}
             onPress={handleAddCondition}
             style={styles.secondaryBtn}
           >
@@ -419,11 +380,23 @@ export default function MobileOnboardingScreen() {
           <Text style={styles.ecTitle}>
             Primary Emergency Contact (For SOS 108 & Medical ID)
           </Text>
+          {emergencyContacts.length > 0 && (
+            <View style={styles.tagsWrap}>
+              {emergencyContacts.map((ec) => (
+                <View key={ec.id} style={styles.condBadge}>
+                  <Text style={styles.condBadgeText}>
+                    {ec.name} ({ec.phone})
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
           <Text style={styles.label}>Contact Name</Text>
           <TextInput
             accessibilityLabel="Emergency Contact Name"
             value={ecName}
             onChangeText={setEcName}
+            placeholder="Family member name"
             style={styles.input}
           />
           <View style={styles.row}>
@@ -434,6 +407,7 @@ export default function MobileOnboardingScreen() {
                 keyboardType="phone-pad"
                 value={ecPhone}
                 onChangeText={setEcPhone}
+                placeholder="+91 98111 00000"
                 style={styles.input}
               />
             </View>
@@ -452,10 +426,15 @@ export default function MobileOnboardingScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Save Profile and Open Home"
+          disabled={completeOnboardingMutation.isPending}
           onPress={handleSaveOnboarding}
           style={styles.primaryBtn}
         >
-          <Text style={styles.primaryBtnText}>Save Profile & Open Home →</Text>
+          <Text style={styles.primaryBtnText}>
+            {completeOnboardingMutation.isPending
+              ? 'Saving Profile…'
+              : 'Save Profile & Open Home →'}
+          </Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -484,6 +463,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+  },
+  errorText: { color: '#991B1B', fontSize: 12, fontWeight: '600' },
   label: { fontSize: 12, fontWeight: '700', color: '#334155' },
   input: {
     borderWidth: 1,

@@ -1,6 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {
+  CONSENT_VERSION,
+  useConsent,
+  useMyProfile,
+  useSession,
+} from '@vyana/shared';
 
 function TabGlyph({ symbol, focused }: { symbol: string; focused: boolean }) {
   return (
@@ -24,6 +36,43 @@ function TabGlyph({ symbol, focused }: { symbol: string; focused: boolean }) {
 
 export default function MobileTabsLayout() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useSession();
+  const { data: consentRecord, isLoading: consentLoading } =
+    useConsent(CONSENT_VERSION);
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user) {
+      router.replace('/(auth)/login');
+      return;
+    }
+    if (consentLoading) return;
+    if (consentRecord === null) {
+      router.replace('/consent');
+      return;
+    }
+    if (profileLoading || !profile) return;
+    if (!profile.onboarded) {
+      router.replace('/onboarding');
+    }
+  }, [
+    sessionLoading,
+    user,
+    consentLoading,
+    consentRecord,
+    profileLoading,
+    profile,
+    router,
+  ]);
+
+  if (sessionLoading || !user) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color="#0D9488" />
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -111,6 +160,12 @@ export default function MobileTabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+  },
   glyphCircle: {
     width: 28,
     height: 24,

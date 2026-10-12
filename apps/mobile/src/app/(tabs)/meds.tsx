@@ -15,36 +15,26 @@ import {
   usePrescriptions,
   useSetItemActive,
 } from '@vyana/shared';
-import { getRefillStatus } from '@/components/health-helpers';
 import { useVyanaMobile } from '@/components/providers';
 import {
+  computeItemRefill,
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 
 export default function MobileMedsTab() {
   const router = useRouter();
-  const {
-    prescriptions: localPrescriptions,
-    toggleLocalPrescriptionItem,
-    setSelectedBasketMedicines,
-    showToast,
-  } = useVyanaMobile();
+  const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
-  const { data: remotePrescriptions } = usePrescriptions();
+  const { data: rxList = [], isLoading: rxLoading } = usePrescriptions();
   const toggleMutation = useSetItemActive();
   const compareSingleMutation = useCompareMedicine();
   const interactionsMutation = useCheckInteractions();
 
-  const [singleMedQuery, setSingleMedQuery] = useState('Metformin');
-  const [singleStrength, setSingleStrength] = useState('500mg');
+  const [singleMedQuery, setSingleMedQuery] = useState('');
+  const [singleStrength, setSingleStrength] = useState('');
   const [singleJobId, setSingleJobId] = useState<string | null>(null);
   const { data: singleJobData } = useBasketJob(singleJobId);
-
-  const rxList =
-    remotePrescriptions && remotePrescriptions.length > 0
-      ? remotePrescriptions
-      : localPrescriptions;
 
   const allActiveMedNames = rxList
     .flatMap((rx) => rx.prescription_items.filter((i) => i.active))
@@ -58,7 +48,8 @@ export default function MobileMedsTab() {
       .map((i) => ({
         name: i.medicine_name,
         strength: i.strength ?? undefined,
-        quantity: i.quantity_total && i.quantity_total > 0 ? i.quantity_total : 30,
+        quantity:
+          i.quantity_total && i.quantity_total > 0 ? i.quantity_total : 30,
       }));
     setSelectedBasketMedicines(basketItems);
     router.push('/basket');
@@ -79,29 +70,30 @@ export default function MobileMedsTab() {
     router.push('/basket');
   };
 
-  const handleToggleItem = async (
-    rxId: string,
-    itemId: string,
-    nextActive: boolean
-  ) => {
-    toggleLocalPrescriptionItem(rxId, itemId, nextActive);
+  const handleToggleItem = async (itemId: string, nextActive: boolean) => {
     try {
       await toggleMutation.mutateAsync({ id: itemId, active: nextActive });
-    } catch {
-      // Demo fallback updated
+      showToast(
+        nextActive ? 'Medicine marked active' : 'Medicine paused',
+        'info'
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not update medicine',
+        'error'
+      );
     }
-    showToast(
-      nextActive ? 'Medicine marked active' : 'Medicine paused',
-      'info'
-    );
   };
 
   const handleCheckInteractions = async () => {
     try {
       await interactionsMutation.mutateAsync({});
       showToast('Checked drug-drug interactions', 'info');
-    } catch {
-      showToast('Interaction check completed', 'info');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Interaction check failed',
+        'error'
+      );
     }
   };
 
@@ -113,8 +105,11 @@ export default function MobileMedsTab() {
         strength: singleStrength.trim() || undefined,
       });
       setSingleJobId(res.job_id);
-    } catch {
-      // Handled via mutation state
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Price lookup failed',
+        'error'
+      );
     }
   };
 
@@ -143,7 +138,7 @@ export default function MobileMedsTab() {
         </Pressable>
       </View>
 
-      {/* Drug Interaction Checker Card (A4 / T2 integrated on Meds) */}
+      {/* Drug Interaction Checker Card */}
       <View style={styles.card}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
@@ -156,6 +151,7 @@ export default function MobileMedsTab() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Check drug interactions for active medicines"
+            disabled={interactionsMutation.isPending}
             onPress={handleCheckInteractions}
             style={styles.outlineBtn}
           >
@@ -167,15 +163,14 @@ export default function MobileMedsTab() {
 
         {interactionsMutation.data && (
           <View style={styles.interactionResults}>
-            <MobileAiSafetyBanner
-              feature="interactions"
-              contextId={interactionsMutation.data.ai.generated_at}
-            />
+            <MobileAiSafetyBanner feature="interactions" />
             {interactionsMutation.data.interactions.length === 0 ? (
               <View style={styles.safeBox}>
                 <Text style={styles.safeText}>
                   No interaction found in:{' '}
-                  {interactionsMutation.data.sources_checked.join(', ')}
+                  {interactionsMutation.data.sources_checked
+                    .map((s) => s.title)
+                    .join(', ') || 'checked clinical sources'}
                 </Text>
               </View>
             ) : (
@@ -198,7 +193,9 @@ export default function MobileMedsTab() {
                   </Text>
                   <Text style={styles.interactionSources}>
                     Sources:{' '}
-                    {inter.sources.map((s) => `${s.title} (${s.url})`).join(' · ')}
+                    {inter.sources
+                      .map((s) => `${s.title} (${s.url})`)
+                      .join(' · ')}
                   </Text>
                 </View>
               ))
@@ -208,107 +205,123 @@ export default function MobileMedsTab() {
       </View>
 
       {/* Prescriptions List */}
-      {rxList.map((rx) => (
-        <View key={rx.id} style={styles.card}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rxHospital}>
-                {rx.notes || 'AIIMS New Delhi — Medicine OPD'}
-              </Text>
-              <Text style={styles.cardTitle}>
-                {rx.diagnosis || 'Chronic Management Prescription'}
-              </Text>
-              <Text style={styles.cardSub}>
-                Prescribed by {rx.doctor_name || 'Dr. Priya Sharma'} · Issued{' '}
-                {rx.issued_on}
-              </Text>
+      {rxLoading ? (
+        <View style={styles.card}>
+          <Text style={styles.cardSub}>Loading prescriptions…</Text>
+        </View>
+      ) : rxList.length === 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>No Prescriptions Yet</Text>
+          <Text style={styles.cardSub}>
+            Scan a prescription image or receive an e-prescription from your
+            doctor to see your medicines here.
+          </Text>
+        </View>
+      ) : (
+        rxList.map((rx) => (
+          <View key={rx.id} style={styles.card}>
+            <View style={styles.headerRow}>
+              <View style={{ flex: 1 }}>
+                {rx.notes && <Text style={styles.rxHospital}>{rx.notes}</Text>}
+                <Text style={styles.cardTitle}>
+                  {rx.diagnosis || 'Prescription'}
+                </Text>
+                <Text style={styles.cardSub}>
+                  {rx.doctor_name ? `Prescribed by ${rx.doctor_name} · ` : ''}
+                  {rx.issued_on ? `Issued ${rx.issued_on}` : ''}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View details of prescription ${rx.diagnosis ?? rx.id}`}
+                onPress={() => router.push(`/prescriptions/${rx.id}`)}
+                style={styles.detailChip}
+              >
+                <Text style={styles.detailChipText}>Details →</Text>
+              </Pressable>
             </View>
+
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`View details of prescription ${rx.diagnosis ?? rx.id}`}
-              onPress={() => router.push(`/prescriptions/${rx.id}`)}
-              style={styles.detailChip}
+              accessibilityLabel={`Order all medicines in prescription ${rx.diagnosis ?? rx.id}`}
+              onPress={() => handleOrderWholeRx(rx.id)}
+              style={styles.orderWholeBtn}
             >
-              <Text style={styles.detailChipText}>Details →</Text>
+              <Text style={styles.orderWholeBtnText}>
+                Order All{' '}
+                {rx.prescription_items.filter((i) => i.active).length} Medicines
+                (Compare Full Basket) →
+              </Text>
             </Pressable>
-          </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Order all medicines in prescription ${rx.diagnosis ?? rx.id}`}
-            onPress={() => handleOrderWholeRx(rx.id)}
-            style={styles.orderWholeBtn}
-          >
-            <Text style={styles.orderWholeBtnText}>
-              Order All {rx.prescription_items.filter((i) => i.active).length}{' '}
-              Medicines (Compare Full Basket) →
-            </Text>
-          </Pressable>
-
-          {rx.prescription_items.map((item) => {
-            const refill = getRefillStatus(item);
-            return (
-              <View key={item.id} style={styles.medItemRow}>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <View style={styles.medNameRow}>
-                    <Text style={styles.medName}>
-                      {item.medicine_name} {item.strength}
-                    </Text>
-                    {refill.needsRefillSoon && (
-                      <Text style={styles.refillSoonBadge}>
-                        Refill due: {refill.daysLeft}d left
+            {rx.prescription_items.map((item) => {
+              const refill = computeItemRefill(item);
+              return (
+                <View key={item.id} style={styles.medItemRow}>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <View style={styles.medNameRow}>
+                      <Text style={styles.medName}>
+                        {item.medicine_name} {item.strength}
                       </Text>
-                    )}
-                  </View>
-                  <Text style={styles.medGeneric}>
-                    Form: {item.form || 'tablet'} · {item.dose} ({item.frequency})
-                  </Text>
-                  <Text style={styles.medMeta}>
-                    Qty: {item.quantity_total ?? 30} · {refill.daysLeft} days left ·{' '}
-                    {item.active ? 'Active' : 'Paused'}
-                  </Text>
-                </View>
-
-                <View style={styles.medItemActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Reorder ${item.medicine_name}`}
-                    onPress={() =>
-                      handleReorderSingle(
-                        item.medicine_name,
-                        item.strength,
-                        item.quantity_total
-                      )
-                    }
-                    style={styles.reorderSmallBtn}
-                  >
-                    <Text style={styles.reorderSmallText}>Reorder</Text>
-                  </Pressable>
-
-                  <Pressable
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: item.active }}
-                    accessibilityLabel={`Toggle ${item.medicine_name} active status`}
-                    onPress={() =>
-                      handleToggleItem(rx.id, item.id, !item.active)
-                    }
-                    style={[
-                      styles.toggleBtn,
-                      !item.active && styles.toggleBtnPaused,
-                    ]}
-                  >
-                    <Text style={styles.toggleBtnText}>
-                      {item.active ? 'Active' : 'Paused'}
+                      {refill.needsRefillSoon && refill.daysLeft !== null && (
+                        <Text style={styles.refillSoonBadge}>
+                          Refill due: {refill.daysLeft}d left
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.medGeneric}>
+                      Form: {item.form || 'tablet'} · {item.dose} (
+                      {item.frequency})
                     </Text>
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      ))}
+                    <Text style={styles.medMeta}>
+                      Qty: {item.quantity_total ?? '—'}
+                      {refill.daysLeft !== null
+                        ? ` · ${refill.daysLeft} days left`
+                        : ''}{' '}
+                      · {item.active ? 'Active' : 'Paused'}
+                    </Text>
+                  </View>
 
-      {/* Single-Medicine Quick Price Lookup (useCompareMedicine + useBasketJob) */}
+                  <View style={styles.medItemActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Reorder ${item.medicine_name}`}
+                      onPress={() =>
+                        handleReorderSingle(
+                          item.medicine_name,
+                          item.strength,
+                          item.quantity_total
+                        )
+                      }
+                      style={styles.reorderSmallBtn}
+                    >
+                      <Text style={styles.reorderSmallText}>Reorder</Text>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="switch"
+                      accessibilityState={{ checked: item.active }}
+                      accessibilityLabel={`Toggle ${item.medicine_name} active status`}
+                      disabled={toggleMutation.isPending}
+                      onPress={() => handleToggleItem(item.id, !item.active)}
+                      style={[
+                        styles.toggleBtn,
+                        !item.active && styles.toggleBtnPaused,
+                      ]}
+                    >
+                      <Text style={styles.toggleBtnText}>
+                        {item.active ? 'Active' : 'Paused'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ))
+      )}
+
+      {/* Single-Medicine Quick Price Lookup */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Single-Medicine Quick Price Lookup</Text>
         <Text style={styles.cardSub}>
@@ -323,7 +336,7 @@ export default function MobileMedsTab() {
               accessibilityLabel="Medicine Name"
               value={singleMedQuery}
               onChangeText={setSingleMedQuery}
-              placeholder="Metformin"
+              placeholder="Enter medicine name"
               style={styles.input}
             />
           </View>
@@ -333,7 +346,7 @@ export default function MobileMedsTab() {
               accessibilityLabel="Medicine Strength"
               value={singleStrength}
               onChangeText={setSingleStrength}
-              placeholder="500mg"
+              placeholder="Optional"
               style={styles.input}
             />
           </View>
@@ -342,6 +355,7 @@ export default function MobileMedsTab() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Compare single medicine price"
+          disabled={compareSingleMutation.isPending || !singleMedQuery.trim()}
           onPress={handleSingleMedicineSearch}
           style={styles.outlineBtnFull}
         >
@@ -361,7 +375,9 @@ export default function MobileMedsTab() {
                     {b.source.toUpperCase()} ·{' '}
                     {b.status === 'pending'
                       ? 'Agent is checking…'
-                      : `₹${b.total}`}
+                      : b.total !== null
+                        ? `₹${b.total}`
+                        : 'Unavailable'}
                   </Text>
                   {b.lines[0] && !b.lines[0].price_verified && (
                     <Text style={styles.unverifiedLabel}>
@@ -369,7 +385,9 @@ export default function MobileMedsTab() {
                     </Text>
                   )}
                 </View>
-                <Text style={styles.singleTotal}>₹{b.total}</Text>
+                <Text style={styles.singleTotal}>
+                  {b.total !== null ? `₹${b.total}` : '—'}
+                </Text>
               </View>
             ))}
           </View>
@@ -536,7 +554,12 @@ const styles = StyleSheet.create({
   toggleBtnPaused: { backgroundColor: '#F1F5F9' },
   toggleBtnText: { fontSize: 10, fontWeight: '700', color: '#0F766E' },
   searchRow: { flexDirection: 'row', gap: 8 },
-  inputLabel: { fontSize: 11, fontWeight: '700', color: '#334155', marginBottom: 4 },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 4,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#CBD5E1',

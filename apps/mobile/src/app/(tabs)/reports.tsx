@@ -8,8 +8,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLabReports, useLabValueHistory } from '@vyana/shared';
-import { DEMO_HBA1C_HISTORY } from '@/components/health-helpers';
-import { useVyanaMobile } from '@/components/providers';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
@@ -18,23 +16,19 @@ import {
 
 export default function MobileReportsTab() {
   const router = useRouter();
-  const { labReports: localReports } = useVyanaMobile();
-  const { data: remoteReports } = useLabReports();
-  const { data: remoteHistory } = useLabValueHistory('HBA1C');
+  const { data: reports = [], isLoading: reportsLoading } = useLabReports();
+  const { data: hba1cHistory = [] } = useLabValueHistory('HbA1c');
 
-  const reports =
-    remoteReports && remoteReports.length > 0 ? remoteReports : localReports;
+  const chartPoints = hba1cHistory
+    .filter((item) => item.value !== null)
+    .map((item) => ({
+      date: item.measured_on ?? 'Recent',
+      value: Number(item.value ?? 0),
+      flag: (item.flag as 'low' | 'normal' | 'high' | null) ?? 'normal',
+    }));
 
-  const hba1cHistory =
-    remoteHistory && remoteHistory.length > 0
-      ? remoteHistory
-      : DEMO_HBA1C_HISTORY;
-
-  const chartPoints = hba1cHistory.map((item) => ({
-    date: item.measured_on ?? 'Recent',
-    value: Number(item.value ?? 0),
-    flag: (item.flag as 'low' | 'normal' | 'high' | null) ?? 'normal',
-  }));
+  const refLow = hba1cHistory[0]?.ref_low ?? 4.0;
+  const refHigh = hba1cHistory[0]?.ref_high ?? 5.6;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -70,7 +64,8 @@ export default function MobileReportsTab() {
             Chronological Health Timeline & Doctor Share Link
           </Text>
           <Text style={styles.timelineBannerSub}>
-            View all prescriptions, lab reports & OPD visits · Generate 24h QR link
+            View all prescriptions, lab reports & OPD visits · Generate 24h QR
+            link
           </Text>
         </View>
         <Text style={styles.timelineArrow}>Open →</Text>
@@ -81,85 +76,58 @@ export default function MobileReportsTab() {
         title="HbA1c Glycemic Control"
         unit="%"
         points={chartPoints}
-        refLow={4.0}
-        refHigh={5.6}
+        refLow={refLow}
+        refHigh={refHigh}
       />
 
       {/* Lab Reports List */}
-      {localReports.map((rep) => (
-        <View key={rep.id} style={styles.reportCard}>
-          <View style={styles.reportHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.labName}>
-                {rep.lab_name || 'Diagnostic Laboratory'} · {rep.report_date}
-              </Text>
-              <Text style={styles.reportTitle}>{rep.report_title}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Open full report ${rep.report_title}`}
-              onPress={() => router.push(`/reports/${rep.id}`)}
-              style={styles.openBtn}
-            >
-              <Text style={styles.openBtnText}>Details →</Text>
-            </Pressable>
-          </View>
-
-          <MobileAiSafetyBanner feature="report_analyze" contextId={rep.id} />
-
-          {rep.summary && (
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>Plain-Language Summary</Text>
-              <Text style={styles.summaryText}>{rep.summary}</Text>
-            </View>
-          )}
-
-          <View style={styles.valuesList}>
-            {rep.values.map((v) => {
-              const isHigh = v.flag === 'high';
-              const isLow = v.flag === 'low';
-              return (
-                <View key={v.id} style={styles.valueRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.testName}>{v.test_name}</Text>
-                    <Text style={styles.refRange}>
-                      Reference: {v.ref_low ?? '—'} – {v.ref_high ?? '—'}{' '}
-                      {v.unit}
-                    </Text>
-                  </View>
-                  <View style={styles.valRight}>
-                    <Text style={styles.valNum}>
-                      {v.value ?? v.value_text} {v.unit}
-                    </Text>
-                    <View
-                      style={[
-                        styles.flagBadge,
-                        isHigh || isLow ? styles.flagAbnormal : styles.flagNormal,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.flagText,
-                          isHigh || isLow
-                            ? styles.flagTextAbnormal
-                            : styles.flagTextNormal,
-                        ]}
-                      >
-                        {isHigh ? 'High' : isLow ? 'Low' : 'Normal'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      ))}
-
-      {reports.length === 0 && (
+      {reportsLoading ? (
         <View style={styles.reportCard}>
-          <Text style={styles.summaryText}>No lab reports uploaded yet.</Text>
+          <Text style={styles.summaryText}>Loading lab reports…</Text>
         </View>
+      ) : reports.length === 0 ? (
+        <View style={styles.reportCard}>
+          <Text style={styles.summaryText}>
+            No lab reports uploaded yet. Tap &ldquo;+ Upload Lab Report&rdquo;
+            to analyze a report.
+          </Text>
+        </View>
+      ) : (
+        reports.map((rep) => (
+          <View key={rep.id} style={styles.reportCard}>
+            <View style={styles.reportHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.labName}>
+                  {rep.lab_name || 'Diagnostic Laboratory'}
+                  {rep.report_date ? ` · ${rep.report_date}` : ''}
+                </Text>
+                <Text style={styles.reportTitle}>
+                  {rep.lab_name ? `${rep.lab_name} Report` : 'Lab Report'}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Open full report ${rep.id}`}
+                onPress={() => router.push(`/reports/${rep.id}`)}
+                style={styles.openBtn}
+              >
+                <Text style={styles.openBtnText}>Details →</Text>
+              </Pressable>
+            </View>
+
+            {rep.summary && (
+              <>
+                <MobileAiSafetyBanner feature="report_analyze" />
+                <View style={styles.summaryBox}>
+                  <Text style={styles.summaryLabel}>
+                    Plain-Language Summary
+                  </Text>
+                  <Text style={styles.summaryText}>{rep.summary}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        ))
       )}
 
       <MobileDisclaimerFooter />
@@ -216,7 +184,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   labName: { fontSize: 11, fontWeight: '700', color: '#0F766E' },
-  reportTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginTop: 2 },
+  reportTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 2,
+  },
   openBtn: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
@@ -232,27 +205,4 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 11, fontWeight: '700', color: '#475569' },
   summaryText: { fontSize: 13, color: '#1E293B', lineHeight: 19 },
-  valuesList: { gap: 8 },
-  valueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  testName: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  refRange: { fontSize: 11, color: '#64748B' },
-  valRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  valNum: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  flagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  flagAbnormal: { backgroundColor: '#FEF2F2' },
-  flagNormal: { backgroundColor: '#ECFDF5' },
-  flagText: { fontSize: 11, fontWeight: '800' },
-  flagTextAbnormal: { color: '#DC2626' },
-  flagTextNormal: { color: '#059669' },
 });

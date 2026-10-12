@@ -3,11 +3,13 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@ai-sdk/react": "^4.0.140",
     "@expo/ui": "~57.0.23",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.117.3",
     "@vyana/shared": "workspace:*",
     "aes-js": "^3.1.2",
+    "ai": "^7.0.137",
     "expo": "~57.0.28",
     "expo-constants": "~57.0.21",
     "expo-device": "~57.0.2",

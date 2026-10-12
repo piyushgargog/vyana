@@ -1,36 +1,49 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
   useAcceptConsent,
   useConsent,
+  useMyProfile,
+  useSession,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 
 export default function MobileConsentScreen() {
   const router = useRouter();
-  const { consentedVersion, grantLocalConsent, onboarded } = useVyanaMobile();
-  const { data: remoteHasConsented } = useConsent(CONSENT_VERSION);
+  const { showToast } = useVyanaMobile();
+  const { user, loading: sessionLoading } = useSession();
+  const { data: consentRecord } = useConsent(CONSENT_VERSION);
+  const { data: profile } = useMyProfile();
   const grantMutation = useAcceptConsent();
 
   const [agreedData, setAgreedData] = useState(true);
   const [agreedDisclaimer, setAgreedDisclaimer] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isConsented =
-    Boolean(remoteHasConsented) || consentedVersion === CONSENT_VERSION;
+  useEffect(() => {
+    if (!sessionLoading && !user) {
+      router.replace('/(auth)/login');
+    }
+  }, [sessionLoading, user, router]);
+
+  const isConsented = Boolean(consentRecord);
 
   const handleAccept = async () => {
+    setErrorMsg(null);
     try {
       await grantMutation.mutateAsync(CONSENT_VERSION);
-    } catch {
-      // Fallback to local state in demo/offline mode
-    }
-    grantLocalConsent(CONSENT_VERSION);
-    if (!onboarded) {
-      router.replace('/onboarding');
-    } else {
-      router.replace('/(tabs)');
+      showToast(`DPDP Consent (${CONSENT_VERSION}) recorded`, 'success');
+      if (!profile?.onboarded) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : 'Failed to record consent'
+      );
     }
   };
 
@@ -43,6 +56,12 @@ export default function MobileConsentScreen() {
         </View>
 
         <Text style={styles.title}>Health Data & Privacy Consent</Text>
+
+        {errorMsg && (
+          <View accessibilityRole="alert" style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
         {isConsented && (
           <View style={styles.activeBanner}>
@@ -168,6 +187,14 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   title: { fontSize: 22, fontWeight: '700', color: '#0F172A' },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+  },
+  errorText: { color: '#991B1B', fontSize: 12, fontWeight: '600' },
   activeBanner: {
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',

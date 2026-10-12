@@ -8,112 +8,132 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  DEFAULT_TIMES,
+  useActiveItems,
   useAdherence,
+  useConditions,
   useDoseLogs,
   useDrugAlerts,
   useLogDose,
   useMyAppointments,
+  useMyProfile,
+  type FrequencyType,
 } from '@vyana/shared';
-import { getRefillStatus } from '@/components/health-helpers';
 import { useVyanaMobile } from '@/components/providers';
-import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import {
+  computeItemRefill,
+  MobileDisclaimerFooter,
+} from '@/components/ui-primitives';
 
 export default function PatientHomeScreen() {
   const router = useRouter();
-  const {
-    profile,
-    role,
-    setRole,
-    prescriptions,
-    appointments: localAppointments,
-    drugAlerts: localAlerts,
-    doseStatusMap,
-    markLocalDose,
-    setSelectedBasketMedicines,
-    showToast,
-  } = useVyanaMobile();
+  const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
-  const todayIsoDate = new Date().toISOString().slice(0, 10);
-  const { data: remoteTodayDoses } = useDoseLogs(
-    `${todayIsoDate}T00:00:00Z`,
-    `${todayIsoDate}T23:59:59Z`
-  );
-  const { data: remoteAdherence } = useAdherence(30);
-  const { data: remoteAppointments } = useMyAppointments();
-  const { data: remoteAlerts } = useDrugAlerts();
-  const markDoseMutation = useLogDose();
+  const { data: profile } = useMyProfile();
+  const { data: activeItems = [], isLoading: itemsLoading } = useActiveItems();
+  const { data: conditions = [] } = useConditions();
 
-  const activeItems = prescriptions.flatMap((rx) =>
-    rx.prescription_items.filter((item) => item.active)
-  );
+  const now = new Date();
+  const startOfDay = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0
+  ).toISOString();
+  const endOfDay = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+    0,
+    0,
+    0
+  ).toISOString();
 
-  const scheduledSlots = activeItems.flatMap((item) =>
-    (item.times && item.times.length > 0 ? item.times : ['09:00']).map(
-      (timeStr) => {
-        const key = `${item.id}-${timeStr}`;
-        const remoteMatch = remoteTodayDoses?.find((d) => d.item_id === item.id);
-        const status =
-          doseStatusMap[key] ??
-          (remoteMatch?.status as 'pending' | 'taken' | 'skipped' | undefined) ??
-          'pending';
-        return {
-          key,
-          itemId: item.id,
-          medicineName: item.medicine_name,
-          strength: item.strength,
-          dosage: item.dose,
-          withFood: item.with_food,
-          timeStr,
-          status,
-        };
-      }
-    )
-  );
+  const { data: todayDoseLogs = [] } = useDoseLogs(startOfDay, endOfDay);
+  const { data: adherence } = useAdherence(30);
+  const { data: appointments = [] } = useMyAppointments();
+  const { data: drugAlerts = [] } = useDrugAlerts();
+  const logDoseMutation = useLogDose();
+
+  const scheduledSlots = activeItems.flatMap((item) => {
+    const times =
+      item.times && item.times.length > 0
+        ? item.times
+        : DEFAULT_TIMES[(item.frequency as FrequencyType) ?? 'OD'] ?? [];
+    return times.map((timeStr) => {
+      const [hh = '09', mm = '00'] = timeStr.split(':');
+      const scheduledDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        Number(hh),
+        Number(mm),
+        0
+      );
+      const scheduledIso = scheduledDate.toISOString();
+      const matchedLog = todayDoseLogs.find(
+        (d) =>
+          d.item_id === item.id &&
+          Math.abs(
+            new Date(d.scheduled_for).getTime() - scheduledDate.getTime()
+          ) <=
+            30 * 60 * 1000
+      );
+      const status = matchedLog?.status ?? 'pending';
+      return {
+        key: `${item.id}-${timeStr}`,
+        itemId: item.id,
+        scheduledIso,
+        medicineName: item.medicine_name,
+        strength: item.strength,
+        dosage: item.dose,
+        withFood: item.with_food,
+        timeStr,
+        status,
+      };
+    });
+  });
 
   const takenCount = scheduledSlots.filter((s) => s.status === 'taken').length;
-  const totalCount = Math.max(1, scheduledSlots.length);
-  const computedAdherence =
-    remoteAdherence && remoteAdherence.percent > 0
-      ? Math.round(remoteAdherence.percent)
-      : Math.round(((takenCount + 24) / (totalCount + 26)) * 100);
 
   const refillDueItems = activeItems
     .map((item) => ({
       item,
-      refill: getRefillStatus(item),
+      refill: computeItemRefill(item, now),
     }))
     .filter((entry) => entry.refill.needsRefillSoon);
 
-  const upcomingAppointments =
-    remoteAppointments && remoteAppointments.length > 0
-      ? remoteAppointments
-      : localAppointments.filter((a) => a.status !== 'cancelled');
+  const upcomingAppointments = appointments.filter(
+    (a) => a.status !== 'cancelled' && a.status !== 'completed'
+  );
+  const nextAppt = upcomingAppointments[0];
 
-  const unseenAlerts = (
-    remoteAlerts && remoteAlerts.length > 0 ? remoteAlerts : localAlerts
-  ).filter((a) => !a.seen);
+  const unseenAlerts = drugAlerts.filter((a) => !a.seen);
 
   const handleDoseAction = async (
-    slotKey: string,
     itemId: string,
-    timeStr: string,
+    scheduledIso: string,
     status: 'taken' | 'skipped',
     medicineLabel: string
   ) => {
-    markLocalDose(slotKey, status);
     try {
-      await markDoseMutation.mutateAsync({
+      await logDoseMutation.mutateAsync({
         item_id: itemId,
-        scheduled_for: `${todayIsoDate}T${timeStr}:00Z`,
+        scheduled_for: scheduledIso,
         status,
       });
-    } catch {
-      // Demo fallback already updated
+      showToast(
+        `${medicineLabel} marked as ${status.toUpperCase()}`,
+        status === 'taken' ? 'success' : 'warning'
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not log dose',
+        'error'
+      );
     }
-    showToast(
-      `${medicineLabel} marked as ${status.toUpperCase()}`,
-      status === 'taken' ? 'success' : 'warning'
-    );
   };
 
   const handleReorderSingle = (
@@ -130,6 +150,10 @@ export default function PatientHomeScreen() {
     ]);
     router.push('/basket');
   };
+
+  const carePlanHref = conditions[0]
+    ? `/care/${conditions[0].id}`
+    : '/onboarding';
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -152,14 +176,16 @@ export default function PatientHomeScreen() {
         </View>
       </Pressable>
 
-      {/* Welcome + Role Switch + Offline Medical ID */}
+      {/* Welcome + Medical ID + Caregiver Circle */}
       <View style={styles.welcomeCard}>
         <View style={styles.welcomeTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Namaste, {profile.full_name}</Text>
+            <Text style={styles.greeting}>
+              Namaste{profile?.full_name ? `, ${profile.full_name}` : ''}
+            </Text>
             <Text style={styles.subGreeting}>
-              Blood Group: {profile.blood_group || 'B+'} · Allergies:{' '}
-              {(profile.allergies ?? []).join(', ') || 'None'}
+              Blood Group: {profile?.blood_group || '—'} · Allergies:{' '}
+              {(profile?.allergies ?? []).join(', ') || 'None recorded'}
             </Text>
           </View>
           <Pressable
@@ -172,47 +198,22 @@ export default function PatientHomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.roleSwitchBar}>
+        <View style={styles.quickNavRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ selected: role === 'patient' }}
-            accessibilityLabel="Patient view"
-            onPress={() => setRole('patient')}
-            style={[
-              styles.roleSwitchItem,
-              role === 'patient' && styles.roleSwitchItemActive,
-            ]}
+            accessibilityLabel="Open Caregiver Circle"
+            onPress={() => router.push('/caregiver')}
+            style={styles.secondaryLinkBtn}
           >
-            <Text
-              style={[
-                styles.roleSwitchText,
-                role === 'patient' && styles.roleSwitchTextActive,
-              ]}
-            >
-              Patient View
-            </Text>
+            <Text style={styles.secondaryLinkText}>Caregiver Circle →</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ selected: role === 'caregiver' }}
-            accessibilityLabel="Caregiver Circle view"
-            onPress={() => {
-              setRole('caregiver');
-              router.push('/caregiver');
-            }}
-            style={[
-              styles.roleSwitchItem,
-              role === 'caregiver' && styles.roleSwitchItemActive,
-            ]}
+            accessibilityLabel="Open Health Timeline"
+            onPress={() => router.push('/timeline')}
+            style={styles.secondaryLinkBtn}
           >
-            <Text
-              style={[
-                styles.roleSwitchText,
-                role === 'caregiver' && styles.roleSwitchTextActive,
-              ]}
-            >
-              Caregiver Circle
-            </Text>
+            <Text style={styles.secondaryLinkText}>Health Timeline →</Text>
           </Pressable>
         </View>
       </View>
@@ -251,114 +252,116 @@ export default function PatientHomeScreen() {
           </View>
           <View style={styles.adherencePill}>
             <Text style={styles.adherenceText}>
-              {computedAdherence}% 30-day adherence
+              {adherence ? `${adherence.percent}%` : '—'} 30-day adherence
             </Text>
           </View>
         </View>
 
-        {scheduledSlots.map((slot) => {
-          const isTaken = slot.status === 'taken';
-          const isSkipped = slot.status === 'skipped';
-          return (
-            <View key={slot.key} style={styles.doseRow}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <View style={styles.doseTitleRow}>
-                  <Text style={styles.doseTime}>{slot.timeStr}</Text>
-                  <Text style={styles.doseName}>
-                    {slot.medicineName} {slot.strength}
+        {itemsLoading ? (
+          <Text style={styles.sectionSub}>Loading active medicines…</Text>
+        ) : scheduledSlots.length === 0 ? (
+          <Text style={styles.sectionSub}>
+            No scheduled doses for today. Scan a prescription to add medicines.
+          </Text>
+        ) : (
+          scheduledSlots.map((slot) => {
+            const isTaken = slot.status === 'taken';
+            const isSkipped = slot.status === 'skipped';
+            return (
+              <View key={slot.key} style={styles.doseRow}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={styles.doseTitleRow}>
+                    <Text style={styles.doseTime}>{slot.timeStr}</Text>
+                    <Text style={styles.doseName}>
+                      {slot.medicineName} {slot.strength}
+                    </Text>
+                  </View>
+                  <Text style={styles.doseMeta}>
+                    {slot.dosage ?? 'As prescribed'} ·{' '}
+                    {slot.withFood ? 'with food' : 'before/anytime'} · Status:{' '}
+                    <Text
+                      style={
+                        isTaken
+                          ? styles.statusTaken
+                          : isSkipped
+                            ? styles.statusSkipped
+                            : styles.statusPending
+                      }
+                    >
+                      {slot.status.toUpperCase()}
+                    </Text>
                   </Text>
                 </View>
-                <Text style={styles.doseMeta}>
-                  {slot.dosage} ·{' '}
-                  {slot.withFood ? 'with food' : 'before/anytime'} ·{' '}
-                  Status:{' '}
-                  <Text
-                    style={
-                      isTaken
-                        ? styles.statusTaken
-                        : isSkipped
-                          ? styles.statusSkipped
-                          : styles.statusPending
+
+                <View style={styles.doseActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Taken`}
+                    disabled={logDoseMutation.isPending}
+                    onPress={() =>
+                      handleDoseAction(
+                        slot.itemId,
+                        slot.scheduledIso,
+                        'taken',
+                        `${slot.medicineName} ${slot.strength ?? ''}`
+                      )
                     }
+                    style={[styles.takenBtn, isTaken && styles.takenBtnActive]}
                   >
-                    {slot.status.toUpperCase()}
-                  </Text>
-                </Text>
-              </View>
+                    <Text
+                      style={[
+                        styles.takenBtnText,
+                        isTaken && styles.takenBtnTextActive,
+                      ]}
+                    >
+                      {isTaken ? '✓ Taken' : 'Taken'}
+                    </Text>
+                  </Pressable>
 
-              <View style={styles.doseActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Taken`}
-                  onPress={() =>
-                    handleDoseAction(
-                      slot.key,
-                      slot.itemId,
-                      slot.timeStr,
-                      'taken',
-                      `${slot.medicineName} ${slot.strength ?? ''}`
-                    )
-                  }
-                  style={[
-                    styles.takenBtn,
-                    isTaken && styles.takenBtnActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.takenBtnText,
-                      isTaken && styles.takenBtnTextActive,
-                    ]}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Skipped`}
+                    disabled={logDoseMutation.isPending}
+                    onPress={() =>
+                      handleDoseAction(
+                        slot.itemId,
+                        slot.scheduledIso,
+                        'skipped',
+                        `${slot.medicineName} ${slot.strength ?? ''}`
+                      )
+                    }
+                    style={[styles.skipBtn, isSkipped && styles.skipBtnActive]}
                   >
-                    {isTaken ? '✓ Taken' : 'Taken'}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Skipped`}
-                  onPress={() =>
-                    handleDoseAction(
-                      slot.key,
-                      slot.itemId,
-                      slot.timeStr,
-                      'skipped',
-                      `${slot.medicineName} ${slot.strength ?? ''}`
-                    )
-                  }
-                  style={[
-                    styles.skipBtn,
-                    isSkipped && styles.skipBtnActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.skipBtnText,
-                      isSkipped && styles.skipBtnTextActive,
-                    ]}
-                  >
-                    {isSkipped ? 'Skipped' : 'Skip'}
-                  </Text>
-                </Pressable>
+                    <Text
+                      style={[
+                        styles.skipBtnText,
+                        isSkipped && styles.skipBtnTextActive,
+                      ]}
+                    >
+                      {isSkipped ? 'Skipped' : 'Skip'}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </View>
 
       {/* Refill-Due Cards */}
       {refillDueItems.length > 0 && (
         <View style={styles.refillSection}>
-          <Text style={styles.sectionTitle}>Refill Due Soon (≤ 5 Days Left)</Text>
+          <Text style={styles.sectionTitle}>Refill Due Soon</Text>
           {refillDueItems.map(({ item, refill }) => (
             <View key={item.id} style={styles.refillCard}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.refillTitle}>
-                  {item.medicine_name} {item.strength} — {refill.daysLeft} days left
+                  {item.medicine_name} {item.strength} — {refill.daysLeft} days
+                  left
                 </Text>
                 <Text style={styles.refillSub}>
-                  Refill by {refill.refillDate.toISOString().slice(0, 10)} · Qty:{' '}
-                  {item.quantity_total ?? 30}
+                  {refill.refillDate ? `Refill by ${refill.refillDate} · ` : ''}
+                  Qty: {item.quantity_total ?? '—'}
                 </Text>
               </View>
               <Pressable
@@ -393,29 +396,24 @@ export default function PatientHomeScreen() {
           </Pressable>
         </View>
 
-        {upcomingAppointments.length > 0 ? (
+        {nextAppt ? (
           <View style={styles.apptCard}>
             <View style={styles.tokenBadgeRow}>
-              <Text style={styles.tokenBadge}>
-                Token #{localAppointments[0]?.token_no ?? 14}
-              </Text>
+              <Text style={styles.tokenBadge}>Token #{nextAppt.token_no}</Text>
               <Text style={styles.apptStatusBadge}>
-                {(localAppointments[0]?.status ?? 'confirmed').toUpperCase()}
+                {nextAppt.status.toUpperCase()}
               </Text>
             </View>
             <Text style={styles.apptTitle}>
-              {localAppointments[0]?.hospital_name ??
-                'All India Institute of Medical Sciences (AIIMS)'}
+              {nextAppt.hospitals?.name ?? 'Hospital OPD'}
             </Text>
             <Text style={styles.apptDept}>
-              {localAppointments[0]?.department_name ?? 'General Medicine OPD'} ·{' '}
-              {localAppointments[0]?.doctor_name ?? 'Dr. Priya Sharma'}
+              {nextAppt.departments?.name ?? 'OPD Department'}
             </Text>
             <Text style={styles.apptInstruction}>
-              Token #{localAppointments[0]?.token_no ?? 14} — report to{' '}
-              {localAppointments[0]?.department_name ?? 'General Medicine OPD'}{' '}
-              between {localAppointments[0]?.opd_hours ?? '09:00 and 11:00'} on{' '}
-              {localAppointments[0]?.appointment_date}
+              Token #{nextAppt.token_no} — report to{' '}
+              {nextAppt.departments?.name ?? 'OPD'} on{' '}
+              {nextAppt.appointment_date}
             </Text>
           </View>
         ) : (
@@ -446,7 +444,7 @@ export default function PatientHomeScreen() {
             {
               title: 'Chronic Care Plan',
               sub: 'Doctor-Reviewed Diet & Vitals',
-              href: '/care/cond-t2d',
+              href: carePlanHref,
             },
             {
               title: 'Symptom Triage',
@@ -455,7 +453,7 @@ export default function PatientHomeScreen() {
             },
             {
               title: 'Upload Lab Report',
-              sub: 'Plain-English + HbA1c Trend',
+              sub: 'Plain-English + Lab Trends',
               href: '/reports/upload',
             },
             {
@@ -470,10 +468,10 @@ export default function PatientHomeScreen() {
             },
           ].map((action) => (
             <Pressable
-              key={action.href}
+              key={action.title}
               accessibilityRole="button"
               accessibilityLabel={`${action.title}: ${action.sub}`}
-              onPress={() => router.push(action.href)}
+              onPress={() => router.push(action.href as never)}
               style={styles.gridCard}
             >
               <Text style={styles.gridTitle}>{action.title}</Text>
@@ -545,22 +543,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   qrQuickBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  roleSwitchBar: {
+  quickNavRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    padding: 3,
-    gap: 4,
+    gap: 8,
   },
-  roleSwitchItem: {
+  secondaryLinkBtn: {
     flex: 1,
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  roleSwitchItemActive: { backgroundColor: '#FFFFFF' },
-  roleSwitchText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
-  roleSwitchTextActive: { color: '#0F766E', fontWeight: '700' },
+  secondaryLinkText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
   alertBanner: {
     backgroundColor: '#FFFBEB',
     borderColor: '#F59E0B',

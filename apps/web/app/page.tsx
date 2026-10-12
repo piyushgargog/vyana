@@ -2,23 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const { setDemoRole, showToast } = useVyanaWeb();
-
-  const launchRole = (
-    role: "patient" | "doctor" | "caregiver" | "admin",
-    target: string
-  ) => {
-    setDemoRole(role);
-    showToast(`Switched active workspace view to ${role.toUpperCase()}`, "info");
-    router.push(target);
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* Emergency Top Strip */}
@@ -128,25 +114,23 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => launchRole("patient", "/dashboard")}
-                  className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800 shadow-sm cursor-pointer"
+                <Link
+                  href="/dashboard"
+                  className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800 shadow-sm"
                 >
                   Open Patient Web Dashboard →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => launchRole("doctor", "/doctor")}
-                  className="rounded-xl border border-teal-700 bg-white px-5 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50 cursor-pointer"
+                </Link>
+                <Link
+                  href="/doctor"
+                  className="rounded-xl border border-teal-700 bg-white px-5 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50"
                 >
                   Open Doctor OPD Portal →
-                </button>
+                </Link>
                 <Link
-                  href="/share/demo-token-asha-2026"
+                  href="/login"
                   className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
                 >
-                  View Sample Shared Medical ID
+                  Sign In to Your Account
                 </Link>
               </div>
             </div>
@@ -159,46 +143,44 @@ export default function LandingPage() {
                     Explore Vyana Workflows
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Jump directly into any role or clinical workflow
+                    Sign in to access your role-specific clinical workspace
                   </p>
                 </div>
                 <span className="rounded-full bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-800">
-                  Live + Demo Ready
+                  DPDP Protected
                 </span>
               </div>
 
               <div className="space-y-2.5 text-sm">
-                <button
-                  type="button"
-                  onClick={() => launchRole("patient", "/dashboard")}
-                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between cursor-pointer"
+                <Link
+                  href="/dashboard"
+                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between"
                 >
                   <div>
                     <div className="font-semibold text-slate-900">
-                      Patient Companion (Asha Devi, 58F)
+                      Patient Companion
                     </div>
                     <div className="text-xs text-slate-500">
                       Doses, full-basket Rx price compare, OPD tokens, lab trends, care plan
                     </div>
                   </div>
                   <span className="text-teal-700 font-bold">→</span>
-                </button>
+                </Link>
 
-                <button
-                  type="button"
-                  onClick={() => launchRole("doctor", "/doctor")}
-                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between cursor-pointer"
+                <Link
+                  href="/doctor"
+                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between"
                 >
                   <div>
                     <div className="font-semibold text-slate-900">
-                      Doctor Portal (Dr. Priya Sharma — AIIMS Medicine OPD)
+                      Doctor Portal
                     </div>
                     <div className="text-xs text-slate-500">
                       Live token queue, patient chart, e-Prescription, care plan approval
                     </div>
                   </div>
                   <span className="text-teal-700 font-bold">→</span>
-                </button>
+                </Link>
 
                 <Link
                   href="/doctor/verify"

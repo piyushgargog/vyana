@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { useReportAiMistake } from "@vyana/shared";
-import { generateQrMatrix } from "./health-helpers";
+import {
+  computeItemRefill,
+  generateQrMatrix,
+  parseCarePlanJson,
+  useReportAiMistake,
+} from "@vyana/shared";
 import { useVyanaWeb } from "./providers";
+
+export { computeItemRefill, generateQrMatrix, parseCarePlanJson };
 
 export function QrCodeSvg({
   data,
@@ -210,9 +216,11 @@ export function TrendChartSvg({
 export function AiSafetyBanner({
   feature,
   contextId,
+  aiRunId,
 }: {
-  feature: string;
+  feature?: string;
   contextId?: string;
+  aiRunId?: string | null;
 }) {
   const reportMutation = useReportAiMistake();
   const { showToast } = useVyanaWeb();
@@ -220,20 +228,26 @@ export function AiSafetyBanner({
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  const resolvedRunId = aiRunId ?? contextId;
+
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!resolvedRunId) return;
     try {
       await reportMutation.mutateAsync({
-        ai_run_id: contextId ?? feature,
-        note: note.trim() || "User flagged potential AI extraction/summary inaccuracy",
+        ai_run_id: resolvedRunId,
+        note: note.trim() || undefined,
       });
-    } catch {
-      // Even in offline/demo mode, acknowledge feedback cleanly
+      setSubmitted(true);
+      setOpen(false);
+      setNote("");
+      showToast("Thank you. AI feedback logged for clinical safety review.", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Could not submit mistake report",
+        "error"
+      );
     }
-    setSubmitted(true);
-    setOpen(false);
-    setNote("");
-    showToast("Thank you. AI feedback logged for clinical safety review.", "success");
   };
 
   return (
@@ -248,28 +262,30 @@ export function AiSafetyBanner({
           </span>
           <span>AI-generated, verify with your doctor</span>
         </div>
-        {submitted ? (
-          <span className="text-teal-800 font-semibold">
-            Mistake report recorded
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="underline font-semibold text-amber-900 hover:text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded px-1"
-          >
-            Report a mistake
-          </button>
-        )}
+        {resolvedRunId ? (
+          submitted ? (
+            <span className="text-teal-800 font-semibold">
+              Mistake report recorded
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="underline font-semibold text-amber-900 hover:text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded px-1"
+            >
+              Report a mistake
+            </button>
+          )
+        ) : null}
       </div>
 
-      {open && (
+      {open && resolvedRunId && (
         <form onSubmit={handleReport} className="mt-2.5 flex flex-col sm:flex-row gap-2">
-          <label htmlFor={`ai-report-${feature}`} className="sr-only">
+          <label htmlFor={`ai-report-${feature ?? resolvedRunId}`} className="sr-only">
             Describe the AI mistake
           </label>
           <input
-            id={`ai-report-${feature}`}
+            id={`ai-report-${feature ?? resolvedRunId}`}
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}

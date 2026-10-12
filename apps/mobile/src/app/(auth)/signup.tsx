@@ -8,59 +8,50 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useVyanaMobile, type MobileRole } from '@/components/providers';
+import { useVyanaMobile } from '@/components/providers';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+
+type SignupRole = 'patient' | 'doctor';
 
 export default function MobileSignupScreen() {
   const router = useRouter();
-  const {
-    supabase,
-    hasLiveSupabaseEnv,
-    setRole,
-    updateLocalProfile,
-    setOnboarded,
-    showToast,
-  } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<MobileRole>('patient');
+  const [selectedRole, setSelectedRole] = useState<SignupRole>('patient');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSignup = async () => {
     setErrorMsg(null);
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter your email address and password.');
+      return;
+    }
     setLoading(true);
     try {
-      if (hasLiveSupabaseEnv && email.trim() && password) {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim(),
-              role: selectedRole,
-            },
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: phone.trim() || undefined,
+            role: selectedRole,
           },
-        });
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
+        },
+      });
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
       }
 
-      setRole(selectedRole);
-      updateLocalProfile({
-        full_name: fullName.trim() || 'Vyana Patient',
-        phone: phone.trim() || '+91 98111 22334',
-        role: selectedRole,
-      });
-      setOnboarded(false);
       showToast('Account created! Please review DPDP consent.', 'success');
-      router.push('/consent');
+      router.replace('/consent');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Signup failed');
     } finally {
@@ -74,7 +65,8 @@ export default function MobileSignupScreen() {
         <Text style={styles.brandBadge}>Vyana · व्यान</Text>
         <Text style={styles.title}>Create your Vyana account</Text>
         <Text style={styles.subtitle}>
-          Join as a patient or caregiver. Your data is protected under India&apos;s DPDP Act 2023.
+          Join as a patient, family caregiver, or doctor. Your data is protected
+          under India&apos;s DPDP Act 2023.
         </Text>
 
         {errorMsg && (
@@ -89,7 +81,7 @@ export default function MobileSignupScreen() {
             accessibilityLabel="Full Name"
             value={fullName}
             onChangeText={setFullName}
-            placeholder="Asha Devi"
+            placeholder="Your full name"
             style={styles.input}
           />
         </View>
@@ -102,7 +94,7 @@ export default function MobileSignupScreen() {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
-            placeholder="asha.devi@example.com"
+            placeholder="you@example.com"
             style={styles.input}
           />
         </View>
@@ -132,27 +124,32 @@ export default function MobileSignupScreen() {
         </View>
 
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Select Your Role</Text>
+          <Text style={styles.label}>Account Type</Text>
           <View style={styles.roleRow}>
-            {(['patient', 'caregiver', 'doctor'] as const).map((r) => (
+            {(
+              [
+                { id: 'patient', label: 'Patient / Caregiver' },
+                { id: 'doctor', label: 'Doctor' },
+              ] as const
+            ).map((item) => (
               <Pressable
-                key={r}
+                key={item.id}
                 accessibilityRole="button"
-                accessibilityState={{ selected: selectedRole === r }}
-                accessibilityLabel={`Select ${r} role`}
-                onPress={() => setSelectedRole(r)}
+                accessibilityState={{ selected: selectedRole === item.id }}
+                accessibilityLabel={`Select ${item.label} role`}
+                onPress={() => setSelectedRole(item.id)}
                 style={[
                   styles.roleChip,
-                  selectedRole === r && styles.roleChipActive,
+                  selectedRole === item.id && styles.roleChipActive,
                 ]}
               >
                 <Text
                   style={[
                     styles.roleChipText,
-                    selectedRole === r && styles.roleChipTextActive,
+                    selectedRole === item.id && styles.roleChipTextActive,
                   ]}
                 >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                  {item.label}
                 </Text>
               </Pressable>
             ))}

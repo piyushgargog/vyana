@@ -11,10 +11,12 @@ import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
   useAddContact,
+  useConsent,
   useDeleteAccount,
   useDeleteContact,
   useEmergencyContacts,
   useExportMyData,
+  useMyProfile,
   useRevokeShareLink,
   useShareLinks,
   useUpdateProfile,
@@ -24,40 +26,32 @@ import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 
 export default function MobileProfileTab() {
   const router = useRouter();
-  const {
-    profile,
-    updateLocalProfile,
-    emergencyContacts: localContacts,
-    addLocalEmergencyContact,
-    removeLocalEmergencyContact,
-    prescriptions,
-    labReports,
-    appointments,
-    vitals,
-    consentedVersion,
-    useMocks,
-    setUseMocks,
-    showToast,
-  } = useVyanaMobile();
+  const { supabase, useMocks, setUseMocks, showToast } = useVyanaMobile();
 
+  const { data: profile } = useMyProfile();
+  const { data: consentRecord } = useConsent(CONSENT_VERSION);
   const updateProfileMutation = useUpdateProfile();
-  const { data: remoteContacts } = useEmergencyContacts();
+  const { data: contacts = [] } = useEmergencyContacts();
   const addContactMutation = useAddContact();
   const deleteContactMutation = useDeleteContact();
-  const { data: shareLinks } = useShareLinks();
+  const { data: shareLinks = [] } = useShareLinks();
   const revokeShareMutation = useRevokeShareLink();
   const exportDataMutation = useExportMyData();
   const deleteAccountMutation = useDeleteAccount();
 
-  const [fullName, setFullName] = useState(profile.full_name || '');
-  const [phone, setPhone] = useState(profile.phone || '');
-  const [bloodGroup, setBloodGroup] = useState(profile.blood_group || 'B+');
-  const [allergiesText, setAllergiesText] = useState(
-    (profile.allergies ?? []).join(', ')
-  );
-  const [preferredLang, setPreferredLang] = useState(
-    profile.preferred_language || 'en'
-  );
+  const [fullNameOverride, setFullName] = useState<string | null>(null);
+  const [phoneOverride, setPhone] = useState<string | null>(null);
+  const [bloodGroupOverride, setBloodGroup] = useState<string | null>(null);
+  const [allergiesTextOverride, setAllergiesText] = useState<string | null>(null);
+  const [preferredLangOverride, setPreferredLang] = useState<string | null>(null);
+
+  const fullName = fullNameOverride ?? profile?.full_name ?? '';
+  const phone = phoneOverride ?? profile?.phone ?? '';
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? 'B+';
+  const allergiesText =
+    allergiesTextOverride ?? (profile?.allergies ?? []).join(', ');
+  const preferredLang =
+    preferredLangOverride ?? profile?.preferred_language ?? 'en';
 
   const [newEcName, setNewEcName] = useState('');
   const [newEcPhone, setNewEcPhone] = useState('');
@@ -68,11 +62,6 @@ export default function MobileProfileTab() {
   );
   const [confirmDeleteStep, setConfirmDeleteStep] = useState(false);
 
-  const contacts =
-    remoteContacts && remoteContacts.length > 0
-      ? remoteContacts
-      : localContacts;
-
   const handleSaveProfile = async () => {
     const parsedAllergies = allergiesText
       .split(',')
@@ -82,22 +71,18 @@ export default function MobileProfileTab() {
     try {
       await updateProfileMutation.mutateAsync({
         full_name: fullName.trim(),
-        phone: phone.trim(),
-        blood_group: bloodGroup.trim(),
+        phone: phone.trim() || null,
+        blood_group: bloodGroup.trim() || null,
         allergies: parsedAllergies,
         preferred_language: preferredLang,
       });
-    } catch {
-      // Demo fallback
+      showToast('Profile & allergies saved', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not save profile',
+        'error'
+      );
     }
-    updateLocalProfile({
-      full_name: fullName.trim(),
-      phone: phone.trim(),
-      blood_group: bloodGroup.trim(),
-      allergies: parsedAllergies,
-      preferred_language: preferredLang,
-    });
-    showToast('Profile & allergies saved', 'success');
   };
 
   const handleAddContact = async () => {
@@ -108,27 +93,27 @@ export default function MobileProfileTab() {
         phone: newEcPhone.trim(),
         relation: newEcRel.trim() || 'Family',
       });
-    } catch {
-      // Demo fallback
+      setNewEcName('');
+      setNewEcPhone('');
+      showToast('Emergency contact added', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not add contact',
+        'error'
+      );
     }
-    addLocalEmergencyContact({
-      name: newEcName.trim(),
-      phone: newEcPhone.trim(),
-      relation: newEcRel.trim() || 'Family',
-    });
-    setNewEcName('');
-    setNewEcPhone('');
-    showToast('Emergency contact added', 'success');
   };
 
   const handleDeleteContact = async (id: string) => {
-    removeLocalEmergencyContact(id);
     try {
       await deleteContactMutation.mutateAsync(id);
-    } catch {
-      // Demo fallback
+      showToast('Emergency contact removed', 'info');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not remove contact',
+        'error'
+      );
     }
-    showToast('Emergency contact removed', 'info');
   };
 
   const handleExportMyData = async () => {
@@ -136,36 +121,38 @@ export default function MobileProfileTab() {
       const remoteBundle = await exportDataMutation.mutateAsync();
       setExportedJsonPreview(JSON.stringify(remoteBundle, null, 2));
       showToast('DPDP health data bundle exported', 'success');
-    } catch {
-      const fallbackBundle = {
-        exported_at: new Date().toISOString(),
-        consent_version: consentedVersion ?? CONSENT_VERSION,
-        profile,
-        emergency_contacts: contacts,
-        prescriptions,
-        lab_reports: labReports,
-        appointments,
-        vitals,
-      };
-      setExportedJsonPreview(JSON.stringify(fallbackBundle, null, 2));
-      showToast('DPDP health data JSON bundle generated', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not export data',
+        'error'
+      );
     }
   };
 
   const handleConfirmDeleteAccount = async () => {
     try {
       await deleteAccountMutation.mutateAsync();
-    } catch {
-      // Demo fallback
+      await supabase.auth.signOut();
+      setConfirmDeleteStep(false);
+      showToast('Account & personal health records deleted', 'warning');
+      router.replace('/(auth)/login');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not delete account',
+        'error'
+      );
     }
-    setConfirmDeleteStep(false);
-    showToast('Account & personal health records deleted', 'warning');
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    showToast('Signed out', 'info');
     router.replace('/(auth)/login');
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Quick Links to Medical ID, Caregiver Circle & Consent */}
+      {/* Quick Links to Medical ID & Caregiver Circle */}
       <View style={styles.quickRow}>
         <Pressable
           accessibilityRole="button"
@@ -267,10 +254,15 @@ export default function MobileProfileTab() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Save Profile"
+          disabled={updateProfileMutation.isPending}
           onPress={handleSaveProfile}
           style={styles.primaryBtn}
         >
-          <Text style={styles.primaryBtnText}>Save Profile Changes</Text>
+          <Text style={styles.primaryBtnText}>
+            {updateProfileMutation.isPending
+              ? 'Saving…'
+              : 'Save Profile Changes'}
+          </Text>
         </Pressable>
       </View>
 
@@ -292,6 +284,7 @@ export default function MobileProfileTab() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Remove emergency contact ${c.name}`}
+              disabled={deleteContactMutation.isPending}
               onPress={() => handleDeleteContact(c.id)}
               style={styles.removeBtn}
             >
@@ -328,6 +321,7 @@ export default function MobileProfileTab() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add Emergency Contact"
+            disabled={addContactMutation.isPending}
             onPress={handleAddContact}
             style={styles.outlineBtn}
           >
@@ -337,7 +331,7 @@ export default function MobileProfileTab() {
       </View>
 
       {/* Active Share Links */}
-      {shareLinks && shareLinks.length > 0 && (
+      {shareLinks.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Active Record Share Links</Text>
           {shareLinks.map((link) => (
@@ -366,7 +360,7 @@ export default function MobileProfileTab() {
       {/* DPDP Act 2023 Data Rights: Export JSON & Two-Step Account Deletion */}
       <View style={styles.dpdpCard}>
         <Text style={styles.dpdpBadge}>
-          DPDP Act 2023 · Consent {consentedVersion ?? CONSENT_VERSION}
+          DPDP Act 2023 · Consent {consentRecord?.version ?? CONSENT_VERSION}
         </Text>
         <Text style={styles.cardTitle}>Your Data Privacy & Rights</Text>
         <Text style={styles.cardSub}>
@@ -378,6 +372,7 @@ export default function MobileProfileTab() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Download my health data as JSON"
+            disabled={exportDataMutation.isPending}
             onPress={handleExportMyData}
             style={[styles.outlineBtn, { flex: 1 }]}
           >
@@ -439,16 +434,28 @@ export default function MobileProfileTab() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Confirm permanent account deletion"
+                disabled={deleteAccountMutation.isPending}
                 onPress={handleConfirmDeleteAccount}
                 style={[styles.deleteConfirmBtn, { flex: 1 }]}
               >
                 <Text style={styles.deleteConfirmBtnText}>
-                  Confirm Permanent Delete
+                  {deleteAccountMutation.isPending
+                    ? 'Deleting…'
+                    : 'Confirm Permanent Delete'}
                 </Text>
               </Pressable>
             </View>
           </View>
         )}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sign Out"
+          onPress={handleSignOut}
+          style={styles.outlineBtn}
+        >
+          <Text style={styles.outlineBtnText}>Sign Out</Text>
+        </Pressable>
       </View>
 
       <MobileDisclaimerFooter />

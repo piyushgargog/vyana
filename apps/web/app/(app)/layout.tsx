@@ -1,10 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useVyanaWeb, type DemoRole } from "@/components/providers";
-import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+import {
+  CONSENT_VERSION,
+  useConsent,
+  useMyProfile,
+  useSession,
+} from "@vyana/shared";
+import { useVyanaWeb } from "@/components/providers";
+import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
 
 export default function AppShellLayout({
   children,
@@ -13,49 +19,77 @@ export default function AppShellLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const {
-    demoRole,
-    setDemoRole,
-    profile,
-    useMocks,
-    setUseMocks,
-    showToast,
-  } = useVyanaWeb();
+  const { supabase, useMocks, setUseMocks, showToast } = useVyanaWeb();
+  const { user, loading: sessionLoading } = useSession();
+  const { data: consentRecord, isLoading: consentLoading } =
+    useConsent(CONSENT_VERSION);
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
 
-  const handleRoleSwitch = (nextRole: DemoRole) => {
-    setDemoRole(nextRole);
-    showToast(`Switched portal view to ${nextRole.toUpperCase()}`, "info");
-    if (nextRole === "doctor") {
-      router.push("/doctor");
-    } else if (nextRole === "admin") {
-      router.push("/admin/doctors");
-    } else {
-      router.push("/dashboard");
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
     }
+    if (consentLoading) return;
+    if (!consentRecord && pathname !== "/consent") {
+      router.replace("/consent");
+      return;
+    }
+    if (profileLoading || !profile) return;
+    if (
+      consentRecord &&
+      !profile.onboarded &&
+      pathname !== "/onboarding" &&
+      pathname !== "/consent"
+    ) {
+      router.replace("/onboarding");
+    }
+  }, [
+    sessionLoading,
+    user,
+    consentLoading,
+    consentRecord,
+    profileLoading,
+    profile,
+    pathname,
+    router,
+  ]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    showToast("Signed out of Vyana", "info");
+    router.replace("/login");
   };
 
+  if (sessionLoading || !user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-12">
+          <SkeletonCard lines={4} />
+        </main>
+        <MedicalDisclaimerFooter />
+      </div>
+    );
+  }
+
+  const role = profile?.role ?? "patient";
+
   const navItems =
-    demoRole === "doctor"
+    role === "doctor"
       ? [
           { href: "/doctor", label: "OPD Queue" },
-          { href: "/doctor/patients/demo-patient-asha", label: "Patient Chart" },
-          {
-            href: "/doctor/appointments/appt-demo-1/prescribe",
-            label: "e-Prescribe",
-          },
-          { href: "/doctor/care-plans/cp-demo-t2d", label: "Care Plan Review" },
           { href: "/doctor/verify", label: "NMC Verification" },
-          { href: "/admin/doctors", label: "Registry" },
+          { href: "/onboarding", label: "Doctor Profile" },
+          { href: "/consent", label: "DPDP Consent" },
         ]
-      : demoRole === "admin"
+      : role === "admin"
         ? [
             { href: "/admin/doctors", label: "Doctors & Hospitals Registry" },
-            { href: "/doctor/verify", label: "NMC Verification Agent" },
-            { href: "/doctor", label: "Doctor Queue View" },
+            { href: "/consent", label: "DPDP Consent" },
           ]
         : [
             { href: "/dashboard", label: "Patient Dashboard" },
-            { href: "/share/demo-token-asha-2026", label: "Shared Medical ID" },
             { href: "/onboarding", label: "Health Profile" },
             { href: "/consent", label: "DPDP Consent" },
           ];
@@ -74,7 +108,7 @@ export default function AppShellLayout({
                   Vyana · व्यान
                 </span>
                 <span className="ml-2 rounded-full bg-teal-50 border border-teal-200 px-2 py-0.5 text-[11px] font-semibold text-teal-800 uppercase">
-                  {demoRole}
+                  {role}
                 </span>
               </div>
             </Link>
@@ -107,20 +141,11 @@ export default function AppShellLayout({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="header-role-switch" className="sr-only">
-              Switch active role
-            </label>
-            <select
-              id="header-role-switch"
-              value={demoRole}
-              onChange={(e) => handleRoleSwitch(e.target.value as DemoRole)}
-              className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-800"
-            >
-              <option value="patient">Role: Patient ({profile.full_name})</option>
-              <option value="doctor">Role: Doctor (Dr. Priya Sharma)</option>
-              <option value="caregiver">Role: Caregiver (Rohit Verma)</option>
-              <option value="admin">Role: Admin Registry</option>
-            </select>
+            {profile?.full_name && (
+              <span className="text-xs font-semibold text-slate-700 px-2">
+                {profile.full_name}
+              </span>
+            )}
 
             <button
               type="button"
@@ -142,6 +167,14 @@ export default function AppShellLayout({
             >
               SOS 108
             </a>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 

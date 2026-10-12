@@ -8,48 +8,59 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useVyanaMobile, type MobileRole } from '@/components/providers';
+import { getMyProfile } from '@vyana/shared';
+import { useVyanaMobile } from '@/components/providers';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+
+const SEEDED_TEST_EMAILS = [
+  { label: 'Patient', email: 'patient@vyana.test' },
+  { label: 'Caregiver', email: 'caregiver@vyana.test' },
+  { label: 'Doctor', email: 'doctor@vyana.test' },
+] as const;
 
 export default function MobileLoginScreen() {
   const router = useRouter();
-  const { supabase, hasLiveSupabaseEnv, setRole, showToast } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<MobileRole>('patient');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setErrorMsg(null);
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter your email address and password.');
+      return;
+    }
     setLoading(true);
     try {
-      if (hasLiveSupabaseEnv && email.trim() && password) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
       }
-      setRole(selectedRole);
-      showToast(`Signed in as ${selectedRole}`, 'success');
-      router.replace('/(tabs)');
+
+      const profile = await getMyProfile(supabase);
+      showToast(
+        `Signed in as ${profile.full_name || email.trim()}`,
+        'success'
+      );
+
+      if (!profile.onboarded) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Sign-in failed');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = (demoRole: MobileRole) => {
-    setRole(demoRole);
-    showToast(`Signed in with ${demoRole} demo account`, 'success');
-    router.replace('/(tabs)');
   };
 
   return (
@@ -75,7 +86,7 @@ export default function MobileLoginScreen() {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
-            placeholder="asha.devi@example.com"
+            placeholder="patient@vyana.test"
             style={styles.input}
           />
         </View>
@@ -92,34 +103,6 @@ export default function MobileLoginScreen() {
           />
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Account Role</Text>
-          <View style={styles.roleRow}>
-            {(['patient', 'caregiver'] as const).map((r) => (
-              <Pressable
-                key={r}
-                accessibilityRole="button"
-                accessibilityState={{ selected: selectedRole === r }}
-                accessibilityLabel={`Select ${r} role`}
-                onPress={() => setSelectedRole(r)}
-                style={[
-                  styles.roleChip,
-                  selectedRole === r && styles.roleChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.roleChipText,
-                    selectedRole === r && styles.roleChipTextActive,
-                  ]}
-                >
-                  {r === 'patient' ? 'Patient' : 'Caregiver'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign In"
@@ -134,24 +117,22 @@ export default function MobileLoginScreen() {
 
         <View style={styles.divider} />
 
-        <Text style={styles.sectionLabel}>Instant Demo Profiles</Text>
+        <Text style={styles.sectionLabel}>
+          Seeded Test Emails (enter SEED_PASSWORD above)
+        </Text>
         <View style={styles.demoRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign in as Demo Patient Asha Devi"
-            onPress={() => handleQuickDemo('patient')}
-            style={styles.demoBtn}
-          >
-            <Text style={styles.demoBtnText}>Patient: Asha Devi</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign in as Demo Caregiver Rohit Verma"
-            onPress={() => handleQuickDemo('caregiver')}
-            style={styles.demoBtn}
-          >
-            <Text style={styles.demoBtnText}>Caregiver: Rohit</Text>
-          </Pressable>
+          {SEEDED_TEST_EMAILS.map((acct) => (
+            <Pressable
+              key={acct.email}
+              accessibilityRole="button"
+              accessibilityLabel={`Fill email ${acct.email}`}
+              onPress={() => setEmail(acct.email)}
+              style={styles.demoBtn}
+            >
+              <Text style={styles.demoBtnText}>{acct.label}</Text>
+              <Text style={styles.demoEmailText}>{acct.email}</Text>
+            </Pressable>
+          ))}
         </View>
 
         <Pressable
@@ -214,21 +195,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     backgroundColor: '#FFFFFF',
   },
-  roleRow: { flexDirection: 'row', gap: 10 },
-  roleChip: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  roleChipActive: {
-    borderColor: '#0D9488',
-    backgroundColor: '#F0FDFA',
-  },
-  roleChipText: { fontSize: 13, fontWeight: '600', color: '#475569' },
-  roleChipTextActive: { color: '#0F766E', fontWeight: '700' },
   primaryBtn: {
     backgroundColor: '#0D9488',
     borderRadius: 14,
@@ -244,16 +210,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textTransform: 'uppercase',
   },
-  demoRow: { flexDirection: 'row', gap: 10 },
+  demoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   demoBtn: {
     flex: 1,
+    minWidth: 96,
     backgroundColor: '#F1F5F9',
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 8,
     alignItems: 'center',
   },
   demoBtnText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  demoEmailText: { fontSize: 10, color: '#64748B' },
   switchLink: { alignItems: 'center', paddingTop: 6 },
   switchLinkText: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
 });

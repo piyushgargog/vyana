@@ -5,241 +5,198 @@ import { useRouter } from "next/navigation";
 import {
   useAddCondition,
   useAddContact,
+  useCompleteOnboarding,
+  useConditions,
   useDepartments,
+  useEmergencyContacts,
   useHospitals,
-  useUpdateProfile,
+  useMyDoctorProfile,
+  useMyProfile,
   useUpsertDoctorProfile,
 } from "@vyana/shared";
-import { DEMO_HOSPITALS } from "@/components/health-helpers";
-import { useVyanaWeb, type DemoRole } from "@/components/providers";
+import { useVyanaWeb } from "@/components/providers";
+import { SkeletonCard } from "@/components/ui-primitives";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const {
-    profile,
-    demoRole,
-    setDemoRole,
-    updateLocalProfile,
-    conditions,
-    addLocalCondition,
-    emergencyContacts,
-    addLocalEmergencyContact,
-    setOnboarded,
-    showToast,
-  } = useVyanaWeb();
+  const { showToast } = useVyanaWeb();
 
-  const updateProfileMutation = useUpdateProfile();
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
+  const { data: conditions = [] } = useConditions();
+  const { data: emergencyContacts = [] } = useEmergencyContacts();
+  const { data: doctorProfile } = useMyDoctorProfile();
+  const { data: hospitals = [] } = useHospitals();
+
+  const completeOnboardingMutation = useCompleteOnboarding();
   const addConditionMutation = useAddCondition();
   const addEmergencyContactMutation = useAddContact();
   const upsertDoctorMutation = useUpsertDoctorProfile();
-  const { data: liveHospitals } = useHospitals();
 
-  const hospitals =
-    liveHospitals && liveHospitals.length > 0 ? liveHospitals : DEMO_HOSPITALS;
-
-  const [role, setRole] = useState<DemoRole>(demoRole);
-  const [fullName, setFullName] = useState(profile.full_name || "");
-  const [phone, setPhone] = useState(profile.phone || "");
-  const [dob, setDob] = useState(profile.dob || "1968-04-12");
-  const [sex, setSex] = useState(profile.gender || "female");
-  const [bloodGroup, setBloodGroup] = useState(profile.blood_group || "B+");
-  const [city, setCity] = useState(profile.city || "New Delhi");
-  const [pincode, setPincode] = useState("110029");
-  const [preferredLang, setPreferredLang] = useState(
-    profile.preferred_language || "en"
-  );
-  const [allergiesText, setAllergiesText] = useState(
-    (profile.allergies ?? []).join(", ")
-  );
+  const [fullNameOverride, setFullName] = useState<string | null>(null);
+  const [phoneOverride, setPhone] = useState<string | null>(null);
+  const [dobOverride, setDob] = useState<string | null>(null);
+  const [sexOverride, setSex] = useState<string | null>(null);
+  const [bloodGroupOverride, setBloodGroup] = useState<string | null>(null);
+  const [cityOverride, setCity] = useState<string | null>(null);
+  const [preferredLangOverride, setPreferredLang] = useState<string | null>(null);
+  const [allergiesTextOverride, setAllergiesText] = useState<string | null>(null);
   const [newCondition, setNewCondition] = useState("");
-  const [contactName, setContactName] = useState(
-    emergencyContacts[0]?.name || ""
-  );
-  const [contactPhone, setContactPhone] = useState(
-    emergencyContacts[0]?.phone || ""
-  );
-  const [contactRel, setContactRel] = useState(
-    emergencyContacts[0]?.relation || "Family"
-  );
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactRel, setContactRel] = useState("Family");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fullName = fullNameOverride ?? profile?.full_name ?? "";
+  const phone = phoneOverride ?? profile?.phone ?? "";
+  const dob = dobOverride ?? profile?.dob ?? "";
+  const sex = sexOverride ?? profile?.gender ?? "female";
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? "B+";
+  const city = cityOverride ?? profile?.city ?? "";
+  const preferredLang =
+    preferredLangOverride ?? profile?.preferred_language ?? "en";
+  const allergiesText =
+    allergiesTextOverride ?? (profile?.allergies ?? []).join(", ");
 
   // Doctor onboarding state (hospital + department + reg no)
-  const [hospitalId, setHospitalId] = useState<string>(
-    hospitals[0]?.id ?? "hosp-aiims-delhi"
+  const [hospitalIdOverride, setHospitalId] = useState<string>("");
+  const hospitalId = hospitalIdOverride || hospitals[0]?.id || "";
+  const { data: departments = [] } = useDepartments(hospitalId || undefined);
+  const [departmentNameOverride, setDepartmentName] = useState<string>("");
+  const departmentName = departmentNameOverride || departments[0]?.name || "";
+  const [regNoOverride, setRegNo] = useState<string | null>(null);
+  const [stateCouncilOverride, setStateCouncil] = useState<string | null>(null);
+  const [specializationOverride, setSpecialization] = useState<string | null>(
+    null
   );
-  const { data: liveDepartments } = useDepartments(hospitalId);
-  const [departmentName, setDepartmentName] = useState<string>(
-    "General Medicine OPD"
-  );
-  const [regNo, setRegNo] = useState<string>("DMC-45892");
-  const [stateCouncil, setStateCouncil] = useState<string>(
-    "Delhi Medical Council"
-  );
-  const [specialization, setSpecialization] = useState<string>(
-    "General Medicine & Diabetology"
-  );
-  const [yearOfReg, setYearOfReg] = useState<string>("2010");
+  const [yearOfRegOverride, setYearOfReg] = useState<string | null>(null);
+
+  const regNo = regNoOverride ?? doctorProfile?.reg_no ?? "";
+  const stateCouncil =
+    stateCouncilOverride ?? doctorProfile?.state_council ?? "";
+  const specialization =
+    specializationOverride ?? doctorProfile?.specialization ?? "";
+  const yearOfReg =
+    yearOfRegOverride ??
+    (doctorProfile?.year_of_registration
+      ? String(doctorProfile.year_of_registration)
+      : "");
+
+  const role = profile?.role ?? "patient";
 
   const handleAddConditionClick = async () => {
     const trimmed = newCondition.trim();
     if (!trimmed) return;
+    setErrorMsg(null);
     try {
       await addConditionMutation.mutateAsync({
         name: trimmed,
       });
-    } catch {
-      // Fallback to local state in demo mode
+      setNewCondition("");
+      showToast(`Added chronic condition: ${trimmed}`, "success");
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Could not add condition"
+      );
     }
-    addLocalCondition(trimmed);
-    setNewCondition("");
-    showToast(`Added chronic condition: ${trimmed}`, "success");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
+
     const parsedAllergies = allergiesText
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const dbRole =
-      role === "admin" ? "doctor" : (role as "patient" | "doctor" | "caregiver");
-
     try {
-      await updateProfileMutation.mutateAsync({
+      await completeOnboardingMutation.mutateAsync({
         full_name: fullName.trim(),
-        phone: phone.trim(),
-        dob,
+        phone: phone.trim() || null,
+        dob: dob || null,
         gender: sex,
         blood_group: bloodGroup,
-        city: city.trim(),
+        city: city.trim() || null,
         preferred_language: preferredLang,
         allergies: parsedAllergies,
       });
-    } catch {
-      // Local demo state updated below
-    }
 
-    if (role === "doctor") {
-      try {
+      if (role === "doctor") {
         const selectedHosp = hospitals.find((h) => h.id === hospitalId);
         await upsertDoctorMutation.mutateAsync({
-          specialization: specialization.trim() || departmentName,
+          specialization:
+            specialization.trim() || departmentName || "General Medicine",
           reg_no: regNo.trim(),
           state_council: stateCouncil.trim(),
-          year_of_registration: Number(yearOfReg) || 2010,
-          clinic_name: `${selectedHosp?.name ?? "AIIMS"} · ${departmentName}`,
+          year_of_registration: yearOfReg ? Number(yearOfReg) : null,
+          clinic_name: selectedHosp
+            ? `${selectedHosp.name}${departmentName ? ` · ${departmentName}` : ""}`
+            : departmentName || null,
         });
-      } catch {
-        // Fallback to local demo doctor state
       }
-    }
 
-    if (contactName.trim() && contactPhone.trim()) {
-      try {
+      if (
+        contactName.trim() &&
+        contactPhone.trim() &&
+        !emergencyContacts.some((c) => c.phone.trim() === contactPhone.trim())
+      ) {
         await addEmergencyContactMutation.mutateAsync({
           name: contactName.trim(),
           phone: contactPhone.trim(),
           relation: contactRel.trim() || "Family",
         });
-      } catch {
-        // Fallback to local demo contact
       }
-      if (
-        !emergencyContacts.some(
-          (c) => c.phone.trim() === contactPhone.trim()
-        )
-      ) {
-        addLocalEmergencyContact({
-          name: contactName.trim(),
-          phone: contactPhone.trim(),
-          relation: contactRel.trim() || "Family",
-        });
+
+      showToast("Health profile & onboarding saved!", "success");
+
+      if (role === "doctor") {
+        router.push("/doctor");
+      } else if (role === "admin") {
+        router.push("/admin/doctors");
+      } else {
+        router.push("/dashboard");
       }
-    }
-
-    setDemoRole(role);
-    updateLocalProfile({
-      role: dbRole,
-      full_name: fullName.trim(),
-      phone: phone.trim(),
-      dob,
-      gender: sex,
-      blood_group: bloodGroup,
-      city: city.trim(),
-      preferred_language: preferredLang,
-      allergies: parsedAllergies,
-    });
-    setOnboarded(true);
-    showToast("Health profile & onboarding saved!", "success");
-
-    if (role === "doctor") {
-      router.push("/doctor");
-    } else if (role === "admin") {
-      router.push("/admin/doctors");
-    } else {
-      router.push("/dashboard");
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Could not save onboarding profile"
+      );
     }
   };
+
+  if (profileLoading) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <SkeletonCard lines={6} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
         <div>
-          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900">
-            Step 2 of 2 · Role & Health Profile Setup
+          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900 uppercase">
+            Account Role: {role}
           </span>
           <h1 className="text-2xl font-bold text-slate-900 mt-2">
             Complete Your Vyana Onboarding
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Configure your role, medical ID essentials, allergies, emergency
-            contacts, or doctor hospital/department credentials.
+            Configure your Medical ID essentials, allergies, emergency contacts,
+            or doctor registration details.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <fieldset>
-            <legend className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              1. Choose Your Primary Role
-            </legend>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                {
-                  id: "patient" as const,
-                  title: "Patient",
-                  desc: "Manage doses, prescriptions, lab reports, care plans & OPD tokens",
-                },
-                {
-                  id: "doctor" as const,
-                  title: "Doctor",
-                  desc: "Manage hospital OPD queue, write e-Rx & approve care plans",
-                },
-                {
-                  id: "caregiver" as const,
-                  title: "Caregiver",
-                  desc: "Monitor family member adherence, alerts & emergency Medical ID",
-                },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={role === item.id}
-                  onClick={() => setRole(item.id)}
-                  className={`rounded-xl border p-4 text-left transition cursor-pointer ${
-                    role === item.id
-                      ? "border-teal-700 bg-teal-50/70 ring-1 ring-teal-700"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="text-sm font-bold text-slate-900">
-                    {item.title}
-                  </div>
-                  <div className="text-xs text-slate-600 mt-1">{item.desc}</div>
-                </button>
-              ))}
-            </div>
-          </fieldset>
+        {errorMsg && (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"
+          >
+            {errorMsg}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit} className="space-y-6">
           {role === "doctor" && (
             <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-5 space-y-4">
               <div className="text-xs font-bold uppercase tracking-wider text-teal-900">
@@ -280,19 +237,9 @@ export default function OnboardingPage() {
                     onChange={(e) => setDepartmentName(e.target.value)}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                   >
-                    {(liveDepartments && liveDepartments.length > 0
-                      ? liveDepartments.map((d) => d.name)
-                      : [
-                          "General Medicine OPD",
-                          "Endocrinology & Diabetes",
-                          "Cardiology OPD",
-                          "Obstetrics & Gynaecology",
-                          "Paediatrics",
-                          "Orthopaedics",
-                        ]
-                    ).map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
                       </option>
                     ))}
                   </select>
@@ -311,7 +258,7 @@ export default function OnboardingPage() {
                     required
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value)}
-                    placeholder="DMC-45892"
+                    placeholder="e.g., DMC-45892"
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
@@ -329,7 +276,7 @@ export default function OnboardingPage() {
                     required
                     value={stateCouncil}
                     onChange={(e) => setStateCouncil(e.target.value)}
-                    placeholder="Delhi Medical Council"
+                    placeholder="e.g., Delhi Medical Council"
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
@@ -344,9 +291,10 @@ export default function OnboardingPage() {
                   <input
                     id="ob-doc-spec"
                     type="text"
+                    required
                     value={specialization}
                     onChange={(e) => setSpecialization(e.target.value)}
-                    placeholder="General Medicine & Diabetology"
+                    placeholder="e.g., General Medicine"
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
@@ -363,7 +311,7 @@ export default function OnboardingPage() {
                     type="number"
                     value={yearOfReg}
                     onChange={(e) => setYearOfReg(e.target.value)}
-                    placeholder="2010"
+                    placeholder="2015"
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
@@ -481,41 +429,23 @@ export default function OnboardingPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor="ob-pincode"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  PIN Code
-                </label>
-                <input
-                  id="ob-pincode"
-                  type="text"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="ob-lang"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Preferred Language
-                </label>
-                <select
-                  id="ob-lang"
-                  value={preferredLang}
-                  onChange={(e) => setPreferredLang(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                >
-                  <option value="en">English</option>
-                  <option value="hi">हिंदी (Hindi)</option>
-                  <option value="hinglish">Hinglish</option>
-                </select>
-              </div>
+            <div>
+              <label
+                htmlFor="ob-lang"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                Preferred Language
+              </label>
+              <select
+                id="ob-lang"
+                value={preferredLang}
+                onChange={(e) => setPreferredLang(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              >
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="hinglish">Hinglish</option>
+              </select>
             </div>
           </div>
 
@@ -531,7 +461,7 @@ export default function OnboardingPage() {
               type="text"
               value={allergiesText}
               onChange={(e) => setAllergiesText(e.target.value)}
-              placeholder="Penicillin, Sulfa drugs, Peanuts"
+              placeholder="e.g., Penicillin, Peanuts"
               className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
             />
           </div>
@@ -549,6 +479,11 @@ export default function OnboardingPage() {
                   {c.name}
                 </span>
               ))}
+              {conditions.length === 0 && (
+                <span className="text-xs text-slate-500">
+                  No chronic conditions recorded yet.
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <label htmlFor="ob-new-cond" className="sr-only">
@@ -564,6 +499,7 @@ export default function OnboardingPage() {
               />
               <button
                 type="button"
+                disabled={addConditionMutation.isPending}
                 onClick={handleAddConditionClick}
                 className="rounded-xl border border-teal-700 bg-white px-4 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-50 cursor-pointer"
               >
@@ -576,6 +512,18 @@ export default function OnboardingPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-red-900">
               Primary Emergency Contact (Alerted on SOS 108 & Shown on Medical ID)
             </div>
+            {emergencyContacts.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {emergencyContacts.map((ec) => (
+                  <span
+                    key={ec.id}
+                    className="rounded-full bg-white border border-red-200 px-3 py-1 text-xs font-medium text-slate-800"
+                  >
+                    {ec.name} ({ec.phone}) · {ec.relation}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label
@@ -589,7 +537,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Rohit Verma"
+                  placeholder="Family member name"
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
                 />
               </div>
@@ -621,7 +569,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={contactRel}
                   onChange={(e) => setContactRel(e.target.value)}
-                  placeholder="Son / Spouse"
+                  placeholder="Spouse / Parent"
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
                 />
               </div>
@@ -631,9 +579,12 @@ export default function OnboardingPage() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-800 cursor-pointer"
+              disabled={completeOnboardingMutation.isPending}
+              className="rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50 cursor-pointer"
             >
-              Save Profile & Open Portal →
+              {completeOnboardingMutation.isPending
+                ? "Saving Profile…"
+                : "Save Profile & Open Portal →"}
             </button>
           </div>
         </form>

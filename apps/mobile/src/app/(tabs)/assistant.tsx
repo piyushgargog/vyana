@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Linking,
   Pressable,
   ScrollView,
@@ -9,9 +10,17 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { fetch as expoFetch } from 'expo/fetch';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
+  EMERGENCY,
+  useApi,
   useChatMessages,
   useChatSessions,
+  useMyProfile,
+  useUpdateProfile,
+  type Language,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
@@ -19,216 +28,136 @@ import {
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 
-interface ChatBubble {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: { title: string; url: string }[];
-  isEmergency?: boolean;
+type AssistantMessage = UIMessage<{ ai_run_id?: string }>;
+
+const MARKDOWN_LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+function extractLinksFromText(text: string): { title: string; url: string }[] {
+  const found: { title: string; url: string }[] = [];
+  const seen = new Set<string>();
+  for (const match of text.matchAll(MARKDOWN_LINK_RE)) {
+    const title = match[1]?.trim();
+    const url = match[2]?.trim();
+    if (title && url && !seen.has(url)) {
+      seen.add(url);
+      found.push({ title, url });
+    }
+  }
+  return found;
 }
 
-const INITIAL_MESSAGES: ChatBubble[] = [
-  {
-    id: 'msg-welcome',
-    role: 'assistant',
-    content:
-      'Namaste! I am your Vyana Health Assistant. I can help explain your lab values (like HbA1c 7.4%), medicine timings (Metformin 500mg & Telmisartan 40mg), or Indian diabetic diet swaps in English, हिंदी, or Hinglish. I do not diagnose conditions or change dosages.',
-    sources: [
-      {
-        title: 'ICMR Standard Treatment Workflows (STW)',
-        url: 'https://stw.icmr.org.in',
-      },
-      {
-        title: 'MedlinePlus Medical Encyclopedia',
-        url: 'https://medlineplus.gov',
-      },
-    ],
-  },
-];
-
-function generateGroundedReply(
-  question: string,
-  selectedLang: 'en' | 'hi' | 'hinglish',
-  replyId: string
-): ChatBubble {
-  const q = question.toLowerCase();
-  const isEmergencyQuery =
-    q.includes('chest pain') ||
-    q.includes('breath') ||
-    q.includes('unconscious') ||
-    q.includes('stroke') ||
-    q.includes('सीने में दर्द') ||
-    q.includes('सांस');
-
-  if (isEmergencyQuery) {
-    return {
-      id: replyId,
-      role: 'assistant',
-      isEmergency: true,
-      content:
-        selectedLang === 'hi'
-          ? 'यह एक संभावित चिकित्सा आपातकाल है। कृपया तुरंत 108 (निःशुल्क एम्बुलेंस) या 112 पर कॉल करें और नजदीकी आपातकालीन अस्पताल जाएं।'
-          : selectedLang === 'hinglish'
-            ? 'Yeh ek medical emergency ho sakti hai. Kripya turant 108 (Ambulance) ya 112 par call karein aur nearest emergency hospital jayein.'
-            : 'These symptoms require immediate emergency evaluation. Please call 108 (Free National Ambulance) or 112 immediately and proceed to the nearest emergency department.',
-      sources: [
-        {
-          title: 'National Health Portal India — Emergency 108 / 112',
-          url: 'https://www.nhp.gov.in',
-        },
-      ],
-    };
-  }
-
-  if (selectedLang === 'hi') {
-    return {
-      id: replyId,
-      role: 'assistant',
-      content:
-        'आपकी नवीनतम रिपोर्ट के अनुसार HbA1c 7.4% है (पहले 8.2% था), जो सुधार दर्शाता है। मेटफॉर्मिन 500mg भोजन के बाद समय पर लें, प्रतिदिन 30 मिनट टहलें और किसी भी खुराक परिवर्तन के लिए अपनी डॉक्टर (डॉ. प्रिया शर्मा) से परामर्श करें।',
-      sources: [
-        {
-          title: 'ICMR Standard Treatment Workflow — Diabetes',
-          url: 'https://stw.icmr.org.in',
-        },
-        {
-          title: 'MedlinePlus — HbA1c Test',
-          url: 'https://medlineplus.gov/lab-tests/hemoglobin-a1c-hba1c-test/',
-        },
-      ],
-    };
-  }
-
-  if (selectedLang === 'hinglish') {
-    return {
-      id: replyId,
-      role: 'assistant',
-      content:
-        'Aapki latest lab report mein HbA1c 7.4% hai (pehle 8.2% tha), jo accha improvement dikhata hai. Metformin 500mg breakfast aur dinner ke baad lein, roz 30 mins brisk walk karein, aur kisi bhi dose change ke liye apne doctor se zaroor salah lein.',
-      sources: [
-        {
-          title: 'ICMR Standard Treatment Workflow — Type 2 Diabetes',
-          url: 'https://stw.icmr.org.in',
-        },
-        {
-          title: 'WHO Noncommunicable Diseases Fact Sheet',
-          url: 'https://www.who.int',
-        },
-      ],
-    };
-  }
-
-  return {
-    id: replyId,
-    role: 'assistant',
-    content:
-      'Based on your health record, your HbA1c improved from 8.2% to 7.4% while taking Metformin 500mg twice daily after meals and Telmisartan 40mg in the morning. Continue whole-grain rotis, dal, greens, and 30 minutes of daily walking. Please consult Dr. Priya Sharma before making any medication adjustments.',
-    sources: [
-      {
-        title: 'ICMR Standard Treatment Workflow — Type 2 Diabetes Mellitus',
-        url: 'https://stw.icmr.org.in',
-      },
-      {
-        title: 'DailyMed — Metformin Hydrochloride Label',
-        url: 'https://dailymed.nlm.nih.gov',
-      },
-    ],
-  };
+function isEmergencyReplyText(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return (
+    normalized.startsWith('if this is an emergency') ||
+    normalized.includes('call 108') ||
+    normalized.includes('108 पर कॉल') ||
+    normalized.includes('108 par call')
+  );
 }
 
 export default function MobileAssistantTab() {
   const router = useRouter();
-  const { supabase, baseUrl, useMocks, profile, showToast } = useVyanaMobile();
+  const api = useApi();
+  const { showToast } = useVyanaMobile();
 
-  const { data: sessions } = useChatSessions();
-  const activeSessionId = sessions?.[0]?.id;
-  const { data: remoteMessages } = useChatMessages(activeSessionId);
+  const { data: profile } = useMyProfile();
+  const updateProfileMutation = useUpdateProfile();
+  const { data: sessions = [] } = useChatSessions();
 
-  const [lang, setLang] = useState<'en' | 'hi' | 'hinglish'>(
-    (profile.preferred_language as 'en' | 'hi' | 'hinglish') || 'en'
-  );
-  const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [localMessages, setLocalMessages] =
-    useState<ChatBubble[]>(INITIAL_MESSAGES);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const hydratedSessionRef = useRef<string | undefined>(undefined);
 
-  const handleSend = async (presetText?: string) => {
-    const text = (presetText ?? input).trim();
-    if (!text || streaming) return;
+  useEffect(() => {
+    if (!sessionId && sessions.length > 0 && !hydratedSessionRef.current) {
+      setSessionId(sessions[0].id);
+    }
+  }, [sessions, sessionId]);
 
-    const nowId = `${localMessages.length + 1}`;
-    const userMsg: ChatBubble = {
-      id: `usr-${nowId}`,
-      role: 'user',
-      content: text,
-    };
-    setLocalMessages((prev) => [...prev, userMsg]);
-    if (!presetText) setInput('');
-    setStreaming(true);
+  const { data: savedMessages } = useChatMessages(sessionId);
 
-    try {
-      const sid = activeSessionId;
-
-      if (!useMocks) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        const res = await fetch(`${baseUrl}/api/assistant/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            session_id: sid ?? undefined,
-            message: text,
-            lang,
-          }),
-        });
-
-        if (res.ok) {
-          const replyText = await res.text();
-          if (replyText.trim()) {
-            setLocalMessages((prev) => [
-              ...prev,
-              {
-                id: `asst-${nowId}`,
-                role: 'assistant',
-                content: replyText.trim(),
-                sources: [
-                  {
-                    title: 'ICMR Standard Treatment Workflows',
-                    url: 'https://stw.icmr.org.in',
-                  },
-                ],
-              },
-            ]);
-            setStreaming(false);
-            return;
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport<AssistantMessage>({
+        api: api.chatUrl,
+        headers: () => api.authHeaders(),
+        body: sessionId ? { session_id: sessionId } : {},
+        fetch: (async (input, init) => {
+          const res = await (expoFetch as unknown as typeof globalThis.fetch)(
+            input,
+            init
+          );
+          const nextSessionId = res.headers.get('x-session-id');
+          if (nextSessionId && nextSessionId !== sessionId) {
+            setSessionId(nextSessionId);
           }
-        }
-      }
+          return res;
+        }) as typeof globalThis.fetch,
+      }),
+    [api, sessionId]
+  );
 
-      const fallbackReply = generateGroundedReply(text, lang, `asst-${nowId}`);
-      setLocalMessages((prev) => [...prev, fallbackReply]);
-    } catch {
-      const fallbackReply = generateGroundedReply(text, lang, `asst-${nowId}`);
-      setLocalMessages((prev) => [...prev, fallbackReply]);
-    } finally {
-      setStreaming(false);
+  const { messages, setMessages, sendMessage, status, error, clearError } =
+    useChat<AssistantMessage>({
+      transport,
+    });
+
+  useEffect(() => {
+    if (
+      sessionId &&
+      savedMessages &&
+      hydratedSessionRef.current !== sessionId &&
+      status === 'ready'
+    ) {
+      hydratedSessionRef.current = sessionId;
+      const mapped: AssistantMessage[] = savedMessages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          parts: Array.isArray(m.parts)
+            ? (m.parts as unknown as AssistantMessage['parts'])
+            : [{ type: 'text' as const, text: String(m.parts ?? '') }],
+        }));
+      setMessages(mapped);
+    }
+  }, [sessionId, savedMessages, setMessages, status]);
+
+  const [input, setInput] = useState('');
+  const currentLang: Language =
+    profile?.preferred_language === 'hi' ||
+    profile?.preferred_language === 'hinglish'
+      ? profile.preferred_language
+      : 'en';
+
+  const isStreaming = status === 'submitted' || status === 'streaming';
+
+  const handleLanguageChange = async (nextLang: Language) => {
+    try {
+      await updateProfileMutation.mutateAsync({ preferred_language: nextLang });
+      showToast(`Assistant language set to ${nextLang}`, 'info');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not update language',
+        'error'
+      );
     }
   };
 
-  const displayedMessages: ChatBubble[] =
-    remoteMessages && remoteMessages.length > 0
-      ? remoteMessages.map((m) => ({
-          id: m.id,
-          role: m.role === 'user' ? 'user' : 'assistant',
-          content:
-            typeof m.parts === 'string'
-              ? m.parts
-              : JSON.stringify(m.parts ?? ''),
-        }))
-      : localMessages;
+  const handleNewChat = () => {
+    hydratedSessionRef.current = 'new';
+    setSessionId(undefined);
+    clearError();
+    setMessages([]);
+  };
+
+  const handleSend = async (presetText?: string) => {
+    const text = (presetText ?? input).trim();
+    if (!text || isStreaming) return;
+    if (!presetText) setInput('');
+    clearError();
+    await sendMessage({ text });
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -240,11 +169,12 @@ export default function MobileAssistantTab() {
         style={styles.emergencyStrip}
       >
         <Text style={styles.emergencyStripText}>
-          Experiencing chest pain or severe symptoms? Tap here to dial 108 →
+          Experiencing chest pain or severe symptoms? Tap here for SOS{' '}
+          {EMERGENCY.ambulance} →
         </Text>
       </Pressable>
 
-      {/* Language Switcher */}
+      {/* Language Switcher + New Conversation */}
       <View style={styles.langBar}>
         <Text style={styles.langLabel}>Language:</Text>
         {(
@@ -257,42 +187,46 @@ export default function MobileAssistantTab() {
           <Pressable
             key={item.id}
             accessibilityRole="button"
-            accessibilityState={{ selected: lang === item.id }}
+            accessibilityState={{ selected: currentLang === item.id }}
             accessibilityLabel={`Switch assistant language to ${item.title}`}
-            onPress={() => {
-              setLang(item.id);
-              showToast(`Assistant language set to ${item.title}`, 'info');
-            }}
+            onPress={() => handleLanguageChange(item.id)}
             style={[
               styles.langChip,
-              lang === item.id && styles.langChipActive,
+              currentLang === item.id && styles.langChipActive,
             ]}
           >
             <Text
               style={[
                 styles.langChipText,
-                lang === item.id && styles.langChipTextActive,
+                currentLang === item.id && styles.langChipTextActive,
               ]}
             >
               {item.title}
             </Text>
           </Pressable>
         ))}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Start a new chat conversation"
+          onPress={handleNewChat}
+          style={styles.newChatBtn}
+        >
+          <Text style={styles.newChatBtnText}>+ New</Text>
+        </Pressable>
       </View>
-
-      <MobileAiSafetyBanner feature="assistant" />
 
       {/* Quick Prompts */}
       <View style={styles.promptsWrap}>
         {[
-          'Explain my HbA1c 7.4% report',
-          'Best Indian breakfast for Type 2 Diabetes?',
-          'When should I take Metformin & Telmisartan?',
+          'Summarize my active medicines and schedule',
+          'Explain my latest lab report in simple words',
+          'Check pharmacy prices for my active medicines',
         ].map((prompt) => (
           <Pressable
             key={prompt}
             accessibilityRole="button"
             accessibilityLabel={`Ask: ${prompt}`}
+            disabled={isStreaming}
             onPress={() => handleSend(prompt)}
             style={styles.promptPill}
           >
@@ -301,57 +235,197 @@ export default function MobileAssistantTab() {
         ))}
       </View>
 
+      {/* Error State — Never fabricate a medical answer */}
+      {error && (
+        <View accessibilityRole="alert" style={styles.errorBanner}>
+          <Text style={styles.errorBannerTitle}>
+            Couldn&apos;t answer right now. For an emergency call{' '}
+            {EMERGENCY.ambulance}.
+          </Text>
+          <View style={styles.errorActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Call 108 Ambulance"
+              onPress={() => Linking.openURL(`tel:${EMERGENCY.ambulance}`)}
+              style={styles.call108Btn}
+            >
+              <Text style={styles.call108BtnText}>
+                Call {EMERGENCY.ambulance} Ambulance
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open SOS Screen"
+              onPress={() => router.push('/sos')}
+              style={styles.sosSecondaryBtn}
+            >
+              <Text style={styles.sosSecondaryBtnText}>Open SOS</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       {/* Messages Feed */}
       <View style={styles.feed}>
-        {displayedMessages.map((msg) => (
-          <View
-            key={msg.id}
-            style={[
-              styles.bubble,
-              msg.role === 'user' ? styles.userBubble : styles.assistantBubble,
-              msg.isEmergency && styles.emergencyBubble,
-            ]}
-          >
-            <Text style={styles.bubbleRole}>
-              {msg.role === 'user' ? 'You' : 'Vyana Assistant (AI)'}
+        {messages.length === 0 && !error && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Ask Vyana Health Assistant</Text>
+            <Text style={styles.emptySub}>
+              Ask about your prescriptions, lab results, care plans, or medicine
+              prices in English, हिंदी, or Hinglish. Vyana never diagnoses
+              conditions or changes your doctor&apos;s dosages.
             </Text>
-            <Text
+          </View>
+        )}
+
+        {messages.map((msg) => {
+          const textParts = msg.parts
+            .filter(
+              (p): p is Extract<typeof p, { type: 'text' }> =>
+                p.type === 'text'
+            )
+            .map((p) => p.text)
+            .join('');
+
+          const links =
+            msg.role === 'assistant' ? extractLinksFromText(textParts) : [];
+          const hasEmergencyNotice =
+            msg.role === 'assistant' && isEmergencyReplyText(textParts);
+
+          return (
+            <View
+              key={msg.id}
               style={[
-                styles.bubbleText,
-                msg.role === 'user' && styles.userBubbleText,
+                styles.bubble,
+                msg.role === 'user'
+                  ? styles.userBubble
+                  : styles.assistantBubble,
+                hasEmergencyNotice && styles.emergencyBubble,
               ]}
             >
-              {msg.content}
-            </Text>
+              <Text style={styles.bubbleRole}>
+                {msg.role === 'user' ? 'You' : 'Vyana Assistant (AI)'}
+              </Text>
 
-            {msg.isEmergency && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Call 108 Ambulance Now"
-                onPress={() => Linking.openURL('tel:108')}
-                style={styles.call108Btn}
-              >
-                <Text style={styles.call108BtnText}>Call 108 Ambulance Now</Text>
-              </Pressable>
-            )}
+              {/* Tool parts */}
+              {msg.parts.map((part, idx) => {
+                if (
+                  part.type === 'tool-search_health_web' ||
+                  part.type === 'tool-read_page'
+                ) {
+                  return (
+                    <View key={`tool-${idx}`} style={styles.toolStatusPill}>
+                      <Text style={styles.toolStatusText}>
+                        Searching trusted sources…
+                      </Text>
+                    </View>
+                  );
+                }
 
-            {msg.sources && msg.sources.length > 0 && (
-              <View style={styles.sourcesBox}>
-                <Text style={styles.sourcesHeader}>Cited Clinical Sources:</Text>
-                {msg.sources.map((src, idx) => (
+                if (part.type === 'tool-compare_medicine_prices') {
+                  const output =
+                    'output' in part &&
+                    part.output &&
+                    typeof part.output === 'object'
+                      ? (part.output as { status?: string; job_id?: string })
+                      : null;
+                  if (output?.job_id) {
+                    return (
+                      <Pressable
+                        key={`tool-${idx}`}
+                        accessibilityRole="button"
+                        accessibilityLabel="See medicine prices in basket comparison"
+                        onPress={() =>
+                          router.push(`/basket?job_id=${output.job_id}` as never)
+                        }
+                        style={styles.seePricesBtn}
+                      >
+                        <Text style={styles.seePricesBtnText}>
+                          See prices →
+                        </Text>
+                      </Pressable>
+                    );
+                  }
+                  return (
+                    <View key={`tool-${idx}`} style={styles.toolStatusPill}>
+                      <Text style={styles.toolStatusText}>
+                        Comparing pharmacy prices…
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return null;
+              })}
+
+              {textParts.length > 0 && (
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    msg.role === 'user' && styles.userBubbleText,
+                  ]}
+                >
+                  {textParts}
+                </Text>
+              )}
+
+              {hasEmergencyNotice && (
+                <View style={styles.errorActions}>
                   <Pressable
-                    key={idx}
-                    accessibilityRole="link"
-                    accessibilityLabel={`Open source ${src.title}`}
-                    onPress={() => Linking.openURL(src.url)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Call 108 Ambulance Now"
+                    onPress={() =>
+                      Linking.openURL(`tel:${EMERGENCY.ambulance}`)
+                    }
+                    style={styles.call108Btn}
                   >
-                    <Text style={styles.sourceLink}>• {src.title} ↗</Text>
+                    <Text style={styles.call108BtnText}>
+                      Call {EMERGENCY.ambulance} Ambulance Now
+                    </Text>
                   </Pressable>
-                ))}
-              </View>
-            )}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Open SOS Emergency Screen"
+                    onPress={() => router.push('/sos')}
+                    style={styles.sosSecondaryBtn}
+                  >
+                    <Text style={styles.sosSecondaryBtnText}>Open SOS</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {links.length > 0 && (
+                <View style={styles.sourcesBox}>
+                  <Text style={styles.sourcesHeader}>Sources:</Text>
+                  {links.map((src) => (
+                    <Pressable
+                      key={src.url}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Open source ${src.title}`}
+                      onPress={() => Linking.openURL(src.url)}
+                    >
+                      <Text style={styles.sourceLink}>• {src.title} ↗</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {msg.role === 'assistant' && (
+                <MobileAiSafetyBanner
+                  feature="assistant_chat"
+                  aiRunId={msg.metadata?.ai_run_id}
+                />
+              )}
+            </View>
+          );
+        })}
+
+        {isStreaming && (
+          <View style={styles.streamingRow}>
+            <ActivityIndicator size="small" color="#0D9488" />
+            <Text style={styles.streamingText}>Vyana is thinking…</Text>
           </View>
-        ))}
+        )}
       </View>
 
       {/* Input Composer */}
@@ -368,12 +442,15 @@ export default function MobileAssistantTab() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Send question"
-            disabled={streaming}
+            disabled={isStreaming || !input.trim()}
             onPress={() => handleSend()}
-            style={styles.sendBtn}
+            style={[
+              styles.sendBtn,
+              (isStreaming || !input.trim()) && styles.sendBtnDisabled,
+            ]}
           >
             <Text style={styles.sendBtnText}>
-              {streaming ? '…' : 'Send'}
+              {isStreaming ? '…' : 'Send'}
             </Text>
           </Pressable>
         </View>
@@ -403,6 +480,7 @@ const styles = StyleSheet.create({
   langBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     backgroundColor: '#FFFFFF',
     padding: 10,
@@ -420,6 +498,15 @@ const styles = StyleSheet.create({
   langChipActive: { backgroundColor: '#0D9488' },
   langChipText: { fontSize: 12, fontWeight: '600', color: '#334155' },
   langChipTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  newChatBtn: {
+    marginLeft: 'auto',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  newChatBtnText: { fontSize: 11, fontWeight: '700', color: '#0F172A' },
   promptsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   promptPill: {
     backgroundColor: '#F0FDFA',
@@ -430,11 +517,39 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   promptPillText: { fontSize: 12, fontWeight: '600', color: '#0F766E' },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#DC2626',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  errorBannerTitle: {
+    color: '#991B1B',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  errorActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
   feed: { gap: 10 },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+  },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  emptySub: { fontSize: 12, color: '#475569', lineHeight: 18 },
   bubble: {
     borderRadius: 16,
     padding: 14,
-    gap: 6,
+    gap: 8,
   },
   userBubble: {
     backgroundColor: '#0F766E',
@@ -461,16 +576,51 @@ const styles = StyleSheet.create({
   },
   bubbleText: { fontSize: 13, lineHeight: 20, color: '#0F172A' },
   userBubbleText: { color: '#FFFFFF' },
+  toolStatusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  toolStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  seePricesBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#0D9488',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  seePricesBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   call108Btn: {
+    flex: 1,
     backgroundColor: '#DC2626',
     borderRadius: 10,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    marginTop: 4,
   },
-  call108BtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  call108BtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  sosSecondaryBtn: {
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  sosSecondaryBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '800' },
   sourcesBox: {
-    marginTop: 6,
+    marginTop: 4,
     paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -483,6 +633,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
+  streamingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  streamingText: { fontSize: 12, color: '#475569', fontWeight: '600' },
   composerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -509,5 +666,6 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 12,
   },
+  sendBtnDisabled: { opacity: 0.5 },
   sendBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 });

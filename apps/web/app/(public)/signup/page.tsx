@@ -3,25 +3,20 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/browser";
-import { useVyanaWeb, type DemoRole } from "@/components/providers";
+import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+
+type SignupRole = "patient" | "doctor";
 
 export default function SignupPage() {
   const router = useRouter();
-  const {
-    hasLiveSupabaseEnv,
-    setDemoRole,
-    updateLocalProfile,
-    setOnboarded,
-    showToast,
-  } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<DemoRole>("patient");
+  const [role, setRole] = useState<SignupRole>("patient");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -31,32 +26,23 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      if (hasLiveSupabaseEnv && email && password) {
-        const supabase = createClient();
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim(),
-              role: role === "admin" ? "doctor" : role,
-            },
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: phone.trim() || undefined,
+            role,
           },
-        });
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
+        },
+      });
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
       }
 
-      setDemoRole(role);
-      updateLocalProfile({
-        full_name: fullName.trim() || "Vyana User",
-        phone: phone.trim() || "+91 98111 00000",
-        role: role === "admin" ? "doctor" : role,
-      });
-      setOnboarded(false);
       showToast("Account created! Please review DPDP consent.", "success");
       router.push("/consent");
     } catch (err) {
@@ -92,7 +78,7 @@ export default function SignupPage() {
               Create your Vyana account
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Start as a patient, hospital doctor, or family caregiver.
+              Register as a patient (or family caregiver) or as a doctor.
             </p>
           </div>
 
@@ -119,7 +105,7 @@ export default function SignupPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Asha Devi"
+                placeholder="Enter your full name"
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
@@ -137,7 +123,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="asha.devi@example.com"
+                placeholder="you@example.com"
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
@@ -180,22 +166,27 @@ export default function SignupPage() {
 
             <fieldset>
               <legend className="block text-xs font-semibold text-slate-700 mb-2">
-                Select Your Role
+                Account Type
               </legend>
-              <div className="grid grid-cols-3 gap-2">
-                {(["patient", "doctor", "caregiver"] as const).map((r) => (
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { id: "patient", label: "Patient / Caregiver" },
+                    { id: "doctor", label: "Doctor (OPD Portal)" },
+                  ] as const
+                ).map((item) => (
                   <button
-                    key={r}
+                    key={item.id}
                     type="button"
-                    aria-pressed={role === r}
-                    onClick={() => setRole(r)}
-                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold capitalize transition cursor-pointer ${
-                      role === r
+                    aria-pressed={role === item.id}
+                    onClick={() => setRole(item.id)}
+                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                      role === item.id
                         ? "border-teal-700 bg-teal-50 text-teal-900"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    {r}
+                    {item.label}
                   </button>
                 ))}
               </div>
