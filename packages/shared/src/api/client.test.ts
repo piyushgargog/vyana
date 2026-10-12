@@ -90,6 +90,22 @@ describe("createApiClient", () => {
     expect(url).toBe("https://api.example.com/api/prescriptions/basket");
   });
 
+  it("polls a basket job with GET, auth and an encoded job id", async () => {
+    const fetchMock = vi.fn(async () => json(200, basketCompareMock));
+    const res = await client(fetchMock).basket.job("abc/DEF_-");
+    expect(res.status).toBe("done");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket/abc%2FDEF_-");
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+  });
+
+  it("rejects an empty basket job id without calling the server", async () => {
+    const fetchMock = vi.fn();
+    await expect(client(fetchMock).basket.job(" ")).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a basket request with both prescription_id and items before sending", async () => {
     const fetchMock = vi.fn();
     await expect(

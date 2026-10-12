@@ -8,7 +8,7 @@ export { doctorsVerifyMock } from "./doctors-verify";
 export { prescriptionsExtractMock } from "./prescriptions-extract";
 export { reportsAnalyzeMock } from "./reports-analyze";
 export { alertsCheckMock } from "./alerts-check";
-export { basketCompareMock } from "./basket-compare";
+export { basketCompareMock, basketJobRunningMock } from "./basket-compare";
 export { carePlanMock } from "./care-plan";
 export { interactionsMock } from "./interactions";
 export { triageMock, triageEmergencyMock, TRIAGE_DISCLAIMER } from "./triage";

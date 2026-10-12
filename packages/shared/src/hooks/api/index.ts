@@ -57,6 +57,18 @@ export function useBasketCompare() {
   });
 }
 
+/** Polls a basket job every 4 s until it is done. Pass the `job_id` from `useBasketCompare`. */
+export function useBasketJob(jobId: string | null | undefined) {
+  const api = useApi();
+  return useQuery<BasketCompareRes, ApiError>({
+    queryKey: [QUERY_ROOTS.basketJob, jobId],
+    queryFn: () => api.basket.job(jobId as string),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    retry: 1,
+  });
+}
+
 export function useCompareLabTest() {
   const api = useApi();
   return useMutation<LabsCompareRes, ApiError, LabsCompareReq>({

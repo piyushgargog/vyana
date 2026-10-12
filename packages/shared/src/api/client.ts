@@ -62,7 +62,8 @@ export type ApiClientOptions = {
 
 export type ApiClient = {
   medicines: { compare(body: MedicinesCompareReq): Promise<MedicinesCompareRes> };
-  basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes> };
+  /** `compare` starts a basket job; poll `job(job_id)` until `status === "done"`. */
+  basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes>; job(jobId: string): Promise<BasketCompareRes> };
   labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
   hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
@@ -158,7 +159,13 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
 
   return {
     medicines: { compare: (body) => post("/api/medicines/compare", MedicinesCompareReq, MedicinesCompareRes, body, mocks.medicinesCompareMock) },
-    basket: { compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketCompareMock) },
+    basket: {
+      compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketJobRunningMock),
+      job: (jobId) => {
+        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
+        return request({ method: "GET", path: `/api/prescriptions/basket/${encodeURIComponent(jobId)}`, resSchema: BasketCompareRes, mock: mocks.basketCompareMock });
+      },
+    },
     labs: { compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsCompareMock) },
     emergency: {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),

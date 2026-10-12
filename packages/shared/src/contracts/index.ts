@@ -165,19 +165,22 @@ export const BasketLine = z.object({
   product_name: z.string().nullable(),
   pack_size: z.string().nullable(),
   unit_price: z.number().nullable(),                  // INR per pack
-  line_total: z.number().nullable(),                  // unit_price × quantity
+  line_total: z.number().nullable(),                  // unit_price × quantity; null unless price_verified
   in_stock: z.boolean().nullable(),
   product_url: z.string().nullable(),
+  price_verified: z.boolean(),                        // the price was found on the fetched product page (plan §2A)
 });
 export const PharmacyBasket = z.object({
   source: PriceSource,
-  status: z.enum(["ok","partial","not_found","timeout","error"]), // partial = some items missing
+  status: z.enum(["pending","ok","partial","not_found","timeout","error"]), // pending = agent still running; partial = some items missing or unverified
   lines: z.array(BasketLine),
-  total: z.number().nullable(),                       // sum of priced lines
+  total: z.number().nullable(),                       // sum of verified lines
   missing: z.array(z.string()),                       // medicines not found on this pharmacy
   checkout_url: z.string().nullable(),                // page the user opens to order and pay
 });
 export const BasketCompareRes = z.object({
+  job_id: z.string().min(1),                          // opaque; poll GET /api/prescriptions/basket/{job_id} while running
+  status: z.enum(["running","done"]),               // done = no basket is pending
   baskets: z.array(PharmacyBasket),                   // complete baskets first, then by total asc; nulls last
   cheapest_source: PriceSource.nullable(),            // cheapest COMPLETE basket
   generic: z.object({ lines: z.array(BasketLine), total: z.number().nullable() }).nullable(), // Jan Aushadhi

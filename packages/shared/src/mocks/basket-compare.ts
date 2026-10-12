@@ -1,11 +1,16 @@
-import type { BasketCompareRes, BasketLine } from "../contracts";
+import type { BasketCompareRes, BasketLine, PharmacyBasket } from "../contracts";
 
 // Mock prices only. Real prices always come from the pharmacy pages (plan §2A).
-const line = (medicine: string, strength: string, product_name: string, pack_size: string, unit_price: number | null, url: string | null, in_stock: boolean | null = true): BasketLine => ({
-  medicine, strength, quantity: 1, product_name, pack_size, unit_price, line_total: unit_price, in_stock, product_url: url,
+const line = (medicine: string, strength: string, product_name: string, pack_size: string, unit_price: number | null, url: string | null, in_stock: boolean | null = true, price_verified = true): BasketLine => ({
+  medicine, strength, quantity: 1, product_name, pack_size, unit_price, line_total: price_verified ? unit_price : null, in_stock, product_url: url, price_verified,
 });
 
+// Opaque in real responses (an encrypted token); any non-empty string works with mocks.
+const MOCK_JOB_ID = "mock-basket-job";
+
 export const basketCompareMock: BasketCompareRes = {
+  job_id: MOCK_JOB_ID,
+  status: "done",
   baskets: [
     {
       source: "pharmeasy", status: "ok", total: 247.4, missing: [], checkout_url: "https://pharmeasy.in",
@@ -24,11 +29,12 @@ export const basketCompareMock: BasketCompareRes = {
       ],
     },
     {
-      source: "netmeds", status: "partial", total: 63.2, missing: ["Telma 40 mg"], checkout_url: "https://www.netmeds.com",
+      source: "netmeds", status: "partial", total: 32, missing: ["Telma 40 mg"], checkout_url: "https://www.netmeds.com",
       lines: [
-        line("Metformin", "500 mg", "Glycomet 500mg SR Strip Of 20 Tablets", "strip of 20 tablets", 32, "https://www.netmeds.com/catalogsearch/result/metformin%20500/all"),
-        { medicine: "Telma", strength: "40 mg", quantity: 1, product_name: null, pack_size: null, unit_price: null, line_total: null, in_stock: null, product_url: null },
-        line("Dolo", "650 mg", "Dolo 650mg Strip Of 15 Tablets", "strip of 15 tablets", 31.2, "https://www.netmeds.com/catalogsearch/result/dolo%20650/all"),
+        line("Metformin", "500 mg", "Glycomet 500mg SR Strip Of 20 Tablets", "strip of 20 tablets", 32, "https://www.netmeds.com/products?q=metformin%20500"),
+        { medicine: "Telma", strength: "40 mg", quantity: 1, product_name: null, pack_size: null, unit_price: null, line_total: null, in_stock: null, product_url: null, price_verified: false },
+        // The page showed a different price than the agent read, so it is shown as unconfirmed and not counted.
+        line("Dolo", "650 mg", "Dolo 650mg Strip Of 15 Tablets", "strip of 15 tablets", 31.2, "https://www.netmeds.com/products?q=dolo%20650", true, false),
       ],
     },
     { source: "apollo", status: "timeout", total: null, missing: [], checkout_url: null, lines: [] },
@@ -44,4 +50,14 @@ export const basketCompareMock: BasketCompareRes = {
   },
   savings_vs_highest: 14.2,
   cached: false,
+};
+
+const pending = (source: PharmacyBasket["source"]): PharmacyBasket => ({ source, status: "pending", lines: [], total: null, missing: [], checkout_url: null });
+
+/** What POST returns while agents are still working: two pharmacies done, two pending. Poll the job until "done". */
+export const basketJobRunningMock: BasketCompareRes = {
+  ...basketCompareMock,
+  status: "running",
+  baskets: [basketCompareMock.baskets[0], basketCompareMock.baskets[1], pending("netmeds"), pending("apollo")],
+  savings_vs_highest: 14.2,
 };

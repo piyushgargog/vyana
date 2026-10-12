@@ -22,6 +22,7 @@ import {
 import {
   alertsCheckMock,
   basketCompareMock,
+  basketJobRunningMock,
   carePlanMock,
   doctorsVerifyMock,
   emergencyNearbyMock,
@@ -48,6 +49,7 @@ const cases: [string, ZodType, unknown][] = [
   ["reports/analyze", ReportAnalyzeRes, reportsAnalyzeMock],
   ["alerts/check", AlertsCheckRes, alertsCheckMock],
   ["prescriptions/basket", BasketCompareRes, basketCompareMock],
+  ["prescriptions/basket (running)", BasketCompareRes, basketJobRunningMock],
   ["care-plan", GenerateCarePlanRes, carePlanMock],
   ["medicines/interactions", InteractionsRes, interactionsMock],
   ["triage", TriageRes, triageMock],
@@ -75,13 +77,19 @@ describe("mock fixtures", () => {
 
   it("basket totals, ordering and savings are consistent", () => {
     for (const b of basketCompareMock.baskets) {
-      const priced = b.lines.filter((l) => l.line_total !== null);
-      expect(b.total).toBe(priced.length ? round(priced.reduce((s, l) => s + (l.line_total ?? 0), 0)) : null);
+      const verified = b.lines.filter((l) => l.price_verified);
+      expect(b.total).toBe(verified.length ? round(verified.reduce((s, l) => s + (l.line_total ?? 0), 0)) : null);
       for (const l of b.lines) {
-        if (l.unit_price !== null) expect(l.line_total).toBe(round(l.unit_price * l.quantity));
+        // Only a price confirmed on the product page gets a line total (plan §2A, ADR-036).
+        expect(l.line_total).toBe(l.price_verified && l.unit_price !== null ? round(l.unit_price * l.quantity) : null);
       }
-      expect(b.status === "partial").toBe(b.missing.length > 0);
+      const unverified = b.lines.some((l) => l.unit_price !== null && !l.price_verified);
+      expect(b.status === "partial").toBe(b.missing.length > 0 || unverified);
     }
+    expect(basketCompareMock.status).toBe("done");
+    expect(basketCompareMock.baskets.some((b) => b.status === "pending")).toBe(false);
+    expect(basketJobRunningMock.status).toBe("running");
+    expect(basketJobRunningMock.baskets.some((b) => b.status === "pending")).toBe(true);
     const complete = basketCompareMock.baskets.filter((b) => b.status === "ok");
     const totals = complete.map((b) => b.total as number);
     expect(totals).toEqual([...totals].sort((a, b) => a - b));
