@@ -54,7 +54,7 @@ flowchart LR
 
 | Feature | TinyFish API | What happens |
 |---|---|---|
-| Prescription basket → delivery | **Agent** ×4 in parallel, Search, Fetch | One agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) finds every medicine on the prescription and returns prices as structured JSON; totals, missing items and savings are computed in code; a Jan Aushadhi generic basket is looked up alongside; the user orders on the cheapest pharmacy |
+| Prescription basket → delivery | **Agent** ×4 (async), **Fetch** | One agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) finds every medicine on the prescription and returns prices as structured JSON; each price is then confirmed on the product page with Fetch; totals, missing items and savings are computed in code; the user orders on the cheapest pharmacy |
 | Doctor verification | **Agent** | Searches the NMC Indian Medical Register for a registration number and returns the official record |
 | Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
 | Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
@@ -65,27 +65,36 @@ Web results are cached in Postgres (`web_cache`), so repeated lookups are instan
 
 ## Prescription basket, step by step
 
+Browser agents take one to a few minutes per pharmacy, so pricing runs as a background job that the app polls.
+
 ```mermaid
 sequenceDiagram
   participant App
-  participant API as POST /api/prescriptions/basket
+  participant API as /api/prescriptions/basket
   participant Cache as web_cache
-  participant Agents as TinyFish agents (1 per pharmacy)
-  App->>API: { prescription_id } + Bearer token
+  participant TF as TinyFish
+  App->>API: POST { prescription_id } + Bearer token
   API->>Cache: lookup (24 h, keyed by the sorted medicine list)
   alt cached
-    Cache-->>API: result
+    API-->>App: status done, baskets, cached: true
   else not cached
-    par 1mg · PharmEasy · Netmeds · Apollo
-      API->>Agents: price every medicine in the basket
+    API->>TF: start 1 agent per pharmacy (run-async)
+    API-->>App: job_id, status running, every basket pending
+    loop every 4 s until done
+      App->>API: GET /{job_id}
+      API->>TF: run status
+      opt a run has finished
+        API->>TF: Fetch its product pages
+        API->>API: link on the pharmacy's site? price shown on the page? totals, sort, savings
+      end
+      API-->>App: baskets so far (finished ones + pending)
     end
-    API->>API: check every price and link, total each basket, sort, savings
-    API->>Cache: store
   end
-  API-->>App: baskets, missing items, cheapest pharmacy, generic basket, savings
 ```
 
-If a pharmacy times out or lacks a medicine, the response still succeeds and says so per pharmacy.
+- The `job_id` is the job itself, encrypted and signed by the server, so no job table is needed and its contents can't be read or changed by the client. Only the user who started a job can read it.
+- A price that the product page doesn't show is returned as unconfirmed and left out of totals, so it can never make a basket look cheapest.
+- If a pharmacy times out or lacks a medicine, the job still finishes and says so per pharmacy.
 
 ## AI safety
 

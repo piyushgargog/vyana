@@ -6,6 +6,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ### Added
 - Backend foundations: one error format for every API route, bearer-token sign-in checks with roles, a shared cache for public web results, and `apps/web/.env.example`.
+- Prescription basket pricing: `POST /api/prescriptions/basket` starts one web agent per pharmacy in the background and `GET /api/prescriptions/basket/{job_id}` reports progress; every price must appear on the pharmacy's product page before it counts, and totals, ordering and savings are computed by the server. `pnpm smoke:basket` runs the whole pipeline live.
 - Live web layer: a TinyFish client for Search, Fetch, browser agents (with live progress, time limits and a per-minute run limit) and Monitors, the agent start pages for each pharmacy and the medical register, offline fixtures, and `pnpm smoke:tinyfish` to check everything against the live sites.
 - AI safety checks: extracted values must quote text found in the document, links are limited to pages the server actually fetched, and emergency warning signs (English, Hindi, Hinglish) are detected by fixed rules before any model runs.
 - API contracts, mocks, client methods and hooks for prescription basket pricing, care plans, interaction checks, symptom triage, hospital OPD info, PM-JAY hospitals, share links, data export and account deletion.
@@ -19,6 +20,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
 
 ### Changed
+- **API contract:** basket pricing is now a job. `BasketCompareRes` gains `job_id` and `status`, baskets can be `pending`, and lines carry `price_verified`; new client method `basket.job()` and hook `useBasketJob()`.
 - ARCHITECTURE documents privacy before AI and the verified interaction table.
 
 ### Removed
