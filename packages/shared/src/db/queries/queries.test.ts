@@ -25,6 +25,7 @@ import {
   getTimeline,
   listActiveItems,
   listHospitals,
+  listItemDoseLogs,
   listMyAppointments,
   listPrescriptions,
   listVerifiedDoctors,
@@ -290,6 +291,27 @@ describe("scheduled adherence", () => {
 
   it("is 0 percent with nothing due and nothing logged", () => {
     expect(computeScheduledAdherence([], [], at(11, 0), at(12, 12))).toEqual({ taken: 0, missed: 0, percent: 0 });
+  });
+});
+
+describe("listItemDoseLogs", () => {
+  const page = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ item_id: "i-1", scheduled_for: `2026-01-01T00:${String(i % 60).padStart(2, "0")}:00Z`, status: "taken" }));
+
+  it("reads the logs page by page until a short page, so a long course is not cut at 1000 rows", async () => {
+    const f = fakeSupabase({ responses: { dose_logs: [ok(page(1000)), ok(page(1000)), ok(page(37))] } });
+    const logs = await listItemDoseLogs(f.sb, ["i-1"]);
+    expect(logs).toHaveLength(2037);
+    expect(f.calls.filter((c) => c.name === "range").map((c) => c.args)).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+  });
+
+  it("makes one request for a short list and none without medicines", async () => {
+    const f = fakeSupabase({ responses: { dose_logs: [ok(page(3))] } });
+    expect(await listItemDoseLogs(f.sb, ["i-1"])).toHaveLength(3);
+    expect(f.calls.filter((c) => c.name === "range")).toHaveLength(1);
+    const g = fakeSupabase();
+    expect(await listItemDoseLogs(g.sb, [])).toEqual([]);
+    expect(g.calls).toHaveLength(0);
   });
 });
 

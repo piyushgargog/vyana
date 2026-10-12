@@ -45,11 +45,32 @@ export async function listDoseLogs(sb: Sb, from: string, to: string): Promise<Db
   );
 }
 
-/** Every dose log of the given medicines (all time), for the refill count and to skip reminders of doses already logged. */
+/** The most rows Supabase returns for one request (`max_rows` in config.toml); longer lists are read in pages. */
+const PAGE_SIZE = 1000;
+
+/**
+ * Every dose log of the given medicines (all time), for the refill count and to skip reminders of
+ * doses already logged. Read page by page, because one request returns at most 1000 rows and a long
+ * course has more: a short count would make a medicine look fuller than it is.
+ */
 export async function listItemDoseLogs(sb: Sb, itemIds: string[]): Promise<Pick<DbDoseLog, "item_id" | "scheduled_for" | "status">[]> {
   if (itemIds.length === 0) return [];
   const patientId = await requireUserId(sb);
-  return unwrap(await sb.from("dose_logs").select("item_id, scheduled_for, status").eq("patient_id", patientId).in("item_id", itemIds));
+  const all: Pick<DbDoseLog, "item_id" | "scheduled_for" | "status">[] = [];
+  for (let page = 0; page < 50; page++) {
+    const rows = unwrap(
+      await sb
+        .from("dose_logs")
+        .select("item_id, scheduled_for, status")
+        .eq("patient_id", patientId)
+        .in("item_id", itemIds)
+        .order("scheduled_for")
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    );
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+  }
+  return all;
 }
 
 /**
