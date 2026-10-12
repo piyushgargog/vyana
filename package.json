@@ -10,7 +10,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "docs:openapi": "node scripts/generate-openapi.mts",
-    "smoke:tinyfish": "pnpm --filter @vyana/web smoke:tinyfish"
+    "smoke:tinyfish": "pnpm --filter @vyana/web smoke:tinyfish",
+    "smoke:basket": "pnpm --filter @vyana/web smoke:basket"
   },
   "devDependencies": {
     "turbo": "^2",
