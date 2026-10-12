@@ -42,8 +42,10 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// The API routes sign requests with an Authorization: Bearer header, not cookies, so refreshing the
+// session there is wasted work (the basket screen polls /api every 4 seconds).
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
