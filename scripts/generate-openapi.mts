@@ -10,6 +10,7 @@ import * as c from "../packages/shared/src/contracts/index.ts";
 
 type Route = {
   path: string;
+  method?: "get" | "post" | "delete";
   summary: string;
   description: string;
   tag: string;
@@ -17,6 +18,9 @@ type Route = {
   res: ZodType;
   roles: string;
   tinyfish?: string;
+  /** No bearer token (e.g. share links, which carry their own token in the path). */
+  publicRoute?: boolean;
+  pathParams?: { name: string; description: string }[];
 };
 
 const routes: Route[] = [
@@ -27,8 +31,16 @@ const routes: Route[] = [
   { path: "/api/emergency/nearby", tag: "Emergency", summary: "Find nearby emergency hospitals", description: "Reverse-geocodes the location and finds hospitals with emergency/ICU care from the live web. Cached for 6 h per ~1 km area. Never fails: returns an empty list if nothing is found.", req: c.EmergencyNearbyReq, res: c.EmergencyNearbyRes, roles: "any signed-in user", tinyfish: "Search, Fetch" },
   { path: "/api/emergency/sos", tag: "Emergency", summary: "Raise an SOS", description: "Creates an emergency request, returns nearby hospitals, the user's emergency contacts and a ready-to-send SMS with a maps link. The request status updates live via Supabase Realtime.", req: c.EmergencySosReq, res: c.EmergencySosRes, roles: "patient" },
   { path: "/api/doctors/verify", tag: "Doctors", summary: "Verify a doctor against the NMC Indian Medical Register", description: "A web agent searches the official register and compares the result with the doctor's profile. Cached for 30 days.", req: c.DoctorVerifyReq, res: c.DoctorVerifyRes, roles: "doctor (verifies self)", tinyfish: "Agent" },
-  { path: "/api/nutrition/plan", tag: "Wellness", summary: "Generate a diet plan for the user's conditions", description: "Grounded in trusted health sources found on the live web; the sources are returned with the plan.", req: c.NutritionPlanReq, res: c.NutritionPlanRes, roles: "patient", tinyfish: "Search, Fetch" },
   { path: "/api/alerts/check", tag: "Wellness", summary: "Check the user's medicines for quality alerts", description: "Searches recent CDSCO quality alerts and recalls for each active medicine and keeps only the genuinely relevant ones.", req: c.AlertsCheckReq, res: c.AlertsCheckRes, roles: "patient", tinyfish: "Search" },
+  { path: "/api/prescriptions/basket", tag: "Prices", summary: "Price a whole prescription across pharmacies", description: "One web agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) prices every medicine in the basket. Totals, missing items and savings are computed by the server, every price and link is checked against the pharmacy's own page, and a Jan Aushadhi generic basket is added when found. Send `prescription_id` or `items`, not both. Cached for 24 h per basket.", req: c.BasketCompareReq, res: c.BasketCompareRes, roles: "any signed-in user", tinyfish: "Agent ×4, Search, Fetch" },
+  { path: "/api/hospitals/info", tag: "Appointments", summary: "Get a hospital's OPD timings", description: "Department-wise OPD days and timings taken from the hospital's own pages, with the source link. Cached for 7 days.", req: c.HospitalInfoReq, res: c.HospitalInfoRes, roles: "any signed-in user", tinyfish: "Search, Fetch" },
+  { path: "/api/care-plan", tag: "Care", summary: "Generate a care plan for a condition", description: "Built only from trusted guideline pages; every section keeps its sources and the plan never mentions medicines or doses. A doctor's request creates a `draft` the doctor must approve; a patient's request creates a plan marked as not reviewed by a doctor.", req: c.GenerateCarePlanReq, res: c.GenerateCarePlanRes, roles: "patient, or the patient's doctor", tinyfish: "Search, Fetch" },
+  { path: "/api/medicines/interactions", tag: "Care", summary: "Check the user's medicines for interactions", description: "Reports an interaction only when a trusted source states it, with the quoted sentence. When none is found, the response lists the sources that were checked; it never calls a combination safe.", req: c.InteractionsReq, res: c.InteractionsRes, roles: "patient", tinyfish: "Search, Fetch" },
+  { path: "/api/triage", tag: "Care", summary: "Check symptoms and suggest a department", description: "Fixed warning-sign rules run first and return `emergency` (call 108 / SOS) without any AI. Otherwise suggests departments from the hospital department list. Never names a disease.", req: c.TriageReq, res: c.TriageRes, roles: "any signed-in user" },
+  { path: "/api/schemes/pmjay-hospitals", tag: "Emergency", summary: "Find Ayushman Bharat (PM-JAY) hospitals nearby", description: "Hospitals near the location that the live web lists as empanelled under PM-JAY, with their source links.", req: c.PmjayHospitalsReq, res: c.PmjayHospitalsRes, roles: "any signed-in user", tinyfish: "Search, Fetch" },
+  { path: "/api/share/{token}", method: "get", publicRoute: true, pathParams: [{ name: "token", description: "Share token from the medical ID QR or a timeline link" }], tag: "Sharing", summary: "Read a shared medical ID or timeline", description: "Read-only record for a doctor or first responder. Works only while the link is valid and not revoked; otherwise 404.", req: null, res: c.ShareRes, roles: "anyone with a valid share link" },
+  { path: "/api/me/export", method: "get", tag: "Account", summary: "Download all of my data", description: "Every record the signed-in user owns, as JSON.", req: null, res: c.MeExportRes, roles: "any signed-in user" },
+  { path: "/api/me", method: "delete", tag: "Account", summary: "Delete my account", description: "Deletes the user, all their records and their uploaded files. Requires a recent login.", req: null, res: c.OkRes, roles: "any signed-in user" },
 ];
 
 const components: Record<string, unknown> = {};
@@ -48,21 +60,32 @@ ref("ApiErrorBody", c.ApiErrorBody);
 
 const paths: Record<string, unknown> = {};
 for (const r of routes) {
+  const method = r.method ?? "post";
+  const responses: Record<string, unknown> = {
+    "200": { description: "Success", content: { "application/json": { schema: ref(nameOf(r.res), r.res) } } },
+  };
+  if (r.req) responses["400"] = errorResponse("Invalid request body (`BAD_REQUEST`)");
+  if (!r.publicRoute) {
+    responses["401"] = errorResponse("Missing or invalid token (`UNAUTHORIZED`)");
+    responses["403"] = errorResponse("Wrong role or not your data (`FORBIDDEN`)");
+  } else {
+    responses["404"] = errorResponse("Unknown, expired or revoked link (`NOT_FOUND`)");
+  }
+  if (r.tinyfish) {
+    responses["502"] = errorResponse("An upstream service failed (`UPSTREAM_ERROR`)");
+    responses["504"] = errorResponse("An upstream service timed out (`UPSTREAM_TIMEOUT`)");
+  }
   paths[r.path] = {
-    post: {
+    ...(paths[r.path] as object | undefined),
+    [method]: {
       tags: [r.tag],
       summary: r.summary,
       description: `${r.description}\n\n**Who can call it:** ${r.roles}.${r.tinyfish ? `\n\n**TinyFish:** ${r.tinyfish}.` : ""}`,
-      operationId: r.path.replace("/api/", "").replace(/\//g, "_"),
+      operationId: `${method}_${r.path.replace("/api/", "").replace(/[{}]/g, "").replace(/[/-]/g, "_")}`,
+      ...(r.publicRoute ? { security: [] } : {}),
+      ...(r.pathParams ? { parameters: r.pathParams.map((p) => ({ name: p.name, in: "path", required: true, description: p.description, schema: { type: "string" } })) } : {}),
       ...(r.req ? { requestBody: { required: true, content: { "application/json": { schema: ref(nameOf(r.req), r.req) } } } } : {}),
-      responses: {
-        "200": { description: "Success", content: { "application/json": { schema: ref(nameOf(r.res), r.res) } } },
-        "400": errorResponse("Invalid request body (`BAD_REQUEST`)"),
-        "401": errorResponse("Missing or invalid token (`UNAUTHORIZED`)"),
-        "403": errorResponse("Wrong role or not your file (`FORBIDDEN`)"),
-        "502": errorResponse("An upstream service failed (`UPSTREAM_ERROR`)"),
-        "504": errorResponse("An upstream service timed out (`UPSTREAM_TIMEOUT`)"),
-      },
+      responses,
     },
   };
 }
@@ -93,11 +116,15 @@ const doc = {
   servers: [{ url: "/", description: "Same origin as the web app (local: http://localhost:3000)" }],
   security: [{ bearerAuth: [] }],
   tags: [
-    { name: "Prices", description: "Live price comparison for medicines and lab tests" },
+    { name: "Prices", description: "Live price comparison for prescriptions, medicines and lab tests" },
     { name: "Health records", description: "Reading prescriptions and lab reports" },
-    { name: "Emergency", description: "SOS and nearby emergency hospitals" },
+    { name: "Care", description: "Care plans, interaction checks and symptom triage" },
+    { name: "Appointments", description: "Hospital information for token booking" },
+    { name: "Emergency", description: "SOS, nearby emergency hospitals and PM-JAY hospitals" },
     { name: "Doctors", description: "Doctor verification" },
-    { name: "Wellness", description: "Diet plans and medicine quality alerts" },
+    { name: "Wellness", description: "Medicine quality alerts" },
+    { name: "Sharing", description: "Read-only medical ID and timeline links" },
+    { name: "Account", description: "Data export and account deletion" },
     { name: "Assistant", description: "AI health assistant chat" },
   ],
   paths,

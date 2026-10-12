@@ -17,15 +17,23 @@ security:
   - bearerAuth: []
 tags:
   - name: Prices
-    description: Live price comparison for medicines and lab tests
+    description: Live price comparison for prescriptions, medicines and lab tests
   - name: Health records
     description: Reading prescriptions and lab reports
+  - name: Care
+    description: Care plans, interaction checks and symptom triage
+  - name: Appointments
+    description: Hospital information for token booking
   - name: Emergency
-    description: SOS and nearby emergency hospitals
+    description: SOS, nearby emergency hospitals and PM-JAY hospitals
   - name: Doctors
     description: Doctor verification
   - name: Wellness
-    description: Diet plans and medicine quality alerts
+    description: Medicine quality alerts
+  - name: Sharing
+    description: Read-only medical ID and timeline links
+  - name: Account
+    description: Data export and account deletion
   - name: Assistant
     description: AI health assistant chat
 paths:
@@ -40,7 +48,7 @@ paths:
         **Who can call it:** any signed-in user.
 
         **TinyFish:** Agent ×4, Search, Fetch.
-      operationId: medicines_compare
+      operationId: post_medicines_compare
       requestBody:
         required: true
         content:
@@ -67,7 +75,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -95,7 +103,7 @@ paths:
         **Who can call it:** any signed-in user.
 
         **TinyFish:** Agent ×4.
-      operationId: labs_compare
+      operationId: post_labs_compare
       requestBody:
         required: true
         content:
@@ -122,7 +130,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -148,7 +156,7 @@ paths:
         Upload the file to the `prescriptions` bucket at `{user_id}/{uuid}.{ext}` first. The server reads it with a vision model, saves the prescription and its items, and returns them with reminder times filled in.
 
         **Who can call it:** patient.
-      operationId: prescriptions_extract
+      operationId: post_prescriptions_extract
       requestBody:
         required: true
         content:
@@ -175,19 +183,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "502":
-          description: An upstream service failed (`UPSTREAM_ERROR`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "504":
-          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -201,7 +197,7 @@ paths:
         Upload the file to the `lab-reports` bucket first. Returns the values with reference ranges and high/low flags, and a plain-language summary (never a diagnosis).
 
         **Who can call it:** patient.
-      operationId: reports_analyze
+      operationId: post_reports_analyze
       requestBody:
         required: true
         content:
@@ -228,19 +224,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "502":
-          description: An upstream service failed (`UPSTREAM_ERROR`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "504":
-          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -256,7 +240,7 @@ paths:
         **Who can call it:** any signed-in user.
 
         **TinyFish:** Search, Fetch.
-      operationId: emergency_nearby
+      operationId: post_emergency_nearby
       requestBody:
         required: true
         content:
@@ -283,7 +267,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -309,7 +293,7 @@ paths:
         Creates an emergency request, returns nearby hospitals, the user's emergency contacts and a ready-to-send SMS with a maps link. The request status updates live via Supabase Realtime.
 
         **Who can call it:** patient.
-      operationId: emergency_sos
+      operationId: post_emergency_sos
       requestBody:
         required: true
         content:
@@ -336,19 +320,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "502":
-          description: An upstream service failed (`UPSTREAM_ERROR`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "504":
-          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -364,7 +336,7 @@ paths:
         **Who can call it:** doctor (verifies self).
 
         **TinyFish:** Agent.
-      operationId: doctors_verify
+      operationId: post_doctors_verify
       requestBody:
         required: true
         content:
@@ -391,62 +363,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "502":
-          description: An upstream service failed (`UPSTREAM_ERROR`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "504":
-          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-  /api/nutrition/plan:
-    post:
-      tags:
-        - Wellness
-      summary: Generate a diet plan for the user's conditions
-      description: |-
-        Grounded in trusted health sources found on the live web; the sources are returned with the plan.
-
-        **Who can call it:** patient.
-
-        **TinyFish:** Search, Fetch.
-      operationId: nutrition_plan
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NutritionPlanReq"
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NutritionPlanRes"
-        "400":
-          description: Invalid request body (`BAD_REQUEST`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "401":
-          description: Missing or invalid token (`UNAUTHORIZED`)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorBody"
-        "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -474,7 +391,7 @@ paths:
         **Who can call it:** patient.
 
         **TinyFish:** Search.
-      operationId: alerts_check
+      operationId: post_alerts_check
       requestBody:
         required: true
         content:
@@ -501,7 +418,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
-          description: Wrong role or not your file (`FORBIDDEN`)
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -514,6 +431,411 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "504":
           description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/prescriptions/basket:
+    post:
+      tags:
+        - Prices
+      summary: Price a whole prescription across pharmacies
+      description: |-
+        One web agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) prices every medicine in the basket. Totals, missing items and savings are computed by the server, every price and link is checked against the pharmacy's own page, and a Jan Aushadhi generic basket is added when found. Send `prescription_id` or `items`, not both. Cached for 24 h per basket.
+
+        **Who can call it:** any signed-in user.
+
+        **TinyFish:** Agent ×4, Search, Fetch.
+      operationId: post_prescriptions_basket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BasketCompareReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BasketCompareRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/hospitals/info:
+    post:
+      tags:
+        - Appointments
+      summary: Get a hospital's OPD timings
+      description: |-
+        Department-wise OPD days and timings taken from the hospital's own pages, with the source link. Cached for 7 days.
+
+        **Who can call it:** any signed-in user.
+
+        **TinyFish:** Search, Fetch.
+      operationId: post_hospitals_info
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HospitalInfoReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HospitalInfoRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/care-plan:
+    post:
+      tags:
+        - Care
+      summary: Generate a care plan for a condition
+      description: |-
+        Built only from trusted guideline pages; every section keeps its sources and the plan never mentions medicines or doses. A doctor's request creates a `draft` the doctor must approve; a patient's request creates a plan marked as not reviewed by a doctor.
+
+        **Who can call it:** patient, or the patient's doctor.
+
+        **TinyFish:** Search, Fetch.
+      operationId: post_care_plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateCarePlanReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateCarePlanRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/medicines/interactions:
+    post:
+      tags:
+        - Care
+      summary: Check the user's medicines for interactions
+      description: |-
+        Reports an interaction only when a trusted source states it, with the quoted sentence. When none is found, the response lists the sources that were checked; it never calls a combination safe.
+
+        **Who can call it:** patient.
+
+        **TinyFish:** Search, Fetch.
+      operationId: post_medicines_interactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InteractionsReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InteractionsRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/triage:
+    post:
+      tags:
+        - Care
+      summary: Check symptoms and suggest a department
+      description: |-
+        Fixed warning-sign rules run first and return `emergency` (call 108 / SOS) without any AI. Otherwise suggests departments from the hospital department list. Never names a disease.
+
+        **Who can call it:** any signed-in user.
+      operationId: post_triage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriageReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TriageRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/schemes/pmjay-hospitals:
+    post:
+      tags:
+        - Emergency
+      summary: Find Ayushman Bharat (PM-JAY) hospitals nearby
+      description: |-
+        Hospitals near the location that the live web lists as empanelled under PM-JAY, with their source links.
+
+        **Who can call it:** any signed-in user.
+
+        **TinyFish:** Search, Fetch.
+      operationId: post_schemes_pmjay_hospitals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PmjayHospitalsReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmjayHospitalsRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/share/{token}:
+    get:
+      tags:
+        - Sharing
+      summary: Read a shared medical ID or timeline
+      description: |-
+        Read-only record for a doctor or first responder. Works only while the link is valid and not revoked; otherwise 404.
+
+        **Who can call it:** anyone with a valid share link.
+      operationId: get_share_token
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Share token from the medical ID QR or a timeline link
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareRes"
+        "404":
+          description: Unknown, expired or revoked link (`NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/me/export:
+    get:
+      tags:
+        - Account
+      summary: Download all of my data
+      description: |-
+        Every record the signed-in user owns, as JSON.
+
+        **Who can call it:** any signed-in user.
+      operationId: get_me_export
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeExportRes"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/me:
+    delete:
+      tags:
+        - Account
+      summary: Delete my account
+      description: |-
+        Deletes the user, all their records and their uploaded files. Requires a recent login.
+
+        **Who can call it:** any signed-in user.
+      operationId: delete_me
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkRes"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
           content:
             application/json:
               schema:
@@ -619,6 +941,221 @@ components:
           additionalProperties: false
       required:
         - error
+      additionalProperties: false
+    BasketCompareReq:
+      type: object
+      properties:
+        prescription_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        items:
+          minItems: 1
+          maxItems: 10
+          type: array
+          items:
+            type: object
+            properties:
+              medicine:
+                type: string
+                minLength: 2
+              strength:
+                type: string
+              quantity:
+                type: integer
+                exclusiveMinimum: 0
+                maximum: 9007199254740991
+            required:
+              - medicine
+            additionalProperties: false
+      additionalProperties: false
+    BasketCompareRes:
+      type: object
+      properties:
+        baskets:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+                enum:
+                  - 1mg
+                  - pharmeasy
+                  - netmeds
+                  - apollo
+                  - janaushadhi
+                  - healthians
+                  - redcliffe
+                  - thyrocare
+                  - 1mg_labs
+              status:
+                type: string
+                enum:
+                  - ok
+                  - partial
+                  - not_found
+                  - timeout
+                  - error
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    medicine:
+                      type: string
+                    strength:
+                      type:
+                        - string
+                        - "null"
+                    quantity:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                    product_name:
+                      type:
+                        - string
+                        - "null"
+                    pack_size:
+                      type:
+                        - string
+                        - "null"
+                    unit_price:
+                      type:
+                        - number
+                        - "null"
+                    line_total:
+                      type:
+                        - number
+                        - "null"
+                    in_stock:
+                      type:
+                        - boolean
+                        - "null"
+                    product_url:
+                      type:
+                        - string
+                        - "null"
+                  required:
+                    - medicine
+                    - strength
+                    - quantity
+                    - product_name
+                    - pack_size
+                    - unit_price
+                    - line_total
+                    - in_stock
+                    - product_url
+                  additionalProperties: false
+              total:
+                type:
+                  - number
+                  - "null"
+              missing:
+                type: array
+                items:
+                  type: string
+              checkout_url:
+                type:
+                  - string
+                  - "null"
+            required:
+              - source
+              - status
+              - lines
+              - total
+              - missing
+              - checkout_url
+            additionalProperties: false
+        cheapest_source:
+          anyOf:
+            - type: string
+              enum:
+                - 1mg
+                - pharmeasy
+                - netmeds
+                - apollo
+                - janaushadhi
+                - healthians
+                - redcliffe
+                - thyrocare
+                - 1mg_labs
+            - type: "null"
+        generic:
+          anyOf:
+            - type: object
+              properties:
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      medicine:
+                        type: string
+                      strength:
+                        type:
+                          - string
+                          - "null"
+                      quantity:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      product_name:
+                        type:
+                          - string
+                          - "null"
+                      pack_size:
+                        type:
+                          - string
+                          - "null"
+                      unit_price:
+                        type:
+                          - number
+                          - "null"
+                      line_total:
+                        type:
+                          - number
+                          - "null"
+                      in_stock:
+                        type:
+                          - boolean
+                          - "null"
+                      product_url:
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - medicine
+                      - strength
+                      - quantity
+                      - product_name
+                      - pack_size
+                      - unit_price
+                      - line_total
+                      - in_stock
+                      - product_url
+                    additionalProperties: false
+                total:
+                  type:
+                    - number
+                    - "null"
+              required:
+                - lines
+                - total
+              additionalProperties: false
+            - type: "null"
+        savings_vs_highest:
+          type:
+            - number
+            - "null"
+        cached:
+          type: boolean
+      required:
+        - baskets
+        - cheapest_source
+        - generic
+        - savings_vs_highest
+        - cached
       additionalProperties: false
     DoctorVerifyReq:
       type: object
@@ -831,6 +1368,302 @@ components:
         - hospitals
         - contacts
         - sms_body
+      additionalProperties: false
+    GenerateCarePlanReq:
+      type: object
+      properties:
+        condition_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        language:
+          type: string
+          enum:
+            - en
+            - hi
+            - hinglish
+      required:
+        - condition_id
+      additionalProperties: false
+    GenerateCarePlanRes:
+      type: object
+      properties:
+        care_plan_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        status:
+          type: string
+          enum:
+            - draft
+            - approved
+            - patient_generated
+        plan:
+          type: object
+          properties:
+            condition:
+              type: string
+            summary:
+              type: string
+            do:
+              type: array
+              items:
+                type: string
+            dont:
+              type: array
+              items:
+                type: string
+            diet:
+              type: object
+              properties:
+                eat_more:
+                  type: array
+                  items:
+                    type: string
+                limit:
+                  type: array
+                  items:
+                    type: string
+                sample_day:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      meal:
+                        type: string
+                        enum:
+                          - breakfast
+                          - lunch
+                          - dinner
+                          - snack
+                      items:
+                        type: array
+                        items:
+                          type: string
+                    required:
+                      - meal
+                      - items
+                    additionalProperties: false
+              required:
+                - eat_more
+                - limit
+                - sample_day
+              additionalProperties: false
+            red_flags:
+              type: array
+              items:
+                type: string
+            follow_up_tests:
+              type: array
+              items:
+                type: object
+                properties:
+                  test:
+                    type: string
+                  every_days:
+                    type: integer
+                    exclusiveMinimum: 0
+                    maximum: 9007199254740991
+                required:
+                  - test
+                  - every_days
+                additionalProperties: false
+            sources:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  url:
+                    type: string
+                required:
+                  - title
+                  - url
+                additionalProperties: false
+            language:
+              type: string
+              enum:
+                - en
+                - hi
+                - hinglish
+          required:
+            - condition
+            - summary
+            - do
+            - dont
+            - diet
+            - red_flags
+            - follow_up_tests
+            - sources
+            - language
+          additionalProperties: false
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+            prompt_version:
+              type: string
+            generated_at:
+              type: string
+          required:
+            - model
+            - prompt_version
+            - generated_at
+          additionalProperties: false
+      required:
+        - care_plan_id
+        - status
+        - plan
+        - ai
+      additionalProperties: false
+    HospitalInfoReq:
+      type: object
+      properties:
+        hospital_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - hospital_id
+      additionalProperties: false
+    HospitalInfoRes:
+      type: object
+      properties:
+        hospital_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        opd:
+          type: array
+          items:
+            type: object
+            properties:
+              department:
+                type: string
+              days:
+                type: string
+              timings:
+                type: string
+            required:
+              - department
+              - days
+              - timings
+            additionalProperties: false
+        notes:
+          type:
+            - string
+            - "null"
+        source_url:
+          type:
+            - string
+            - "null"
+        fetched_at:
+          type: string
+        cached:
+          type: boolean
+      required:
+        - hospital_id
+        - opd
+        - notes
+        - source_url
+        - fetched_at
+        - cached
+      additionalProperties: false
+    InteractionsReq:
+      type: object
+      properties:
+        prescription_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      additionalProperties: false
+    InteractionsRes:
+      type: object
+      properties:
+        checked_medicines:
+          type: array
+          items:
+            type: string
+        interactions:
+          type: array
+          items:
+            type: object
+            properties:
+              medicine_a:
+                type: string
+              medicine_b:
+                type: string
+              severity:
+                type: string
+                enum:
+                  - major
+                  - moderate
+                  - minor
+              effect:
+                type: string
+              advice:
+                type: string
+              quote:
+                type: string
+              sources:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    url:
+                      type: string
+                  required:
+                    - title
+                    - url
+                  additionalProperties: false
+            required:
+              - medicine_a
+              - medicine_b
+              - severity
+              - effect
+              - advice
+              - quote
+              - sources
+            additionalProperties: false
+        sources_checked:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              url:
+                type: string
+            required:
+              - title
+              - url
+            additionalProperties: false
+        cached:
+          type: boolean
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+            prompt_version:
+              type: string
+            generated_at:
+              type: string
+          required:
+            - model
+            - prompt_version
+            - generated_at
+          additionalProperties: false
+      required:
+        - checked_medicines
+        - interactions
+        - sources_checked
+        - cached
+        - ai
       additionalProperties: false
     LabsCompareReq:
       type: object
@@ -1246,78 +2079,69 @@ components:
         - generic_salt
         - cached
       additionalProperties: false
-    NutritionPlanReq:
+    MeExportRes:
+      type: object
+      propertyNames:
+        type: string
+      additionalProperties: {}
+    OkRes:
       type: object
       properties:
-        condition_ids:
-          type: array
-          items:
-            type: string
-            format: uuid
-            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        ok:
+          type: boolean
+          const: true
+      required:
+        - ok
       additionalProperties: false
-    NutritionPlanRes:
+    PmjayHospitalsReq:
       type: object
       properties:
-        plan_id:
-          type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-        conditions:
-          type: array
-          items:
-            type: string
-        summary:
-          type: string
-        eat_more:
-          type: array
-          items:
-            type: string
-        limit:
-          type: array
-          items:
-            type: string
-        sample_day:
+        lat:
+          type: number
+        lng:
+          type: number
+      required:
+        - lat
+        - lng
+      additionalProperties: false
+    PmjayHospitalsRes:
+      type: object
+      properties:
+        area:
+          type:
+            - string
+            - "null"
+        hospitals:
           type: array
           items:
             type: object
             properties:
-              meal:
+              name:
                 type: string
-                enum:
-                  - breakfast
-                  - lunch
-                  - dinner
-                  - snack
-              items:
+              address:
+                type:
+                  - string
+                  - "null"
+              specialities:
                 type: array
                 items:
                   type: string
+              source_url:
+                type:
+                  - string
+                  - "null"
             required:
-              - meal
-              - items
+              - name
+              - address
+              - specialities
+              - source_url
             additionalProperties: false
-        sources:
-          type: array
-          items:
-            type: object
-            properties:
-              title:
-                type: string
-              url:
-                type: string
-            required:
-              - title
-              - url
-            additionalProperties: false
+        cached:
+          type: boolean
       required:
-        - plan_id
-        - conditions
-        - summary
-        - eat_more
-        - limit
-        - sample_day
-        - sources
+        - area
+        - hospitals
+        - cached
       additionalProperties: false
     PrescriptionExtractReq:
       type: object
@@ -1413,6 +2237,12 @@ components:
                 type:
                   - string
                   - "null"
+              needs_review:
+                type: boolean
+              evidence:
+                type:
+                  - string
+                  - "null"
             required:
               - id
               - medicine_name
@@ -1431,6 +2261,20 @@ components:
           type: array
           items:
             type: string
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+            prompt_version:
+              type: string
+            generated_at:
+              type: string
+          required:
+            - model
+            - prompt_version
+            - generated_at
+          additionalProperties: false
       required:
         - prescription_id
         - doctor_name
@@ -1438,6 +2282,7 @@ components:
         - issued_on
         - items
         - warnings
+        - ai
       additionalProperties: false
     ReportAnalyzeReq:
       type: object
@@ -1502,6 +2347,12 @@ components:
                   - normal
                   - high
                   - unknown
+              needs_review:
+                type: boolean
+              evidence:
+                type:
+                  - string
+                  - "null"
             required:
               - test_name
               - value
@@ -1515,6 +2366,20 @@ components:
           type: array
           items:
             type: string
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+            prompt_version:
+              type: string
+            generated_at:
+              type: string
+          required:
+            - model
+            - prompt_version
+            - generated_at
+          additionalProperties: false
       required:
         - report_id
         - lab_name
@@ -1522,4 +2387,192 @@ components:
         - summary
         - values
         - follow_up_tests
+        - ai
+      additionalProperties: false
+    ShareRes:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - medical_id
+            - timeline
+        profile:
+          type: object
+          properties:
+            full_name:
+              type:
+                - string
+                - "null"
+            age:
+              anyOf:
+                - type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                - type: "null"
+            blood_group:
+              type:
+                - string
+                - "null"
+            allergies:
+              type: array
+              items:
+                type: string
+            conditions:
+              type: array
+              items:
+                type: string
+            active_medicines:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  strength:
+                    type:
+                      - string
+                      - "null"
+                  dose:
+                    type:
+                      - string
+                      - "null"
+                  frequency:
+                    type: string
+                required:
+                  - name
+                  - strength
+                  - dose
+                  - frequency
+                additionalProperties: false
+            emergency_contacts:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  phone:
+                    type: string
+                required:
+                  - name
+                  - phone
+                additionalProperties: false
+          required:
+            - full_name
+            - age
+            - blood_group
+            - allergies
+            - conditions
+            - active_medicines
+            - emergency_contacts
+          additionalProperties: false
+        timeline:
+          anyOf:
+            - type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    pattern: ^\d{4}-\d{2}-\d{2}$
+                  kind:
+                    type: string
+                    enum:
+                      - prescription
+                      - report
+                      - appointment
+                      - condition
+                  title:
+                    type: string
+                  summary:
+                    type:
+                      - string
+                      - "null"
+                required:
+                  - date
+                  - kind
+                  - title
+                  - summary
+                additionalProperties: false
+            - type: "null"
+        expires_at:
+          type: string
+      required:
+        - kind
+        - profile
+        - timeline
+        - expires_at
+      additionalProperties: false
+    TriageReq:
+      type: object
+      properties:
+        symptoms:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        age:
+          type: integer
+          minimum: 0
+          maximum: 120
+        sex:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+        duration:
+          type: string
+          maxLength: 100
+        language:
+          type: string
+          enum:
+            - en
+            - hi
+            - hinglish
+      required:
+        - symptoms
+      additionalProperties: false
+    TriageRes:
+      type: object
+      properties:
+        urgency:
+          type: string
+          enum:
+            - emergency
+            - soon
+            - routine
+        departments:
+          type: array
+          items:
+            type: string
+        advice:
+          type: string
+        red_flags:
+          type: array
+          items:
+            type: string
+        disclaimer:
+          type: string
+        ai:
+          type: object
+          properties:
+            model:
+              type: string
+            prompt_version:
+              type: string
+            generated_at:
+              type: string
+          required:
+            - model
+            - prompt_version
+            - generated_at
+          additionalProperties: false
+      required:
+        - urgency
+        - departments
+        - advice
+        - red_flags
+        - disclaimer
+        - ai
       additionalProperties: false
