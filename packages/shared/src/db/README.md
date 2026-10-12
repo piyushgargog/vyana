@@ -54,6 +54,9 @@ OPD tokens, never anyone's appointment). Booking is by token, so there are no ti
 transaction: if a medicine is refused, nothing is saved. The medicines are checked first (`prepareDoctorItems`) and get
 the reminder times of their frequency when the doctor gave none.
 
+A diagnosis on the e-prescription also creates the patient's condition (source `doctor`), one per prescription; editing the
+diagnosis updates it. The result's `condition_id` is the id to pass to `POST /api/care-plan`.
+
 ## Adherence
 
 `getAdherence(days)` / `useAdherence(days)` counts a dose that was due and never logged as missed once it is overdue by

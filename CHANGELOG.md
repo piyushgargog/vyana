@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- A doctor's e-prescription with a diagnosis now creates the patient's condition automatically (one per prescription, an edited diagnosis updates it), so the care plan draft can start from it. Doctors still cannot insert conditions themselves.
 - AI safety test suite: case files for every safety check (emergencies, redaction, prices, interactions, care plans, no diagnosis, no dose advice, citations). The checks that need no AI model run on every change.
 
 - `pnpm prewarm` fills the shared cache before a demo (the demo prescription's pharmacy baskets and the care plan pages for the demo conditions); `--dry-run` shows the plan and the agent-run estimate. The README's TinyFish section now lists each feature's endpoint and code.

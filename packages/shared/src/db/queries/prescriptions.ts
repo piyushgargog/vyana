@@ -23,8 +23,9 @@ export type CreateDoctorPrescriptionResult = {
   prescription: DbPrescription;
   items: DbPrescriptionItem[];
   /**
-   * The condition created from the diagnosis (so the web can call useGenerateCarePlan), or null when
-   * there is none yet. A doctor cannot insert conditions; a database trigger on prescriptions does (V12).
+   * The condition that the diagnosis created (so the web can call `POST /api/care-plan` with it), or null
+   * when the diagnosis was blank. A doctor cannot insert conditions; a trigger on prescriptions does it in the
+   * same transaction (`0006_diagnosis_condition.sql`), so it already exists when the call returns.
    */
   condition_id: string | null;
 };
