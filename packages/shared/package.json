@@ -23,6 +23,7 @@
   "devDependencies": {
     "@supabase/supabase-js": "^2.117.3",
     "@tanstack/react-query": "^5.104.1",
+    "@types/node": "^20.19.43",
     "@types/react": "~19.2.2",
     "react": "19.2.3",
     "typescript": "^5",
