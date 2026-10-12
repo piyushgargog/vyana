@@ -1,0 +1,75 @@
+// packages/shared/src/db/queries/appointments.ts
+// Token booking like the government ORS portal (plan 7.5). Owner: Vaibhav Parmar
+
+import type { DbAppointment, DbDepartment, DbHospital } from "../types";
+import { requireUserId, unwrap, type Sb } from "./helpers";
+
+export type AppointmentStatus = "requested" | "confirmed" | "completed" | "cancelled";
+
+export type BookAppointmentInput = {
+  hospital_id: string;
+  department_id: string;
+  /** A verified doctor of that department, or leave out to book the department's OPD queue. */
+  doctor_id?: string | null;
+  /** `YYYY-MM-DD` */
+  appointment_date: string;
+  reason?: string | null;
+};
+
+export type MyAppointment = DbAppointment & {
+  hospitals: Pick<DbHospital, "name" | "address"> | null;
+  departments: Pick<DbDepartment, "name"> | null;
+};
+
+export type QueueEntry = DbAppointment & {
+  patient: { full_name: string | null } | null;
+};
+
+/**
+ * Books a token through the `book_appointment` function (the only way to create an appointment).
+ * It raises 'OPD is closed on that day', 'no tokens left for that day', 'date is in the past' and
+ * 'doctor is not in this department' as a DbError.
+ */
+export async function bookAppointment(sb: Sb, input: BookAppointmentInput): Promise<DbAppointment> {
+  // The generated argument types are not nullable; the SQL function accepts null for both.
+  return unwrap(
+    await sb.rpc("book_appointment", {
+      p_hospital: input.hospital_id,
+      p_department: input.department_id,
+      p_doctor: (input.doctor_id ?? null) as string,
+      p_date: input.appointment_date,
+      p_reason: (input.reason ?? null) as string,
+    })
+  ) as DbAppointment;
+}
+
+/** The signed-in patient's appointments, newest first, with the hospital and department names. */
+export async function listMyAppointments(sb: Sb): Promise<MyAppointment[]> {
+  const patientId = await requireUserId(sb);
+  return unwrap(
+    await sb
+      .from("appointments")
+      .select("*, hospitals(name, address), departments(name)")
+      .eq("patient_id", patientId)
+      .order("appointment_date", { ascending: false })
+      .order("token_no", { ascending: false })
+  );
+}
+
+/** A doctor's queue for one day (`YYYY-MM-DD`): their own bookings and their department's, in token order. */
+export async function listDoctorQueue(sb: Sb, date: string): Promise<QueueEntry[]> {
+  return unwrap(
+    await sb
+      .from("appointments")
+      .select("*, patient:profiles!appointments_patient_id_fkey(full_name)")
+      .eq("appointment_date", date)
+      .neq("status", "cancelled")
+      .order("token_no")
+  );
+}
+
+/** A doctor confirms or completes an appointment (with notes); a patient cancels their own. */
+export async function updateAppointmentStatus(sb: Sb, id: string, status: AppointmentStatus, doctorNotes?: string): Promise<DbAppointment> {
+  const patch = doctorNotes === undefined ? { status } : { status, doctor_notes: doctorNotes };
+  return unwrap(await sb.from("appointments").update(patch).eq("id", id).select().single());
+}
