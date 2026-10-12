@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke:tinyfish": "tsx --conditions=react-server ../../scripts/smoke-tinyfish.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }
