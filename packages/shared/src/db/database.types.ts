@@ -22,6 +22,7 @@ export type Database = {
           model: string | null
           output_json: Json | null
           prompt_version: string | null
+          report_note: string | null
           sources: Json | null
           status: string
           user_id: string | null
@@ -35,6 +36,7 @@ export type Database = {
           model?: string | null
           output_json?: Json | null
           prompt_version?: string | null
+          report_note?: string | null
           sources?: Json | null
           status?: string
           user_id?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           model?: string | null
           output_json?: Json | null
           prompt_version?: string | null
+          report_note?: string | null
           sources?: Json | null
           status?: string
           user_id?: string | null
@@ -1458,9 +1461,56 @@ export type Database = {
         }
       }
       create_care_invite: { Args: Record<PropertyKey, never>; Returns: string }
+      create_doctor_prescription: {
+        Args: {
+          p_appointment: string
+          p_diagnosis: string
+          p_items: Json
+          p_notes: string
+          p_patient: string
+        }
+        Returns: string
+      }
+      department_tokens: {
+        Args: { p_date: string; p_department: string }
+        Returns: {
+          daily_token_limit: number
+          opd_open: boolean
+          tokens_left: number
+        }[]
+      }
+      doctor_directory: {
+        Args: { p_department?: string; p_hospital?: string; p_id?: string }
+        Returns: {
+          availability: Json
+          clinic_address: string
+          clinic_name: string
+          consultation_fee: number
+          department_id: string
+          full_name: string
+          hospital_id: string
+          id: string
+          reg_no: string
+          specialization: string
+          state_council: string
+          verified_at: string
+          year_of_registration: number
+        }[]
+      }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_caregiver_of: { Args: { p: string }; Returns: boolean }
       is_doctor_of: { Args: { p: string }; Returns: boolean }
+      my_caregivers: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          caregiver_id: string
+          created_at: string
+          full_name: string
+          link_id: string
+          relation: string
+          status: string
+        }[]
+      }
       my_verified_department: {
         Args: Record<PropertyKey, never>
         Returns: string
