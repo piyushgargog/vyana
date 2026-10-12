@@ -322,14 +322,8 @@ export async function runAgent<T = unknown>(params: AgentParams<T>, opts?: CallO
   }
 
   const timeoutMs = opts?.timeoutMs ?? TIMEOUTS.agent;
-  const body = {
-    url: params.url,
-    goal: params.goal,
-    ...(params.output_schema ? { output_schema: params.output_schema } : {}),
-    browser_profile: params.browser_profile ?? "lite",
-    // Stop the remote run when we stop waiting, so a slow site doesn't keep spending credits.
-    agent_config: { max_duration_seconds: Math.ceil(timeoutMs / 1000) },
-  };
+  // Stop the remote run when we stop waiting, so a slow site doesn't keep spending credits.
+  const body = agentBody(params, Math.ceil(timeoutMs / 1000));
   const signal = AbortSignal.timeout(timeoutMs);
   count(opts);
   const started = Date.now();
@@ -357,6 +351,130 @@ export async function runAgent<T = unknown>(params: AgentParams<T>, opts?: CallO
     duration_ms: Date.now() - started,
   });
   return outcome;
+}
+
+// ---------------------------------------------------------------- Async agent runs (paid)
+
+export type RunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+export interface RunState {
+  status: RunStatus;
+  result: unknown;
+  /** TinyFish error code when the run failed. */
+  error: string | null;
+  /** When the run left the queue (ms since epoch); null while PENDING. Runs queue when the account's browser limit is reached. */
+  startedAt: number | null;
+}
+
+export type StartOutcome = { status: "started"; runId: string } | { status: "error"; error: string };
+
+/** Mock mode: results of runs "started" in this process, keyed by run id. */
+const mockRuns = new Map<string, unknown>();
+
+function agentBody(params: Pick<AgentParams<unknown>, "url" | "goal" | "output_schema" | "browser_profile">, maxSeconds: number) {
+  return {
+    url: params.url,
+    goal: params.goal,
+    ...(params.output_schema ? { output_schema: params.output_schema } : {}),
+    browser_profile: params.browser_profile ?? "lite",
+    agent_config: { max_duration_seconds: maxSeconds },
+  };
+}
+
+/**
+ * Starts an agent run and returns its id at once (`run-async`), so no request has to wait for a slow site.
+ * Read it later with `getRun()`. Counts against the credit guard. Never throws for an expected failure.
+ */
+export async function startAgent(
+  params: Pick<AgentParams<unknown>, "url" | "goal" | "output_schema" | "browser_profile" | "mockResult"> & { maxSeconds: number },
+  opts?: CallOptions,
+): Promise<StartOutcome> {
+  if (isMock()) {
+    const runId = `mock-run-${crypto.randomUUID()}`;
+    mockRuns.set(runId, params.mockResult ?? null);
+    return { status: "started", runId };
+  }
+  if (!takeAgentSlot()) {
+    log({ event: "tinyfish_credit_guard", limit_per_minute: AGENT_CALLS_PER_MINUTE });
+    return { status: "error", error: "credit_guard" };
+  }
+  count(opts);
+  try {
+    const res = await fetch(`${AGENT_URL}/automation/run-async`, {
+      method: "POST",
+      headers: headers(true),
+      body: JSON.stringify(agentBody(params, params.maxSeconds)),
+      signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
+    });
+    if (!res.ok) {
+      log({ event: "tinyfish_http_error", api: "run-async", status: res.status });
+      return { status: "error", error: `http_${res.status}` };
+    }
+    const body = z.object({ run_id: z.string().nullable(), error: RunError }).safeParse(await res.json().catch(() => null));
+    if (!body.success || !body.data.run_id) return { status: "error", error: body.success ? (body.data.error?.code ?? "no_run_id") : "invalid_response" };
+    log({ event: "tinyfish_agent_started", host: new URL(params.url).hostname, run_id: body.data.run_id });
+    return { status: "started", runId: body.data.run_id };
+  } catch (err) {
+    return { status: "error", error: err instanceof Error && err.name === "TimeoutError" ? "client_timeout" : "network" };
+  }
+}
+
+const RunStateResponse = z.object({
+  status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
+  result: z.unknown().optional(),
+  error: RunError,
+  started_at: z.string().nullable().optional(),
+});
+
+function toMs(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/** Current state of a run. A network or HTTP problem is reported as still RUNNING, so the caller simply asks again. */
+export async function getRun(runId: string, opts?: CallOptions): Promise<RunState> {
+  if (isMock()) {
+    if (!mockRuns.has(runId)) return { status: "FAILED", result: null, error: "unknown_run", startedAt: null };
+    return { status: "COMPLETED", result: mockRuns.get(runId), error: null, startedAt: Date.now() };
+  }
+  count(opts);
+  try {
+    const res = await fetch(`${AGENT_URL}/runs/${encodeURIComponent(runId)}`, {
+      headers: headers(false),
+      signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
+    });
+    if (res.status === 404) return { status: "FAILED", result: null, error: "unknown_run", startedAt: null };
+    if (!res.ok) {
+      log({ event: "tinyfish_http_error", api: "runs", status: res.status });
+      return { status: "RUNNING", result: null, error: null, startedAt: null };
+    }
+    const parsed = RunStateResponse.safeParse(await res.json().catch(() => null));
+    if (!parsed.success) return { status: "RUNNING", result: null, error: null, startedAt: null };
+    return {
+      status: parsed.data.status,
+      result: parsed.data.result ?? null,
+      error: parsed.data.error?.code ?? null,
+      startedAt: toMs(parsed.data.started_at),
+    };
+  } catch {
+    return { status: "RUNNING", result: null, error: null, startedAt: null };
+  }
+}
+
+/** Asks TinyFish to stop a run (best effort; a run that already finished stays finished). */
+export async function cancelRun(runId: string, opts?: CallOptions): Promise<void> {
+  if (isMock()) return;
+  count(opts);
+  try {
+    await fetch(`${AGENT_URL}/runs/${encodeURIComponent(runId)}/cancel`, {
+      method: "POST",
+      headers: headers(false),
+      signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
+    });
+  } catch {
+    // The run also stops by itself at max_duration_seconds.
+  }
 }
 
 // ---------------------------------------------------------------- Monitor (paid per run)

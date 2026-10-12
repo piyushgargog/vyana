@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/lib/server/errors";
 import {
   AGENT_CALLS_PER_MINUTE,
+  cancelRun,
   createSearchMonitor,
   deleteMonitor,
   fetchPages,
+  getRun,
   resetCreditGuard,
   runAgent,
   search,
+  startAgent,
 } from "@/lib/server/tinyfish/client";
 import { PHARMACIES, absoluteUrl, isOnDomain } from "@/lib/server/tinyfish/sources";
 
@@ -185,6 +188,67 @@ describe("runAgent", () => {
     vi.stubEnv("TINYFISH_MOCK", "1");
     expect(await runAgent({ ...params, mockResult: { price: 1 } })).toEqual({ status: "ok", result: { price: 1 }, runId: null });
     expect(await runAgent(params)).toMatchObject({ status: "not_found" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("async runs", () => {
+  const params = { url: "https://pharmeasy.in/search/all?name=dolo", goal: "Price these", maxSeconds: 150 };
+
+  it("starts a run and returns its id at once", async () => {
+    fetchMock.mockResolvedValueOnce(json({ run_id: "r9", error: null }));
+    const counter = { tinyfishCalls: 0 };
+    expect(await startAgent(params, { counter })).toEqual({ status: "started", runId: "r9" });
+    expect(String(lastCall()[0])).toBe("https://agent.tinyfish.ai/v1/automation/run-async");
+    expect(lastBody()).toMatchObject({ url: params.url, agent_config: { max_duration_seconds: 150 } });
+    expect(counter.tinyfishCalls).toBe(1);
+  });
+
+  it("reports a start that failed without throwing", async () => {
+    fetchMock.mockResolvedValueOnce(json({}, 429));
+    expect(await startAgent(params)).toEqual({ status: "error", error: "http_429" });
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    expect(await startAgent(params)).toEqual({ status: "error", error: "network" });
+  });
+
+  it("starts count against the credit guard", async () => {
+    fetchMock.mockImplementation(async () => json({ run_id: "r", error: null }));
+    for (let i = 0; i < AGENT_CALLS_PER_MINUTE; i++) await startAgent(params);
+    expect(await startAgent(params)).toEqual({ status: "error", error: "credit_guard" });
+  });
+
+  it("reads a run's state", async () => {
+    fetchMock.mockResolvedValueOnce(json({ run_id: "r9", status: "COMPLETED", result: { items: [] }, error: null, started_at: "2026-10-12T03:01:02Z" }));
+    expect(await getRun("r9")).toEqual({ status: "COMPLETED", result: { items: [] }, error: null, startedAt: Date.parse("2026-10-12T03:01:02Z") });
+    fetchMock.mockResolvedValueOnce(json({ run_id: "r9", status: "PENDING", started_at: null }));
+    expect(await getRun("r9")).toMatchObject({ status: "PENDING", startedAt: null });
+    expect(String(lastCall()[0])).toBe("https://agent.tinyfish.ai/v1/runs/r9");
+    fetchMock.mockResolvedValueOnce(json({ run_id: "r9", status: "FAILED", error: { code: "SITE_BLOCKED" } }));
+    expect(await getRun("r9")).toMatchObject({ status: "FAILED", error: "SITE_BLOCKED" });
+  });
+
+  it("treats a hiccup while reading as still running, and an unknown run as failed", async () => {
+    fetchMock.mockResolvedValueOnce(json({}, 503));
+    expect((await getRun("r9")).status).toBe("RUNNING");
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    expect((await getRun("r9")).status).toBe("RUNNING");
+    fetchMock.mockResolvedValueOnce(json({}, 404));
+    expect(await getRun("nope")).toMatchObject({ status: "FAILED", error: "unknown_run" });
+  });
+
+  it("cancels a run and never throws", async () => {
+    fetchMock.mockResolvedValueOnce(json({ run_id: "r9", status: "CANCELLED" }));
+    await cancelRun("r9");
+    expect(String(lastCall()[0])).toBe("https://agent.tinyfish.ai/v1/runs/r9/cancel");
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await expect(cancelRun("r9")).resolves.toBeUndefined();
+  });
+
+  it("completes mock runs with the caller's fixture", async () => {
+    vi.stubEnv("TINYFISH_MOCK", "1");
+    const started = await startAgent({ ...params, mockResult: { items: [1] } });
+    expect(started.status).toBe("started");
+    expect(await getRun((started as { runId: string }).runId)).toMatchObject({ status: "COMPLETED", result: { items: [1] }, error: null });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
