@@ -58,3 +58,25 @@ export function verifyEvidence<F extends Record<string, unknown>>(
   }
   return { values, failed, needs_review: failed.length > 0 };
 }
+
+/** Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap. */
+export function numbersIn(s: string): number[] {
+  const out: number[] = [];
+  let current = "";
+  const flush = () => {
+    const cleaned = current.replace(/,/g, "").replace(/\.$/, "");
+    if (/\d/.test(cleaned)) out.push(Number(cleaned));
+    current = "";
+  };
+  for (const ch of s) {
+    if ((ch >= "0" && ch <= "9") || ((ch === "." || ch === ",") && current.length > 0)) current += ch;
+    else flush();
+  }
+  flush();
+  return out.filter((n) => Number.isFinite(n));
+}
+
+/** True when `n` is one of the numbers written in `s` (compared as numbers, so 3 doesn't match "30"). */
+export function hasNumber(s: string | null | undefined, n: number): boolean {
+  return !!s && numbersIn(s).some((x) => Math.abs(x - n) < 1e-9);
+}

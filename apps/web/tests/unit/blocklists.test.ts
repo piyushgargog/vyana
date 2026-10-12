@@ -74,6 +74,7 @@ describe("dose patterns", () => {
     "Your HbA1c is 7.4%.",
     "Eat less than 5 g of salt a day.",
     "Your appointment is on 12-10-2026.",
+    "Your fasting sugar is 115 mg/dL, above the range of 70 to 100 mg/dL.",
     "Drink plenty of water.",
     "Ask your doctor before changing any medicine.",
   ];

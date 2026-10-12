@@ -120,7 +120,8 @@ export function hasDiagnosisLanguage(text: string, allowedConditions: string[] =
 const NUM = "(?:\\d{1,4}(?:[.,]\\d{1,3})?|half|one|two|three|four|ek|do|teen|char|aadhi|आधी|एक|दो|तीन)";
 /** `measure` = units also used for food and drink (ml, spoons), which a care plan's diet section may mention. */
 const DOSE_PATTERNS: [RegExp, string, "dose" | "measure"][] = [
-  [new RegExp(`(?<![\\p{L}\\d])\\d{1,5}(?:[.,]\\d{1,3})?[ \\t]?(?:mg|mcg|µg|iu|units?)(?![\\p{L}])`, "gu"), "amount + unit", "dose"],
+  // "mg/dL" is a lab concentration, not a dose, hence the "/" in the lookahead.
+  [new RegExp(`(?<![\\p{L}\\d])\\d{1,5}(?:[.,]\\d{1,3})?[ \\t]?(?:mg|mcg|µg|iu|units?)(?![\\p{L}/])`, "gu"), "amount + unit", "dose"],
   [new RegExp(`(?<![\\p{L}\\d])\\d{1,5}(?:[.,]\\d{1,3})?[ \\t]?ml(?![\\p{L}])`, "gu"), "amount in ml", "measure"],
   [new RegExp(`(?<![\\p{L}])${NUM}[ \\t]+(?:tablets?|tabs?|capsules?|caps?|pills?|drops?|puffs?|sachets?|goli|goliyan|गोली|गोलियां)(?![\\p{L}])`, "gu"), "count + form", "dose"],
   [new RegExp(`(?<![\\p{L}])${NUM}[ \\t]+(?:teaspoons?|tablespoons?|spoons?|chammach|चम्मच)(?![\\p{L}])`, "gu"), "count + spoon", "measure"],
