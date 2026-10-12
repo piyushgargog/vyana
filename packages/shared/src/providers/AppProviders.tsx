@@ -3,7 +3,7 @@
 // packages/shared/src/providers/AppProviders.tsx
 // Owner: Vaibhav Parmar
 
-import React, { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { SupabaseClient, Session, User } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -19,6 +19,8 @@ export type SessionContextValue = {
   user: User | null;
   loading: boolean;
 };
+
+const ApiBaseUrlContext = createContext<string | null>(null);
 
 const SessionContext = createContext<SessionContextValue>({
   session: null,
@@ -37,6 +39,15 @@ export function useSupabase(): SupabaseClient<Database> {
 
 export function useSession(): SessionContextValue {
   return useContext(SessionContext);
+}
+
+/** The base URL of the web app / API (used to build share links). */
+export function useApiBaseUrl(): string {
+  const context = useContext(ApiBaseUrlContext);
+  if (context === null) {
+    throw new Error("useApiBaseUrl must be used within an AppProviders component");
+  }
+  return context;
 }
 
 // Re-export useApi so callers can import all hooks from shared
@@ -75,6 +86,15 @@ export function AppProviders({
   );
 
   const activeQueryClient = customQueryClient ?? defaultQueryClient;
+
+  // Never show one user's cached data to the next: drop the cache when the signed-in user changes.
+  const lastUserId = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (loading) return;
+    const userId = session?.user.id ?? null;
+    if (lastUserId.current !== undefined && lastUserId.current !== userId) activeQueryClient.clear();
+    lastUserId.current = userId;
+  }, [session, loading, activeQueryClient]);
 
   useEffect(() => {
     let mounted = true;
@@ -135,13 +155,15 @@ export function AppProviders({
 
   return (
     <SupabaseContext.Provider value={supabase}>
-      <SessionContext.Provider value={sessionValue}>
-        <QueryClientProvider client={activeQueryClient}>
-          <ApiProvider client={apiClient}>
-            {children}
-          </ApiProvider>
-        </QueryClientProvider>
-      </SessionContext.Provider>
+      <ApiBaseUrlContext.Provider value={apiBaseUrl}>
+        <SessionContext.Provider value={sessionValue}>
+          <QueryClientProvider client={activeQueryClient}>
+            <ApiProvider client={apiClient}>
+              {children}
+            </ApiProvider>
+          </QueryClientProvider>
+        </SessionContext.Provider>
+      </ApiBaseUrlContext.Provider>
     </SupabaseContext.Provider>
   );
 }

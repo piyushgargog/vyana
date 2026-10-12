@@ -45,7 +45,7 @@ import {
 } from "./index";
 
 const ok = (data: unknown) => ({ data, error: null });
-const fail = (message: string, code?: string) => ({ data: null, error: { message, code } });
+const fail = (message: string, code?: string) => ({ data: null, error: { message, code: code ?? "", details: "" } });
 
 describe("helpers", () => {
   it("unwrap returns the data, or throws a DbError with the Postgres code", () => {
