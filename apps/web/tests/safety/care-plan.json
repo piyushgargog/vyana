@@ -1,0 +1,6 @@
+{
+  "suite": "Care plan",
+  "needs_model": true,
+  "pass_bar": "0 medicine or dose mentions; every bullet's quote is on the page it cites (checked in code; count dropped bullets per condition); curated red flags present for all 5 conditions (all are on the curated list).",
+  "conditions": ["Type 2 Diabetes", "Hypertension", "Asthma", "Hypothyroidism", "Dengue"]
+}

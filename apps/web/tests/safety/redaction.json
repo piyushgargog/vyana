@@ -1,0 +1,26 @@
+{
+  "suite": "Redaction",
+  "pass_bar": "No listed identifier appears in the text sent to a model; the listed kept facts are still there.",
+  "cases": [
+    { "id": "name-label", "text": "Patient Name: Ramesh Kumar Yadav, Age 54, Male", "secrets": ["Ramesh", "Yadav"], "keep": ["54"] },
+    { "id": "name-honorific", "text": "Referred by Dr. Anjali Verma for HbA1c 7.4 %", "secrets": ["Anjali", "Verma"], "keep": ["HbA1c", "7.4"] },
+    { "id": "self-name", "text": "Hi, my name is Priyanka Joshi and my sugar is 180", "secrets": ["Priyanka", "Joshi"], "keep": ["180"] },
+    { "id": "self-name-hinglish", "text": "mera naam Suresh Patel hai, BP 150/90 aa raha hai", "secrets": ["Suresh", "Patel"], "keep": ["150/90"] },
+    { "id": "name-hindi", "text": "श्री मोहन लाल शर्मा, उम्र 62 वर्ष", "secrets": ["मोहन", "शर्मा"], "keep": ["62"] },
+    { "id": "known-name", "text": "Asha took Metformin 500 mg today", "known_names": ["Asha Rani"], "secrets": ["Asha"], "keep": ["Metformin", "500 mg"] },
+    { "id": "phone-mobile", "text": "Call me on 9876543210 if the report is ready", "secrets": ["9876543210"], "keep": ["report"] },
+    { "id": "phone-plus91", "text": "Emergency contact +91 98765 43210 (wife)", "secrets": ["98765 43210", "9876543210"], "keep": ["wife"] },
+    { "id": "phone-landline", "text": "Clinic: 011-2658 8500, timings 9 to 5", "secrets": ["2658 8500"], "keep": ["9 to 5"] },
+    { "id": "email", "text": "Send the report to rahul.sharma92@gmail.com please", "secrets": ["rahul.sharma92@gmail.com"], "keep": ["report"] },
+    { "id": "address-label", "text": "Address: House 42, Sector 15, Rohini, Delhi 110085. Fasting sugar 126", "secrets": ["House 42", "Rohini", "110085"], "keep": ["126"] },
+    { "id": "aadhaar", "text": "Aadhaar: 2345 6789 0123 attached for the claim", "secrets": ["2345 6789 0123"], "keep": ["claim"] },
+    { "id": "aadhaar-unlabelled", "text": "my id 4567 8901 2345, HbA1c 6.9", "secrets": ["4567 8901 2345"], "keep": ["6.9"] },
+    { "id": "abha", "text": "ABHA number 12-3456-7890-1234 linked", "secrets": ["12-3456-7890-1234"], "keep": ["linked"] },
+    { "id": "pan", "text": "PAN ABCDE1234F for the bill, Pan 40 mg once daily", "secrets": ["ABCDE1234F"], "keep": ["Pan 40 mg"] },
+    { "id": "dob-label", "text": "DOB: 14/08/1971, Hb 11.2 g/dL", "secrets": ["14/08/1971"], "keep": ["11.2"] },
+    { "id": "dob-words", "text": "Date of Birth: 3 March 1985. Platelets 1,50,000", "secrets": ["3 March 1985"], "keep": ["1,50,000"] },
+    { "id": "relation", "text": "S/o Late Shri Gopal Das, admitted on 12 Oct", "secrets": ["Gopal"], "keep": ["12 Oct"] },
+    { "id": "mixed", "text": "Name: Kavita Singh, Mobile 9811122233, email kavita.s@yahoo.in, Rx: Telma 40 mg 0-0-1", "secrets": ["Kavita", "9811122233", "kavita.s@yahoo.in"], "keep": ["Telma 40 mg", "0-0-1"] },
+    { "id": "report-header", "text": "Patient: Arjun Mehta  Age/Sex: 45/M  Ref. By: Dr. S. K. Gupta  TSH 2.1 uIU/mL", "secrets": ["Arjun", "Mehta"], "keep": ["TSH 2.1", "45/M"] }
+  ]
+}

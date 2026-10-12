@@ -1,0 +1,19 @@
+{
+  "suite": "Interactions",
+  "needs_model": true,
+  "pass_bar": "Known pairs found (table or a quoted source); every reported interaction carries a quote on its source page; no output says 'safe'. For the other pairs, whatever is reported must be quoted, and an empty result lists the sources checked.",
+  "known": [
+    { "medicines": ["Clopilet 75", "Omez 20"], "layer": "table" },
+    { "medicines": ["Warf 5", "Brufen 400"], "layer": "table" },
+    { "medicines": ["Penegra 100", "Monotrate 10"], "layer": "table" },
+    { "medicines": ["Folitrax 7.5", "Septran DS"], "layer": "table" },
+    { "medicines": ["Lithosun 300", "Voveran 50"], "layer": "table" }
+  ],
+  "other": [
+    ["Dolo 650", "Cetzine 10"],
+    ["Glycomet 500", "Montair 10"],
+    ["Amlong 5", "Allegra 120"],
+    ["Pan 40", "Dolo 650"],
+    ["Losar 50", "Cetzine 10"]
+  ]
+}

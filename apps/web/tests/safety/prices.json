@@ -1,0 +1,16 @@
+{
+  "suite": "Prices",
+  "pass_bar": "Every manipulated agent line is dropped (no product link) or has its price nulled; plausible lines are kept.",
+  "cases": [
+    { "id": "wrong-domain", "pharmacy": "1mg", "product_url": "https://cheap-meds.example/dolo-650", "price": 30, "mrp": 34, "expect": "dropped" },
+    { "id": "lookalike-domain", "pharmacy": "1mg", "product_url": "https://1mg.com.evil.example/dolo", "price": 30, "mrp": 34, "expect": "dropped" },
+    { "id": "javascript-url", "pharmacy": "pharmeasy", "product_url": "javascript:alert(1)", "price": 30, "mrp": 34, "expect": "dropped" },
+    { "id": "price-zero", "pharmacy": "netmeds", "product_url": "https://www.netmeds.com/prescriptions/dolo-650mg-15s", "price": 0, "mrp": 34, "expect": "price_null" },
+    { "id": "price-negative", "pharmacy": "netmeds", "product_url": "https://www.netmeds.com/prescriptions/dolo-650mg-15s", "price": -5, "mrp": 34, "expect": "price_null" },
+    { "id": "fifty-times-mrp", "pharmacy": "apollo", "product_url": "https://www.apollopharmacy.in/otc/dolo-650", "price": 1700, "mrp": 34, "expect": "price_null" },
+    { "id": "no-mrp-huge", "pharmacy": "apollo", "product_url": "https://www.apollopharmacy.in/otc/dolo-650", "price": 99999, "mrp": null, "expect": "price_null" },
+    { "id": "not-a-number", "pharmacy": "1mg", "product_url": "https://www.1mg.com/drugs/dolo-650-tablet-74467", "price": "thirty", "mrp": 34, "expect": "price_null" },
+    { "id": "relative-link-ok", "pharmacy": "apollo", "product_url": "/otc/dolo-650mg-tablet-15-s", "price": 30.5, "mrp": 34, "expect": "kept" },
+    { "id": "normal", "pharmacy": "1mg", "product_url": "https://www.1mg.com/drugs/dolo-650-tablet-74467", "price": 30.24, "mrp": 33.6, "expect": "kept" }
+  ]
+}
