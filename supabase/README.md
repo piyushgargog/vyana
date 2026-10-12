@@ -52,6 +52,16 @@ The tests sign in as real roles (`authenticated`, `anon`) with a JWT subject and
 - storage: a user reaches only their own folder, and both buckets are private
 - every foreign key has an index, and every `security definer` function sets its `search_path`
 
+## Database types
+
+`packages/shared/src/db/database.types.ts` is generated from the migrations. After a schema change, regenerate it and commit the result:
+
+```bash
+supabase gen types typescript --local --schema public > packages/shared/src/db/database.types.ts
+```
+
+Update the `Db*` aliases in `packages/shared/src/db/types.ts` when a table is added or removed.
+
 ## Notes
 
 - Hosted Supabase installs `pgcrypto` in the `extensions` schema, so functions that need `gen_random_bytes` set `search_path = public, extensions`.
