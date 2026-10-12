@@ -13,6 +13,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Monorepo: Next.js 16 web app, Expo SDK 57 mobile app and the shared package, wired with pnpm workspaces and Turborepo.
 - CI on every pull request: lint, typecheck, tests, web build, expo-doctor, CodeQL, secret scanning, dependency review, PR title check and auto-labels.
 - Repository basics: README, MIT license, contributing guide, security policy, issue and PR templates, CODEOWNERS, Dependabot.
+- Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
 
 ### Changed
 - ARCHITECTURE documents privacy before AI and the verified interaction table.

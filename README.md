@@ -90,10 +90,11 @@ Environment variables: copy `apps/web/.env.example` and `apps/mobile/.env.exampl
 | [`CHANGELOG.md`](CHANGELOG.md) | What changed and when |
 | [`apps/web/tests/README.md`](apps/web/tests/README.md) | How the backend is tested |
 | [`AGENTS.md`](AGENTS.md) | Rules for AI coding agents working in this repo |
+| [`ACCESSIBILITY.md`](.github/ACCESSIBILITY.md) | Accessibility target (WCAG 2.2 AA) and how to report a barrier |
 
 ## Contributing
 
-We work in feature branches and merge through pull requests only. Read [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) before your first PR.
+We work in feature branches and merge through pull requests only. Read [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) before your first PR. Everyone taking part follows our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
 ## Team
 

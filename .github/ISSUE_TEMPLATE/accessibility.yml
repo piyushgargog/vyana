@@ -1,0 +1,32 @@
+name: Accessibility barrier
+description: Something is hard or impossible to use with assistive technology, larger text, a keyboard, or low vision
+labels: ["accessibility"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for telling us. We treat accessibility barriers as bugs. See [ACCESSIBILITY.md](https://github.com/piyushgargog/vyana/blob/main/.github/ACCESSIBILITY.md) for what we aim for."
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Mobile app, Web app]
+    validations:
+      required: true
+  - type: input
+    id: screen
+    attributes:
+      label: Screen
+      placeholder: "e.g. SOS, medicine reminders, sign in"
+    validations:
+      required: true
+  - type: textarea
+    id: barrier
+    attributes:
+      label: What were you trying to do, and what got in the way?
+    validations:
+      required: true
+  - type: input
+    id: setup
+    attributes:
+      label: Assistive technology, browser or device (optional)
+      placeholder: "e.g. TalkBack on Android 15, NVDA + Firefox, largest font size"

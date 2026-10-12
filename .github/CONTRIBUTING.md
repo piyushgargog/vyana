@@ -105,5 +105,10 @@ As a reviewer, check that:
 - the contracts were respected
 - there are no secrets
 - the "Done when" condition from the issue is met
+- UI changes meet [`ACCESSIBILITY.md`](ACCESSIBILITY.md) (screen reader labels, contrast, text scaling, keyboard on web)
 
 Approve or request changes within a few hours. Fast reviews keep everyone unblocked.
+
+## 6. Conduct
+
+Everyone taking part follows our [Code of Conduct](CODE_OF_CONDUCT.md).
