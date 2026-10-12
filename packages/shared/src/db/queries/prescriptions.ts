@@ -3,7 +3,7 @@
 
 import type { TablesInsert } from "../database.types";
 import type { DbPrescription, DbPrescriptionItem } from "../types";
-import { requireUserId, unwrap, unwrapOrNull, type Sb } from "./helpers";
+import { requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
 
 export type PrescriptionWithItems = DbPrescription & { prescription_items: DbPrescriptionItem[] };
 
@@ -79,8 +79,8 @@ export async function setItemActive(sb: Sb, id: string, active: boolean): Promis
   return unwrap(await sb.from("prescription_items").update({ active }).eq("id", id).select().single());
 }
 
-/** The signed-in patient's medicines that are switched on and not past their end date. */
-export async function listActiveItems(sb: Sb, today: string = new Date().toISOString().slice(0, 10)): Promise<DbPrescriptionItem[]> {
+/** The signed-in patient's medicines that are switched on and not past their end date (`today` is a local `YYYY-MM-DD`). */
+export async function listActiveItems(sb: Sb, today: string = toLocalDate(new Date())): Promise<DbPrescriptionItem[]> {
   const patientId = await requireUserId(sb);
   return unwrap(
     await sb
