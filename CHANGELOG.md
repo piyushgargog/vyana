@@ -20,6 +20,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ### Removed
 - The standalone diet-plan endpoint; diet guidance is now part of the care plan.
 
+### Security
+- Third-party GitHub Actions are pinned to full commit SHAs.
+- Vitest upgraded to 4.1.11 (GHSA-82fw-gwwq-j7x9, development only).
+
 ### Fixed
 - API client: trailing-slash trimming no longer uses a regex flagged as a potential ReDoS.
 - Shared React modules are marked as client modules, so Next.js server components can import `@vyana/shared`.
