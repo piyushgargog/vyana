@@ -62,7 +62,8 @@ function replaceGroup(text: string, re: RegExp, kind: PlaceholderKind, r: Redact
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Words that end a labelled value: the next field on the same line ("Name: Aryan Sharma  Age: 34"). */
-const NEXT_FIELD = /\s{2,}|\t|\b(?:age|sex|gender|dob|d\.o\.b|date|uhid|mrn|mobile|phone|ph|tel|contact|email|e-mail|address|ref|referred|reg|id|ip|op|bed|ward|w\/o|s\/o|d\/o|c\/o)\b|आयु|उम्र|लिंग/i;
+// A sentence break also ends a value: a period after a 3+ letter word or a digit, then a capital ("Delhi 110085. Fasting").
+const NEXT_FIELD = /\s{2,}|\t|(?<=[A-Za-z]{3}|\d)\.\s+(?=[A-Z])|\b(?:age|sex|gender|dob|d\.o\.b|date|uhid|mrn|mobile|phone|ph|tel|contact|email|e-mail|address|ref|referred|reg|id|ip|op|bed|ward|w\/o|s\/o|d\/o|c\/o)\b|आयु|उम्र|लिंग/i;
 
 /** Cuts a captured label value at the next field and to at most `maxWords` words. */
 function trimValue(raw: string, maxWords: number): string {
@@ -107,7 +108,7 @@ const DOB = new RegExp(`(?:\\bd\\.?\\s?o\\.?\\s?b\\.?|\\bdate\\s+of\\s+birth|\\b
 
 /** Label words that are NOT about a person, so "Medicine name: Dolo" or "Test name: HbA1c" stay. */
 const NOT_A_PERSON = /(?:medicine|drug|brand|generic|test|product|hospital|lab|laboratory|clinic|company|file|user|item|investigation|department|ward)\s*$/i;
-const NAME_LABEL = /(\b(?:patient(?:'s)?\s+name|pt\.?\s*name|name\s+of\s+(?:the\s+)?patient|name)|नाम)[ \t]*[:\-][ \t]*([^\s,;|][^\n,;|]{0,79})/gi;
+const NAME_LABEL = /(\b(?:patient(?:'s)?\s+name|pt\.?\s*name|name\s+of\s+(?:the\s+)?patient|name|patient|pt\.?)|नाम)[ \t]*[:\-][ \t]*([^\s,;|][^\n,;|]{0,79})/gi;
 const ADDRESS_LABEL = /(\b(?:address|addr\.?|residence)|पता)[ \t]*[:\-][ \t]*([^\s,;|][^\n]{0,199})/gi;
 const RESIDENT_OF = /(\bR\/[Oo])(?:[ \t]*[:\-][ \t]*|[ \t]+)([^\s,;|][^\n]{0,199})/g;
 
@@ -153,7 +154,8 @@ export function redact(text: string, opts: RedactOptions = {}): Redaction {
     const before = whole.slice(Math.max(0, offset - 30), offset) + label.replace(/name$/i, "");
     if (/^name$/i.test(label.trim()) && NOT_A_PERSON.test(before)) return match;
     const value = trimValue(raw, 5);
-    if (!value || PLACEHOLDER.test(value)) return match;
+    // A name starts with a letter: "Patient: 45/M" is not one.
+    if (!value || PLACEHOLDER.test(value) || !/^\p{L}/u.test(value)) return match;
     return match.slice(0, match.lastIndexOf(raw)) + raw.replace(value, r.placeholder("NAME", value));
   });
 
