@@ -10,6 +10,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Backend foundations: one error format for every API route, bearer-token sign-in checks with roles, a shared cache for public web results, and `apps/web/.env.example`.
 - Prescription basket pricing: `POST /api/prescriptions/basket` starts one web agent per pharmacy in the background and `GET /api/prescriptions/basket/{job_id}` reports progress; every price must appear on the pharmacy's product page before it counts, and totals, ordering and savings are computed by the server. `pnpm smoke:basket` runs the whole pipeline live.
 - Live web layer: a TinyFish client for Search, Fetch, browser agents (with live progress, time limits and a per-minute run limit) and Monitors, the agent start pages for each pharmacy and the medical register, offline fixtures, and `pnpm smoke:tinyfish` to check everything against the live sites.
+- Emergency and hospital routes:
+  - `POST /api/emergency/nearby` finds hospitals with emergency care near a location. Every name, address and phone number must appear on the fetched page; the route never fails, so the SOS screen always works.
+  - `POST /api/emergency/sos` records the request, returns emergency contacts, nearby hospitals and a ready SMS, then updates the ambulance status (simulated).
+  - `POST /api/hospitals/info` returns a hospital's OPD timings, keeping only rows quoted from the hospital's pages, and caches them for 7 days.
 - AI layer: every AI call asks for structured output at temperature 0, retries once if the answer doesn't match its schema (then asks the user to enter it manually), and is logged with its model, prompt version and sources. A mock mode serves fixtures until a model provider is chosen.
 - More AI safety checks: personal details (names, phone numbers, emails, addresses, ID numbers, dates of birth) are replaced with placeholders before any text reaches a model; AI text is checked for diagnosis wording and medicine doses; a curated table of well-known drug interactions, each backed by a quote from an NHS, MHRA or MedlinePlus page, with `pnpm verify:interactions` to re-check the quotes against the live pages.
 - AI safety checks: extracted values must quote text found in the document, links are limited to pages the server actually fetched, and emergency warning signs (English, Hindi, Hinglish) are detected by fixed rules before any model runs.
@@ -24,6 +28,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
 
 ### Changed
+- **API contract:** emergency requests now reject a latitude outside −90…90 or a longitude outside −180…180, and an SOS note over 500 characters.
 - **API contract:** a single-medicine price check is now a one-item basket job. `POST /api/medicines/compare` and `MedicinesCompareRes` are removed; `medicines.compare` / `useCompareMedicine` keep their names, post to `/api/prescriptions/basket` and return `BasketCompareRes` (poll with `useBasketJob`).
 - **API contract:** basket pricing is now a job. `BasketCompareRes` gains `job_id` and `status`, baskets can be `pending`, and lines carry `price_verified`; new client method `basket.job()` and hook `useBasketJob()`.
 - ARCHITECTURE documents privacy before AI and the verified interaction table.
