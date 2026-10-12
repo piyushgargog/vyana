@@ -24,6 +24,8 @@ import {
   listMyAppointments,
   listPrescriptions,
   listVerifiedDoctors,
+  liveChannelName,
+  subscribeTable,
   logDose,
   markAlertSeen,
   randomUuid,
@@ -409,5 +411,31 @@ describe("storage", () => {
     const f = fakeSupabase();
     expect(await getSignedUrl(f.sb, "lab-reports", "u/a.pdf")).toBe("https://signed.test/u/a.pdf");
     expect(f.argsOf("storage.createSignedUrl")).toEqual(["lab-reports", "u/a.pdf", 3600]);
+  });
+});
+
+describe("realtime", () => {
+  it("names the channel of each live table for one user", () => {
+    expect(liveChannelName("appointments", "u1")).toBe("appointments:doctor:u1");
+    expect(liveChannelName("drug_alerts", "u1")).toBe("alerts:u1");
+    expect(liveChannelName("care_plans", "u1")).toBe("care-plans:u1");
+  });
+
+  it("listens to every change of a table and stops on request", () => {
+    const f = fakeSupabase();
+    const seen: string[] = [];
+    const stop = subscribeTable(f.sb, "chan-1", "care_plans", () => seen.push("changed"));
+    expect(f.channels[0]).toMatchObject({ name: "chan-1", subscribed: true });
+    expect(f.channels[0].handlers[0].filter).toEqual({ event: "*", schema: "public", table: "care_plans" });
+    f.emitChange("chan-1");
+    expect(seen).toEqual(["changed"]);
+    stop();
+    expect(f.channels[0].removed).toBe(true);
+  });
+
+  it("can narrow a subscription with a filter", () => {
+    const f = fakeSupabase();
+    subscribeTable(f.sb, "chan-2", "appointments", () => undefined, "patient_id=eq.u1");
+    expect(f.channels[0].handlers[0].filter).toMatchObject({ filter: "patient_id=eq.u1" });
   });
 });

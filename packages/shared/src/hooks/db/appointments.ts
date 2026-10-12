@@ -18,10 +18,11 @@ import {
 import type { DbError } from "../../db/queries/helpers";
 import type { DbAppointment } from "../../db/types";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { DB_KEYS, useDb, useInvalidate } from "./shared";
+import { DB_KEYS, useDb, useInvalidate, useLiveInvalidate } from "./shared";
 
 export function useMyAppointments() {
   const { sb, ready } = useDb();
+  useLiveInvalidate("appointments", QUERY_ROOTS.appointments);
   return useQuery<MyAppointment[], DbError>({
     queryKey: [QUERY_ROOTS.appointments, "mine"],
     queryFn: () => listMyAppointments(sb),
@@ -29,9 +30,10 @@ export function useMyAppointments() {
   });
 }
 
-/** A doctor's queue for one day (`YYYY-MM-DD`). Live through Realtime is up to the screen. */
+/** A doctor's queue for one day (`YYYY-MM-DD`). It updates live when a patient books or cancels. */
 export function useDoctorQueue(date: string) {
   const { sb, ready } = useDb();
+  useLiveInvalidate("appointments", QUERY_ROOTS.appointments);
   return useQuery<QueueEntry[], DbError>({
     queryKey: [QUERY_ROOTS.appointments, "queue", date],
     queryFn: () => listDoctorQueue(sb, date),

@@ -4,9 +4,10 @@
 // Plumbing for the DB hooks: the client, the signed-in user and query keys. Owner: Vaibhav Parmar
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect, useId } from "react";
 
 import type { Sb } from "../../db/queries/helpers";
+import { liveChannelName, subscribeTable, type LiveTable } from "../../db/queries/realtime";
 import { useSession, useSupabase } from "../../providers/AppProviders";
 
 /**
@@ -44,4 +45,20 @@ export function useInvalidate(): (...roots: string[]) => Promise<void> {
     },
     [queryClient]
   );
+}
+
+/**
+ * Refreshes the queries under `roots` whenever `table` changes for this user (Realtime applies RLS, so
+ * a patient is told about their own rows only). Each call opens its own channel: a channel name that is
+ * already subscribed cannot take new listeners.
+ */
+export function useLiveInvalidate(table: LiveTable, ...roots: string[]): void {
+  const { sb, userId, ready } = useDb();
+  const invalidate = useInvalidate();
+  const instance = useId();
+  const rootKey = roots.join("|");
+  useEffect(() => {
+    if (!ready || !userId) return;
+    return subscribeTable(sb, `${liveChannelName(table, userId)}:${instance}`, table, () => void invalidate(...rootKey.split("|")));
+  }, [sb, ready, userId, table, instance, rootKey, invalidate]);
 }

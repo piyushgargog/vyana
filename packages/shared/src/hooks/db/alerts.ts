@@ -9,10 +9,11 @@ import { listDrugAlerts, markAlertSeen } from "../../db/queries/alerts";
 import type { DbError } from "../../db/queries/helpers";
 import type { DbDrugAlert } from "../../db/types";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useDb, useInvalidate } from "./shared";
+import { useDb, useInvalidate, useLiveInvalidate } from "./shared";
 
 export function useDrugAlerts() {
   const { sb, ready } = useDb();
+  useLiveInvalidate("drug_alerts", QUERY_ROOTS.drugAlerts);
   return useQuery<DbDrugAlert[], DbError>({
     queryKey: [QUERY_ROOTS.drugAlerts],
     queryFn: () => listDrugAlerts(sb),
