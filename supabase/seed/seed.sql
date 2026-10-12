@@ -118,7 +118,7 @@ end $$;
 insert into public.lab_reports (id, patient_id, file_path, lab_name, report_date, status, summary)
 values
   ('33333333-3333-3333-3333-333333333331', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001/report1.pdf', 'Sample Diagnostics', current_date - 90, 'done', 'HbA1c elevated at 7.4%. Fasting glucose above reference range.'),
-  ('33333333-3333-3333-3333-333333333332', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001/report2.pdf', 'Sample Diagnostics', current_date - 7, 'done', 'Significant improvement in HbA1c (6.8%). Fasting glucose normalized.')
+  ('33333333-3333-3333-3333-333333333332', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001/report2.pdf', 'Sample Diagnostics', current_date - 7, 'done', 'HbA1c improved to 6.8%. Fasting glucose is lower but still above the reference range.')
 on conflict (id) do nothing;
 
 insert into public.lab_values (id, report_id, patient_id, test_name, value, unit, ref_low, ref_high, flag, measured_on)
@@ -126,7 +126,7 @@ values
   ('44444444-4444-4444-4444-444444444441', '33333333-3333-3333-3333-333333333331', '00000000-0000-0000-0000-000000000001', 'HbA1c', 7.4, '%', 4.0, 5.6, 'high', current_date - 90),
   ('44444444-4444-4444-4444-444444444442', '33333333-3333-3333-3333-333333333331', '00000000-0000-0000-0000-000000000001', 'Fasting Blood Sugar', 142.0, 'mg/dL', 70.0, 100.0, 'high', current_date - 90),
   ('44444444-4444-4444-4444-444444444443', '33333333-3333-3333-3333-333333333332', '00000000-0000-0000-0000-000000000001', 'HbA1c', 6.8, '%', 4.0, 5.6, 'high', current_date - 7),
-  ('44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333332', '00000000-0000-0000-0000-000000000001', 'Fasting Blood Sugar', 115.0, 'mg/dL', 70.0, 100.0, 'normal', current_date - 7)
+  ('44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333332', '00000000-0000-0000-0000-000000000001', 'Fasting Blood Sugar', 115.0, 'mg/dL', 70.0, 100.0, 'high', current_date - 7)
 on conflict (id) do nothing;
 
 -- 11. 7 Days of Vitals (Clean up previous runs for demo patient)
