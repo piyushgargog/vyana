@@ -7,31 +7,42 @@ export const OTHER_USER_ID = "7c2d9e4f-1a3b-4c5d-8e6f-9a0b1c2d3e4f";
 
 type Row = Record<string, unknown>;
 
+/** Rows per table. `profiles` is seeded; everything else starts empty. */
+const rows: Record<string, Row[]> = {};
+const table = (name: string): Row[] => (rows[name] ??= []);
+
 export const db = {
+  rows,
   web_cache: new Map<string, { payload: unknown; expires_at: string }>(),
-  profiles: new Map<string, Row>([
-    [USER_ID, { id: USER_ID, role: "patient", full_name: "Demo Patient" }],
-    [OTHER_USER_ID, { id: OTHER_USER_ID, role: "patient", full_name: "Other Patient" }],
-  ]),
-  prescription_items: [] as Row[],
+  /** Same array as rows.prescription_items, kept for older tests. */
+  get prescription_items() {
+    return table("prescription_items");
+  },
   inserts: [] as { table: string; rows: Row[] }[],
 };
 
+const PROFILES: Row[] = [
+  { id: USER_ID, role: "patient", full_name: "Demo Patient" },
+  { id: OTHER_USER_ID, role: "patient", full_name: "Other Patient" },
+];
+
 export function resetDb() {
+  for (const k of Object.keys(rows)) delete rows[k];
+  table("profiles").push(...PROFILES.map((p) => ({ ...p })));
   db.web_cache.clear();
-  db.prescription_items.length = 0;
   db.inserts.length = 0;
 }
+resetDb();
 
-function table(name: string) {
+let nextId = 1;
+const newId = () => `00000000-0000-4000-8000-${String(nextId++).padStart(12, "0")}`;
+
+function query(name: string) {
   const filters: [string, unknown][] = [];
   let gtExpires = "";
-  const rows = (): Row[] => {
-    if (name === "profiles") return [...db.profiles.values()];
-    if (name === "prescription_items") return db.prescription_items;
-    return [];
-  };
-  const matching = () => rows().filter((r) => filters.every(([c, v]) => r[c] === v));
+  let pendingUpdate: Row | null = null;
+  const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v));
+
   const chain = {
     select: () => chain,
     eq: (col: string, value: unknown) => (filters.push([col, value]), chain),
@@ -48,11 +59,24 @@ function table(name: string) {
       db.web_cache.set(row.key, { payload: JSON.parse(JSON.stringify(row.payload)), expires_at: row.expires_at });
       return { error: null };
     },
-    insert: async (r: Row | Row[]) => {
-      db.inserts.push({ table: name, rows: Array.isArray(r) ? r : [r] });
-      return { error: null };
+    insert: (r: Row | Row[]) => {
+      const added = (Array.isArray(r) ? r : [r]).map((x) => ({ id: newId(), ...x }));
+      table(name).push(...added);
+      db.inserts.push({ table: name, rows: added });
+      const done = { data: null, error: null };
+      return {
+        select: () => ({ single: async () => ({ data: added[0], error: null }) }),
+        then: (resolve: (v: typeof done) => unknown) => resolve(done),
+      };
     },
-    then: (resolve: (v: { data: Row[]; error: null }) => unknown) => resolve({ data: matching(), error: null }),
+    update: (values: Row) => ((pendingUpdate = values), chain),
+    then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
+      if (pendingUpdate) {
+        for (const r of matching()) Object.assign(r, pendingUpdate);
+        return resolve({ data: null, error: null });
+      }
+      return resolve({ data: matching(), error: null });
+    },
   };
   return chain;
 }
@@ -67,9 +91,9 @@ export const fakeSupabaseModule = {
           ? { data: { user: { id: users[token], email: "patient@vyana.test" } }, error: null }
           : { data: { user: null }, error: new Error("invalid JWT") },
     },
-    from: table,
+    from: query,
   }),
-  supabaseForUser: () => ({ from: table }),
+  supabaseForUser: () => ({ from: query }),
   requireEnv: (name: string) => {
     const v = process.env[name];
     if (!v) throw new Error(`Missing environment variable ${name}`);
