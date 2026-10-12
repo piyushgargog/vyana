@@ -9,11 +9,12 @@ import { approveCarePlan, getCarePlan, listCarePlans, type PlanJson } from "../.
 import type { DbError } from "../../db/queries/helpers";
 import type { DbCarePlan } from "../../db/types";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useDb, useInvalidate } from "./shared";
+import { useDb, useInvalidate, useLiveInvalidate } from "./shared";
 
 /** The newest care plan of a condition (a patient sees it once a doctor approved it). */
 export function useCarePlan(conditionId: string | undefined) {
   const { sb, ready } = useDb();
+  useLiveInvalidate("care_plans", QUERY_ROOTS.carePlans);
   return useQuery<DbCarePlan | null, DbError>({
     queryKey: [QUERY_ROOTS.carePlans, "condition", conditionId],
     queryFn: () => getCarePlan(sb, conditionId as string),
@@ -24,6 +25,7 @@ export function useCarePlan(conditionId: string | undefined) {
 /** The signed-in patient's care plans; a doctor passes `patientId` to review drafts. */
 export function useCarePlans(patientId?: string) {
   const { sb, ready } = useDb();
+  useLiveInvalidate("care_plans", QUERY_ROOTS.carePlans);
   return useQuery<DbCarePlan[], DbError>({
     queryKey: [QUERY_ROOTS.carePlans, "list", patientId ?? "me"],
     queryFn: () => listCarePlans(sb, patientId),

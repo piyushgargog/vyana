@@ -20,6 +20,7 @@ export * from "./meals";
 export * from "./prescriptions";
 export * from "./profile";
 export * from "./push";
+export * from "./realtime";
 export * from "./reports";
 export * from "./shareLinks";
 export * from "./storage";
