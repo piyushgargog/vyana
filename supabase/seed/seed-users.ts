@@ -66,6 +66,7 @@ const DEMO_USERS: SeedUser[] = [
 ];
 
 async function seed() {
+  let failed = 0;
   console.log(`🌱 Seeding demo auth users to ${supabaseUrl}...`);
 
   for (const user of DEMO_USERS) {
@@ -84,6 +85,7 @@ async function seed() {
           },
         });
         if (updateError) {
+          failed++;
           console.error(`❌ Failed to update ${user.email}:`, updateError.message);
         } else {
           console.log(`✅ Updated ${user.email}`);
@@ -101,16 +103,22 @@ async function seed() {
         });
 
         if (createError) {
+          failed++;
           console.error(`❌ Failed to create ${user.email}:`, createError.message);
         } else {
           console.log(`✅ Created ${user.email} (${user.role})`);
         }
       }
     } catch (err) {
+      failed++;
       console.error(`❌ Unexpected error with ${user.email}:`, err);
     }
   }
 
+  if (failed > 0) {
+    console.error(`❌ ${failed} demo user(s) failed; do not run seed.sql until this is fixed.`);
+    process.exit(1);
+  }
   console.log('🎉 Seed users script completed!');
 }
 
