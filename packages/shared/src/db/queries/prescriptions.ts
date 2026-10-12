@@ -2,7 +2,7 @@
 // Owner: Vaibhav Parmar
 
 import { DEFAULT_TIMES, type FrequencyType } from "../../constants";
-import type { TablesInsert } from "../database.types";
+import type { Json, TablesInsert } from "../database.types";
 import type { DbPrescription, DbPrescriptionItem } from "../types";
 import { DbError, requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
 
@@ -63,38 +63,31 @@ export async function getPrescription(sb: Sb, id: string): Promise<PrescriptionW
 }
 
 /**
- * A doctor writes an e-prescription for one of their patients. The prescription row is inserted first,
- * then all its medicines in one statement. RLS only lets a doctor prescribe, in their own name, for a
- * patient of their department.
+ * A doctor writes an e-prescription for one of their patients. The prescription and all its medicines
+ * are saved by the `create_doctor_prescription` function in ONE transaction: if a medicine is refused,
+ * nothing is saved. (A doctor cannot delete a prescription, so a half-saved one could never be undone.)
+ * Row level security still decides: a doctor can only prescribe, in their own name, for a patient of
+ * their verified department. The medicines are also checked here first (`prepareDoctorItems`) so the
+ * doctor gets a clear message.
  */
 export async function createDoctorPrescription(sb: Sb, input: CreateDoctorPrescriptionInput): Promise<CreateDoctorPrescriptionResult> {
   const items = prepareDoctorItems(input.items);
-  const doctorId = await requireUserId(sb);
 
-  const prescription = unwrap(
-    await sb
-      .from("prescriptions")
-      .insert({
-        patient_id: input.patient_id,
-        doctor_id: doctorId,
-        appointment_id: input.appointment_id ?? null,
-        source: "doctor",
-        diagnosis: input.diagnosis,
-        notes: input.notes ?? null,
-      })
-      .select()
-      .single()
+  // The generated argument types are not nullable; the SQL function accepts null for both.
+  const prescriptionId = unwrap(
+    await sb.rpc("create_doctor_prescription", {
+      p_patient: input.patient_id,
+      p_appointment: (input.appointment_id ?? null) as string,
+      p_diagnosis: input.diagnosis,
+      p_notes: (input.notes ?? null) as string,
+      p_items: items as unknown as Json,
+    })
   );
 
-  const saved = unwrap(
-    await sb
-      .from("prescription_items")
-      .insert(items.map((item) => ({ ...item, prescription_id: prescription.id, patient_id: input.patient_id })))
-      .select()
-  );
-
-  const condition = unwrapOrNull(await sb.from("conditions").select("id").eq("prescription_id", prescription.id).limit(1).maybeSingle());
-  return { prescription, items: saved, condition_id: condition?.id ?? null };
+  const saved = await getPrescription(sb, prescriptionId);
+  const { prescription_items: savedItems, ...prescription } = saved;
+  const condition = unwrapOrNull(await sb.from("conditions").select("id").eq("prescription_id", prescriptionId).limit(1).maybeSingle());
+  return { prescription, items: savedItems, condition_id: condition?.id ?? null };
 }
 
 /** Switches a medicine on or off (the patient may do this even on a doctor's prescription). */

@@ -10,7 +10,7 @@ import type { DbError } from "../../db/queries/helpers";
 import type { DbAiRun } from "../../db/types";
 import { useDb } from "./shared";
 
-/** "Report a mistake" under an AI answer (plan 2A). `note` is not stored yet: ai_runs has no column for it. */
+/** "Report a mistake" under an AI answer (plan 2A). The optional `note` (up to 1000 characters) is stored with the report. */
 export function useReportAiMistake() {
   const { sb } = useDb();
   return useMutation<DbAiRun, DbError, { ai_run_id: string; note?: string }>({

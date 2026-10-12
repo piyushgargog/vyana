@@ -104,7 +104,11 @@ export function computeScheduledAdherence(
   return { taken: counted.taken, missed, percent: total === 0 ? 0 : Math.round((counted.taken / total) * 100) };
 }
 
-/** Adherence over the last `days` days, counting doses that were due and never logged as missed. */
+/**
+ * Adherence over the last `days` days, counting doses that were due and never logged as missed.
+ * Only medicines that are switched on now are scheduled: a dose that was due while a medicine was on and
+ * missed before it was switched off is not counted, because the database keeps no history of that switch.
+ */
 export async function getAdherence(sb: Sb, days: number, now: Date = new Date()): Promise<Adherence> {
   const patientId = await requireUserId(sb);
   const from = new Date(daysAgoIso(days, now));

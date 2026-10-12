@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   bookAppointment,
+  getTokensLeft,
   listDoctorQueue,
   listMyAppointments,
   updateAppointmentStatus,
@@ -14,6 +15,7 @@ import {
   type BookAppointmentInput,
   type MyAppointment,
   type QueueEntry,
+  type TokensLeft,
 } from "../../db/queries/appointments";
 import type { DbError } from "../../db/queries/helpers";
 import type { DbAppointment } from "../../db/types";
@@ -57,5 +59,15 @@ export function useUpdateAppointment() {
   return useMutation<DbAppointment, DbError, { id: string; status: AppointmentStatus; doctor_notes?: string }>({
     mutationFn: ({ id, status, doctor_notes }) => updateAppointmentStatus(sb, id, status, doctor_notes),
     onSuccess: () => invalidate(QUERY_ROOTS.appointments, DB_KEYS.timeline),
+  });
+}
+
+/** Whether a department's OPD is open on `date` (`YYYY-MM-DD`) and how many tokens are left (null: unknown department). */
+export function useTokensLeft(departmentId: string | undefined, date: string | undefined) {
+  const { sb, ready } = useDb();
+  return useQuery<TokensLeft | null, DbError>({
+    queryKey: [QUERY_ROOTS.appointments, "tokens", departmentId, date],
+    queryFn: () => getTokensLeft(sb, departmentId as string, date as string),
+    enabled: ready && !!departmentId && !!date,
   });
 }

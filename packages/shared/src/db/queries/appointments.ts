@@ -56,7 +56,10 @@ export async function listMyAppointments(sb: Sb): Promise<MyAppointment[]> {
   );
 }
 
-/** A doctor's queue for one day (`YYYY-MM-DD`): their own bookings and their department's, in token order. */
+/**
+ * A doctor's queue for one day (`YYYY-MM-DD`): their own bookings and their department's, in token order.
+ * There is no filter by doctor: row level security decides which appointments a doctor may read.
+ */
 export async function listDoctorQueue(sb: Sb, date: string): Promise<QueueEntry[]> {
   return unwrap(
     await sb
@@ -72,4 +75,15 @@ export async function listDoctorQueue(sb: Sb, date: string): Promise<QueueEntry[
 export async function updateAppointmentStatus(sb: Sb, id: string, status: AppointmentStatus, doctorNotes?: string): Promise<DbAppointment> {
   const patch = doctorNotes === undefined ? { status } : { status, doctor_notes: doctorNotes };
   return unwrap(await sb.from("appointments").update(patch).eq("id", id).select().single());
+}
+
+export type TokensLeft = { opd_open: boolean; tokens_left: number; daily_token_limit: number };
+
+/**
+ * Whether a department's OPD is open on `date` (`YYYY-MM-DD`) and how many tokens are left. It is a
+ * count from `department_tokens()`: a patient cannot read other patients' appointments. Null for an unknown department.
+ */
+export async function getTokensLeft(sb: Sb, departmentId: string, date: string): Promise<TokensLeft | null> {
+  const rows = unwrap(await sb.rpc("department_tokens", { p_department: departmentId, p_date: date })) as TokensLeft[];
+  return rows[0] ?? null;
 }

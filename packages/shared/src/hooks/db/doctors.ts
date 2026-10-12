@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   getDoctor,
-  getFreeSlots,
   getMyDoctorProfile,
   listVerifiedDoctors,
   upsertMyDoctorProfile,
@@ -55,15 +54,5 @@ export function useUpsertDoctorProfile() {
   return useMutation<DbDoctor, DbError, DoctorProfileInput>({
     mutationFn: (data) => upsertMyDoctorProfile(sb, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_ROOTS.doctors] }),
-  });
-}
-
-/** Free start times (`HH:MM`) of a doctor on `date` (`YYYY-MM-DD`). */
-export function useFreeSlots(doctorId: string | undefined, date: string | undefined) {
-  const { sb, ready } = useDb();
-  return useQuery<string[], DbError>({
-    queryKey: [QUERY_ROOTS.doctors, "slots", doctorId, date],
-    queryFn: () => getFreeSlots(sb, doctorId as string, date as string),
-    enabled: ready && !!doctorId && !!date,
   });
 }

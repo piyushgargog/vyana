@@ -5,10 +5,10 @@ import type { DbAiRun } from "../types";
 import { unwrap, type Sb } from "./helpers";
 
 /**
- * Marks one of the user's own AI runs as reported. The database lets a user change only the status of
- * their own runs, and only to 'reported'. `ai_runs` has no column for a note, so `note` is not stored
- * yet; it is accepted so the screens can already ask for it.
+ * Marks one of the user's own AI runs as reported, with an optional note (up to 1000 characters). The
+ * database lets a user change only the status (to 'reported') and the note of their own runs.
  */
-export async function reportAiMistake(sb: Sb, aiRunId: string, _note?: string): Promise<DbAiRun> {
-  return unwrap(await sb.from("ai_runs").update({ status: "reported" }).eq("id", aiRunId).select().single());
+export async function reportAiMistake(sb: Sb, aiRunId: string, note?: string): Promise<DbAiRun> {
+  const patch = note && note.trim() !== "" ? { status: "reported", report_note: note.trim() } : { status: "reported" };
+  return unwrap(await sb.from("ai_runs").update(patch).eq("id", aiRunId).select().single());
 }
