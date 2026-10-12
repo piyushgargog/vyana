@@ -11,7 +11,8 @@
     "test": "turbo run test",
     "docs:openapi": "node scripts/generate-openapi.mts",
     "smoke:tinyfish": "pnpm --filter @vyana/web smoke:tinyfish",
-    "smoke:basket": "pnpm --filter @vyana/web smoke:basket"
+    "smoke:basket": "pnpm --filter @vyana/web smoke:basket",
+    "verify:interactions": "pnpm --filter @vyana/web verify:interactions"
   },
   "devDependencies": {
     "turbo": "^2",

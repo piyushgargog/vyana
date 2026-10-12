@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "smoke:tinyfish": "tsx --conditions=react-server ../../scripts/smoke-tinyfish.mts",
-    "smoke:basket": "tsx --conditions=react-server ../../scripts/smoke-basket.mts"
+    "smoke:basket": "tsx --conditions=react-server ../../scripts/smoke-basket.mts",
+    "verify:interactions": "tsx --conditions=react-server ../../scripts/verify-interactions.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
