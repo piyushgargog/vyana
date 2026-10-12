@@ -5,6 +5,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Doctor verification: `POST /api/doctors/verify` checks a doctor on the NMC Indian Medical Register.
+  - A web agent only reads the register; the server decides.
+  - A doctor is verified only when the registration number, council, surname and name match (initials allowed), and the year too when both give one. A fake or borrowed number never verifies.
+  - A number already verified on another account is refused. If the register can't be read, or asks for a CAPTCHA, the result stays pending; CAPTCHAs are never automated.
 - Medicine interaction check: `POST /api/medicines/interactions` checks the patient's active medicines (or one prescription).
   - Brand names are mapped to salts from a reviewed list of 44 common Indian brands, each checked against its pharmacy page (`pnpm verify:brands`), or from a salt written in brackets. Medicines that can't be mapped are listed as not checked (`not_checked`).
   - The reviewed interaction table is checked first. Other pairs are looked up on trusted medicine pages: the server picks the sentences that name both medicines, the AI only confirms that a sentence states an interaction, and the sentence is shown word for word. Severity comes from the sentence's own words.
