@@ -14,7 +14,8 @@
     "smoke:basket": "pnpm --filter @vyana/web smoke:basket",
     "verify:interactions": "pnpm --filter @vyana/web verify:interactions",
     "verify:red-flags": "pnpm --filter @vyana/web verify:red-flags",
-    "verify:brands": "pnpm --filter @vyana/web verify:brands"
+    "verify:brands": "pnpm --filter @vyana/web verify:brands",
+    "prewarm": "pnpm --filter @vyana/web prewarm"
   },
   "devDependencies": {
     "turbo": "^2",

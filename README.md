@@ -30,13 +30,17 @@ The name comes from Ayurveda. **Vyana** is the prana that starts at the heart an
 
 Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-| Feature | TinyFish API |
-|---|---|
-| Prescription basket price compare (delivery) | **Agent**: one agent per pharmacy prices the whole basket, all four in parallel |
-| Doctor verification | **Agent** on the NMC Indian Medical Register |
-| Hospital OPD timings, nearby emergency hospitals | **Search** + **Fetch** |
-| Care plans, interaction checks, assistant answers | **Search** + **Fetch** on trusted health domains, with citations |
-| Medicine quality alerts | **Monitor** + **Search** + **Fetch** |
+| Feature | TinyFish API | Endpoint | Code |
+|---|---|---|---|
+| Prescription basket price compare (delivery) | **Agent**: one agent per pharmacy prices the whole basket in the background; each price is then confirmed on the product page with **Fetch** | `POST /api/prescriptions/basket`, `GET /api/prescriptions/basket/{job_id}` | [`tinyfish/basket.ts`](apps/web/lib/server/tinyfish/basket.ts) |
+| Doctor verification | **Agent** reads the NMC Indian Medical Register; the server decides | `POST /api/doctors/verify` | [`tinyfish/nmc.ts`](apps/web/lib/server/tinyfish/nmc.ts) |
+| Nearby emergency hospitals, hospital OPD timings | **Search** + **Fetch**; names, addresses and phone numbers must be on the fetched page | `POST /api/emergency/nearby`, `POST /api/emergency/sos`, `POST /api/hospitals/info` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
+| Care plans | **Search** + **Fetch** of guideline pages; every bullet quotes its page | `POST /api/care-plan` | [`care-plan.ts`](apps/web/lib/server/care-plan.ts) |
+| Drug interaction check | **Search** + **Fetch** on trusted medicine sites; each interaction shown with its exact sentence | `POST /api/medicines/interactions` | [`interactions.ts`](apps/web/lib/server/interactions.ts) |
+| AI assistant | **Search** + **Fetch** as the assistant's tools, trusted health sites only; only fetched links can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
+| Medicine quality alerts (planned) | **Monitor** + **Search** + **Fetch** | | |
+
+Every TinyFish call goes through one client ([`tinyfish/client.ts`](apps/web/lib/server/tinyfish/client.ts)) with timeouts, a per-minute agent limit and an offline mock mode. Public results are cached in Postgres, and `pnpm prewarm` fills the cache before a demo. Live checks: `pnpm smoke:tinyfish`, `pnpm smoke:basket`, and `pnpm verify:interactions`, `verify:red-flags` and `verify:brands`, which re-check the reviewed safety lists against their source pages.
 
 ## AI you can trust
 

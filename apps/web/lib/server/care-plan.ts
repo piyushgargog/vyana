@@ -3,7 +3,6 @@ import { z } from "zod";
 import { Language, type CarePlan, type GenerateCarePlanReq, type GenerateCarePlanRes, type SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
 import { requireRole, type AuthedUser } from "./auth";
-import { TTL, cached, normalizeKeyPart } from "./cache";
 import { forbidden, notFound, upstream } from "./errors";
 import { log } from "./log";
 import { CARE_PLAN_PROMPT_VERSION, CARE_PLAN_SYSTEM, carePlanPrompt } from "./prompts/care-plan";
@@ -12,20 +11,14 @@ import { redFlagsForCondition } from "./safety/condition-red-flags";
 import { RED_FLAG_RULES } from "./safety/red-flags";
 import { evidenceFound, hasNumber, normalizeText, numbersIn } from "./safety/verbatim";
 import { supabaseAdmin } from "./supabase-admin";
-import { fetchPages, search, type CallCounter } from "./tinyfish/client";
-import { registerMockPage } from "./tinyfish/fixtures";
-import { isOnDomain } from "./tinyfish/sources";
+import type { CallCounter } from "./tinyfish/client";
+import { guidelinePages, type Page } from "./tinyfish/guideline-pages";
 
 /**
  * Care plans (SPEC §13, PLAN §2A, ADR-044): built only from fetched guideline pages, every bullet quoting its page,
  * checked in code; red flags merged with the curated per-condition list; saved as a draft for the doctor or as a
  * patient-generated plan.
  */
-
-export const CARE_PLAN_DOMAINS = ["mohfw.gov.in", "icmr.gov.in", "who.int", "nhs.uk", "medlineplus.gov", "nhm.gov.in"];
-const MAX_PAGES = 3;
-const PAGE_CHARS = 12_000;
-const MIN_PAGE_CHARS = 200;
 
 const Bullet = z.object({ text: z.string(), quote: z.string(), source: z.number().int() });
 type Bullet = z.infer<typeof Bullet>;
@@ -45,12 +38,6 @@ export const CarePlanLlm = z.object({
   follow_up_tests: z.array(z.object({ test: z.string(), quote: z.string(), source: z.number().int() })),
 });
 export type CarePlanLlm = z.infer<typeof CarePlanLlm>;
-
-export interface Page {
-  title: string;
-  url: string;
-  text: string;
-}
 
 const SUMMARY_FALLBACK: Record<Language, (condition: string) => string> = {
   en: (c) => `Care plan for ${c}, from trusted health sources.`,
@@ -79,6 +66,8 @@ export function intervalDays(quote: string): number | null {
 }
 
 // ---------------------------------------------------------------- checks
+
+export { CARE_PLAN_DOMAINS, guidelinePages, type Page } from "./tinyfish/guideline-pages";
 
 export interface VerifiedPlan {
   plan: CarePlan;
@@ -164,37 +153,6 @@ export function verifyCarePlan(out: CarePlanLlm, pages: Page[], condition: strin
     dropped,
     hasContent: doList.length + dontList.length + eatMoreBullets.length + limit.length > 0,
   };
-}
-
-// ---------------------------------------------------------------- pages
-
-const MOCK_PAGE = [
-  "# [mock] Living well with a long-term condition",
-  "Regular physical activity, such as brisk walking for 30 minutes a day, helps you stay healthy.",
-  "Stop smoking and limit alcohol.",
-  "Eat plenty of vegetables, whole grains such as oats and brown rice, and pulses such as dal.",
-  "Limit foods high in sugar and salt, such as sweets and fried snacks.",
-  "Get urgent medical help if you feel very unwell.",
-  "Have your blood sugar (HbA1c) checked every 3 months.",
-].join("\n\n");
-
-/** Up to 3 trusted guideline pages for a condition. Public data, so cached for a day per condition. */
-export async function guidelinePages(condition: string, counter: CallCounter): Promise<Page[]> {
-  const hit = await cached<Page[]>(`careplan_pages:${normalizeKeyPart(condition)}`, "care_plan_pages", TTL.day, async () => {
-    const res = await search({ query: `${condition} patient guidelines diet lifestyle`, include_domains: CARE_PLAN_DOMAINS }, { counter });
-    const urls = res.results
-      .map((r) => r.url)
-      .filter((u) => CARE_PLAN_DOMAINS.some((d) => isOnDomain(u, d)))
-      .slice(0, MAX_PAGES);
-    if (!urls.length) return null;
-    if (process.env.TINYFISH_MOCK === "1") for (const u of urls) registerMockPage(u, MOCK_PAGE);
-    const fetched = await fetchPages({ urls, format: "markdown" }, { counter });
-    const pages = fetched.results
-      .filter((r) => (r.text ?? "").length >= MIN_PAGE_CHARS && CARE_PLAN_DOMAINS.some((d) => isOnDomain(r.final_url ?? r.url, d)))
-      .map((r) => ({ title: r.title ?? r.url, url: r.final_url ?? r.url, text: (r.text as string).slice(0, PAGE_CHARS) }));
-    return pages.length ? pages : null;
-  });
-  return hit?.value ?? [];
 }
 
 const b = (text: string, quote: string, source = 1): Bullet => ({ text, quote, source });
