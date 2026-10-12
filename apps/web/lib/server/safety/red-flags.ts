@@ -122,7 +122,10 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
   {
     id: "serious_injury",
     label: "Serious injury: accident, burn, near-drowning or deep wound",
-    patterns: [["accident"], ["burns"], ["burned"], ["drowning"], ["deep", "wound"], ["smoke", "inhalation"]],
+    patterns: [
+      ["accident"], ["burns"], ["burned"], ["burnt"], ["severe", "burn"], ["drowning"], ["deep", "wound"], ["smoke", "inhalation"],
+      ["jal", "gaya"], ["jal", "gayi"], ["जल", "गया"], ["जल", "गई"],
+    ],
   },
   {
     id: "child_warning",
