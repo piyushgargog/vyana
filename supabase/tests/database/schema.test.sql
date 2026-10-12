@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 select is(
   (select count(*)::int from unnest(array[
@@ -53,6 +53,17 @@ select is(
    where pubname = 'supabase_realtime' and schemaname = 'public'
      and tablename in ('emergency_requests', 'appointments', 'drug_alerts', 'care_plans')),
   4, 'realtime publishes the four live tables');
+
+select is(
+  (select count(*)::int from pg_indexes
+   where schemaname = 'public' and indexname in ('idx_web_cache_expires_at', 'idx_prescription_items_active_medicine')),
+  2, 'the cache cleanup and the medicine-name lookups are indexed');
+
+select is(
+  (select count(*)::int from pg_constraint c
+   where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+     and not exists (select 1 from pg_index i where i.indrelid = c.conrelid and i.indkey[0] = c.conkey[1])),
+  0, 'every foreign key has an index that starts with its first column');
 
 select * from finish();
 rollback;

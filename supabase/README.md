@@ -47,6 +47,8 @@ The tests sign in as real roles (`authenticated`, `anon`) with a JWT subject and
 - a caregiver reads but never writes, and a revoked caregiver cannot switch back on
 - invite codes are rate limited (5 wrong tries per 15 minutes)
 - a patient never sees an unreviewed AI care plan
+- storage: a user reaches only their own folder, and both buckets are private
+- every foreign key has an index, and every `security definer` function sets its `search_path`
 
 ## Notes
 
