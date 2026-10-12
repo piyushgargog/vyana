@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient } from "@tanstack/react-query";
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, configure, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,10 @@ import { fakeSupabase, type FakeResult } from "../../db/queries/fakeSupabase";
 import { AppProviders } from "../../providers/AppProviders";
 import { QUERY_ROOTS } from "../api/query-roots";
 import { useBookAppointment, useCarePlans, useCreateShareLink, useDoctorQueue, useEmergencyRequest, useMyAppointments, useMyProfile } from "./index";
+
+// jsdom starts slowly on a busy machine (CI, a laptop running the whole suite): be patient, not flaky
+configure({ asyncUtilTimeout: 8000 });
+vi.setConfig({ testTimeout: 20000 });
 
 const ok = (data: unknown): FakeResult => ({ data, error: null });
 

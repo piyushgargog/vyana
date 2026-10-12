@@ -11,6 +11,9 @@ import {
   bookAppointment,
   buildTimeline,
   computeAdherence,
+  computeScheduledAdherence,
+  listDueDoses,
+  prepareDoctorItems,
   computeFreeSlots,
   createCareInvite,
   createDoctorPrescription,
@@ -124,7 +127,9 @@ describe("prescriptions", () => {
     expect(f.argsOf("insert", 0)).toEqual([
       { patient_id: "pat-1", doctor_id: "doc-1", appointment_id: null, source: "doctor", diagnosis: "Type 2 Diabetes", notes: null },
     ]);
-    expect(f.argsOf("insert", 1)).toEqual([[{ medicine_name: "Metformin", frequency: "BD", prescription_id: "rx-1", patient_id: "pat-1" }]]);
+    expect(f.argsOf("insert", 1)).toEqual([
+      [{ medicine_name: "Metformin", frequency: "BD", times: ["09:00", "21:00"], prescription_id: "rx-1", patient_id: "pat-1" }],
+    ]);
     expect(f.calls.filter((c) => c.name === "from").map((c) => c.args[0])).toEqual(["prescriptions", "prescription_items", "conditions"]);
     expect(result.condition_id).toBe("cond-1");
     expect(result.items).toHaveLength(1);
@@ -156,6 +161,38 @@ describe("prescriptions", () => {
   });
 });
 
+describe("prepareDoctorItems", () => {
+  it("fills the reminder times of the frequency when the doctor gave none", () => {
+    const [bd, sos, custom] = prepareDoctorItems([
+      { medicine_name: " Metformin ", frequency: "BD" },
+      { medicine_name: "Dolo", frequency: "SOS" },
+      { medicine_name: "Vitamin", frequency: "custom", times: ["07:30"] },
+    ]);
+    expect(bd).toMatchObject({ medicine_name: "Metformin", times: ["09:00", "21:00"] });
+    expect(sos.times).toEqual([]);
+    expect(custom.times).toEqual(["07:30"]);
+  });
+
+  it("stops on a bad medicine before anything is saved", () => {
+    expect(() => prepareDoctorItems([])).toThrow("at least one medicine");
+    expect(() => prepareDoctorItems([{ medicine_name: "  ", frequency: "OD" }])).toThrow("Medicine 1: the name is missing");
+    expect(() => prepareDoctorItems([{ medicine_name: "x", frequency: "WEEKLY" as never }])).toThrow('unknown frequency "WEEKLY"');
+    expect(() => prepareDoctorItems([{ medicine_name: "x", frequency: "OD", times: ["9am"] }])).toThrow("not a time like 09:00");
+    expect(() => prepareDoctorItems([{ medicine_name: "x", frequency: "OD", times: ["24:00"] }])).toThrow("not a time");
+    expect(() => prepareDoctorItems([{ medicine_name: "ok", frequency: "OD" }, { medicine_name: "x", frequency: "OD", quantity_total: 0 }])).toThrow(
+      "Medicine 2: the quantity must be more than 0"
+    );
+  });
+
+  it("writes nothing when a medicine is invalid", async () => {
+    const f = fakeSupabase({ userId: "doc-1" });
+    await expect(createDoctorPrescription(f.sb, { patient_id: "p", diagnosis: "d", items: [{ medicine_name: "", frequency: "OD" }] })).rejects.toMatchObject({
+      code: "invalid_prescription",
+    });
+    expect(f.calls).toHaveLength(0);
+  });
+});
+
 describe("doses", () => {
   it("logs one row per medicine and due time", async () => {
     const f = fakeSupabase({ responses: { dose_logs: [ok({ id: "d-1", status: "taken" })] } });
@@ -176,12 +213,62 @@ describe("doses", () => {
     expect(computeAdherence([{ status: "taken" }])).toEqual({ taken: 1, missed: 0, percent: 100 });
   });
 
-  it("reads the last N days of logs for the adherence", async () => {
-    const f = fakeSupabase({ responses: { dose_logs: [ok([{ status: "taken" }, { status: "missed" }])] } });
+  it("reads the last N days of logs and the active medicines for the adherence", async () => {
+    const f = fakeSupabase({
+      responses: {
+        dose_logs: [ok([{ item_id: "i-1", scheduled_for: "2026-10-12T03:30:00.000Z", status: "taken" }, { item_id: "i-1", scheduled_for: "2026-10-11T03:30:00.000Z", status: "missed" }])],
+        prescription_items: [ok([])],
+      },
+    });
     const now = new Date("2026-10-12T12:00:00Z");
     expect(await getAdherence(f.sb, 7, now)).toEqual({ taken: 1, missed: 1, percent: 50 });
     expect(f.argsOf("gte")).toEqual(["scheduled_for", "2026-10-05T12:00:00.000Z"]);
     expect(f.argsOf("lt")).toEqual(["scheduled_for", "2026-10-12T12:00:00.000Z"]);
+    expect(f.calls.filter((c) => c.name === "eq").map((c) => c.args)).toContainEqual(["active", true]);
+  });
+});
+
+describe("scheduled adherence", () => {
+  // local times, so the test does not depend on the time zone of the machine
+  const at = (day: number, hh: number, mm = 0) => new Date(2026, 9, day, hh, mm);
+  const bd = { id: "i-1", times: ["09:00", "21:00"], start_date: "2026-10-01", end_date: null };
+
+  it("lists doses that are overdue by more than the grace period, and no others", () => {
+    const now = at(12, 22, 30); // 21:00 was 90 minutes ago, 09:00 too
+    const due = listDueDoses([bd], at(11, 0), now);
+    expect(due.map((d) => d.due.getTime())).toEqual([at(11, 9), at(11, 21), at(12, 9), at(12, 21)].map((d) => d.getTime()));
+    // 21:30 is only 30 minutes after the 21:00 dose: inside the 60 minute grace
+    expect(listDueDoses([bd], at(12, 0), at(12, 21, 30)).map((d) => d.due.getTime())).toEqual([at(12, 9).getTime()]);
+  });
+
+  it("respects the start date, the end date and as-needed medicines", () => {
+    const now = at(12, 23);
+    expect(listDueDoses([{ ...bd, start_date: "2026-10-12" }], at(11, 0), now)).toHaveLength(2);
+    expect(listDueDoses([{ ...bd, end_date: "2026-10-11" }], at(11, 0), now)).toHaveLength(2);
+    expect(listDueDoses([{ id: "i-2", times: [], start_date: "2026-10-01", end_date: null }], at(11, 0), now)).toHaveLength(0);
+  });
+
+  it("counts a dose that was due and never logged as missed", () => {
+    const now = at(12, 23);
+    const logs = [
+      { item_id: "i-1", scheduled_for: at(12, 9).toISOString(), status: "taken" as const },
+      { item_id: "i-1", scheduled_for: at(12, 21, 10).toISOString(), status: "taken" as const }, // logged 10 minutes off
+    ];
+    // due since 11 Oct: 4 doses (11th 09:00 and 21:00 unlogged) + 2 logged on the 12th
+    expect(computeScheduledAdherence([bd], logs, at(11, 0), now)).toEqual({ taken: 2, missed: 2, percent: 50 });
+  });
+
+  it("does not count a logged dose twice, and leaves skipped ones out", () => {
+    const now = at(12, 23);
+    const logs = [
+      { item_id: "i-1", scheduled_for: at(12, 9).toISOString(), status: "missed" as const },
+      { item_id: "i-1", scheduled_for: at(12, 21).toISOString(), status: "skipped" as const },
+    ];
+    expect(computeScheduledAdherence([bd], logs, at(12, 0), now)).toEqual({ taken: 0, missed: 1, percent: 0 });
+  });
+
+  it("is 0 percent with nothing due and nothing logged", () => {
+    expect(computeScheduledAdherence([], [], at(11, 0), at(12, 12))).toEqual({ taken: 0, missed: 0, percent: 0 });
   });
 });
 

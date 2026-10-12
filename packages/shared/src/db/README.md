@@ -41,6 +41,12 @@ Every function throws a `DbError` with `message` and `code` (the Postgres code):
 `acceptCareInvite` returns `null` (not an error) for a wrong or expired code: show "invalid or expired code".
 After 5 wrong codes in 15 minutes it throws `too many attempts`.
 
+## Adherence
+
+`getAdherence(days)` / `useAdherence(days)` counts a dose that was due and never logged as missed once it is overdue by
+more than 60 minutes (`MISSED_DOSE_GRACE_MINUTES`), using the times of the patient's active medicines. A patient who
+never opens the app does not look 100% adherent. Skipped doses are left out.
+
 ## Live updates
 
 Care plans, appointments and drug alerts refresh themselves when the database changes (Realtime, filtered by
