@@ -36,6 +36,16 @@ const OWN_PREFIXES = ["dose:", "refill:", "followup:"];
 
 export type SyncResult = { permission: boolean; doses: number; refills: number; followUps: number };
 
+export type SyncOptions = {
+  /** The time to plan from (tests); defaults to now. */
+  now?: Date;
+  /**
+   * Put medicine and test names in the notification text. Off by default: the text can be read on a
+   * locked screen, and a medicine name reveals health data. The app can offer this as a setting.
+   */
+  showNames?: boolean;
+};
+
 /** Shows notifications while the app is open, and creates the Android channels. Call once at start. */
 export async function setupNotifications(): Promise<void> {
   Notifications.setNotificationHandler({
@@ -119,20 +129,22 @@ async function replaceScheduled(planned: PlannedNotification[]): Promise<void> {
  * care plan. Safe to call as often as you like (it replaces what it scheduled before). Does nothing
  * without notification permission.
  */
-export async function syncReminders(sb: Sb, now: Date = new Date()): Promise<SyncResult> {
+export async function syncReminders(sb: Sb, options: SyncOptions = {}): Promise<SyncResult> {
+  const now = options.now ?? new Date();
+  const text = { showNames: options.showNames ?? false };
   if (!(await ensureNotificationPermission())) return { permission: false, doses: 0, refills: 0, followUps: 0 };
 
   const items = await listActiveItems(sb);
   const [logs, plans, lastDone] = await Promise.all([listItemDoseLogs(sb, items.map((i) => i.id)), listCarePlans(sb), listLastLabDates(sb)]);
 
-  const doses = planDoseReminders(items, logs, now);
-  const refills = planRefillAlerts(items, logs, now);
+  const doses = planDoseReminders(items, logs, now, text);
+  const refills = planRefillAlerts(items, logs, now, text);
   const followUps = plans
     .filter((p) => p.status === "approved")
     .flatMap((p) => {
       const parsed = CarePlan.safeParse(p.plan_json);
       if (!parsed.success) return [];
-      return planFollowUpReminders(p.id, parsed.data.follow_up_tests, lastDone, (p.reviewed_at ?? p.created_at).slice(0, 10), now);
+      return planFollowUpReminders(p.id, parsed.data.follow_up_tests, lastDone, (p.reviewed_at ?? p.created_at).slice(0, 10), now, text);
     });
 
   await replaceScheduled(sortPlanned(doses, refills, followUps));
@@ -152,13 +164,13 @@ export async function scheduleDemoReminders(minutes = 1): Promise<void> {
   if (!(await ensureNotificationPermission())) return;
   const at = new Date(Date.now() + minutes * 60 * 1000);
   const demo: PlannedNotification[] = [
-    { id: "dose:demo", kind: "dose", at, title: "Time for your medicine", body: "Metformin 500 mg · 1 tablet · after food", data: { kind: "dose", demo: "1" } },
+    { id: "dose:demo", kind: "dose", at, title: "Time for your medicine", body: "Your 09:00 dose is due. Tap to log it.", data: { kind: "dose", demo: "1" } },
     {
       id: "refill:demo",
       kind: "refill",
       at: new Date(at.getTime() + 5000),
       title: "Time to reorder",
-      body: "Metformin 500 mg: 2 days left. Tap to order it again.",
+      body: "A medicine is running low. Tap to see which and order it again.",
       data: { kind: "refill", demo: "1" },
     },
   ];

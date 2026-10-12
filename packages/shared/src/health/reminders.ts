@@ -21,6 +21,13 @@ export type PlannedNotification = {
 
 export type DoseReminderItem = Pick<DbPrescriptionItem, "id" | "medicine_name" | "strength" | "dose" | "times" | "with_food" | "start_date" | "end_date" | "active">;
 
+/**
+ * Notification text is visible on a locked screen, and a medicine or test name reveals health data.
+ * By default the text says only what the user needs to act ("Time for your 9:00 medicine"); the
+ * names go in the text only when `showNames` is true. The ids are always in `data` for the app.
+ */
+export type TextOptions = { showNames?: boolean };
+
 /** iOS keeps at most 64 pending local notifications; the three kinds share them. */
 export const MAX_DOSE_REMINDERS = 48;
 export const MAX_REFILL_ALERTS = 8;
@@ -44,7 +51,7 @@ export function planDoseReminders(
   items: DoseReminderItem[],
   logs: Pick<DbDoseLog, "item_id" | "scheduled_for" | "status">[],
   now: Date,
-  options: { horizonDays?: number; max?: number } = {}
+  options: { horizonDays?: number; max?: number } & TextOptions = {}
 ): PlannedNotification[] {
   const horizon = options.horizonDays ?? 7;
   const max = options.max ?? MAX_DOSE_REMINDERS;
@@ -71,7 +78,7 @@ export function planDoseReminders(
           kind: "dose",
           at,
           title: "Time for your medicine",
-          body: [medicineLabel(item), item.dose, food].filter(Boolean).join(" · "),
+          body: options.showNames ? [medicineLabel(item), item.dose, food].filter(Boolean).join(" · ") : `Your ${time} dose is due. Tap to log it.`,
           data: { kind: "dose", item_id: item.id, scheduled_for: at.toISOString() },
         });
       }
@@ -97,7 +104,8 @@ export function nextOccurrenceOfHour(now: Date, hour: number): Date {
 export function planRefillAlerts(
   items: (RefillItem & Pick<DbPrescriptionItem, "medicine_name" | "strength">)[],
   logs: Pick<DbDoseLog, "item_id" | "status">[],
-  now: Date
+  now: Date,
+  options: TextOptions = {}
 ): PlannedNotification[] {
   const at = nextOccurrenceOfHour(now, REMINDER_HOUR.refill);
   const date = formatLocalDate(at);
@@ -116,7 +124,7 @@ export function planRefillAlerts(
       kind: "refill",
       at,
       title: "Time to reorder",
-      body: `${medicineLabel(item)}: ${left}. Tap to order it again.`,
+      body: options.showNames ? `${medicineLabel(item)}: ${left}. Tap to order it again.` : "A medicine is running low. Tap to see which and order it again.",
       data: { kind: "refill", item_id: item.id },
     });
   }
@@ -124,6 +132,28 @@ export function planRefillAlerts(
 }
 
 export type FollowUpTest = { test: string; every_days: number };
+
+/** A test name reduced to lower-case letters and digits, so "HbA1c" and "Hb A1c" compare equal. */
+function normaliseTestName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * When a care plan test was last measured. `lastDone` is keyed by the lab's own test name, which rarely
+ * equals the plan's: "HbA1c" in the plan is "Glycated Haemoglobin (HbA1c)" in the report. Names match when
+ * one contains the other (ignoring case, spaces and punctuation, at least 4 characters); the latest date wins.
+ */
+export function findLastDone(test: string, lastDone: Record<string, string>): string | null {
+  const wanted = normaliseTestName(test);
+  if (wanted.length < 4) return lastDone[test.trim().toLowerCase()] ?? null;
+  let best: string | null = null;
+  for (const [name, date] of Object.entries(lastDone)) {
+    const key = normaliseTestName(name);
+    if (key.length < 4) continue;
+    if ((key === wanted || key.includes(wanted) || wanted.includes(key)) && (best === null || date > best)) best = date;
+  }
+  return best;
+}
 
 /**
  * A reminder for each follow-up test of an approved care plan. A test is due `every_days` after the
@@ -135,13 +165,14 @@ export function planFollowUpReminders(
   tests: FollowUpTest[],
   lastDone: Record<string, string>,
   approvedOn: string,
-  now: Date
+  now: Date,
+  options: TextOptions = {}
 ): PlannedNotification[] {
   const today = formatLocalDate(now);
   const planned: PlannedNotification[] = [];
   for (const { test, every_days } of tests) {
     if (!(every_days > 0)) continue;
-    const base = lastDone[test.trim().toLowerCase()] ?? approvedOn;
+    const base = findLastDone(test, lastDone) ?? approvedOn;
     const due = addDays(base, every_days);
     const dueAt = atLocalTime(due, `${String(REMINDER_HOUR.followUp).padStart(2, "0")}:00`);
     const at = due > today && dueAt.getTime() > now.getTime() ? dueAt : nextOccurrenceOfHour(now, REMINDER_HOUR.followUp);
@@ -150,7 +181,7 @@ export function planFollowUpReminders(
       kind: "follow_up",
       at,
       title: "Time for a check-up test",
-      body: `${test} is due (your care plan suggests it every ${every_days} days).`,
+      body: options.showNames ? `${test} is due (your care plan suggests it every ${every_days} days).` : "A check-up test from your care plan is due.",
       data: { kind: "follow_up", plan_id: planId, test },
     });
   }

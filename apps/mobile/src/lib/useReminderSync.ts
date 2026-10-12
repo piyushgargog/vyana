@@ -24,13 +24,15 @@ const WATCHED_ROOTS = new Set<string>([
 /**
  * When the user is signed in: sets up notifications, saves the push token, schedules the reminders, and
  * schedules them again (after a short pause) when the data above changes or the app comes back to the
- * front. When the user signs out, the reminders are removed.
+ * front. When the user signs out, the reminders are removed. Medicine and test names stay out of the
+ * notification text unless `showNames` is true (lock screens show it).
  */
-export function useReminderSync(): void {
+export function useReminderSync(options: { showNames?: boolean } = {}): void {
   const sb = useSupabase();
   const { user, loading } = useSession();
   const queryClient = useQueryClient();
   const userId = user?.id ?? null;
+  const showNames = options.showNames ?? false;
 
   useEffect(() => {
     if (loading) return;
@@ -42,7 +44,7 @@ export function useReminderSync(): void {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const run = () => {
       void setupNotifications()
-        .then(() => syncReminders(sb))
+        .then(() => syncReminders(sb, { showNames }))
         .catch((error) => console.warn("Could not schedule the reminders:", error));
     };
     const schedule = () => {
@@ -65,5 +67,5 @@ export function useReminderSync(): void {
       stopCache();
       stopAppState.remove();
     };
-  }, [sb, userId, loading, queryClient]);
+  }, [sb, userId, loading, queryClient, showNames]);
 }
