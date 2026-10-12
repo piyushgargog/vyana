@@ -86,11 +86,13 @@ export const LabsCompareRes = z.object({
 });
 
 // ---------- POST /api/emergency/nearby ----------
-export const EmergencyNearbyReq = z.object({ lat: z.number(), lng: z.number() });
+const Lat = z.number().min(-90).max(90);
+const Lng = z.number().min(-180).max(180);
+export const EmergencyNearbyReq = z.object({ lat: Lat, lng: Lng });
 export const EmergencyNearbyRes = z.object({ area: z.string().nullable(), hospitals: z.array(Hospital), cached: z.boolean() });
 
 // ---------- POST /api/emergency/sos ----------
-export const EmergencySosReq = z.object({ lat: z.number(), lng: z.number(), note: z.string().optional() });
+export const EmergencySosReq = z.object({ lat: Lat, lng: Lng, note: z.string().max(500).optional() });
 export const EmergencySosRes = z.object({
   request_id: z.string().uuid(),
   status: z.enum(["requested","dispatched","arriving","completed","cancelled"]),
