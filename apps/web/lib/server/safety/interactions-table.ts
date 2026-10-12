@@ -32,6 +32,11 @@ export const TABLE_ADVICE = "Don't stop or change any medicine on your own. Ask 
 /** Other names a salt is sold or written under → its main name. Keys and values are lowercase. */
 export const SALT_ALIASES: Record<string, string> = {
   "acetylsalicylic acid": "aspirin",
+  acetaminophen: "paracetamol",
+  thyroxine: "levothyroxine",
+  "thyroxine sodium": "levothyroxine",
+  "levothyroxine sodium": "levothyroxine",
+  amoxycillin: "amoxicillin",
   "glyceryl trinitrate": "glyceryl trinitrate",
   gtn: "glyceryl trinitrate",
   nitroglycerin: "glyceryl trinitrate",
