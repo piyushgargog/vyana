@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Database (`supabase/`): the full v2 schema (hospitals and departments, token booking, care plans, caregiver mode, share links, consents, AI run log), row level security for every table, private storage buckets, realtime for the live tables and demo seed data. Appointments are created only by the `book_appointment` function, caregiver invites only by `create_care_invite` / `accept_care_invite` (5 wrong codes per 15 minutes, then locked). Executable pgTAP tests in `supabase/tests/database/` cover every access path (`supabase test db`).
 - Backend foundations: one error format for every API route, bearer-token sign-in checks with roles, a shared cache for public web results, and `apps/web/.env.example`.
 - Prescription basket pricing: `POST /api/prescriptions/basket` starts one web agent per pharmacy in the background and `GET /api/prescriptions/basket/{job_id}` reports progress; every price must appear on the pharmacy's product page before it counts, and totals, ordering and savings are computed by the server. `pnpm smoke:basket` runs the whole pipeline live.
 - Live web layer: a TinyFish client for Search, Fetch, browser agents (with live progress, time limits and a per-minute run limit) and Monitors, the agent start pages for each pharmacy and the medical register, offline fixtures, and `pnpm smoke:tinyfish` to check everything against the live sites.
