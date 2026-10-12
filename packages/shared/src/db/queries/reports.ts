@@ -25,3 +25,15 @@ export async function listLabValueHistory(sb: Sb, testName: string): Promise<DbL
     await sb.from("lab_values").select("*").eq("patient_id", patientId).ilike("test_name", testName).order("measured_on", { ascending: true, nullsFirst: false })
   );
 }
+
+/** When each test was last measured, keyed by lower-case test name (`YYYY-MM-DD`). For the follow-up test reminders. */
+export async function listLastLabDates(sb: Sb): Promise<Record<string, string>> {
+  const patientId = await requireUserId(sb);
+  const rows = unwrap(await sb.from("lab_values").select("test_name, measured_on").eq("patient_id", patientId).not("measured_on", "is", null));
+  const last: Record<string, string> = {};
+  for (const row of rows) {
+    const key = row.test_name.trim().toLowerCase();
+    if (row.measured_on && (!last[key] || row.measured_on > last[key])) last[key] = row.measured_on;
+  }
+  return last;
+}

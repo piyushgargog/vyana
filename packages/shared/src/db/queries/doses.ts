@@ -45,6 +45,13 @@ export async function listDoseLogs(sb: Sb, from: string, to: string): Promise<Db
   );
 }
 
+/** Every dose log of the given medicines (all time), for the refill count and to skip reminders of doses already logged. */
+export async function listItemDoseLogs(sb: Sb, itemIds: string[]): Promise<Pick<DbDoseLog, "item_id" | "scheduled_for" | "status">[]> {
+  if (itemIds.length === 0) return [];
+  const patientId = await requireUserId(sb);
+  return unwrap(await sb.from("dose_logs").select("item_id, scheduled_for, status").eq("patient_id", patientId).in("item_id", itemIds));
+}
+
 /**
  * Share of doses taken among the doses that were taken or missed. A skipped dose is a choice, so it
  * is left out; with nothing logged the percentage is 0.
