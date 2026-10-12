@@ -212,11 +212,13 @@ export const Interaction = z.object({
   advice: z.string(),
   quote: z.string(),                                  // the sentence from the source that states this interaction
   sources: z.array(SourceLink),
+  layer: z.enum(["table","sources"]).optional(),     // CONTRACT CHANGED 13 Oct (ADR-046): which layer found it
 });
 export const InteractionsRes = z.object({
   checked_medicines: z.array(z.string()),
   interactions: z.array(Interaction),
   sources_checked: z.array(SourceLink),               // shown as "no interaction found in: …" when interactions is empty
+  not_checked: z.array(z.string()).optional(),       // CONTRACT CHANGED 13 Oct (ADR-046): medicines whose salt is unknown, so not checked
   cached: z.boolean(),
   ai: AiMeta,
 });
