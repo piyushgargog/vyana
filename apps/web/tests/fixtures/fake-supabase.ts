@@ -19,6 +19,10 @@ export const db = {
     return table("prescription_items");
   },
   inserts: [] as { table: string; rows: Row[] }[],
+  /** Uploaded files by "bucket/path". */
+  storage: new Map<string, Blob>(),
+  /** Tables whose next insert fails (to test rollbacks). */
+  failInsert: new Set<string>(),
 };
 
 const PROFILES: Row[] = [
@@ -31,6 +35,8 @@ export function resetDb() {
   table("profiles").push(...PROFILES.map((p) => ({ ...p })));
   db.web_cache.clear();
   db.inserts.length = 0;
+  db.storage.clear();
+  db.failInsert.clear();
 }
 resetDb();
 
@@ -41,6 +47,7 @@ function query(name: string) {
   const filters: [string, unknown][] = [];
   let gtExpires = "";
   let pendingUpdate: Row | null = null;
+  let pendingDelete = false;
   const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v));
 
   const chain = {
@@ -60,19 +67,37 @@ function query(name: string) {
       return { error: null };
     },
     insert: (r: Row | Row[]) => {
+      if (db.failInsert.has(name)) {
+        db.failInsert.delete(name);
+        const failed = { data: null, error: new Error(`insert into ${name} failed`) };
+        return {
+          select: () => ({ single: async () => failed, then: (resolve: (v: typeof failed) => unknown) => resolve(failed) }),
+          then: (resolve: (v: typeof failed) => unknown) => resolve(failed),
+        };
+      }
       const added = (Array.isArray(r) ? r : [r]).map((x) => ({ id: newId(), ...x }));
       table(name).push(...added);
       db.inserts.push({ table: name, rows: added });
       const done = { data: null, error: null };
+      const all = { data: added, error: null };
       return {
-        select: () => ({ single: async () => ({ data: added[0], error: null }) }),
+        select: () => ({
+          single: async () => ({ data: added[0], error: null }),
+          then: (resolve: (v: typeof all) => unknown) => resolve(all),
+        }),
         then: (resolve: (v: typeof done) => unknown) => resolve(done),
       };
     },
+    delete: () => ((pendingDelete = true), chain),
     update: (values: Row) => ((pendingUpdate = values), chain),
     then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
       if (pendingUpdate) {
         for (const r of matching()) Object.assign(r, pendingUpdate);
+        return resolve({ data: null, error: null });
+      }
+      if (pendingDelete) {
+        const gone = new Set(matching());
+        rows[name] = table(name).filter((r) => !gone.has(r));
         return resolve({ data: null, error: null });
       }
       return resolve({ data: matching(), error: null });
@@ -92,6 +117,14 @@ export const fakeSupabaseModule = {
           : { data: { user: null }, error: new Error("invalid JWT") },
     },
     from: query,
+    storage: {
+      from: (bucket: string) => ({
+        download: async (path: string) => {
+          const blob = db.storage.get(`${bucket}/${path}`);
+          return blob ? { data: blob, error: null } : { data: null, error: new Error("Object not found") };
+        },
+      }),
+    },
   }),
   supabaseForUser: () => ({ from: query }),
   requireEnv: (name: string) => {
