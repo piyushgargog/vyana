@@ -5,6 +5,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Symptom triage: `POST /api/triage` suggests how soon to see a doctor and which hospital department to book.
+  - Emergency warning signs (English, Hindi, Hinglish) go straight to "call 108 / press SOS" without any AI.
+  - Otherwise the AI only picks the urgency and up to 2 departments from the hospital list. The advice, warning signs and disclaimer are fixed text in the user's language, so no AI-written sentence reaches the user, and it never names a disease.
+  - Personal details are removed before the symptoms reach the AI. If the AI can't answer, the result is "see a General Medicine doctor soon".
 - Care plans: `POST /api/care-plan` builds a plan for a condition (summary, do's and don'ts, diet with a sample day, warning signs, follow-up tests) from trusted guideline pages.
   - Every bullet must quote the page it comes from, and the server checks the quote is really there. Follow-up intervals are read from those quotes, and the sample day uses only foods the pages recommend. Medicines and doses are never mentioned.
   - Warning signs include a reviewed list for 10 common conditions (diabetes, high blood pressure, asthma, COPD, angina, heart failure, epilepsy, pregnancy, dengue, underactive thyroid), each item quoted from an NHS or MedlinePlus page; `pnpm verify:red-flags` re-checks them against the live pages.

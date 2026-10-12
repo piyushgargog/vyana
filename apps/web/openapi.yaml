@@ -656,7 +656,7 @@ paths:
         - Care
       summary: Check symptoms and suggest a department
       description: |-
-        Fixed warning-sign rules run first and return `emergency` (call 108 / SOS) without any AI. Otherwise suggests departments from the hospital department list. Never names a disease.
+        Fixed warning-sign rules run first and return `emergency` (call 108 / SOS) without any AI. Otherwise the AI only picks the urgency and up to 2 departments from the hospital department list; the advice, warning signs and disclaimer are fixed text in the user's language. Never names a disease. If the AI can't answer, the result is `soon` + General Medicine.
 
         **Who can call it:** any signed-in user.
       operationId: post_triage
