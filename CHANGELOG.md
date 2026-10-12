@@ -5,6 +5,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Care plans: `POST /api/care-plan` builds a plan for a condition (summary, do's and don'ts, diet with a sample day, warning signs, follow-up tests) from trusted guideline pages.
+  - Every bullet must quote the page it comes from, and the server checks the quote is really there. Follow-up intervals are read from those quotes, and the sample day uses only foods the pages recommend. Medicines and doses are never mentioned.
+  - Warning signs include a reviewed list for 10 common conditions (diabetes, high blood pressure, asthma, COPD, angina, heart failure, epilepsy, pregnancy, dengue, underactive thyroid), each item quoted from an NHS or MedlinePlus page; `pnpm verify:red-flags` re-checks them against the live pages.
+  - A doctor's request creates a draft the doctor approves. A patient can generate a plan only for a condition they added, marked as not reviewed by a doctor.
 - AI health assistant: `POST /api/assistant/chat` streams answers in English, Hindi or Hinglish.
   - It searches and reads trusted health sites only (WHO, MoHFW, MedlinePlus, NHS, CDC, NCBI, ICMR, CDSCO) and cites them. Any other link is removed while the answer streams, and an answer without a trusted source says so.
   - It can read your own medicines, lab values and conditions, and compare a medicine's price across pharmacies.

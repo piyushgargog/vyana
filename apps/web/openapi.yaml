@@ -546,7 +546,7 @@ paths:
         - Care
       summary: Generate a care plan for a condition
       description: |-
-        Built only from trusted guideline pages; every section keeps its sources and the plan never mentions medicines or doses. A doctor's request creates a `draft` the doctor must approve; a patient's request creates a plan marked as not reviewed by a doctor.
+        Built only from trusted guideline pages: every bullet must quote the page it comes from, follow-up intervals are read from those quotes, and the plan never mentions medicines or doses. Red flags include a reviewed list for common conditions. A doctor's request creates a `draft` the doctor must approve; a patient can generate a plan only for a condition they added, marked as not reviewed by a doctor (403 for a doctor's diagnosis).
 
         **Who can call it:** patient, or the patient's doctor.
 
