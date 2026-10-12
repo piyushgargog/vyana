@@ -87,26 +87,25 @@ export function AppProviders({
 
   const activeQueryClient = customQueryClient ?? defaultQueryClient;
 
-  // Never show one user's cached data to the next: drop the cache when the signed-in user changes.
+  // Never show one user's cached data to the next. The cache is dropped before the new session is
+  // applied, so queries that start for the new user are not thrown away (token refreshes keep the cache).
   const lastUserId = useRef<string | null | undefined>(undefined);
-  useEffect(() => {
-    if (loading) return;
-    const userId = session?.user.id ?? null;
-    if (lastUserId.current !== undefined && lastUserId.current !== userId) activeQueryClient.clear();
-    lastUserId.current = userId;
-  }, [session, loading, activeQueryClient]);
 
   useEffect(() => {
     let mounted = true;
 
+    const applySession = (next: Session | null) => {
+      if (!mounted) return;
+      const userId = next?.user.id ?? null;
+      if (lastUserId.current !== undefined && lastUserId.current !== userId) activeQueryClient.clear();
+      lastUserId.current = userId;
+      setSession(next);
+      setLoading(false);
+    };
+
     supabase.auth
       .getSession()
-      .then(({ data: { session } }) => {
-        if (mounted) {
-          setSession(session);
-          setLoading(false);
-        }
-      })
+      .then(({ data: { session } }) => applySession(session))
       .catch(() => {
         if (mounted) {
           setLoading(false);
@@ -115,18 +114,13 @@ export function AppProviders({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setSession(session);
-        setLoading(false);
-      }
-    });
+    } = supabase.auth.onAuthStateChange((_event, session) => applySession(session));
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, activeQueryClient]);
 
   // ApiClient initialization
   const apiClient: ApiClient = useMemo(() => {
