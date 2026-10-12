@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { AiMeta, Interaction, InteractionsReq, InteractionsRes, SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
 import { requireRole, type AuthedUser } from "./auth";
-import { TTL, cached, sha1 } from "./cache";
+import { createHash } from "node:crypto";
+import { TTL, cached } from "./cache";
 import { log } from "./log";
 import { INTERACTIONS_PROMPT_VERSION, INTERACTIONS_SYSTEM, interactionsPrompt, type Candidate } from "./prompts/interactions";
 import { checkDiagnosisLanguage, findDosePatterns } from "./safety/blocklists";
@@ -164,7 +165,8 @@ export async function checkInteractions({ sb, user, profile }: AuthedUser, body:
 
   // A saved result for the same medicines, less than a week old.
   const admin = supabaseAdmin();
-  const medicinesKey = sha1(JSON.stringify([...known.map((m) => `${m.name}|${m.salts.join("+")}`)].sort()));
+  // SHA-256: the key is built from health data (medicine names).
+  const medicinesKey = createHash("sha256").update(JSON.stringify(known.map((m) => `${m.name}|${m.salts.join("+")}`).sort())).digest("hex");
   const { data: saved } = await admin
     .from("interaction_checks")
     .select("id, result_json, created_at")
