@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(105);
+select plan(107);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures (as the table owner). Everything is rolled back at the end.
@@ -178,9 +178,15 @@ select public.tap_login('10000000-0000-0000-0000-000000000001');
 select is(
   (select (public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'checkup')).token_no),
   1, 'the first booking of a department and day gets token 1');
+select throws_ok(
+  $$ select public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'again') $$,
+  'P0001', 'you already have a token for this department on that day', 'the same patient cannot book the same department and day twice');
+
+select public.tap_login('10000000-0000-0000-0000-000000000006');
 select is(
-  (select (public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'again')).token_no),
-  2, 'the second booking gets token 2');
+  (select (public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'checkup')).token_no),
+  2, 'the next patient of that department and day gets token 2');
+select public.tap_login('10000000-0000-0000-0000-000000000001');
 select throws_ok(
   $$ select public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date - 1, 'x') $$,
   'P0001', 'date is in the past', 'booking a past date fails');
@@ -214,12 +220,15 @@ select throws_ok(
 select is(
   (select count(*)::int from public.appointments where patient_id = '10000000-0000-0000-0000-000000000002'),
   0, 'a patient cannot read another patient''s appointments');
-select lives_ok(
-  $$ update public.appointments set status = 'cancelled' where token_no = 2 and department_id = '30000000-0000-0000-0000-000000000001' $$,
-  'a patient cancels their own appointment');
 select throws_ok(
   $$ update public.appointments set status = 'completed' where token_no = 1 and department_id = '30000000-0000-0000-0000-000000000001' $$,
   '42501', null, 'a patient cannot mark an appointment completed');
+select lives_ok(
+  $$ update public.appointments set status = 'cancelled' where token_no = 1 and department_id = '30000000-0000-0000-0000-000000000001' $$,
+  'a patient cancels their own appointment');
+select is(
+  (select (public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'rebook')).token_no),
+  3, 'and can book that department and day again, with a new token number (2 is taken, 1 is never reused)');
 
 -- ----------------------------------------------------------------------------
 -- Doctors only see patients of their own (verified) department
