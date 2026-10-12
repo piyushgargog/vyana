@@ -16,14 +16,14 @@
     "zod": "^4"
   },
   "peerDependencies": {
-    "react": "*",
-    "@tanstack/react-query": "^5"
+    "@tanstack/react-query": "^5",
+    "react": "*"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.1",
     "@types/react": "~19.2.2",
     "react": "19.2.3",
     "typescript": "^5",
-    "vitest": "^3"
+    "vitest": "^4.1.11"
   }
 }
