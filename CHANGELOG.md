@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- `pnpm prewarm` fills the shared cache before a demo (the demo prescription's pharmacy baskets and the care plan pages for the demo conditions); `--dry-run` shows the plan and the agent-run estimate. The README's TinyFish section now lists each feature's endpoint and code.
 - Reminders on the phone: dose reminders for the next days (a dose already logged gets none), a refill alert at 9:00 for each medicine that is running out (units left from the quantity dispensed and the doses taken), and a reminder for each follow-up test of an approved care plan. The phone also saves its push token. What to remind of and when is planned by tested pure functions in `@vyana/shared` (`getRefillStatus`, `planDoseReminders`, `planRefillAlerts`, `planFollowUpReminders`).
 - Doctor verification: `POST /api/doctors/verify` checks a doctor on the NMC Indian Medical Register.
   - A web agent only reads the register; the server decides.
