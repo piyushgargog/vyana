@@ -99,6 +99,8 @@ Vyana treats AI output as a draft that must be proven, never as fact:
 | A human confirms | Patients review every scanned prescription before reminders are set; doctors approve care plans for their diagnoses |
 | Say "I don't know" | Missing or conflicting sources mean the app says so and points to a doctor or 108; it never diagnoses and never calls a combination "safe" |
 | Traceable | Each AI result is stored with the model, prompt version and sources; users can report a mistake |
+| Privacy before AI | Names, phone numbers, addresses and ID numbers are removed from text before it reaches a model; prescription and report images go only to a provider whose terms rule out keeping or training on them |
+| Verified interaction data | Well-known dangerous medicine combinations come from a reviewed table checked in code; anything else needs a quoted, trusted source |
 
 ## Contracts
 

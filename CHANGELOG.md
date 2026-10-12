@@ -14,6 +14,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - CI on every pull request: lint, typecheck, tests, web build, expo-doctor, CodeQL, secret scanning, dependency review, PR title check and auto-labels.
 - Repository basics: README, MIT license, contributing guide, security policy, issue and PR templates, CODEOWNERS, Dependabot.
 
+### Changed
+- ARCHITECTURE documents privacy before AI and the verified interaction table.
+
 ### Removed
 - The standalone diet-plan endpoint; diet guidance is now part of the care plan.
 
