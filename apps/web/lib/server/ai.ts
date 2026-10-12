@@ -1,0 +1,108 @@
+import "server-only";
+import { NoObjectGeneratedError, Output, generateText, type ModelMessage } from "ai";
+import type { z } from "zod";
+import type { AiMeta, SourceLink } from "@vyana/shared";
+import { upstream } from "./errors";
+import { getModel, isLlmMock, modelName, type ModelKind } from "./llm";
+import { log } from "./log";
+import { supabaseAdmin } from "./supabase-admin";
+
+/**
+ * Every AI call goes through `runAi` (DESIGN §10, PLAN §2A): structured output at temperature 0, one retry when
+ * the output doesn't match the schema, and one `ai_runs` row per result. Routes never call the AI SDK directly.
+ */
+
+export type AiRunStatus = "ok" | "needs_review" | "rejected";
+
+interface RunAiBase<T> {
+  /** What this run is for, e.g. "rx_extract", "hospitals_nearby" (stored in ai_runs.feature). */
+  feature: string;
+  kind: ModelKind;
+  schema: z.ZodType<T>;
+  system?: string;
+  /** Versioned with the prompt file, e.g. "hospitals-nearby@1". */
+  promptVersion: string;
+  /** Pages the model was given; stored with the run. */
+  sources: SourceLink[];
+  userId: string | null;
+  /** A storage path or a hash, never the content itself (DATABASE.md). */
+  inputRef?: string;
+  /** What `LLM_MOCK=1` returns instead of calling a model. */
+  mock: T;
+  /** The caller's verdict after its own checks (verbatim, citations, blocklists). Default "ok". */
+  statusOf?: (object: T) => AiRunStatus;
+}
+
+export type RunAiInput<T> = RunAiBase<T> & ({ prompt: string; messages?: never } | { messages: ModelMessage[]; prompt?: never });
+
+export interface RunAiResult<T> {
+  object: T;
+  ai: AiMeta;
+  /** The ai_runs row, or null when it couldn't be written. */
+  runId: string | null;
+}
+
+/** Sent to the user when the model's answer can't be used: never a half-guess (PLAN §2A rule 2). */
+export const UNREADABLE_MESSAGE = "Couldn't read this. Please enter it manually.";
+
+async function generate<T>(input: RunAiInput<T>): Promise<T> {
+  const call = () =>
+    generateText({
+      model: getModel(input.kind),
+      output: Output.object({ schema: input.schema }),
+      temperature: 0,
+      maxRetries: 1,
+      ...(input.system ? { system: input.system } : {}),
+      ...(input.messages ? { messages: input.messages } : { prompt: input.prompt as string }),
+    });
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const result = await call();
+      return result.output as T;
+    } catch (err) {
+      if (NoObjectGeneratedError.isInstance(err) && attempt === 1) {
+        log({ event: "ai_retry", feature: input.feature });
+        continue;
+      }
+      if (NoObjectGeneratedError.isInstance(err)) throw upstream(UNREADABLE_MESSAGE);
+      throw err;
+    }
+  }
+}
+
+type RunRecord = Pick<RunAiBase<unknown>, "feature" | "userId" | "promptVersion" | "inputRef" | "sources">;
+
+async function recordRun(input: RunRecord, model: string, object: unknown, status: AiRunStatus): Promise<string | null> {
+  try {
+    const { data, error } = await supabaseAdmin()
+      .from("ai_runs")
+      .insert({
+        user_id: input.userId,
+        feature: input.feature,
+        model,
+        prompt_version: input.promptVersion,
+        input_ref: input.inputRef ?? null,
+        output_json: object,
+        sources: input.sources,
+        status,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return (data as { id: string }).id;
+  } catch {
+    // Traceability must not break the feature; the failure is visible in the logs.
+    log({ event: "ai_run_insert_failed", feature: input.feature });
+    return null;
+  }
+}
+
+export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
+  const started = Date.now();
+  const model = modelName(input.kind);
+  const object = isLlmMock() ? input.schema.parse(input.mock) : await generate(input);
+  const status = input.statusOf?.(object) ?? "ok";
+  const runId = await recordRun(input, model, object, status);
+  log({ event: "ai_run", feature: input.feature, model, status, duration_ms: Date.now() - started });
+  return { object, ai: { model, prompt_version: input.promptVersion, generated_at: new Date().toISOString() }, runId };
+}
