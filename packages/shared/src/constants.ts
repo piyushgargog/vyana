@@ -1,4 +1,5 @@
 // packages/shared/src/constants.ts
+// Enums, bucket names, channel names and defaults shared by web and mobile (plan 7.1 and 7.5).
 // Owner: Vaibhav Parmar
 
 export const BUCKETS = {
@@ -38,3 +39,14 @@ export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
 export type VitalType = keyof typeof VITAL_UNITS;
 
 export const EMERGENCY_NUMBER = "108";
+
+// Scope v2 additions (plan 7.5)
+export const CONSENT_VERSION = "2026-10-11";
+export const EMERGENCY = { ambulance: "108", all: "112" } as const; // EMERGENCY_NUMBER stays for compatibility
+export const BLINKIT = {
+  url: "https://blinkit.com",
+  note: "Blinkit Ambulance is available in parts of Gurugram",
+} as const;
+export const ORS_URL = "https://ors.gov.in";
+export const CAREGIVER_INVITE_TTL_HOURS = 24;
+export const MISSED_DOSE_GRACE_MINUTES = 60;
