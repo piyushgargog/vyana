@@ -1,13 +1,24 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { EmergencyNearbyRes, Hospital, HospitalInfoRes, SourceLink } from "@vyana/shared";
+import type { EmergencyNearbyRes, Hospital, HospitalInfoRes, PmjayHospitalsRes, SourceLink } from "@vyana/shared";
 import { runAi } from "../ai";
 import { TTL, cached } from "../cache";
 import { notFound } from "../errors";
 import { reverseGeocode } from "../geo";
 import { log } from "../log";
-import { NEARBY_PROMPT_VERSION, NEARBY_SYSTEM, OPD_PROMPT_VERSION, OPD_SYSTEM, nearbyPrompt, opdPrompt, type PromptPage } from "../prompts/hospitals";
+import {
+  NEARBY_PROMPT_VERSION,
+  NEARBY_SYSTEM,
+  OPD_PROMPT_VERSION,
+  OPD_SYSTEM,
+  PMJAY_PROMPT_VERSION,
+  PMJAY_SYSTEM,
+  nearbyPrompt,
+  opdPrompt,
+  pmjayPrompt,
+  type PromptPage,
+} from "../prompts/hospitals";
 import { evidenceFound, normalizeText } from "../safety/verbatim";
 import { supabaseAdmin } from "../supabase-admin";
 import { type CallCounter, fetchPages, search } from "./client";
@@ -250,4 +261,90 @@ export async function hospitalOpdInfo(
     .eq("id", hospital.id);
   if (saveError) log({ event: "opd_info_save_failed" });
   return { hospital_id: hospital.id, opd, notes, source_url: sourceUrl, fetched_at: now, cached: false };
+}
+
+// ---------------------------------------------------------------- PM-JAY (SPEC §17, ADR-048)
+
+/** Government pages only: a third party's list can't say a hospital is empanelled (ADR-048). */
+export function isGovUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return (u.protocol === "https:" || u.protocol === "http:") && (host.endsWith(".gov.in") || host.endsWith(".nic.in"));
+  } catch {
+    return false;
+  }
+}
+
+export const PmjayLlm = z.object({
+  hospitals: z.array(z.object({ name: z.string(), address: z.string().nullable(), specialities: z.array(z.string()), page: z.number().int() })),
+});
+type PmjayLlm = z.infer<typeof PmjayLlm>;
+export type PmjayHospital = PmjayHospitalsRes["hospitals"][number];
+
+export function verifyPmjay(out: PmjayLlm, pages: Page[]): { hospitals: PmjayHospital[]; dropped: number } {
+  const hospitals: PmjayHospital[] = [];
+  const seen = new Set<string>();
+  let dropped = 0;
+  for (const h of out.hospitals) {
+    const page = pages[h.page];
+    const name = h.name.trim();
+    const key = normalizeText(name);
+    if (!page || !isGovUrl(page.url) || !name || !evidenceFound(page.text, name) || seen.has(key)) {
+      dropped++;
+      continue;
+    }
+    seen.add(key);
+    hospitals.push({
+      name,
+      address: h.address && evidenceFound(page.text, h.address) ? h.address.trim() : null,
+      specialities: h.specialities.map((s) => s.trim()).filter((s) => {
+        const ok = Boolean(s) && evidenceFound(page.text, s);
+        if (!ok) dropped++;
+        return ok;
+      }),
+      source_url: page.url,
+    });
+    if (hospitals.length === 10) break;
+  }
+  return { hospitals, dropped };
+}
+
+const MOCK_PMJAY_URL_HOST = "health.mock.gov.in";
+const MOCK_PMJAY_PAGE = "# [mock] PM-JAY empanelled hospitals\n\n[mock] Sanjeevani Hospital, [mock] 12 Ring Road, Delhi. Specialities: General Medicine, Cardiology.";
+const MOCK_PMJAY: PmjayLlm = {
+  hospitals: [{ name: "[mock] Sanjeevani Hospital", address: "[mock] 12 Ring Road, Delhi", specialities: ["General Medicine", "Cardiology", "Oncology"], page: 0 }],
+};
+
+export async function findPmjayHospitals(lat: number, lng: number, ctx: { userId: string; counter: CallCounter }): Promise<PmjayHospitalsRes> {
+  const key = `pmjay:${lat.toFixed(2)}:${lng.toFixed(2)}`;
+  let area: string | null = null;
+  const hit = await cached<{ area: string | null; hospitals: PmjayHospital[] }>(key, "pmjay", 7 * TTL.day, async () => {
+    area = await reverseGeocode(lat, lng);
+    const where = area ?? `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    const found = await search({ query: `Ayushman Bharat PM-JAY empanelled hospitals ${where}`, location: "IN" }, { counter: ctx.counter });
+    let urls = [...new Set(found.results.map((r) => r.url))].filter(isGovUrl).slice(0, 3);
+    if (isWebMock()) {
+      urls = [`https://${MOCK_PMJAY_URL_HOST}/pmjay-hospitals`];
+      registerMockPage(urls[0], MOCK_PMJAY_PAGE);
+    }
+    const pages = await readPages(urls, "Find hospitals empanelled under PM-JAY, with address and specialities", ctx.counter);
+    if (!pages.length) return null;
+    const { object } = await runAi({
+      feature: "pmjay_hospitals",
+      kind: "text",
+      schema: PmjayLlm,
+      system: PMJAY_SYSTEM,
+      prompt: pmjayPrompt(where, pages),
+      promptVersion: PMJAY_PROMPT_VERSION,
+      sources: sourcesOf(pages),
+      userId: ctx.userId,
+      mock: MOCK_PMJAY,
+      statusOf: (o) => (verifyPmjay(o, pages).dropped > 0 ? "needs_review" : "ok"),
+    });
+    const { hospitals } = verifyPmjay(object, pages);
+    return hospitals.length ? { area, hospitals } : null;
+  });
+  if (hit) return { area: hit.value.area, hospitals: hit.value.hospitals, cached: hit.cached };
+  return { area, hospitals: [], cached: false };
 }

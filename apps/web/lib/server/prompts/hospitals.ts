@@ -44,3 +44,15 @@ export function opdPrompt(hospital: string, pages: PromptPage[]): string {
     pagesBlock(pages),
   ].join("\n");
 }
+
+// v1
+export const PMJAY_PROMPT_VERSION = "pmjay@1";
+export const PMJAY_SYSTEM = `You extract hospitals listed as empanelled under Ayushman Bharat PM-JAY from government web pages. ${DATA_ONLY}`;
+export function pmjayPrompt(area: string, pages: PromptPage[]): string {
+  return [
+    `List up to 10 hospitals near ${area} that the pages list as empanelled under PM-JAY (Ayushman Bharat).`,
+    "For each: name, address, specialities (only those the page lists for it, else an empty list), and page (the index of the page you took it from).",
+    "",
+    pagesBlock(pages),
+  ].join("\n");
+}
