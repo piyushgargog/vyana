@@ -16,24 +16,41 @@ export type RefillStatus = {
   refill_due: boolean;
 };
 
+/** Units that are counted one by one: a dose of "2 tablets" or "5 ml" uses 2 or 5 of them. */
+const COUNTABLE_UNITS = new Set([
+  "tablet", "tablets", "tab", "tabs", "capsule", "capsules", "cap", "caps", "goli", "piece", "pieces", "pc", "pcs",
+  "ml", "puff", "puffs", "drop", "drops", "gtt", "sachet", "sachets", "spoon", "spoons", "spoonful", "spoonfuls",
+  "tsp", "tbsp", "teaspoon", "teaspoons", "tablespoon", "tablespoons",
+]);
+
 /**
  * Units in one dose, from text such as "1 tablet", "2 tablets", "5 ml", "1/2 tablet" or "0.5 tablet".
- * A dose that cannot be read counts as 1.
+ * A number counts only when a countable unit follows it (or nothing does). A strength such as
+ * "500 mg", "650mg", "40 mg OD", "2 g" or "10 IU" is how strong the medicine is, not how many to take,
+ * so it counts as 1. A dose that cannot be read counts as 1.
  */
 export function parseDoseUnits(dose: string | null | undefined): number {
   if (!dose) return 1;
-  const text = dose.trim();
+  const text = dose.trim().toLowerCase();
+
+  let value: number;
+  let rest: string;
   const fraction = text.match(/^(\d{1,3})\s{0,3}\/\s{0,3}(\d{1,3})/);
-  if (fraction) {
-    const value = Number(fraction[1]) / Number(fraction[2]);
-    return Number.isFinite(value) && value > 0 ? value : 1;
-  }
   const number = text.match(/^(\d{1,4}(?:\.\d{1,3})?)/);
-  if (number) {
-    const value = Number(number[1]);
-    return value > 0 ? value : 1;
+  if (fraction) {
+    value = Number(fraction[1]) / Number(fraction[2]);
+    rest = text.slice(fraction[0].length);
+  } else if (number) {
+    value = Number(number[1]);
+    rest = text.slice(number[0].length);
+  } else {
+    return 1;
   }
-  return 1;
+  if (!Number.isFinite(value) || value <= 0) return 1;
+
+  const unit = rest.trim().match(/^(?:[a-z]+|%)/)?.[0];
+  // "500" alone, or a countable unit: count it. Any other unit (mg, mcg, g, iu, ...) is a strength.
+  return unit === undefined || COUNTABLE_UNITS.has(unit) ? value : 1;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
