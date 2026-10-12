@@ -109,6 +109,7 @@ Vyana treats AI output as a draft that must be proven, never as fact:
 | Say "I don't know" | Missing or conflicting sources mean the app says so and points to a doctor or 108; it never diagnoses and never calls a combination "safe" |
 | Traceable | Each AI result is stored with the model, prompt version and sources; users can report a mistake |
 | Privacy before AI | Names, phone numbers, addresses and ID numbers are removed from text before it reaches a model; prescription and report images go only to a provider whose terms rule out keeping or training on them |
+| Streaming answers stay checked | The assistant's reply passes through a filter as it streams: a link is held until it is complete and removed unless the server fetched it from a trusted health site in that request; emergency warning signs make the server write a fixed 108 / SOS notice before the AI answers |
 | Verified interaction data | Well-known dangerous medicine combinations come from a reviewed table checked in code; anything else needs a quoted, trusted source |
 
 ## Contracts

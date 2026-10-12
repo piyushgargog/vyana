@@ -95,11 +95,13 @@ paths["/api/assistant/chat"] = {
     tags: ["Assistant"],
     summary: "Chat with the AI health assistant (streaming)",
     description:
-      "Request: `{ session_id?: string, messages: UIMessage[] }` (Vercel AI SDK UI messages). Response: an AI SDK UI-message stream. A new session id is returned in the `x-session-id` header. Answers cite trusted sources; emergency messages start with a 108 / SOS notice.\n\n**Who can call it:** any signed-in user.\n\n**TinyFish:** Search, Fetch (as assistant tools).",
+      "Request: `{ session_id?: string, messages: UIMessage[] }` (Vercel AI SDK UI messages; only the text of the last 20 is used, and the last one must be from the user). Response: an AI SDK UI-message stream. A new session id is returned in the `x-session-id` header. The first chunk carries `messageMetadata.ai_run_id` for \"Report a mistake\".\n\nAnswers cite pages from trusted health sites only; any other link is removed before it is sent. Emergency messages start with a fixed 108 / SOS notice.\n\n**Who can call it:** any signed-in user.\n\n**TinyFish:** Search, Fetch (as assistant tools).",
     operationId: "assistant_chat",
     responses: {
       "200": { description: "Server-sent UI message stream", headers: { "x-session-id": { schema: { type: "string", format: "uuid" } } } },
+      "400": errorResponse("Invalid body, or the last message isn't from the user (`BAD_REQUEST`)"),
       "401": errorResponse("Missing or invalid token (`UNAUTHORIZED`)"),
+      "404": errorResponse("`session_id` is not one of the caller's conversations (`NOT_FOUND`)"),
     },
   },
 };

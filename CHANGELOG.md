@@ -5,6 +5,11 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- AI health assistant: `POST /api/assistant/chat` streams answers in English, Hindi or Hinglish.
+  - It searches and reads trusted health sites only (WHO, MoHFW, MedlinePlus, NHS, CDC, NCBI, ICMR, CDSCO) and cites them. Any other link is removed while the answer streams, and an answer without a trusted source says so.
+  - It can read your own medicines, lab values and conditions, and compare a medicine's price across pharmacies.
+  - Emergency warning signs make the reply start with a fixed "call 108 / press SOS" notice, written by the server before the AI answers.
+  - Personal details are removed before the AI sees a message. Conversations are saved, and each reply is logged so it can be reported as a mistake.
 - Data layer for the apps: typed query functions (`@vyana/shared`) for the profile, doctors (with names via `doctor_directory`), hospitals, token booking, prescriptions and the doctor's e-Rx, doses and adherence, lab reports, vitals, care plans, caregivers, share links, consents, timeline, AI mistake reports, storage uploads and push tokens, plus a React Query hook for each. Cached data is dropped when another user signs in.
 - Auth and data plumbing: Supabase clients for web (browser, server, `proxy.ts` session refresh) and mobile (session encrypted in AsyncStorage, key in SecureStore, so it survives app restarts), `AppProviders` with `useSupabase()` and `useSession()`, generated database types (`Tables`, `TablesInsert`, `TablesUpdate`, `Db*` row aliases) and the v2 constants (consent version, emergency numbers, Blinkit, ORS, caregiver invite lifetime, missed-dose grace).
 - Database (`supabase/`): the full v2 schema (hospitals and departments, token booking, care plans, caregiver mode, share links, consents, AI run log), row level security for every table, private storage buckets, realtime for the live tables and demo seed data. Appointments are created only by the `book_appointment` function, caregiver invites only by `create_care_invite` / `accept_care_invite` (5 wrong codes per 15 minutes, then locked). Executable pgTAP tests in `supabase/tests/database/` cover every access path (`supabase test db`).
