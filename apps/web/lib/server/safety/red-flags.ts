@@ -1,5 +1,5 @@
 /**
- * Emergency warning signs (PLAN §2A rule 2, DESIGN §10). Fixed rules run in code BEFORE any model call, so an
+ * Emergency warning signs (PLAN §2A rule 4, DESIGN §10). Fixed rules run in code BEFORE any model call, so an
  * emergency is never missed because a model misread it. Used by triage, the assistant and care plans.
  *
  * Every rule comes from the source below, written as English, Hindi and Hinglish phrases. Matching is deliberately
