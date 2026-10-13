@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,7 +12,7 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
 
-export default function AppShellLayout({
+function AppShellContent({
   children,
 }: {
   children: React.ReactNode;
@@ -241,5 +241,25 @@ export default function AppShellLayout({
 
       <MedicalDisclaimerFooter />
     </div>
+  );
+}
+
+export default function AppShellLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col bg-slate-50">
+          <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-12">
+            <SkeletonCard lines={4} />
+          </main>
+        </div>
+      }
+    >
+      <AppShellContent>{children}</AppShellContent>
+    </Suspense>
   );
 }
