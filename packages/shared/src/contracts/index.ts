@@ -10,7 +10,8 @@ const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
 
 // ---------- AI accuracy & safety (plan §2A) ----------
 export const Language = z.enum(["en","hi","hinglish"]);
-export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), generated_at: z.string() });
+// run_id: the ai_runs row, so "Report a mistake" can name it (CONTRACT CHANGED 14 Oct, ADR-063). null when it wasn't saved.
+export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), generated_at: z.string(), run_id: z.guid().nullable().optional() });
 // Extracted fields: `evidence` is the exact source text; `needs_review` is set when it can't be verified.
 const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.string().nullable().optional() };
 

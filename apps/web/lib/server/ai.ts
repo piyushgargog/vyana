@@ -131,5 +131,5 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
   const status = input.statusOf?.(object) ?? "ok";
   const runId = await recordRun(input, model, object, status);
   log({ event: "ai_run", feature: input.feature, model, status, duration_ms: Date.now() - started });
-  return { object, ai: { model, prompt_version: input.promptVersion, generated_at: new Date().toISOString() }, runId };
+  return { object, ai: { model, prompt_version: input.promptVersion, generated_at: new Date().toISOString(), run_id: runId }, runId };
 }

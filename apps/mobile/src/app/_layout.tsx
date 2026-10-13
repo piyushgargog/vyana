@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { MobileAppProviders } from '@/components/providers';
+import { onNotificationTap } from '@/lib/notifications';
 import { useReminderSync } from '@/lib/useReminderSync';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -12,6 +13,17 @@ function RootNavigator() {
 
   // Keeps phone's dose & follow-up test reminders in sync with patient records
   useReminderSync();
+
+  // A tapped reminder opens its screen: a dose → today's schedule, a refill → medicines, a check-up test → reports.
+  useEffect(
+    () =>
+      onNotificationTap((data) => {
+        if (data.kind === 'dose') router.push('/(tabs)');
+        else if (data.kind === 'refill') router.push('/(tabs)/meds');
+        else if (data.kind === 'follow_up') router.push('/(tabs)/reports');
+      }),
+    []
+  );
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
