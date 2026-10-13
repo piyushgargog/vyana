@@ -30,16 +30,13 @@ import {
 
 export default function PatientHomeScreen() {
   const router = useRouter();
-  const { useMocks, setSelectedBasketMedicines, showToast } = useVyanaMobile();
+  const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
   const { data: activeItems = [], isLoading: itemsLoading } = useActiveItems();
   const { data: conditions = [] } = useConditions();
   const { data: carePlans = [] } = useCarePlans();
-  const activeCarePlan = parseCarePlanJson(
-    carePlans[0]?.plan_json,
-    useMocks
-  );
+  const activeCarePlan = parseCarePlanJson(carePlans[0]?.plan_json);
 
   const now = new Date();
   const startOfDay = new Date(

@@ -12,8 +12,10 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import {
+  DEFAULT_TIMES,
   uploadFile,
   useExtractPrescription,
+  type FrequencyType,
   type PrescriptionExtractRes,
   type PrescriptionItem,
 } from '@vyana/shared';
@@ -139,9 +141,21 @@ export default function PrescriptionScanScreen() {
   ) => {
     setEditedItems((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
+      const updated = { ...copy[index], [field]: value };
+      if (field === 'frequency' && typeof value === 'string') {
+        const freq = value.toUpperCase() as FrequencyType;
+        if (freq in DEFAULT_TIMES) {
+          updated.frequency = freq;
+          updated.times = DEFAULT_TIMES[freq];
+        }
+      }
+      copy[index] = updated;
       return copy;
     });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setEditedItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleConfirmAndSetReminders = async () => {
@@ -167,6 +181,13 @@ export default function PrescriptionScanScreen() {
 
       // 2. Update existing items in DB with patient-verified values (no invented defaults)
       for (const item of editedItems) {
+        const freq = (item.frequency?.toUpperCase() || 'custom') as FrequencyType;
+        const validFreq = freq in DEFAULT_TIMES ? freq : 'custom';
+        const times =
+          item.times && item.times.length > 0
+            ? item.times
+            : (DEFAULT_TIMES[validFreq] ?? []);
+
         const { error: updateErr } = await supabase
           .from('prescription_items')
           .update({
@@ -174,8 +195,8 @@ export default function PrescriptionScanScreen() {
             strength: item.strength?.trim() || null,
             dose: item.dose?.trim() || null,
             form: item.form,
-            frequency: item.frequency,
-            times: item.times,
+            frequency: validFreq,
+            times: times,
             with_food: item.with_food,
             instructions: item.instructions?.trim() || null,
             duration_days: item.duration_days ? Number(item.duration_days) : null,
@@ -371,10 +392,20 @@ export default function PrescriptionScanScreen() {
                 )}
 
                 <View style={styles.itemHeader}>
-                  <Text style={styles.itemTitle}>{item.medicine_name}</Text>
-                  <Text style={styles.itemForm}>
-                    {item.form?.toUpperCase() ?? 'TABLET'}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemTitle}>{item.medicine_name}</Text>
+                    <Text style={styles.itemForm}>
+                      {item.form?.toUpperCase() ?? 'TABLET'}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${item.medicine_name}`}
+                    onPress={() => handleRemoveItem(idx)}
+                    style={styles.removeItemBtn}
+                  >
+                    <Text style={styles.removeItemBtnText}>✕ Remove</Text>
+                  </Pressable>
                 </View>
 
                 {/* Edit Fields */}
@@ -643,4 +674,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   confirmBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  removeItemBtn: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  removeItemBtnText: {
+    color: '#991B1B',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });

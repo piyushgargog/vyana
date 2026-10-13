@@ -266,10 +266,9 @@ export default function ReportUploadScreen() {
           {/* Review Header */}
           <View style={styles.reviewBanner}>
             <Text style={styles.reviewStepBadge}>MANDATORY LAB REVIEW</Text>
-            <Text style={styles.reviewTitle}>Review & Correct Lab Values</Text>
+            <Text style={styles.reviewTitle}>Review Extracted Lab Values</Text>
             <Text style={styles.reviewSub}>
-              Verify extracted values against your physical paper report. You
-              can correct any number before saving.
+              Verify extracted values against your physical paper report. Test values and reference flags are verified and saved to your Health Records.
             </Text>
           </View>
 
