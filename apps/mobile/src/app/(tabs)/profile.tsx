@@ -26,7 +26,7 @@ import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 
 export default function MobileProfileTab() {
   const router = useRouter();
-  const { supabase, useMocks, setUseMocks, showToast } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
@@ -198,19 +198,7 @@ export default function MobileProfileTab() {
 
       {/* Personal Profile & Allergies */}
       <View style={styles.card}>
-        <View style={styles.headerRow}>
-          <Text style={styles.cardTitle}>Personal Profile & Allergies</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Toggle Demo Mocks Mode"
-            onPress={() => setUseMocks(!useMocks)}
-            style={styles.modeChip}
-          >
-            <Text style={styles.modeChipText}>
-              {useMocks ? 'Demo Mocks: ON' : 'Live API: ON'}
-            </Text>
-          </Pressable>
-        </View>
+        <Text style={styles.cardTitle}>Personal Profile & Allergies</Text>
 
         <Text style={styles.label}>Full Name</Text>
         <TextInput

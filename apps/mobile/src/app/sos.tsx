@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import {
   BLINKIT,
   EMERGENCY,
@@ -29,6 +30,10 @@ export default function MobileSosScreen() {
   const [sosActive, setSosActive] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
 
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+
   const sosMutation = useSos();
   const nearbyMutation = useNearbyHospitals();
   const { data: contacts = [] } = useEmergencyContacts();
@@ -36,8 +41,45 @@ export default function MobileSosScreen() {
     requestId ?? undefined
   );
 
-  // Default coordinates: Delhi / NCR (Connaught Place / AIIMS area)
-  const defaultCoords = useMemo(() => ({ lat: 28.628, lng: 77.295 }), []);
+  // Request real device coordinates using expo-location
+  useEffect(() => {
+    let ignore = false;
+    async function fetchLocation() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (ignore) return;
+        if (status !== 'granted') {
+          setLocationError('Location permission denied. Real-time GPS unavailable.');
+          setLocationLoading(false);
+          return;
+        }
+        const pos = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error('Location timeout')), 6000)
+          ),
+        ]);
+        if (ignore) return;
+        if (pos && 'coords' in pos) {
+          const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setCoords(c);
+          nearbyMutation.mutate(c);
+        }
+      } catch {
+        if (!ignore) {
+          setLocationError('Could not acquire GPS fix in time.');
+        }
+      } finally {
+        if (!ignore) {
+          setLocationLoading(false);
+        }
+      }
+    }
+    void fetchLocation();
+    return () => {
+      ignore = true;
+    };
+  }, [nearbyMutation]);
 
   const triggerSosCall = useCallback(async () => {
     setSosActive(true);
@@ -46,21 +88,25 @@ export default function MobileSosScreen() {
       showToast('Could not open phone dialer', 'error');
     });
 
-    try {
-      const res: EmergencySosRes = await sosMutation.mutateAsync({
-        lat: defaultCoords.lat,
-        lng: defaultCoords.lng,
-        note: 'Emergency SOS triggered from mobile app',
-      });
-      setRequestId(res.request_id);
-      showToast('Emergency SOS dispatched', 'success');
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : 'Could not reach SOS dispatch',
-        'error'
-      );
+    if (coords) {
+      try {
+        const res: EmergencySosRes = await sosMutation.mutateAsync({
+          lat: coords.lat,
+          lng: coords.lng,
+          note: 'Emergency SOS triggered from mobile app',
+        });
+        setRequestId(res.request_id);
+        showToast('Emergency SOS dispatched', 'success');
+      } catch (err) {
+        showToast(
+          err instanceof Error ? err.message : 'Could not reach SOS dispatch',
+          'error'
+        );
+      }
+    } else {
+      showToast('Ambulance 108 dialed. Note: GPS coordinates unavailable', 'warning');
     }
-  }, [sosMutation, defaultCoords, showToast]);
+  }, [sosMutation, coords, showToast]);
 
   // 3-second automatic countdown
   useEffect(() => {
@@ -80,14 +126,6 @@ export default function MobileSosScreen() {
     }
   }, [countdown, triggerSosCall]);
 
-  // Load nearby hospitals on mount
-  const nearbyRef = React.useRef(false);
-  useEffect(() => {
-    if (nearbyRef.current) return;
-    nearbyRef.current = true;
-    nearbyMutation.mutate({ lat: defaultCoords.lat, lng: defaultCoords.lng });
-  }, [nearbyMutation, defaultCoords]);
-
   const handleCancelCountdown = () => {
     setCountdown(null);
     showToast('Emergency countdown cancelled', 'info');
@@ -96,7 +134,9 @@ export default function MobileSosScreen() {
   const handleSendLocationSms = (phone: string, contactName: string) => {
     const smsText =
       sosMutation.data?.sms_body ??
-      `EMERGENCY: I need urgent medical assistance. My live location: https://maps.google.com/?q=${defaultCoords.lat},${defaultCoords.lng}. Sent from Vyana.`;
+      (coords
+        ? `EMERGENCY: I need urgent medical assistance. My live location: https://maps.google.com/?q=${coords.lat},${coords.lng}. Sent from Vyana.`
+        : `EMERGENCY: I need urgent medical assistance. Real GPS coordinates unavailable. Please call me or 108 immediately. Sent from Vyana.`);
     const cleanPhone = phone.replace(/[^0-9+]/g, '');
     const smsUrl = `sms:${cleanPhone}?body=${encodeURIComponent(smsText)}`;
     Linking.openURL(smsUrl).catch(() => {
@@ -140,6 +180,26 @@ export default function MobileSosScreen() {
           <Text style={styles.closeBtnText}>✕ Close</Text>
         </Pressable>
       </View>
+
+      {/* Real-time GPS Location Status */}
+      {locationError ? (
+        <View style={styles.locationNoticeBox}>
+          <Text style={styles.locationNoticeText}>
+            ⚠️ {locationError} Emergency call dials 108 without GPS coordinates.
+          </Text>
+        </View>
+      ) : coords ? (
+        <View style={styles.locationSuccessBox}>
+          <Text style={styles.locationSuccessText}>
+            📍 Live GPS: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+          </Text>
+        </View>
+      ) : locationLoading ? (
+        <View style={styles.locationLoadingBox}>
+          <ActivityIndicator size="small" color="#0D9488" />
+          <Text style={styles.locationLoadingText}>Acquiring real-time GPS location…</Text>
+        </View>
+      ) : null}
 
       {/* Countdown Card or Active SOS Card */}
       {countdown !== null && countdown > 0 ? (
@@ -354,6 +414,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   closeBtnText: { color: '#991B1B', fontWeight: '700', fontSize: 13 },
+  locationNoticeBox: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  locationNoticeText: { color: '#991B1B', fontSize: 13, fontWeight: '600' },
+  locationSuccessBox: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  locationSuccessText: { color: '#166534', fontSize: 13, fontWeight: '700' },
+  locationLoadingBox: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationLoadingText: { color: '#64748B', fontSize: 13, fontWeight: '600' },
   countdownCard: {
     backgroundColor: '#DC2626',
     borderRadius: 20,

@@ -30,7 +30,7 @@ import {
 export default function ConditionCarePlanScreen() {
   const { conditionId } = useLocalSearchParams<{ conditionId: string }>();
   const router = useRouter();
-  const { useMocks, showToast } = useVyanaMobile();
+  const { showToast } = useVyanaMobile();
 
   const { data: dbPlan, isLoading: planLoading } = useCarePlan(conditionId);
   const generateMutation = useGenerateCarePlan();
@@ -42,7 +42,7 @@ export default function ConditionCarePlanScreen() {
   const addVitalMutation = useAddVital();
 
   const activePlan: CarePlanType | null =
-    parseCarePlanJson(dbPlan?.plan_json, useMocks) ??
+    parseCarePlanJson(dbPlan?.plan_json) ??
     (generateMutation.data ? generateMutation.data.plan : null);
 
   const handleGeneratePlan = async () => {

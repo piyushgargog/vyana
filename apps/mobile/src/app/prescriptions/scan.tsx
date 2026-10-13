@@ -9,12 +9,16 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import {
+  uploadFile,
   useExtractPrescription,
   type PrescriptionExtractRes,
   type PrescriptionItem,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { syncReminders } from '@/lib/notifications';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
@@ -22,11 +26,13 @@ import {
 
 export default function PrescriptionScanScreen() {
   const router = useRouter();
-  const { showToast } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
   const extractMutation = useExtractPrescription();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [filePath, setFilePath] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [extractedData, setExtractedData] =
     useState<PrescriptionExtractRes | null>(null);
   const [editedItems, setEditedItems] = useState<PrescriptionItem[]>([]);
@@ -46,10 +52,88 @@ export default function PrescriptionScanScreen() {
     }
   };
 
-  const handleSelectSample = () => {
-    const samplePath = 'demo-patient/sample-rx-dolo-metformin.png';
-    setFilePath(samplePath);
-    handleRunExtract(samplePath);
+  const handlePickFromCamera = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        showToast('Camera permission is required to photograph prescriptions', 'warning');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'prescriptions',
+        { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
+        ext
+      );
+      setFilePath(uploadedPath);
+      await handleRunExtract(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Camera upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showToast('Photo library permission is required', 'warning');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'prescriptions',
+        { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
+        ext
+      );
+      setFilePath(uploadedPath);
+      await handleRunExtract(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gallery upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePickPdfDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets || !result.assets[0]) return;
+      const asset = result.assets[0];
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'prescriptions',
+        { uri: asset.uri, mimeType: 'application/pdf' },
+        'pdf'
+      );
+      setFilePath(uploadedPath);
+      await handleRunExtract(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Document upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleItemFieldChange = (
@@ -64,12 +148,71 @@ export default function PrescriptionScanScreen() {
     });
   };
 
-  const handleConfirmAndSetReminders = () => {
-    showToast(
-      `Reminders scheduled for ${editedItems.length} medicines`,
-      'success'
-    );
-    router.replace('/(tabs)/meds');
+  const handleConfirmAndSetReminders = async () => {
+    if (editedItems.length === 0) {
+      showToast('No medicines to save', 'warning');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        throw new Error('User session not found');
+      }
+      const userId = authData.user.id;
+
+      // 1. Insert prescription row
+      const { data: newRx, error: rxErr } = await supabase
+        .from('prescriptions')
+        .insert({
+          patient_id: userId,
+          source: 'upload',
+          file_path: filePath,
+          doctor_id: null,
+          issued_on: new Date().toISOString().slice(0, 10),
+        })
+        .select()
+        .single();
+      if (rxErr || !newRx) throw rxErr || new Error('Could not create prescription record');
+
+      // 2. Insert reviewed prescription items
+      const itemsToInsert = editedItems.map((item) => ({
+        prescription_id: newRx.id,
+        patient_id: userId,
+        medicine_name: item.medicine_name.trim(),
+        strength: item.strength?.trim() || null,
+        dose: item.dose?.trim() || null,
+        form: item.form || 'tablet',
+        frequency: item.frequency || 'OD',
+        times: item.times && item.times.length > 0 ? item.times : ['09:00'],
+        with_food: (item.with_food as 'before' | 'after' | 'any') || 'after',
+        instructions: item.instructions?.trim() || null,
+        duration_days: item.duration_days ? Number(item.duration_days) : null,
+        start_date: item.start_date || new Date().toISOString().slice(0, 10),
+        end_date: item.end_date || null,
+        active: true,
+      }));
+      const { error: itemsErr } = await supabase
+        .from('prescription_items')
+        .insert(itemsToInsert);
+      if (itemsErr) throw itemsErr;
+
+      // 3. Schedule reminders
+      await syncReminders(supabase);
+
+      showToast(
+        `Saved ${editedItems.length} medicines and scheduled reminders`,
+        'success'
+      );
+      router.replace('/(tabs)/meds');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not save prescription items',
+        'error'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -79,7 +222,7 @@ export default function PrescriptionScanScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Scan Prescription</Text>
           <Text style={styles.headerSub}>
-            AI vision extraction with mandatory human verification (§2A)
+            AI vision extraction — please verify every medicine before saving
           </Text>
         </View>
         <Pressable
@@ -94,64 +237,60 @@ export default function PrescriptionScanScreen() {
 
       {step === 'upload' ? (
         <View style={styles.uploadContainer}>
-          {/* Quick Sample Selector for Demo & Fast Verification */}
+          {/* Picker Options */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Choose Prescription Source</Text>
+            <Text style={styles.cardTitle}>Upload Prescription</Text>
             <Text style={styles.cardSub}>
-              Select a paper prescription photo or PDF from storage to extract
-              medicines, doses, and schedules.
+              Take a photo or pick an image/PDF of your paper prescription to extract medicines, dosages, and schedules.
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Extract sample prescription with Dolo, Metformin, and Telma"
-              disabled={extractMutation.isPending}
-              onPress={handleSelectSample}
-              style={styles.sampleBtn}
-            >
-              <Text style={styles.sampleBtnTitle}>
-                📄 Load Verified Demo Rx
-              </Text>
-              <Text style={styles.sampleBtnSub}>
-                Metformin 500mg (BD), Telma 40mg (OD), Dolo 650mg (SOS)
-              </Text>
-            </Pressable>
+            {isUploading || extractMutation.isPending ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color="#0D9488" />
+                <Text style={styles.loadingText}>
+                  {isUploading
+                    ? 'Uploading prescription file…'
+                    : 'Analyzing prescription with AI vision…'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.pickerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Photograph prescription using camera"
+                  onPress={handlePickFromCamera}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>📷 Take Photo with Camera</Text>
+                  <Text style={styles.pickerBtnSub}>Snap a clear picture of your prescription</Text>
+                </Pressable>
 
-            {/* Custom file path option */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Or enter Supabase Storage file path:
-              </Text>
-              <TextInput
-                accessibilityLabel="Prescription Storage Path"
-                value={filePath}
-                onChangeText={setFilePath}
-                placeholder="e.g., patient-id/rx-123.jpg"
-                style={styles.textInput}
-              />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Extract entered file path"
-                disabled={extractMutation.isPending || !filePath.trim()}
-                onPress={() => handleRunExtract(filePath.trim())}
-                style={[
-                  styles.extractBtn,
-                  (!filePath.trim() || extractMutation.isPending) &&
-                    styles.extractBtnDisabled,
-                ]}
-              >
-                {extractMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.extractBtnText}>Extract with AI Vision</Text>
-                )}
-              </Pressable>
-            </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose prescription image from gallery"
+                  onPress={handlePickFromGallery}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>🖼️ Pick from Photo Gallery</Text>
+                  <Text style={styles.pickerBtnSub}>Select JPG or PNG from your device photos</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Upload prescription PDF document"
+                  onPress={handlePickPdfDocument}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>📄 Choose PDF Document</Text>
+                  <Text style={styles.pickerBtnSub}>Select digital e-prescription or scanned PDF</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {/* AI Safety Rule Notice */}
           <View style={styles.safetyCard}>
-            <Text style={styles.safetyTitle}>Zero-Hallucination Policy (§2A)</Text>
+            <Text style={styles.safetyTitle}>Zero-Hallucination Policy</Text>
             <Text style={styles.safetyText}>
               • Doses and frequencies come only from verified prescription text.
               {'\n'}• Fields without verbatim source evidence are flagged for your review.
@@ -329,12 +468,17 @@ export default function PrescriptionScanScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Confirm verified medicines and schedule dose reminders"
+            disabled={isSaving}
             onPress={handleConfirmAndSetReminders}
-            style={styles.confirmBtn}
+            style={[styles.confirmBtn, isSaving && styles.confirmBtnDisabled]}
           >
-            <Text style={styles.confirmBtnText}>
-              ✓ Confirm & Set Dose Reminders
-            </Text>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.confirmBtnText}>
+                ✓ Confirm & Set Dose Reminders
+              </Text>
+            )}
           </Pressable>
         </View>
       )}
@@ -373,35 +517,29 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   cardSub: { fontSize: 13, color: '#64748B', lineHeight: 18 },
-  sampleBtn: {
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  loadingText: { fontSize: 13, color: '#0F766E', fontWeight: '600' },
+  pickerActions: { gap: 10 },
+  pickerBtn: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
     gap: 4,
   },
-  sampleBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
-  sampleBtnSub: { fontSize: 12, color: '#115E59' },
-  inputGroup: { gap: 6, marginTop: 4 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: '#334155' },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-  },
-  extractBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  extractBtnDisabled: { opacity: 0.5 },
-  extractBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  pickerBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
+  pickerBtnSub: { fontSize: 12, color: '#64748B' },
+  confirmBtnDisabled: { opacity: 0.6 },
   safetyCard: {
     backgroundColor: '#EFF6FF',
     borderColor: '#BFDBFE',

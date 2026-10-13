@@ -14,7 +14,6 @@ interface VyanaMobileContextValue {
   supabase: SupabaseClient<Database>;
   baseUrl: string;
   useMocks: boolean;
-  setUseMocks: (v: boolean) => void;
   selectedBasketMedicines: {
     name: string;
     strength?: string;
@@ -35,9 +34,7 @@ export function MobileAppProviders({
 }) {
   const baseUrl =
     process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
-  const [useMocks, setUseMocks] = useState<boolean>(
-    process.env.EXPO_PUBLIC_USE_MOCKS === 'true'
-  );
+  const useMocks = process.env.EXPO_PUBLIC_USE_MOCKS === 'true';
   const [selectedBasketMedicines, setSelectedBasketMedicines] = useState<
     { name: string; strength?: string; quantity: number }[]
   >([]);
@@ -59,12 +56,11 @@ export function MobileAppProviders({
       supabase,
       baseUrl,
       useMocks,
-      setUseMocks,
       selectedBasketMedicines,
       setSelectedBasketMedicines,
       showToast,
     }),
-    [baseUrl, useMocks, selectedBasketMedicines, showToast]
+    [baseUrl, selectedBasketMedicines, showToast, useMocks]
   );
 
   return (

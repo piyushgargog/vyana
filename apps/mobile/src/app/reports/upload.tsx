@@ -9,7 +9,10 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import {
+  uploadFile,
   useAnalyzeReport,
   type LabValue,
   type ReportAnalyzeRes,
@@ -22,7 +25,7 @@ import {
 
 export default function ReportUploadScreen() {
   const router = useRouter();
-  const { showToast } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
   const analyzeMutation = useAnalyzeReport();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
@@ -30,6 +33,8 @@ export default function ReportUploadScreen() {
   const [reportDate, setReportDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [analyzedData, setAnalyzedData] =
     useState<ReportAnalyzeRes | null>(null);
   const [editedValues, setEditedValues] = useState<LabValue[]>([]);
@@ -52,13 +57,91 @@ export default function ReportUploadScreen() {
     }
   };
 
-  const handleSelectSample = () => {
-    const samplePath = 'demo-patient/sample-lab-hba1c-glucose.pdf';
-    setFilePath(samplePath);
-    handleRunAnalyze(samplePath);
+  const handlePickFromCamera = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        showToast('Camera permission is required to photograph lab reports', 'warning');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'lab-reports',
+        { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
+        ext
+      );
+      setFilePath(uploadedPath);
+      await handleRunAnalyze(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Camera upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // When patient edits numeric value, recompute flag in code (§2A rule 4)
+  const handlePickFromGallery = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showToast('Photo library permission is required', 'warning');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'lab-reports',
+        { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
+        ext
+      );
+      setFilePath(uploadedPath);
+      await handleRunAnalyze(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gallery upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePickPdfDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets || !result.assets[0]) return;
+      const asset = result.assets[0];
+      setIsUploading(true);
+      const uploadedPath = await uploadFile(
+        supabase,
+        'lab-reports',
+        { uri: asset.uri, mimeType: 'application/pdf' },
+        'pdf'
+      );
+      setFilePath(uploadedPath);
+      await handleRunAnalyze(uploadedPath);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Document upload failed', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // When patient edits numeric value, recompute flag in code
   const handleValueChange = (index: number, newNumStr: string) => {
     setEditedValues((prev) => {
       const copy = [...prev];
@@ -81,12 +164,38 @@ export default function ReportUploadScreen() {
     });
   };
 
-  const handleSaveToRecords = () => {
-    showToast(
-      `Saved ${editedValues.length} lab results to your health record`,
-      'success'
-    );
-    router.replace('/(tabs)/reports');
+  const handleSaveToRecords = async () => {
+    setIsSaving(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        throw new Error('User session not found');
+      }
+
+      const { error: saveErr } = await supabase.from('lab_reports').insert({
+        patient_id: authData.user.id,
+        file_path: filePath,
+        report_date: reportDate || null,
+        lab_name: analyzedData?.lab_name || null,
+        summary: analyzedData?.summary || null,
+        extracted_json: { values: editedValues, summary: analyzedData?.summary },
+        status: 'reviewed',
+      });
+      if (saveErr) throw saveErr;
+
+      showToast(
+        `Saved ${editedValues.length} lab results to your health record`,
+        'success'
+      );
+      router.replace('/(tabs)/reports');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not save lab report',
+        'error'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -111,41 +220,14 @@ export default function ReportUploadScreen() {
 
       {step === 'upload' ? (
         <View style={styles.uploadContainer}>
-          {/* Sample Diagnostic Report Option */}
+          {/* Diagnostic Report Source Picker */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Choose Report Document</Text>
             <Text style={styles.cardSub}>
-              Select a blood test, lipid panel, or metabolic report (PDF or image).
+              Take a photo or pick a diagnostic test report (PDF, JPG, PNG) to extract values and reference ranges.
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Analyze sample lab report with HbA1c and Glucose"
-              disabled={analyzeMutation.isPending}
-              onPress={handleSelectSample}
-              style={styles.sampleBtn}
-            >
-              <Text style={styles.sampleBtnTitle}>
-                🧪 Load Verified Demo Lab Report
-              </Text>
-              <Text style={styles.sampleBtnSub}>
-                HbA1c (7.4%), Fasting Blood Glucose (138 mg/dL), Serum Creatinine
-              </Text>
-            </Pressable>
-
-            {/* Custom file path entry */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Or enter Supabase Storage path:
-              </Text>
-              <TextInput
-                accessibilityLabel="Lab Report Storage Path"
-                value={filePath}
-                onChangeText={setFilePath}
-                placeholder="e.g., patient-id/report-oct2026.pdf"
-                style={styles.textInput}
-              />
-
+            <View style={styles.dateGroup}>
               <Text style={styles.inputLabel}>Report Test Date:</Text>
               <TextInput
                 accessibilityLabel="Report Test Date"
@@ -154,32 +236,55 @@ export default function ReportUploadScreen() {
                 placeholder="YYYY-MM-DD"
                 style={styles.textInput}
               />
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Analyze entered lab report"
-                disabled={analyzeMutation.isPending || !filePath.trim()}
-                onPress={() => handleRunAnalyze(filePath.trim())}
-                style={[
-                  styles.analyzeBtn,
-                  (!filePath.trim() || analyzeMutation.isPending) &&
-                    styles.analyzeBtnDisabled,
-                ]}
-              >
-                {analyzeMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.analyzeBtnText}>
-                    Analyze Report with AI
-                  </Text>
-                )}
-              </Pressable>
             </View>
+
+            {isUploading || analyzeMutation.isPending ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color="#0D9488" />
+                <Text style={styles.loadingText}>
+                  {isUploading
+                    ? 'Uploading report document…'
+                    : 'Analyzing lab values with AI…'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.pickerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Photograph lab report with camera"
+                  onPress={handlePickFromCamera}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>📷 Take Photo with Camera</Text>
+                  <Text style={styles.pickerBtnSub}>Snap a picture of your physical lab sheet</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Pick lab report image from gallery"
+                  onPress={handlePickFromGallery}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>🖼️ Pick from Photo Gallery</Text>
+                  <Text style={styles.pickerBtnSub}>Select JPG or PNG from photos</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Upload lab report PDF document"
+                  onPress={handlePickPdfDocument}
+                  style={styles.pickerBtn}
+                >
+                  <Text style={styles.pickerBtnTitle}>📄 Choose PDF Document</Text>
+                  <Text style={styles.pickerBtnSub}>Select digital diagnostic PDF from lab</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {/* AI Safety Rule Card */}
           <View style={styles.safetyCard}>
-            <Text style={styles.safetyTitle}>Medical Safety Rules (§2A)</Text>
+            <Text style={styles.safetyTitle}>Medical Safety Rules</Text>
             <Text style={styles.safetyText}>
               • Values and units are verified verbatim against the document.
               {'\n'}• Flags (High, Low, Normal) are calculated by code, not guessed by AI.
@@ -315,12 +420,17 @@ export default function ReportUploadScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Save verified lab report to health records"
+            disabled={isSaving}
             onPress={handleSaveToRecords}
-            style={styles.saveBtn}
+            style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
           >
-            <Text style={styles.saveBtnText}>
-              ✓ Save to Health Records & Timeline
-            </Text>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveBtnText}>
+                ✓ Save to Health Records & Timeline
+              </Text>
+            )}
           </Pressable>
         </View>
       )}
@@ -359,17 +469,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   cardSub: { fontSize: 13, color: '#64748B', lineHeight: 18 },
-  sampleBtn: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
-  },
-  sampleBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
-  sampleBtnSub: { fontSize: 12, color: '#115E59' },
-  inputGroup: { gap: 6, marginTop: 4 },
+  dateGroup: { gap: 6, marginBottom: 4 },
   inputLabel: { fontSize: 12, fontWeight: '600', color: '#334155' },
   textInput: {
     backgroundColor: '#F8FAFC',
@@ -380,15 +480,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
   },
-  analyzeBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 10,
-    paddingVertical: 12,
+  loadingBox: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    gap: 10,
+    backgroundColor: '#F0FDFA',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
   },
-  analyzeBtnDisabled: { opacity: 0.5 },
-  analyzeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  loadingText: { fontSize: 13, color: '#0F766E', fontWeight: '600' },
+  pickerActions: { gap: 10 },
+  pickerBtn: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+  },
+  pickerBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
+  pickerBtnSub: { fontSize: 12, color: '#64748B' },
+  saveBtnDisabled: { opacity: 0.6 },
   safetyCard: {
     backgroundColor: '#EFF6FF',
     borderColor: '#BFDBFE',

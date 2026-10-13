@@ -29,24 +29,18 @@ export default function BasketHeroScreen() {
   const jobId = compareMutation.data?.job_id;
   const { data: jobData } = useBasketJob(jobId);
 
-  // Default demo items if none selected from Rx
   const activeItems = useMemo(
     () =>
-      selectedBasketMedicines.length > 0
-        ? selectedBasketMedicines.map((m) => ({
-            medicine: m.name,
-            strength: m.strength,
-            quantity: m.quantity || 1,
-          }))
-        : [
-            { medicine: 'Metformin', strength: '500 mg', quantity: 1 },
-            { medicine: 'Telma', strength: '40 mg', quantity: 1 },
-            { medicine: 'Dolo', strength: '650 mg', quantity: 1 },
-          ],
+      selectedBasketMedicines.map((m) => ({
+        medicine: m.name,
+        strength: m.strength,
+        quantity: m.quantity || 1,
+      })),
     [selectedBasketMedicines]
   );
 
   const handleStartBasketJob = useCallback(() => {
+    if (activeItems.length === 0) return;
     compareMutation.mutate(
       { items: activeItems },
       {
@@ -66,9 +60,10 @@ export default function BasketHeroScreen() {
   const startedRef = React.useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
+    if (activeItems.length === 0) return;
     startedRef.current = true;
     handleStartBasketJob();
-  }, [handleStartBasketJob]);
+  }, [handleStartBasketJob, activeItems.length]);
 
   const currentResult = jobData ?? compareMutation.data;
   const isRunning = currentResult?.status === 'running';
@@ -118,12 +113,41 @@ export default function BasketHeroScreen() {
         </Pressable>
       </View>
 
-      {/* Hero Basket Items Being Priced */}
-      <View style={styles.itemsSummaryCard}>
-        <View style={styles.itemsHeader}>
-          <Text style={styles.itemsTitle}>
-            Medicines in Basket ({activeItems.length})
+      {/* If basket is empty, show empty state */}
+      {activeItems.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>🛒</Text>
+          <Text style={styles.emptyTitle}>Your Basket is Empty</Text>
+          <Text style={styles.emptySub}>
+            No medicines selected. Choose medicines from your active prescriptions or scan a new prescription to compare doorstep delivery prices across Tata 1mg, Apollo, PharmEasy, and Netmeds.
           </Text>
+          <View style={styles.emptyActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View My Prescriptions"
+              onPress={() => router.push('/(tabs)/meds')}
+              style={styles.emptyPrimaryBtn}
+            >
+              <Text style={styles.emptyPrimaryBtnText}>View My Medicines</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scan New Prescription"
+              onPress={() => router.push('/prescriptions/scan')}
+              style={styles.emptySecondaryBtn}
+            >
+              <Text style={styles.emptySecondaryBtnText}>Scan Prescription</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Hero Basket Items Being Priced */}
+          <View style={styles.itemsSummaryCard}>
+            <View style={styles.itemsHeader}>
+              <Text style={styles.itemsTitle}>
+                Medicines in Basket ({activeItems.length})
+              </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Re-check live pharmacy prices"
@@ -384,6 +408,8 @@ export default function BasketHeroScreen() {
           </Text>
         </View>
       )}
+        </>
+      )}
 
       <MobileAiSafetyBanner feature="prescriptions_basket" />
       <MobileDisclaimerFooter />
@@ -394,6 +420,35 @@ export default function BasketHeroScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: 16, gap: 14 },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
+  emptyActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  emptyPrimaryBtn: {
+    backgroundColor: '#0F766E',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyPrimaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  emptySecondaryBtn: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptySecondaryBtnText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
