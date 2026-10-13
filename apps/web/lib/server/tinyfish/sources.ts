@@ -82,3 +82,20 @@ export function isGovUrl(url: string): boolean {
     return false;
   }
 }
+
+export interface LabSource {
+  source: PriceSource;
+  name: string;
+  /** Registrable domain: the test page an agent returns must be on this host or a subdomain of it. */
+  domain: string;
+  /** Agent start when Search finds no page for the test, and where the user books. */
+  homeUrl: string;
+}
+
+/** Labs for the lab test price compare (SPEC §2, ADR-050). Test pages found live by Search on 13 Oct. */
+export const LABS: readonly LabSource[] = [
+  { source: "healthians", name: "Healthians", domain: "healthians.com", homeUrl: "https://www.healthians.com/" },
+  { source: "redcliffe", name: "Redcliffe Labs", domain: "redcliffelabs.com", homeUrl: "https://redcliffelabs.com/" },
+  { source: "thyrocare", name: "Thyrocare", domain: "thyrocare.com", homeUrl: "https://www.thyrocare.com/" },
+  { source: "1mg_labs", name: "Tata 1mg Labs", domain: "1mg.com", homeUrl: "https://www.1mg.com/labs" },
+];
