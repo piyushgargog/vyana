@@ -1,7 +1,7 @@
 import "server-only";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { wrapLanguageModel, type LanguageModel } from "ai";
+import { wrapLanguageModel, type LanguageModel, type LanguageModelMiddleware } from "ai";
 import { AppError } from "./errors";
 import { log } from "./log";
 
@@ -135,8 +135,9 @@ export function isRetryable(err: unknown): boolean {
 const label = (c: Candidate) => `${c.provider}:${c.id}`;
 
 /**
- * The prompt without the reasoning parts of earlier assistant steps. A model refuses another model's reasoning
- * (`'reasoning_content' is unsupported`), so a fallback to a different model gets the prompt without it (P24).
+ * The prompt without the reasoning parts of earlier assistant steps. Groq refuses reasoning sent back to it
+ * (`'reasoning_content' is unsupported`), whichever model wrote it, so no call carries it (P24). The models do not
+ * need it: each step reasons again from the visible text and tool results.
  */
 export function withoutReasoning<P extends { prompt: unknown }>(params: P): P {
   const prompt = (params.prompt as { role: string; content: unknown }[]).flatMap((m) => {
@@ -171,7 +172,8 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
 
   const [first, ...rest] = candidates;
   const primary = build(first);
-  if (rest.length === 0) return primary;
+  const dropReasoning: LanguageModelMiddleware = { transformParams: async ({ params }) => withoutReasoning(params) };
+  if (rest.length === 0) return wrapLanguageModel({ model: primary, middleware: dropReasoning });
 
   const others = rest.map((c) => ({ c, model: build(c) }));
   // Tries the other candidates in order after a retryable failure of the first; an unretryable error is thrown at once.
@@ -195,20 +197,19 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
   return wrapLanguageModel({
     model: primary,
     middleware: {
+      ...dropReasoning,
       wrapGenerate: async ({ doGenerate, params }) => {
-        const forModel = (c: Candidate) => (c.id === first.id && c.provider === first.provider ? params : withoutReasoning(params));
         try {
           return await doGenerate();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doGenerate(forModel(c)).then((r) => ({ ...r, providerMetadata: { ...r.providerMetadata, [POOL_KEY]: { fallback: label(c) } } })));
+          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doGenerate(params).then((r) => ({ ...r, providerMetadata: { ...r.providerMetadata, [POOL_KEY]: { fallback: label(c) } } })));
         }
       },
       wrapStream: async ({ doStream, params }) => {
-        const forModel = (c: Candidate) => (c.id === first.id && c.provider === first.provider ? params : withoutReasoning(params));
         try {
           return await doStream();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doStream(forModel(c)));
+          return fallBack(err, params.abortSignal?.aborted === true, (m) => m.doStream(params));
         }
       },
     },

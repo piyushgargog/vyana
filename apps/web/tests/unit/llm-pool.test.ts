@@ -91,11 +91,12 @@ describe("keys", () => {
     expect(await ask()).toBe("groq|k1|main-model");
   });
 
-  it("with one key and no fallbacks it is the plain provider model (no wrapper)", () => {
+  it("with one key and no fallbacks it is the provider model itself (only reasoning is dropped)", async () => {
     vi.stubEnv("GROQ_API_KEY", "only");
     const model = getModel("text") as unknown as { modelId: string; provider: string };
     expect(model.modelId).toBe("main-model");
     expect(model.provider).toBe("groq");
+    expect(await ask()).toBe("groq|only|main-model");
   });
 });
 
@@ -141,7 +142,7 @@ describe("failover (retryable failures only)", () => {
     expect(await result.text).toBe("groq|k2|main-model");
   });
 
-  it("drops earlier reasoning only for a different model (P24)", async () => {
+  it("never sends earlier reasoning back, to the main model or a fallback (P24)", async () => {
     vi.stubEnv("GROQ_API_KEYS", "k1,k2");
     vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
     const messages = [
@@ -153,11 +154,11 @@ describe("failover (retryable failures only)", () => {
     const types = (name: string) => (prompts.get(name) as { role: string; content: { type: string }[] | string }[]).map((m) => (typeof m.content === "string" ? m.role : `${m.role}:${m.content.map((p) => p.type).join("+")}`));
     script.set("groq|k1|main-model", 429);
     expect((await generateText({ model: getModel("text"), messages, maxRetries: 0 })).text).toBe("groq|k2|main-model");
-    expect(types("groq|k2|main-model")).toContain("assistant:reasoning+text"); // same model: kept
+    expect(types("groq|k2|main-model").filter((t) => t.startsWith("assistant"))).toEqual(["assistant:text"]); // Groq refuses reasoning from any model
     script.set("groq|k2|main-model", 429);
     const answered = (await generateText({ model: getModel("text"), messages, maxRetries: 0 })).text;
     expect(["groq|k1|small-model", "groq|k2|small-model"]).toContain(answered);
-    expect(types(answered).filter((t) => t.startsWith("assistant"))).toEqual(["assistant:text"]); // other model: dropped
+    expect(types(answered).filter((t) => t.startsWith("assistant"))).toEqual(["assistant:text"]); // and for a fallback
   });
 
   it("marks the result when a fallback answered, so ai_runs records the model that really did", async () => {
