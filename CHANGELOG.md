@@ -61,6 +61,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - CI on every pull request: lint, typecheck, tests, web build, expo-doctor, CodeQL, secret scanning, dependency review, PR title check and auto-labels.
 - Repository basics: README, MIT license, contributing guide, security policy, issue and PR templates, CODEOWNERS, Dependabot.
 - Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
+- Demo data v2: nine real Delhi hospitals (five government, four private) with 47 departments, two fictional verified doctors for each, a Metformin pack that is 2 days from a refill, an approved Type 2 Diabetes care plan, an HbA1c trend over four reports, accepted consents, and dose logs in India time. Booking now shows real hospitals.
 
 ### Changed
 - **API contract:** emergency requests now reject a latitude outside −90…90 or a longitude outside −180…180, and an SOS note over 500 characters.

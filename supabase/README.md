@@ -23,7 +23,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
    ```bash
    supabase db reset
    ```
-2. Create the demo users (patient, doctor, doctor2, admin, caregiver; all `@vyana.test`). The password comes only from `SEED_PASSWORD`, the script exits without it:
+2. Create the demo users (patient, doctor, doctor2, admin, caregiver, and `doc01` to `doc18`, two fictional doctors for each hospital; all `@vyana.test`). The password comes only from `SEED_PASSWORD`, the script exits without it:
    ```bash
    SEED_PASSWORD=<choose-one> SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
      pnpm --filter @vyana/web exec tsx ../../supabase/seed/seed-users.ts
@@ -35,6 +35,19 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
    ```
 
 Users are created only through the admin API, which also writes `auth.identities`. Raw inserts into `auth.users` would leave email login broken.
+
+## What the demo world contains
+
+`patient@vyana.test` (Aryan Sharma) opens a full app:
+
+- **Hospitals:** 9 real Delhi hospitals with 47 departments (public information: names, addresses, websites; coordinates are approximate). Five government hospitals (AIIMS, Safdarjung, Dr. RML, LNJP, GTB) take bookings on ORS; four private ones (Max Patparganj, Sir Ganga Ram, Indraprastha Apollo, Max Saket). OPD days and timings are the column defaults; the real ones come from "Check OPD timings".
+- **Doctors:** two fictional, verified doctors for each hospital (`doc01` to `doc18`), plus Dr. Rajesh Mehta at AIIMS and a pending doctor for the NMC demo.
+- **Medicines:** Metformin (2 days from a refill: the home screen shows a Reorder card), Telmisartan, and Dolo as needed; seven days of dose logs in India time.
+- **Care plan:** an approved plan for Type 2 Diabetes with follow-up tests (HbA1c every 90 days).
+- **Reports:** four reports with an HbA1c trend of 8.1, 7.8, 7.4 and 6.8 over nine months.
+- **People and more:** two conditions, two appointments, vitals, two emergency contacts, a caregiver (`caregiver@vyana.test`), and accepted consents.
+
+Run the seed again at any time: it replaces the dose logs and vitals and leaves the rest as it is.
 
 ## Tests
 
