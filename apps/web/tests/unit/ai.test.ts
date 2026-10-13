@@ -127,10 +127,10 @@ describe("runAi with a model", () => {
 });
 
 describe("getModel", () => {
-  it("refuses until a provider is configured and installed", () => {
+  it("refuses until a known provider is configured", () => {
     vi.stubEnv("LLM_PROVIDER", "");
     expect(() => getModel("text")).toThrow("isn't configured");
-    vi.stubEnv("LLM_PROVIDER", "google");
+    vi.stubEnv("LLM_PROVIDER", "made-up-provider");
     vi.stubEnv("LLM_MODEL", "some-model");
     expect(() => getModel("vision")).toThrow("isn't configured");
   });

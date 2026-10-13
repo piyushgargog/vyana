@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- AI providers: the app can use Gemini, Groq, NVIDIA, OpenRouter or Hugging Face (free tiers). Their data terms were read and recorded; in production only a provider with recorded terms (Groq, with Zero Data Retention) can receive patient text, so a free tier that trains on prompts is limited to testing and the demo.
 - Release tooling: `pnpm eval:safety` runs the safety checks that need an AI model (no diagnosis, no dose advice, no invented links, care plan lines) against the running app, and `pnpm review:sheet` writes a tick-box sheet of the reviewed medical lists for the human review.
 - `pnpm live:check` checks a running API against a real Supabase project as the seeded demo users: sign-in and roles, row level security, the cache, share links, the assistant stream and the emergency routes. `--llm` adds the routes that need a model; `--agents` adds the basket, lab compare and doctor verification (uses TinyFish credits).
 - Lab test price compare: `POST /api/labs/compare` finds each lab's own page for a test in a city (Healthians, Redcliffe, Thyrocare, 1mg Labs) and checks the price in the background; `GET /api/labs/compare/{job_id}` reports progress. A price counts only when it appears on the lab's page, and the cheapest is always a confirmed price.
