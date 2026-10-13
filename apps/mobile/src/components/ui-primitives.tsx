@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import {
+  buildQrMatrix,
   computeItemRefill,
   generateQrMatrix,
   parseCarePlanJson,
@@ -14,20 +15,22 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from './providers';
 
-export { computeItemRefill, generateQrMatrix, parseCarePlanJson };
+export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
 
 export function MobileQrGrid({
   data,
-  size = 200,
+  size = 280,
   label = 'Medical ID QR Code',
 }: {
   data: string;
   size?: number;
   label?: string;
 }) {
-  const grid = 25;
-  const matrix = generateQrMatrix(data, grid);
-  const cellSize = Math.floor((size - 24) / grid);
+  const matrix = buildQrMatrix(data);
+  const grid = matrix.length;
+  const quiet = 4;
+  const cellSize = Math.max(1, Math.floor(size / (grid + quiet * 2)));
+  const pad = cellSize * quiet;
 
   return (
     <View
@@ -35,7 +38,12 @@ export function MobileQrGrid({
       accessibilityLabel={label}
       style={[
         styles.qrBox,
-        { width: cellSize * grid + 24, height: cellSize * grid + 24 },
+        {
+          width: cellSize * grid + pad * 2,
+          height: cellSize * grid + pad * 2,
+          padding: pad,
+          backgroundColor: '#FFFFFF',
+        },
       ]}
     >
       {matrix.map((row, r) => (
