@@ -66,11 +66,12 @@ describe("mock fixtures", () => {
     expect(result.success, JSON.stringify(result.error?.issues, null, 2)).toBe(true);
   });
 
-  it("price quotes are sorted by price with unknown prices last", () => {
+  it("lab quotes: verified prices first, by price; the cheapest is the lowest verified one (ADR-050)", () => {
     for (const res of [labsCompareMock]) {
-      const prices = res.quotes.map((q) => q.price ?? Number.POSITIVE_INFINITY);
-      expect(prices).toEqual([...prices].sort((a, b) => a - b));
-      expect(res.cheapest).toEqual(res.quotes[0]);
+      const rank = (q: (typeof res.quotes)[number]) => [q.price_verified ? 0 : 1, q.price ?? Number.POSITIVE_INFINITY];
+      const ranks = res.quotes.map(rank);
+      expect(ranks).toEqual([...ranks].sort((x, y) => x[0] - y[0] || x[1] - y[1]));
+      expect(res.cheapest).toEqual(res.quotes.find((q) => q.price_verified));
     }
   });
 

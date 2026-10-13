@@ -77,6 +77,18 @@ export function useCompareLabTest() {
   });
 }
 
+/** Polls a lab compare job every 4 s until it is done. Pass the `job_id` from `useCompareLabTest`. */
+export function useLabsJob(jobId: string | null | undefined) {
+  const api = useApi();
+  return useQuery<LabsCompareRes, ApiError>({
+    queryKey: ["labs-job", jobId],
+    queryFn: () => api.labs.job(jobId as string),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    retry: 1,
+  });
+}
+
 export function useNearbyHospitals() {
   const api = useApi();
   return useMutation<EmergencyNearbyRes, ApiError, EmergencyNearbyReq>({

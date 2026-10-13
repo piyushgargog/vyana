@@ -64,7 +64,8 @@ export type ApiClient = {
   medicines: { compare(body: MedicinesCompareReq): Promise<BasketCompareRes> };
   /** `compare` starts a basket job; poll `job(job_id)` until `status === "done"`. */
   basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes>; job(jobId: string): Promise<BasketCompareRes> };
-  labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes> };
+  /** `compare` starts a lab job; poll `job(job_id)` until `status === "done"` (ADR-050). */
+  labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes>; job(jobId: string): Promise<LabsCompareRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
   hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
   schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
@@ -175,7 +176,11 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         return request({ method: "GET", path: `/api/prescriptions/basket/${encodeURIComponent(jobId)}`, resSchema: BasketCompareRes, mock: mocks.basketCompareMock });
       },
     },
-    labs: { compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsCompareMock) },
+    labs: {
+      compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsJobRunningMock),
+      job: (jobId) =>
+        request({ method: "GET", path: `/api/labs/compare/${encodeURIComponent(jobId)}`, resSchema: LabsCompareRes, mock: mocks.labsCompareMock }),
+    },
     emergency: {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
       sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),

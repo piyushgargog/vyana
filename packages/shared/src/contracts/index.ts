@@ -27,8 +27,9 @@ export const PriceQuote = z.object({
   in_stock: z.boolean().nullable(),
   product_url: z.string().nullable(),
   fetched_at: z.string(),                // ISO datetime
+  price_verified: z.boolean().optional(), // CONTRACT CHANGED 13 Oct (ADR-050): price seen on the fetched page
 });
-export const SourceStatus = z.object({ source: PriceSource, status: z.enum(["ok","not_found","timeout","error"]) });
+export const SourceStatus = z.object({ source: PriceSource, status: z.enum(["pending","ok","not_found","timeout","error"]) }); // "pending" added 13 Oct (ADR-050)
 
 export const Hospital = z.object({
   name: z.string(),
@@ -80,9 +81,14 @@ export const MedicinesCompareReq = z.object({ medicine: z.string().min(2), stren
 
 // ---------- POST /api/labs/compare ----------
 export const LabsCompareReq = z.object({ test_name: z.string().min(2), city: z.string().min(2) });
-export const LabsCompareRes = z.object({
-  query: z.string(), quotes: z.array(PriceQuote), sources: z.array(SourceStatus),
-  cheapest: PriceQuote.nullable(), cached: z.boolean(),
+export const LabsCompareRes = z.object({            // CONTRACT CHANGED 13 Oct (ADR-050): a job like the basket
+  job_id: z.string().min(1),                          // poll GET /api/labs/compare/{job_id} while running
+  status: z.enum(["running","done"]),
+  query: z.string(), city: z.string(),
+  quotes: z.array(PriceQuote),                        // verified first, by price
+  sources: z.array(SourceStatus),
+  cheapest: PriceQuote.nullable(),                    // lowest VERIFIED price
+  cached: z.boolean(),
 });
 
 // ---------- POST /api/emergency/nearby ----------
