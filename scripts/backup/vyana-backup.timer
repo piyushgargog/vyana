@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Vyana database backup every night
+
+[Timer]
+# 21:00 UTC is 02:30 in India: the quietest hour of the app.
+OnCalendar=*-*-* 21:00:00 UTC
+# If the server was off at that time, run the backup as soon as it is on again.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
