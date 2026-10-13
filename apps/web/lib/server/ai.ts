@@ -3,7 +3,7 @@ import { NoObjectGeneratedError, Output, generateText, type ModelMessage } from 
 import type { z } from "zod";
 import type { AiMeta, SourceLink } from "@vyana/shared";
 import { upstream } from "./errors";
-import { getModel, isLlmMock, modelName, type ModelKind } from "./llm";
+import { POOL_KEY, getModel, isLlmMock, modelName, type DataClass, type ModelKind } from "./llm";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
 
@@ -18,6 +18,8 @@ interface RunAiBase<T> {
   /** What this run is for, e.g. "rx_extract", "hospitals_nearby" (stored in ai_runs.feature). */
   feature: string;
   kind: ModelKind;
+  /** "public" only when the call sends no patient data (public web pages, a condition name): any wired provider may answer it (ADR-056). Default "patient". */
+  data?: DataClass;
   schema: z.ZodType<T>;
   system?: string;
   /** Versioned with the prompt file, e.g. "hospitals-nearby@1". */
@@ -45,10 +47,10 @@ export interface RunAiResult<T> {
 /** Sent to the user when the model's answer can't be used: never a half-guess (PLAN §2A rule 2). */
 export const UNREADABLE_MESSAGE = "Couldn't read this. Please enter it manually.";
 
-async function generate<T>(input: RunAiInput<T>): Promise<T> {
+async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback: string | null }> {
   const call = () =>
     generateText({
-      model: getModel(input.kind),
+      model: getModel(input.kind, { data: input.data ?? "patient" }),
       output: Output.object({ schema: input.schema }),
       temperature: 0,
       maxRetries: 1,
@@ -58,7 +60,8 @@ async function generate<T>(input: RunAiInput<T>): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       const result = await call();
-      return result.output as T;
+      const used = (result.providerMetadata?.[POOL_KEY] as { fallback?: string } | undefined)?.fallback;
+      return { object: result.output as T, fallback: used ?? null };
     } catch (err) {
       if (NoObjectGeneratedError.isInstance(err) && attempt === 1) {
         log({ event: "ai_retry", feature: input.feature });
@@ -120,8 +123,11 @@ export async function finishAiRun(runId: string | null, result: { output: unknow
 
 export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
   const started = Date.now();
-  const model = modelName(input.kind);
-  const object = isLlmMock() ? input.schema.parse(input.mock) : await generate(input);
+  const configured = modelName(input.kind);
+  const out = isLlmMock() ? { object: input.schema.parse(input.mock), fallback: null } : await generate(input);
+  const object = out.object;
+  // The model that actually answered (ADR-056): a fallback shows up in ai_runs as "fallback:<id>".
+  const model = out.fallback ? `fallback:${out.fallback}` : configured;
   const status = input.statusOf?.(object) ?? "ok";
   const runId = await recordRun(input, model, object, status);
   log({ event: "ai_run", feature: input.feature, model, status, duration_ms: Date.now() - started });
