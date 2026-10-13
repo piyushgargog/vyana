@@ -63,6 +63,25 @@ const DEMO_USERS: SeedUser[] = [
     role: 'patient',
     fullName: 'Neha Sharma',
   },
+  // Two fictional doctors for each hospital in seed.sql (verified there).
+  { id: '00000000-0000-0000-0000-000000000101', email: 'doc01@vyana.test', role: 'doctor', fullName: 'Dr. Kavita Nair' },
+  { id: '00000000-0000-0000-0000-000000000102', email: 'doc02@vyana.test', role: 'doctor', fullName: 'Dr. Sandeep Bhatia' },
+  { id: '00000000-0000-0000-0000-000000000103', email: 'doc03@vyana.test', role: 'doctor', fullName: 'Dr. Meenal Joshi' },
+  { id: '00000000-0000-0000-0000-000000000104', email: 'doc04@vyana.test', role: 'doctor', fullName: 'Dr. Harpreet Gill' },
+  { id: '00000000-0000-0000-0000-000000000105', email: 'doc05@vyana.test', role: 'doctor', fullName: 'Dr. Farhan Siddiqui' },
+  { id: '00000000-0000-0000-0000-000000000106', email: 'doc06@vyana.test', role: 'doctor', fullName: 'Dr. Lata Menon' },
+  { id: '00000000-0000-0000-0000-000000000107', email: 'doc07@vyana.test', role: 'doctor', fullName: 'Dr. Arjun Pillai' },
+  { id: '00000000-0000-0000-0000-000000000108', email: 'doc08@vyana.test', role: 'doctor', fullName: 'Dr. Ritu Saxena' },
+  { id: '00000000-0000-0000-0000-000000000109', email: 'doc09@vyana.test', role: 'doctor', fullName: 'Dr. Manoj Tiwari' },
+  { id: '00000000-0000-0000-0000-000000000110', email: 'doc10@vyana.test', role: 'doctor', fullName: 'Dr. Shweta Kulkarni' },
+  { id: '00000000-0000-0000-0000-000000000111', email: 'doc11@vyana.test', role: 'doctor', fullName: 'Dr. Vikram Malhotra' },
+  { id: '00000000-0000-0000-0000-000000000112', email: 'doc12@vyana.test', role: 'doctor', fullName: 'Dr. Anjali Deshmukh' },
+  { id: '00000000-0000-0000-0000-000000000113', email: 'doc13@vyana.test', role: 'doctor', fullName: 'Dr. Rohit Verma' },
+  { id: '00000000-0000-0000-0000-000000000114', email: 'doc14@vyana.test', role: 'doctor', fullName: 'Dr. Nandini Iyer' },
+  { id: '00000000-0000-0000-0000-000000000115', email: 'doc15@vyana.test', role: 'doctor', fullName: 'Dr. Imran Qureshi' },
+  { id: '00000000-0000-0000-0000-000000000116', email: 'doc16@vyana.test', role: 'doctor', fullName: 'Dr. Pooja Chawla' },
+  { id: '00000000-0000-0000-0000-000000000117', email: 'doc17@vyana.test', role: 'doctor', fullName: 'Dr. Tarun Bansal' },
+  { id: '00000000-0000-0000-0000-000000000118', email: 'doc18@vyana.test', role: 'doctor', fullName: 'Dr. Divya Krishnan' },
 ];
 
 async function seed() {
