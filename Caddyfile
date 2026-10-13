@@ -1,6 +1,15 @@
 # HTTPS for the domain in DOMAIN; Caddy gets and renews the certificate itself (ADR-053).
+# Cloudflare sits in front (ADR-054); this is the origin it talks to.
 {$DOMAIN} {
 	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(self)"
+	}
 	reverse_proxy web:3000 {
 		# Agent jobs and the assistant stream can take a while.
 		transport http {
@@ -8,4 +17,8 @@
 		}
 		flush_interval -1
 	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
 }

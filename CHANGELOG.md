@@ -8,6 +8,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - The API now accepts the ids of the demo records. Its strict id check rejected the simple ids in the seed (for example the demo diabetes condition and prescription, and every seeded hospital), so those requests answered 400. Found by running the live check against a real Supabase stack.
 
 ### Added
+- The server sends security headers (HSTS, content-type, frame, referrer and permissions policies), no longer names its software, and sends `www` to the main address.
 - Docker deployment: a `Dockerfile` (Next.js standalone build), `docker-compose.yml` and a `Caddyfile` (automatic HTTPS) run the web app and API on a single server. `pnpm monitor:create <url>` creates the drug quality alert Monitor after deployment.
 - AI providers: the app can use Gemini, Groq, NVIDIA, OpenRouter or Hugging Face (free tiers). Their data terms were read and recorded; in production only a provider with recorded terms (Groq, with Zero Data Retention) can receive patient text, so a free tier that trains on prompts is limited to testing and the demo.
 
