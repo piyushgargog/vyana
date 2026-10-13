@@ -98,3 +98,4 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Severe burns ("severe burn", "jal gaya") are now treated as emergencies.
 - Personal-detail removal no longer swallows medical values written after an address, and removes the name after a "Patient:" label.
 - Demo hospitals: the GTB Hospital and Max Saket addresses now match the hospitals' own listings (Tahirpur Road, GTB Enclave; Mandir Marg).
+- The storage database test passes on a real Supabase, where a direct delete from `storage.objects` raises an error instead of deleting nothing.

@@ -21,6 +21,8 @@ declare n int;
 begin
   execute 'with d as (' || q || ' returning 1) select count(*) from d' into n;
   return n;
+exception when others then
+  return 0; -- real Supabase blocks a direct delete from the storage tables with an error (storage.protect_delete)
 end;
 $$;
 

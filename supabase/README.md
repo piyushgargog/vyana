@@ -73,6 +73,8 @@ To run one by hand: `select public.run_missed_dose_check();`.
 supabase test db
 ```
 
+Run it after `supabase db reset`: a database that already has the demo seed holds ids that clash with the users the tests create. (On a real Supabase a direct delete from `storage.objects` raises an error instead of deleting nothing; the test helper `tap_deleted` counts both as 0 rows.)
+
 The tests sign in as real roles (`authenticated`, `anon`) with a JWT subject and check, among others:
 
 - sign-up cannot create an admin; nobody but the server changes a role or verifies a doctor
