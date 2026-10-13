@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,14 +12,14 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
 
-export default function AppShellLayout({
+function AppShellContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { supabase, useMocks, setUseMocks, showToast } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
   const { user, loading: sessionLoading } = useSession();
   const { data: consentRecord, isLoading: consentLoading } =
     useConsent(CONSENT_VERSION);
@@ -180,19 +180,6 @@ export default function AppShellLayout({
               </span>
             )}
 
-            <button
-              type="button"
-              onClick={() => setUseMocks(!useMocks)}
-              aria-pressed={useMocks}
-              className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${
-                useMocks
-                  ? "border-amber-300 bg-amber-50 text-amber-900"
-                  : "border-emerald-300 bg-emerald-50 text-emerald-900"
-              }`}
-            >
-              {useMocks ? "Mode: Demo Mocks" : "Mode: Live API"}
-            </button>
-
             <a
               href="tel:108"
               aria-label="Emergency Call 108 Ambulance"
@@ -241,5 +228,25 @@ export default function AppShellLayout({
 
       <MedicalDisclaimerFooter />
     </div>
+  );
+}
+
+export default function AppShellLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col bg-slate-50">
+          <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-12">
+            <SkeletonCard lines={4} />
+          </main>
+        </div>
+      }
+    >
+      <AppShellContent>{children}</AppShellContent>
+    </Suspense>
   );
 }
