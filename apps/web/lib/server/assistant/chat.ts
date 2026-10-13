@@ -32,7 +32,7 @@ const SEPARATOR = "\n\n␞\n\n";
 const SAFE_ERROR = "Something went wrong while answering. Please try again.";
 
 export const ChatBody = z.object({
-  session_id: z.string().uuid().optional(),
+  session_id: z.guid().optional(),
   messages: z
     .array(z.object({ role: z.string(), parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).loose()) }).loose())
     .min(1)

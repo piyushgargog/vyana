@@ -42,7 +42,7 @@ export const Hospital = z.object({
 });
 
 export const PrescriptionItem = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   medicine_name: z.string(),
   strength: z.string().nullable(),
   form: z.enum(["tablet","capsule","syrup","injection","drops","inhaler","other"]),
@@ -69,7 +69,7 @@ export const LabValue = z.object({
 });
 
 export const DrugAlert = z.object({
-  id: z.string().uuid(), medicine_name: z.string(), title: z.string(),
+  id: z.guid(), medicine_name: z.string(), title: z.string(),
   url: z.string(), snippet: z.string().nullable(), created_at: z.string(),
 });
 
@@ -100,7 +100,7 @@ export const EmergencyNearbyRes = z.object({ area: z.string().nullable(), hospit
 // ---------- POST /api/emergency/sos ----------
 export const EmergencySosReq = z.object({ lat: Lat, lng: Lng, note: z.string().max(500).optional() });
 export const EmergencySosRes = z.object({
-  request_id: z.string().uuid(),
+  request_id: z.guid(),
   status: z.enum(["requested","dispatched","arriving","completed","cancelled"]),
   eta_minutes: z.number().int(),
   hospitals: z.array(Hospital),
@@ -126,7 +126,7 @@ export const DoctorVerifyRes = z.object({
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
 export const PrescriptionExtractReq = z.object({ file_path: z.string() });
 export const PrescriptionExtractRes = z.object({
-  prescription_id: z.string().uuid(),
+  prescription_id: z.guid(),
   doctor_name: z.string().nullable(),
   diagnosis: z.string().nullable(),
   issued_on: isoDate,
@@ -139,7 +139,7 @@ export const PrescriptionExtractRes = z.object({
 // client first uploads the file to bucket "lab-reports" at {user_id}/{uuid}.{ext}
 export const ReportAnalyzeReq = z.object({ file_path: z.string(), report_date: isoDate.optional() });
 export const ReportAnalyzeRes = z.object({
-  report_id: z.string().uuid(),
+  report_id: z.guid(),
   lab_name: z.string().nullable(),
   report_date: isoDate.nullable(),
   summary: z.string(),                   // plain language, 3–6 sentences, no diagnosis
@@ -155,7 +155,7 @@ export const BasketItemInput = z.object({
   quantity: z.number().int().positive().optional(),   // packs to buy; default 1
 });
 export const BasketCompareReq = z.object({
-  prescription_id: z.string().uuid().optional(),      // price the prescription's active items
+  prescription_id: z.guid().optional(),      // price the prescription's active items
   items: z.array(BasketItemInput).min(1).max(10).optional(), // or an ad-hoc list (e.g. "Reorder" for one item)
 }).refine((b) => Boolean(b.prescription_id) !== Boolean(b.items), { message: "Send prescription_id or items, not both" });
 export const BasketLine = z.object({
@@ -205,11 +205,11 @@ export const CarePlan = z.object({
   language: Language,
 });
 export const CarePlanStatus = z.enum(["draft","approved","patient_generated"]);
-export const GenerateCarePlanReq = z.object({ condition_id: z.string().uuid(), language: Language.optional() });
-export const GenerateCarePlanRes = z.object({ care_plan_id: z.string().uuid(), status: CarePlanStatus, plan: CarePlan, ai: AiMeta });
+export const GenerateCarePlanReq = z.object({ condition_id: z.guid(), language: Language.optional() });
+export const GenerateCarePlanRes = z.object({ care_plan_id: z.guid(), status: CarePlanStatus, plan: CarePlan, ai: AiMeta });
 
 // ---------- POST /api/medicines/interactions ----------
-export const InteractionsReq = z.object({ prescription_id: z.string().uuid().optional() }); // empty = all active medicines
+export const InteractionsReq = z.object({ prescription_id: z.guid().optional() }); // empty = all active medicines
 export const Interaction = z.object({
   medicine_a: z.string(),
   medicine_b: z.string(),
@@ -247,9 +247,9 @@ export const TriageRes = z.object({
 });
 
 // ---------- POST /api/hospitals/info ----------
-export const HospitalInfoReq = z.object({ hospital_id: z.string().uuid() });
+export const HospitalInfoReq = z.object({ hospital_id: z.guid() });
 export const HospitalInfoRes = z.object({
-  hospital_id: z.string().uuid(),
+  hospital_id: z.guid(),
   opd: z.array(z.object({ department: z.string(), days: z.string(), timings: z.string() })),
   notes: z.string().nullable(),
   source_url: z.string().nullable(),
