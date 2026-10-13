@@ -142,28 +142,30 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="border-t border-slate-200 pt-4 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Seeded Test Emails (enter your SEED_PASSWORD above)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {SEEDED_TEST_ACCOUNTS.map((acct) => (
-                <button
-                  key={acct.email}
-                  type="button"
-                  onClick={() => setEmail(acct.email)}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-800 hover:bg-teal-50 hover:border-teal-200 cursor-pointer"
-                >
-                  <span className="block font-bold text-slate-900">
-                    {acct.label}
-                  </span>
-                  <span className="text-[11px] text-slate-600">
-                    {acct.email}
-                  </span>
-                </button>
-              ))}
+          {process.env.NODE_ENV !== "production" && (
+            <div className="border-t border-slate-200 pt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Seeded Test Emails (enter your SEED_PASSWORD above)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {SEEDED_TEST_ACCOUNTS.map((acct) => (
+                  <button
+                    key={acct.email}
+                    type="button"
+                    onClick={() => setEmail(acct.email)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-800 hover:bg-teal-50 hover:border-teal-200 cursor-pointer"
+                  >
+                    <span className="block font-bold text-slate-900">
+                      {acct.label}
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      {acct.email}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <p className="text-center text-xs text-slate-600">
             New to Vyana?{" "}

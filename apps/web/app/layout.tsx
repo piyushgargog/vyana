@@ -14,12 +14,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://vyanahealth.app"),
   title: "Vyana · व्यान — Complete Healthcare Companion",
   description:
-    "Vyana (व्यान) — The breath that reaches every corner. One-stop healthcare platform for patients, doctors, and caregivers in India.",
+    "Vyana (व्यान) — Complete healthcare platform for patients, doctors, and caregivers in India. Real-time medication reminders, prescription scanning, lab reports, and emergency Medical ID.",
   icons: {
     icon: "/favicon.png",
+    shortcut: "/favicon.png",
     apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Vyana · व्यान — Complete Healthcare Companion",
+    description:
+      "One-stop healthcare platform in India: dose reminders, scannable Medical ID, lab trend analysis, hospital OPD tokens, and Jan Aushadhi generic savings.",
+    url: "https://vyanahealth.app",
+    siteName: "Vyana Health",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Vyana · व्यान — Complete Healthcare Companion",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vyana · व्यान — Complete Healthcare Companion",
+    description:
+      "One-stop healthcare platform in India: dose reminders, scannable Medical ID, lab trend analysis, hospital OPD tokens, and Jan Aushadhi generic savings.",
+    images: ["/og-image.png"],
   },
 };
 

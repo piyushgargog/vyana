@@ -11,7 +11,8 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_USE_MOCKS": "false"
+        "EXPO_PUBLIC_USE_MOCKS": "false",
+        "EXPO_PUBLIC_API_URL": "https://vyanahealth.app"
       },
       "android": {
         "buildType": "apk"

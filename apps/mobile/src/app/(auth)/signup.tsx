@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -156,6 +157,24 @@ export default function MobileSignupScreen() {
           </View>
         </View>
 
+        <Text style={styles.legalNotice}>
+          By creating an account, you acknowledge our{' '}
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://vyanahealth.app/terms')}
+          >
+            Terms of Service
+          </Text>{' '}
+          and{' '}
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://vyanahealth.app/privacy')}
+          >
+            Privacy Policy
+          </Text>
+          .
+        </Text>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Continue to DPDP Consent"
@@ -253,4 +272,16 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   switchLink: { alignItems: 'center', paddingTop: 6 },
   switchLinkText: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
+  legalNotice: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingHorizontal: 4,
+  },
+  legalLink: {
+    color: '#0F766E',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

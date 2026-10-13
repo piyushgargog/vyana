@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
@@ -135,6 +142,24 @@ export default function MobileConsentScreen() {
           </Text>
         </Pressable>
 
+        <Text style={styles.legalNotice}>
+          Read our complete{' '}
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://vyanahealth.app/privacy')}
+          >
+            Privacy Policy
+          </Text>{' '}
+          and{' '}
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://vyanahealth.app/terms')}
+          >
+            Terms of Service
+          </Text>
+          .
+        </Text>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Accept Consent and Continue"
@@ -244,4 +269,16 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  legalNotice: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  legalLink: {
+    color: '#0F766E',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

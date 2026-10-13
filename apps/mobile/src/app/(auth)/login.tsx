@@ -115,25 +115,29 @@ export default function MobileLoginScreen() {
           </Text>
         </Pressable>
 
-        <View style={styles.divider} />
+        {__DEV__ && (
+          <>
+            <View style={styles.divider} />
 
-        <Text style={styles.sectionLabel}>
-          Seeded Test Emails (enter SEED_PASSWORD above)
-        </Text>
-        <View style={styles.demoRow}>
-          {SEEDED_TEST_EMAILS.map((acct) => (
-            <Pressable
-              key={acct.email}
-              accessibilityRole="button"
-              accessibilityLabel={`Fill email ${acct.email}`}
-              onPress={() => setEmail(acct.email)}
-              style={styles.demoBtn}
-            >
-              <Text style={styles.demoBtnText}>{acct.label}</Text>
-              <Text style={styles.demoEmailText}>{acct.email}</Text>
-            </Pressable>
-          ))}
-        </View>
+            <Text style={styles.sectionLabel}>
+              Seeded Test Emails (enter SEED_PASSWORD above)
+            </Text>
+            <View style={styles.demoRow}>
+              {SEEDED_TEST_EMAILS.map((acct) => (
+                <Pressable
+                  key={acct.email}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Fill email ${acct.email}`}
+                  onPress={() => setEmail(acct.email)}
+                  style={styles.demoBtn}
+                >
+                  <Text style={styles.demoBtnText}>{acct.label}</Text>
+                  <Text style={styles.demoEmailText}>{acct.email}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
 
         <Pressable
           accessibilityRole="link"

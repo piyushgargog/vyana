@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CONSENT_VERSION,
@@ -163,6 +164,26 @@ export default function ConsentPage() {
               care.
             </span>
           </label>
+
+          <p className="text-xs text-slate-500 pt-1">
+            Please read our full{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="font-medium text-teal-700 underline"
+            >
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="font-medium text-teal-700 underline"
+            >
+              Terms of Service
+            </Link>
+            .
+          </p>
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             <button

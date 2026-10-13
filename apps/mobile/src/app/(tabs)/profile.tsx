@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -476,6 +477,30 @@ export default function MobileProfileTab() {
             </View>
           </View>
         )}
+
+        <View style={{ gap: 8, marginTop: 4 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Help and contact"
+            onPress={() => Linking.openURL('mailto:piyushgarg@vyanahealth.app')}
+            style={styles.outlineBtn}
+          >
+            <Text style={styles.outlineBtnText}>
+              Help & Contact · piyushgarg@vyanahealth.app
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Privacy policy"
+            onPress={() => Linking.openURL('https://vyanahealth.app/privacy')}
+            style={styles.outlineBtn}
+          >
+            <Text style={styles.outlineBtnText}>
+              Privacy Policy · vyanahealth.app/privacy
+            </Text>
+          </Pressable>
+        </View>
 
         <Pressable
           accessibilityRole="button"

@@ -192,6 +192,24 @@ export default function SignupPage() {
               </div>
             </fieldset>
 
+            <p className="text-center text-xs text-slate-500">
+              By registering, you acknowledge our{" "}
+              <Link
+                href="/terms"
+                className="font-medium text-teal-700 hover:underline"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="font-medium text-teal-700 hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+
             <button
               type="submit"
               disabled={loading}

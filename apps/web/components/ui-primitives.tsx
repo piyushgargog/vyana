@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   buildQrMatrix,
   computeItemRefill,
@@ -310,22 +311,46 @@ export function AiSafetyBanner({
 export function MedicalDisclaimerFooter() {
   return (
     <footer className="mt-auto border-t border-slate-200 bg-white py-5 px-4 text-xs text-slate-600">
-      <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <p className="font-medium text-slate-700">
-          Vyana · व्यान — Not a substitute for professional medical advice. Always verify AI-assisted summaries and drug information with a registered medical practitioner.
-        </p>
-        <div className="flex items-center gap-3 shrink-0">
+      <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <p className="font-medium text-slate-700">
+            Vyana · व्यान — Not a substitute for professional medical advice. Always verify AI-assisted summaries and drug information with a registered medical practitioner.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <Link
+              href="/privacy"
+              className="font-medium text-teal-700 hover:text-teal-900 hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            <span className="text-slate-300">·</span>
+            <Link
+              href="/terms"
+              className="font-medium text-teal-700 hover:text-teal-900 hover:underline"
+            >
+              Terms of Service
+            </Link>
+            <span className="text-slate-300">·</span>
+            <a
+              href="mailto:piyushgarg@vyanahealth.app"
+              className="text-slate-600 hover:text-teal-800 hover:underline"
+            >
+              Contact: piyushgarg@vyanahealth.app
+            </a>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
           <a
             href="tel:108"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 shadow-xs"
           >
-            Emergency Ambulance: 108
+            Emergency: 108
           </a>
           <a
             href="tel:112"
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 font-semibold text-red-800 hover:bg-red-100"
           >
-            National Emergency: 112
+            National: 112
           </a>
         </div>
       </div>
