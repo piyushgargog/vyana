@@ -167,6 +167,7 @@ export default function PrescriptionScanScreen() {
     }
     setIsSaving(true);
     try {
+      const prescriptionId = extractedData?.prescription_id;
       // 1. Delete any items removed by the user during review
       const currentIds = new Set(editedItems.map((i) => i.id));
       const removedIds = (extractedData?.items || [])
@@ -213,9 +214,11 @@ export default function PrescriptionScanScreen() {
       await syncReminders(supabase);
 
       // 4. Auto-check drug interactions for newly added prescription
-      await checkInteractionsMutation
-        .mutateAsync({ prescription_id: newRx.id })
-        .catch(() => {});
+      if (prescriptionId) {
+        await checkInteractionsMutation
+          .mutateAsync({ prescription_id: prescriptionId })
+          .catch(() => {});
+      }
 
       showToast(
         `Confirmed ${editedItems.length} medicines and scheduled reminders`,

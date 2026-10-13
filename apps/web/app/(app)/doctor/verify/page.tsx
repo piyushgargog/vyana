@@ -65,12 +65,15 @@ export default function DoctorVerifyPage() {
 
     try {
       const parsedYear = yearOfReg.trim() ? parseInt(yearOfReg.trim(), 10) : NaN;
+      const hasValidYear =
+        Number.isInteger(parsedYear) &&
+        parsedYear >= 1950 &&
+        parsedYear <= new Date().getFullYear();
+
       const res = await verifyMutation.mutateAsync({
         reg_no: regNo.trim(),
         state_council: stateCouncil,
-        ...(Number.isInteger(parsedYear) && parsedYear >= 1950
-          ? { year_of_registration: parsedYear }
-          : {}),
+        ...(hasValidYear ? { year_of_registration: parsedYear } : {}),
       });
 
       setVerifyResult(res);
@@ -252,9 +255,9 @@ export default function DoctorVerifyPage() {
                 type="number"
                 min="1950"
                 max={new Date().getFullYear()}
+                placeholder="e.g. 2018 (optional)"
                 value={yearOfReg}
                 onChange={(e) => setUserEditedYear(e.target.value)}
-                placeholder="e.g. 2018 (optional)"
                 className="w-full rounded-xl border border-slate-300 p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
