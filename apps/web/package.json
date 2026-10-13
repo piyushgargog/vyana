@@ -14,7 +14,8 @@
     "verify:interactions": "tsx --conditions=react-server ../../scripts/verify-interactions.mts",
     "verify:red-flags": "tsx --conditions=react-server ../../scripts/verify-red-flags.mts",
     "verify:brands": "tsx --conditions=react-server ../../scripts/verify-brands.mts",
-    "prewarm": "tsx --conditions=react-server ../../scripts/prewarm-cache.mts"
+    "prewarm": "tsx --conditions=react-server ../../scripts/prewarm-cache.mts",
+    "live:check": "tsx ../../scripts/live-check.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
