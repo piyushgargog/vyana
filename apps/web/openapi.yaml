@@ -224,6 +224,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+  /api/reports/values/correct:
+    post:
+      tags:
+        - Health records
+      summary: Correct one value of a lab report
+      description: |-
+        The patient corrects a value the AI read from their own report (by the value's `id` from the analysis). The flag is recomputed on the server from the report's reference range, the report summary is rebuilt in code, and the old value is kept for the record. Another person's value answers 404.
+
+        **Who can call it:** patient.
+      operationId: post_reports_values_correct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabValueCorrectReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabValueCorrectRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
   /api/emergency/nearby:
     post:
       tags:
@@ -1956,6 +1997,105 @@ components:
         - cheapest
         - cached
       additionalProperties: false
+    LabValueCorrectReq:
+      type: object
+      properties:
+        value_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        value:
+          type:
+            - number
+            - "null"
+        value_text:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 60
+            - type: "null"
+        unit:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 20
+            - type: "null"
+      required:
+        - value_id
+        - value
+      additionalProperties: false
+    LabValueCorrectRes:
+      type: object
+      properties:
+        report_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        value:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+            test_name:
+              type: string
+            value:
+              type:
+                - number
+                - "null"
+            value_text:
+              type:
+                - string
+                - "null"
+            unit:
+              type:
+                - string
+                - "null"
+            ref_low:
+              type:
+                - number
+                - "null"
+            ref_high:
+              type:
+                - number
+                - "null"
+            flag:
+              type: string
+              enum:
+                - low
+                - normal
+                - high
+                - unknown
+            needs_review:
+              type: boolean
+            evidence:
+              type:
+                - string
+                - "null"
+            corrected:
+              type: boolean
+          required:
+            - test_name
+            - value
+            - value_text
+            - unit
+            - ref_low
+            - ref_high
+            - flag
+          additionalProperties: false
+        summary:
+          type: string
+        follow_up_tests:
+          type: array
+          items:
+            type: string
+      required:
+        - report_id
+        - value
+        - summary
+        - follow_up_tests
+      additionalProperties: false
     MeExportRes:
       type: object
       propertyNames:
@@ -2195,6 +2335,10 @@ components:
           items:
             type: object
             properties:
+              id:
+                type: string
+                format: uuid
+                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
               test_name:
                 type: string
               value:
@@ -2230,6 +2374,8 @@ components:
                 type:
                   - string
                   - "null"
+              corrected:
+                type: boolean
             required:
               - test_name
               - value

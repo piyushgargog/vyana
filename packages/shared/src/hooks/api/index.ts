@@ -32,6 +32,8 @@ import type {
   PrescriptionExtractRes,
   ReportAnalyzeReq,
   ReportAnalyzeRes,
+  LabValueCorrectReq,
+  LabValueCorrectRes,
   ShareRes,
   TriageReq,
   TriageRes,
@@ -156,6 +158,21 @@ export function useAnalyzeReport() {
   return useMutation<ReportAnalyzeRes, ApiError, ReportAnalyzeReq>({
     mutationKey: ["reports", "analyze"],
     mutationFn: (body) => api.reports.analyze(body),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: [QUERY_ROOTS.labReports] }),
+        qc.invalidateQueries({ queryKey: [QUERY_ROOTS.labValues] }),
+      ]),
+  });
+}
+
+// A patient corrects one value the AI read; the server recomputes the flag (ADR-062).
+export function useCorrectLabValue() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation<LabValueCorrectRes, ApiError, LabValueCorrectReq>({
+    mutationKey: ["reports", "correctValue"],
+    mutationFn: (body) => api.reports.correctValue(body),
     onSuccess: () =>
       Promise.all([
         qc.invalidateQueries({ queryKey: [QUERY_ROOTS.labReports] }),

@@ -1,9 +1,10 @@
 import "server-only";
 import { z } from "zod";
-import type { Language, LabValue, ReportAnalyzeRes } from "@vyana/shared";
+import type { Language, LabValue, LabValueCorrectReq, LabValueCorrectRes, ReportAnalyzeRes } from "@vyana/shared";
 import { runAi } from "./ai";
+import type { AuthedUser } from "./auth";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
-import { AppError, upstream } from "./errors";
+import { AppError, notFound, upstream } from "./errors";
 import { log } from "./log";
 import {
   REPORT_EXTRACT_PROMPT_VERSION,
@@ -148,6 +149,95 @@ const MOCK_EXTRACT: ReportLlm = {
   ],
 };
 
+const followUpsOf = (values: LabValue[]) => values.filter((v) => v.flag === "high" || v.flag === "low").map((v) => v.test_name);
+
+type LabValueRow = {
+  id: string;
+  report_id: string;
+  patient_id: string;
+  test_name: string;
+  value: number | null;
+  value_text: string | null;
+  unit: string | null;
+  ref_low: number | null;
+  ref_high: number | null;
+  flag: LabValue["flag"];
+};
+
+/** The corrected value: the patient's reading, the stored range, and a flag computed in code (§2A rule 4). */
+export function applyCorrection(row: LabValueRow, body: LabValueCorrectReq): LabValue {
+  const value = body.value;
+  return {
+    id: row.id,
+    test_name: row.test_name,
+    value,
+    value_text: body.value_text?.trim() || null,
+    unit: body.unit === undefined ? row.unit : body.unit?.trim() || null,
+    ref_low: row.ref_low,
+    ref_high: row.ref_high,
+    flag: flagFor(value, row.ref_low, row.ref_high),
+    needs_review: false,
+    corrected: true,
+  };
+}
+
+/** POST /api/reports/values/correct (SPEC §4b, ADR-062): a patient corrects one value of their own report. */
+export async function correctLabValue({ sb, user }: Pick<AuthedUser, "sb" | "user">, body: LabValueCorrectReq): Promise<LabValueCorrectRes> {
+  // Read as the caller: RLS shows a patient only their own rows.
+  const { data, error } = await sb
+    .from("lab_values")
+    .select("id, report_id, patient_id, test_name, value, value_text, unit, ref_low, ref_high, flag")
+    .eq("id", body.value_id)
+    .maybeSingle();
+  if (error) throw error;
+  const row = data as LabValueRow | null;
+  if (!row || row.patient_id !== user.id) throw notFound("This value was not found.");
+
+  const next = applyCorrection(row, body);
+  const before = { value: row.value, value_text: row.value_text, unit: row.unit, flag: row.flag };
+  const admin = supabaseAdmin();
+  const { error: updateError } = await admin
+    .from("lab_values")
+    .update({ value: next.value, value_text: next.value_text, unit: next.unit, flag: next.flag })
+    .eq("id", row.id);
+  if (updateError) throw updateError;
+
+  // Every value of the report, with this one replaced, for the summary and the saved extraction.
+  const { data: rest, error: restError } = await admin
+    .from("lab_values")
+    .select("id, report_id, patient_id, test_name, value, value_text, unit, ref_low, ref_high, flag")
+    .eq("report_id", row.report_id)
+    .order("created_at");
+  if (restError) throw restError;
+  const values = ((rest ?? []) as LabValueRow[]).map((r) => (r.id === row.id ? next : { ...r }) as LabValue);
+  const summary = templateSummary(values);
+  const followUps = followUpsOf(values);
+
+  const { data: report } = await admin.from("lab_reports").select("extracted_json").eq("id", row.report_id).maybeSingle();
+  const extracted = (report as { extracted_json: { values?: LabValue[] } | null } | null)?.extracted_json ?? {};
+  const savedValues = (extracted.values ?? []).map((v) => (v.id === row.id ? { ...v, ...next, evidence: v.evidence } : v));
+  const { error: reportError } = await admin
+    .from("lab_reports")
+    .update({ summary, extracted_json: { ...extracted, values: savedValues, follow_up_tests: followUps } })
+    .eq("id", row.report_id);
+  if (reportError) throw reportError;
+
+  // The old value is kept for the record (no model call: model null).
+  const after = { value: next.value, value_text: next.value_text, unit: next.unit, flag: next.flag };
+  const { error: runError } = await admin.from("ai_runs").insert({
+    user_id: user.id,
+    feature: "lab_value_correction",
+    model: null,
+    input_ref: `lab_values/${row.id}`,
+    output_json: { report_id: row.report_id, before, after },
+    status: "ok",
+  });
+  if (runError) log({ event: "lab_correction_record_failed" });
+
+  log({ event: "lab_value_corrected", flag_changed: before.flag !== after.flag });
+  return { report_id: row.report_id, value: next, summary, follow_up_tests: followUps };
+}
+
 export async function analyzeReport(
   user: { id: string; fullName: string | null; language: Language },
   filePath: string,
@@ -194,7 +284,7 @@ export async function analyzeReport(
     const verified = verifyReport(object, text, map);
     const reportDate = verified.report_date ?? requestDate ?? null;
     const { summary } = await writeSummary(verified.values, user.language, user.id);
-    const followUps = verified.values.filter((v) => v.flag === "high" || v.flag === "low").map((v) => v.test_name);
+    const followUps = followUpsOf(verified.values);
 
     if (verified.values.length) {
       const rows = verified.values.map((v) => ({
@@ -209,8 +299,11 @@ export async function analyzeReport(
         flag: v.flag,
         measured_on: reportDate,
       }));
-      const { error: valuesError } = await admin.from("lab_values").insert(rows);
+      // The ids come back in insert order; the review screen corrects a value by its id (ADR-062).
+      const { data: saved, error: valuesError } = await admin.from("lab_values").insert(rows).select("id");
       if (valuesError) throw valuesError;
+      const ids = (saved ?? []) as { id: string }[];
+      if (ids.length === verified.values.length) verified.values = verified.values.map((v, i) => ({ id: ids[i].id, ...v }));
     }
     const { error: doneError } = await admin
       .from("lab_reports")
