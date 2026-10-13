@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InteractionsRes } from "@vyana/shared";
-import { USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
+import { OTHER_TOKEN, OTHER_USER_ID, USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
@@ -95,11 +95,28 @@ describe("POST /api/medicines/interactions", () => {
     expect(db.rows.ai_runs ?? []).toHaveLength(0);
   });
 
-  it("is for patients only", async () => {
-    db.rows.profiles[0].role = "doctor";
-    expect((await post()).status).toBe(403);
+  it("is for patients and the doctors who treat them", async () => {
     expect((await post({}, "")).status).toBe(401);
-    db.rows.profiles[0].role = "patient";
     expect((await post({ prescription_id: "nope" })).status).toBe(400);
+    expect((await post({ patient_id: OTHER_USER_ID })).status).toBe(403);
+    db.rows.profiles[0].role = "admin";
+    expect((await post()).status).toBe(403);
+  });
+
+  it("a doctor of the patient checks by prescription or by patient; the result is saved for the patient", async () => {
+    db.rows.profiles[1].role = "doctor";
+    db.rows.prescriptions = [{ id: RX_ID, patient_id: USER_ID }];
+    expect((await post({}, OTHER_TOKEN)).status).toBe(400);
+    expect((await post({ patient_id: USER_ID }, OTHER_TOKEN)).status).toBe(403);
+    expect((await post({ prescription_id: RX_ID }, OTHER_TOKEN)).status).toBe(403);
+
+    db.doctorOf.add(`${OTHER_USER_ID}:${USER_ID}`);
+    const byRx = await post({ prescription_id: RX_ID }, OTHER_TOKEN);
+    expect(byRx.status).toBe(200);
+    const body = InteractionsRes.parse(await byRx.json());
+    expect(body.interactions.length).toBeGreaterThan(0);
+    expect((await post({ patient_id: USER_ID }, OTHER_TOKEN)).status).toBe(200);
+    expect(db.rows.interaction_checks.every((r) => r.patient_id === USER_ID)).toBe(true);
+    expect((await post({ prescription_id: RX_ID, patient_id: OTHER_USER_ID }, OTHER_TOKEN)).status).toBe(403);
   });
 });
