@@ -649,11 +649,11 @@ paths:
     post:
       tags:
         - Care
-      summary: Check the user's medicines for interactions
+      summary: Check a patient's medicines for interactions
       description: |-
-        Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. A reviewed table of well-known interactions is checked first (`layer: table`); other pairs are looked up on trusted medicine pages, and an interaction is reported only with the exact sentence that states it (`layer: sources`). When none is found, the response lists the sources that were checked; it never calls a combination safe.
+        A patient checks their own medicines (all current ones, or one prescription). A doctor checks a patient they treat by sending `prescription_id` or `patient_id`; any other doctor gets 403. Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. A reviewed table of well-known interactions is checked first (`layer: table`); other pairs are looked up on trusted medicine pages, and an interaction is reported only with the exact sentence that states it (`layer: sources`). When none is found, the response lists the sources that were checked; it never calls a combination safe.
 
-        **Who can call it:** patient.
+        **Who can call it:** patient, doctor of the patient.
 
         **TinyFish:** Search, Fetch.
       operationId: post_medicines_interactions
@@ -1660,6 +1660,10 @@ components:
       type: object
       properties:
         prescription_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        patient_id:
           type: string
           format: uuid
           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$

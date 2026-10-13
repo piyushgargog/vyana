@@ -209,7 +209,8 @@ export const GenerateCarePlanReq = z.object({ condition_id: z.guid(), language: 
 export const GenerateCarePlanRes = z.object({ care_plan_id: z.guid(), status: CarePlanStatus, plan: CarePlan, ai: AiMeta });
 
 // ---------- POST /api/medicines/interactions ----------
-export const InteractionsReq = z.object({ prescription_id: z.guid().optional() }); // empty = all active medicines
+// empty = all active medicines. CONTRACT CHANGED 13 Oct (ADR-061): a doctor sends prescription_id or patient_id.
+export const InteractionsReq = z.object({ prescription_id: z.guid().optional(), patient_id: z.guid().optional() });
 export const Interaction = z.object({
   medicine_a: z.string(),
   medicine_b: z.string(),
