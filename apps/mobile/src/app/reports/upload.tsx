@@ -272,11 +272,8 @@ export default function ReportUploadScreen() {
             </Text>
           </View>
 
-          {/* AI Banner with mistake reporting */}
-          <MobileAiSafetyBanner
-            feature="reports_analyze"
-            aiRunId={analyzedData?.ai?.model ?? 'reports-analyze'}
-          />
+          {/* AI Safety Banner */}
+          <MobileAiSafetyBanner feature="reports_analyze" />
 
           {/* Plain-Language Summary */}
           {analyzedData?.summary && (

@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useBasketCompare,
   useBasketJob,
@@ -23,10 +23,11 @@ import {
 
 export default function BasketHeroScreen() {
   const router = useRouter();
+  const { job_id: paramJobId } = useLocalSearchParams<{ job_id?: string }>();
   const { selectedBasketMedicines, showToast } = useVyanaMobile();
 
   const compareMutation = useBasketCompare();
-  const jobId = compareMutation.data?.job_id;
+  const jobId = paramJobId || compareMutation.data?.job_id;
   const { data: jobData } = useBasketJob(jobId);
 
   const activeItems = useMemo(
@@ -60,10 +61,11 @@ export default function BasketHeroScreen() {
   const startedRef = React.useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
+    if (paramJobId) return;
     if (activeItems.length === 0) return;
     startedRef.current = true;
     handleStartBasketJob();
-  }, [handleStartBasketJob, activeItems.length]);
+  }, [handleStartBasketJob, activeItems.length, paramJobId]);
 
   const currentResult = jobData ?? compareMutation.data;
   const isRunning = currentResult?.status === 'running';
@@ -114,7 +116,7 @@ export default function BasketHeroScreen() {
       </View>
 
       {/* If basket is empty, show empty state */}
-      {activeItems.length === 0 ? (
+      {activeItems.length === 0 && !jobId ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>🛒</Text>
           <Text style={styles.emptyTitle}>Your Basket is Empty</Text>

@@ -152,7 +152,7 @@ export default function TimelineScreen() {
               size={200}
               label="Doctor Timeline Share QR"
             />
-            <Text style={styles.qrSub}>Doctor can scan this QR directly</Text>
+            <Text style={styles.qrSub}>Share URL or open web view below</Text>
           </View>
 
           <Text style={styles.shareUrlText} numberOfLines={2}>

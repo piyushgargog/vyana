@@ -322,11 +322,8 @@ export default function PrescriptionScanScreen() {
             </Text>
           </View>
 
-          {/* AI Run Safety & Mistake Reporting */}
-          <MobileAiSafetyBanner
-            feature="prescriptions_extract"
-            aiRunId={extractedData?.ai?.model ?? 'prescriptions-extract'}
-          />
+          {/* AI Run Safety Notice */}
+          <MobileAiSafetyBanner feature="prescriptions_extract" />
 
           {/* Warnings Banner if any */}
           {extractedData?.warnings && extractedData.warnings.length > 0 && (

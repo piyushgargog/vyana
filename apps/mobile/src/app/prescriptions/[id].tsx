@@ -197,8 +197,8 @@ export default function PrescriptionDetailScreen() {
           <Text style={styles.interactionsTitle}>Interaction Check Results</Text>
           {interactionsData.interactions.length === 0 ? (
             <Text style={styles.noInteractionsText}>
-              ✓ No interactions found in checked sources (
-              {interactionsData.sources_checked.map((s) => s.title).join(', ')})
+              No interaction found in:{' '}
+              {interactionsData.sources_checked.map((s) => s.title).join(', ')}
             </Text>
           ) : (
             interactionsData.interactions.map((inter, i) => (
@@ -216,6 +216,11 @@ export default function PrescriptionDetailScreen() {
                   >
                     {inter.severity.toUpperCase()}
                   </Text>
+                  {inter.layer && (
+                    <Text style={styles.layerBadge}>
+                      {inter.layer === 'table' ? 'Curated Table' : 'Verified Sources'}
+                    </Text>
+                  )}
                   <Text style={styles.interNames}>
                     {inter.medicine_a} + {inter.medicine_b}
                   </Text>
@@ -226,9 +231,25 @@ export default function PrescriptionDetailScreen() {
                     Quote: &ldquo;{inter.quote}&rdquo;
                   </Text>
                 )}
+                {inter.sources && inter.sources.length > 0 && (
+                  <View style={styles.sourcesRow}>
+                    {inter.sources.map((src, sIdx) => (
+                      <Text key={sIdx} style={styles.sourceText}>
+                        • {src.title}
+                      </Text>
+                    ))}
+                  </View>
+                )}
               </View>
             ))
           )}
+
+          {interactionsData.not_checked &&
+            interactionsData.not_checked.length > 0 && (
+              <Text style={styles.notCheckedText}>
+                Not checked: {interactionsData.not_checked.join(', ')} (active salt unverified)
+              </Text>
+            )}
         </View>
       )}
 
@@ -423,6 +444,18 @@ const styles = StyleSheet.create({
   interNames: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
   interAdvice: { fontSize: 12, color: '#334155' },
   interQuote: { fontSize: 11, color: '#64748B', fontStyle: 'italic' },
+  layerBadge: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#0F766E',
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  sourcesRow: { gap: 2, paddingTop: 2 },
+  sourceText: { fontSize: 11, color: '#0F766E' },
+  notCheckedText: { fontSize: 12, color: '#92400E', fontWeight: '600' },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
   itemCard: {
     backgroundColor: '#FFFFFF',
