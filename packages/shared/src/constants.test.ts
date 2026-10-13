@@ -8,6 +8,9 @@ import {
   DEFAULT_TIMES,
   EMERGENCY,
   EMERGENCY_NUMBER,
+  MEAL_CALORIES_MAX,
+  MEAL_DESCRIPTION_MAX,
+  MEAL_TYPES,
   MISSED_DOSE_GRACE_MINUTES,
   ORS_URL,
   SHARE_LINK_MAX_TTL_HOURS,
@@ -79,6 +82,12 @@ describe("Scope v2 constants", () => {
 
   it("waits 60 minutes before a missed dose alert", () => {
     expect(MISSED_DOSE_GRACE_MINUTES).toBe(60);
+  });
+
+  it("keeps the meal log limits the database enforces (migration 0011)", () => {
+    expect(MEAL_TYPES).toEqual(["breakfast", "lunch", "dinner", "snack"]);
+    expect(MEAL_DESCRIPTION_MAX).toBe(200);
+    expect(MEAL_CALORIES_MAX).toBe(5000);
   });
 
   it("lets a share link live 30 days at most", () => {

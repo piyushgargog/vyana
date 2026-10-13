@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeResult } from "../../db/queries/fakeSupabase";
 import { AppProviders } from "../../providers/AppProviders";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useBookAppointment, useCarePlans, useCreateShareLink, useDoctorQueue, useEmergencyRequest, useMyAppointments, useMyProfile } from "./index";
+import { useBookAppointment, useCarePlans, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useMeals, useMyAppointments, useMyProfile } from "./index";
 
 // jsdom starts slowly on a busy machine (CI, a laptop running the whole suite): be patient, not flaky
 configure({ asyncUtilTimeout: 8000 });
@@ -81,6 +81,23 @@ describe("DB hooks", () => {
     const roots = spy.mock.calls.map((c) => (c[0]?.queryKey as string[])[0]);
     expect(roots).toContain(QUERY_ROOTS.appointments);
     expect(roots).toContain("timeline");
+  });
+});
+
+describe("meal log", () => {
+  it("show the day's meals again after a meal is added or removed", async () => {
+    const fake = fakeSupabase({
+      responses: { meal_logs: [ok([{ id: "m1", description: "Poha" }]), ok(null), ok([])] },
+    });
+    const { wrapper } = setup(fake);
+    const meals = renderHook(() => useMeals("2026-10-13"), { wrapper });
+    await waitFor(() => expect(meals.result.current.data).toEqual([{ id: "m1", description: "Poha" }]));
+
+    const remove = renderHook(() => useDeleteMeal(), { wrapper });
+    await act(async () => {
+      await remove.result.current.mutateAsync("m1");
+    });
+    await waitFor(() => expect(meals.result.current.data).toEqual([]));
   });
 });
 

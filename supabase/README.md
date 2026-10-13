@@ -14,6 +14,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
 | `migrations/0008_missed_dose_cron.sql` | pg_cron calls `POST /api/cron/missed-doses` every 15 minutes through `run_missed_dose_check()` (address and secret come from the Vault) |
 | `migrations/0009_share_link_cap.sql` | a share link expires within 30 days of its creation (a CHECK on `share_links`, one hour of slack for phone clocks) |
 | `migrations/0010_account_deletion.sql` | A doctor or a caregiver can delete their account: links from other people's records to them (`doctor_id`, `diagnosed_by`, `reviewed_by`, `used_by`) are cleared instead of blocking the deletion |
+| `migrations/0011_meal_log_limits.sql` | The meal log keeps its limits in the database (a description of 1 to 200 characters, 0 to 5,000 calories) and is indexed by patient and time |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |

@@ -52,3 +52,10 @@ export const CAREGIVER_INVITE_TTL_HOURS = 24;
 export const MISSED_DOSE_GRACE_MINUTES = 60;
 /** A share link can be valid for at most this long; the database refuses a longer one (migration 0009). */
 export const SHARE_LINK_MAX_TTL_HOURS = 30 * 24;
+
+// Meal log (T3). The database holds the same limits (migration 0011).
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+export const MEAL_DESCRIPTION_MAX = 200;
+/** The most calories one entry may have: a typo like 3000000 is refused instead of ruining a day's total. */
+export const MEAL_CALORIES_MAX = 5000;

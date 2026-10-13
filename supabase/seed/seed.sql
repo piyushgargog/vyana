@@ -302,6 +302,24 @@ begin
   end loop;
 end $$;
 
+-- 11b. Three days of meals for the demo patient (a diabetic diet, in India time), for the meal log in the care plan.
+delete from public.meal_logs where patient_id = '00000000-0000-0000-0000-000000000001';
+
+do $$
+declare
+  d int;
+  day_start timestamptz;
+begin
+  for d in 0..2 loop
+    day_start := date_trunc('day', (now() at time zone 'Asia/Kolkata') - (d || ' days')::interval) at time zone 'Asia/Kolkata';
+    insert into public.meal_logs (patient_id, meal, description, calories, logged_at) values
+      ('00000000-0000-0000-0000-000000000001', 'breakfast', 'Vegetable poha, tea without sugar', 310, day_start + interval '8 hours 30 minutes'),
+      ('00000000-0000-0000-0000-000000000001', 'lunch', '2 rotis, dal, mixed sabzi, curd', 520, day_start + interval '13 hours 15 minutes'),
+      ('00000000-0000-0000-0000-000000000001', 'snack', 'Roasted chana, one apple', 180, day_start + interval '17 hours'),
+      ('00000000-0000-0000-0000-000000000001', 'dinner', 'Moong dal khichdi, salad', 430, day_start + interval '20 hours 15 minutes');
+  end loop;
+end $$;
+
 -- 12. An approved care plan for Type 2 Diabetes (shows the "approved" badge and the follow-up test reminders).
 -- Written by hand for the demo patient. Real plans come from POST /api/care-plan, where every line is checked against
 -- a fetched guideline page. Sources: the NHS and MedlinePlus pages below.

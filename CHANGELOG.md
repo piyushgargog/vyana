@@ -78,6 +78,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 - Share links last 30 days at most: the database refuses a longer `expires_at` (migration `0009`), including when an old link is extended, and `createShareLink` rejects 0 or more than 720 hours before asking the database. The 404 of `GET /api/share/[token]` now also carries `cache-control: no-store`, and the age and the "medicine still running" check use the day in India.
 - Privacy controls: `GET /api/me/export` downloads every row the user owns, keyed by table, with links to their uploaded files that work for one hour (link tokens, pairing codes and device tokens are left out, and a caregiver or doctor gets their own data, not their patients'). `DELETE /api/me` removes the user's files and then the account, and everything of the patient goes with it; it asks for a sign-in within the last 15 minutes. Migration `0010` lets doctors and caregivers delete their accounts too.
+- Meal log: `addMeal` checks a meal before it is sent (a known meal type, a description of 1 to 200 characters, whole calories from 0 to 5,000) and the database holds the same limits (migration `0011`); new `deleteMeal` / `useDeleteMeal` remove a wrong entry, `totalCalories` adds up a day, and the demo patient has three days of meals.
 
 ### Changed
 - **API contract:** emergency requests now reject a latitude outside −90…90 or a longitude outside −180…180, and an SOS note over 500 characters.
