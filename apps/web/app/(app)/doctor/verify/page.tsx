@@ -45,7 +45,6 @@ export default function DoctorVerifyPage() {
   const yearOfReg = userEditedYear ?? (doctorProfile?.year_of_registration || 2018);
 
   const [verifyResult, setVerifyResult] = useState<DoctorVerifyRes | null>(null);
-  const [agentProgressStep, setAgentProgressStep] = useState<string>("");
 
   const verifyMutation = useVerifyDoctor();
 
@@ -58,27 +57,17 @@ export default function DoctorVerifyPage() {
     }
 
     setVerifyResult(null);
-    setAgentProgressStep("Connecting to National Medical Commission register…");
-
-    // Simulated progress steps for TinyFish Agent showcase
-    const timer1 = setTimeout(() => {
-      setAgentProgressStep("Searching official council database records…");
-    }, 1200);
-
-    const timer2 = setTimeout(() => {
-      setAgentProgressStep("Verifying practitioner credentials and qualification details…");
-    }, 2800);
 
     try {
+      const parsedYear = Number(yearOfReg);
       const res = await verifyMutation.mutateAsync({
         reg_no: regNo.trim(),
         state_council: stateCouncil,
-        year_of_registration: Number(yearOfReg),
+        ...(Number.isInteger(parsedYear) && parsedYear > 1900
+          ? { year_of_registration: parsedYear }
+          : {}),
       });
 
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      setAgentProgressStep("");
       setVerifyResult(res);
 
       if (res.status === "verified") {
@@ -91,9 +80,6 @@ export default function DoctorVerifyPage() {
       }
       await refetch();
     } catch (err) {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      setAgentProgressStep("");
       showToast(
         err instanceof Error ? err.message : "Verification request failed",
         "error"
@@ -204,7 +190,7 @@ export default function DoctorVerifyPage() {
             Run Official Register Verification
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Our autonomous TinyFish verification agent navigates the National Medical Commission and State Medical Council registers to cross-reference your credentials.
+            Checks the National Medical Commission and State Medical Council registers to cross-reference your credentials.
           </p>
         </div>
 
@@ -269,16 +255,13 @@ export default function DoctorVerifyPage() {
             </div>
           </div>
 
-          {/* Agent Progress Showcase Banner */}
+          {/* Status Line Banner */}
           {verifyMutation.isPending && (
             <div className="rounded-xl border border-teal-300 bg-teal-50 p-4 text-xs text-teal-950 flex items-center gap-3">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-700 border-t-transparent" />
-              <div>
-                <p className="font-bold text-teal-900">
-                  Agent Autonomous Verification in Progress…
-                </p>
-                <p className="text-teal-800">{agentProgressStep}</p>
-              </div>
+              <p className="font-semibold text-teal-900">
+                Checking the NMC register. This can take up to a minute.
+              </p>
             </div>
           )}
 
@@ -353,7 +336,7 @@ export default function DoctorVerifyPage() {
                 No automatic match found in public registry.
               </p>
               <p>
-                Please verify that the registration number matches your state council certificate exactly. Hospital administrators can also manually review your registration in the Admin registry.
+                Please verify that the registration number matches your state council certificate exactly.
               </p>
             </div>
           )}

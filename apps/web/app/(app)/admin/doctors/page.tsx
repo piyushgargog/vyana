@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   useHospitalInfo,
   useHospitals,
@@ -35,27 +35,6 @@ export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = useState<DoctorWithRelations[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [doctorsError, setDoctorsError] = useState<string | null>(null);
-
-  const reloadDoctors = useCallback(async () => {
-    try {
-      setDoctorsLoading(true);
-      setDoctorsError(null);
-      const { data, error } = await supabase
-        .from("doctors")
-        .select(
-          "*, profile:profiles!doctors_id_fkey(full_name), hospitals(name), departments(name)"
-        )
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setDoctors((data ?? []) as DoctorWithRelations[]);
-    } catch (err) {
-      setDoctorsError(
-        err instanceof Error ? err.message : "Failed to load doctors"
-      );
-    } finally {
-      setDoctorsLoading(false);
-    }
-  }, [supabase]);
 
   useEffect(() => {
     let ignore = false;
@@ -99,33 +78,6 @@ export default function AdminDoctorsPage() {
   // Mutation to verify hospital OPD info via TinyFish
   const hospitalInfoMutation = useHospitalInfo();
   const [verifyingHospitalId, setVerifyingHospitalId] = useState<string | null>(null);
-
-  // Admin manual verification decision
-  const handleAdminVerifyDoctor = async (
-    doctorId: string,
-    newStatus: "verified" | "failed" | "pending"
-  ) => {
-    try {
-      const patch = {
-        verification_status: newStatus,
-        verified_at: newStatus === "verified" ? new Date().toISOString() : null,
-      };
-
-      const { error } = await supabase.from("doctors").update(patch).eq("id", doctorId);
-      if (error) throw error;
-
-      showToast(`Doctor status updated to "${newStatus}".`, "success");
-      await reloadDoctors();
-      if (selectedDoctorForJson?.id === doctorId) {
-        setSelectedDoctorForJson(null);
-      }
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Failed to update doctor status",
-        "error"
-      );
-    }
-  };
 
   // Trigger TinyFish Hospital OPD verification
   const handleVerifyHospitalOpd = async (hospitalId: string) => {
@@ -335,28 +287,6 @@ export default function AdminDoctorsPage() {
                                 View Evidence
                               </button>
                             )}
-
-                            {!isVerified ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleAdminVerifyDoctor(doc.id, "verified")
-                                }
-                                className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700"
-                              >
-                                Approve
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleAdminVerifyDoctor(doc.id, "pending")
-                                }
-                                className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
-                              >
-                                Revoke
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -522,7 +452,7 @@ export default function AdminDoctorsPage() {
               </pre>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+            <div className="mt-5 flex justify-end">
               <button
                 type="button"
                 onClick={() => setSelectedDoctorForJson(null)}
@@ -530,27 +460,6 @@ export default function AdminDoctorsPage() {
               >
                 Close
               </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleAdminVerifyDoctor(selectedDoctorForJson.id, "failed")
-                  }
-                  className="rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
-                >
-                  Reject Verification
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleAdminVerifyDoctor(selectedDoctorForJson.id, "verified")
-                  }
-                  className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
-                >
-                  Manually Approve
-                </button>
-              </div>
             </div>
           </div>
         </div>

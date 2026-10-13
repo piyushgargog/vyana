@@ -23,7 +23,7 @@ function DoctorCarePlanReviewContent({
   params: Promise<{ id: string }>;
 }) {
   const { id: routeId } = use(params);
-  const { supabase, showToast, useMocks } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
 
   const [carePlan, setCarePlan] = useState<DbCarePlan | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
@@ -70,7 +70,7 @@ function DoctorCarePlanReviewContent({
       setCarePlan(targetPlan);
 
       if (targetPlan?.plan_json) {
-        const parsed = parseCarePlanJson(targetPlan.plan_json, useMocks);
+        const parsed = parseCarePlanJson(targetPlan.plan_json);
         if (parsed) {
           setDraftPlan(parsed);
         }
@@ -91,7 +91,7 @@ function DoctorCarePlanReviewContent({
     } finally {
       setPlanLoading(false);
     }
-  }, [routeId, supabase, useMocks]);
+  }, [routeId, supabase]);
 
   useEffect(() => {
     if (!routeId) return;
@@ -121,7 +121,7 @@ function DoctorCarePlanReviewContent({
         setCarePlan(targetPlan);
 
         if (targetPlan?.plan_json) {
-          const parsed = parseCarePlanJson(targetPlan.plan_json, useMocks);
+          const parsed = parseCarePlanJson(targetPlan.plan_json);
           if (parsed && !ignore) {
             setDraftPlan(parsed);
           }
@@ -153,7 +153,7 @@ function DoctorCarePlanReviewContent({
     return () => {
       ignore = true;
     };
-  }, [routeId, supabase, useMocks]);
+  }, [routeId, supabase]);
 
   const approveMutation = useApproveCarePlan();
 

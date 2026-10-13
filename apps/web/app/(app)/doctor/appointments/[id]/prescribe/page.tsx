@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   DEFAULT_TIMES,
-  useCheckInteractions,
   useCreateDoctorPrescription,
   useGenerateCarePlan,
   usePrescriptions,
@@ -134,12 +133,12 @@ function DoctorPrescribeContent({
       dose: "1 tablet",
       form: "tablet",
       frequency: "OD",
-      times: ["09:00"],
-      with_food: "after_food",
+      times: DEFAULT_TIMES.OD ? [...DEFAULT_TIMES.OD] : ["09:00"],
+      with_food: "after",
       instructions: "Take after breakfast with water",
       quantity_total: 30,
       duration_days: 30,
-      refill_alert_days: 5,
+      refill_alert_days: undefined,
       start_date: new Date().toISOString().slice(0, 10),
       end_date: null,
       active: true,
@@ -147,10 +146,7 @@ function DoctorPrescribeContent({
   ]);
 
   // Drug Interaction Checking State
-  const checkInteractionsMutation = useCheckInteractions();
-  const [interactionResult, setInteractionResult] = useState<InteractionsRes | null>(
-    null
-  );
+  const [interactionResult] = useState<InteractionsRes | null>(null);
   const [interactionNotice, setInteractionNotice] = useState<string | null>(null);
 
   // Pipeline execution state
@@ -172,12 +168,12 @@ function DoctorPrescribeContent({
         dose: "1 tablet",
         form: "tablet",
         frequency: "OD",
-        times: ["09:00"],
-        with_food: "after_food",
+        times: DEFAULT_TIMES.OD ? [...DEFAULT_TIMES.OD] : ["09:00"],
+        with_food: "after",
         instructions: "Take after meals",
         quantity_total: 30,
         duration_days: 30,
-        refill_alert_days: 5,
+        refill_alert_days: undefined,
         start_date: new Date().toISOString().slice(0, 10),
         end_date: null,
         active: true,
@@ -202,11 +198,11 @@ function DoctorPrescribeContent({
       prev.map((item) => {
         if (item.id !== id) return item;
         const updated = { ...item, [field]: value };
-        // If frequency changed, sync default times
+        // If frequency changed, sync default times (BD gets 2 times, SOS gets [])
         if (field === "frequency") {
           const freq = value as FrequencyType;
           if (freq in DEFAULT_TIMES) {
-            updated.times = DEFAULT_TIMES[freq];
+            updated.times = [...DEFAULT_TIMES[freq]];
           }
         }
         return updated;
@@ -215,7 +211,7 @@ function DoctorPrescribeContent({
   };
 
   // Run Drug Interaction Checker
-  const handleCheckInteractions = async () => {
+  const handleCheckInteractions = () => {
     const validNames = medicines
       .map((m) => m.medicine_name.trim())
       .filter(Boolean);
@@ -225,25 +221,9 @@ function DoctorPrescribeContent({
       return;
     }
 
-    try {
-      setInteractionNotice(null);
-      const res = await checkInteractionsMutation.mutateAsync({});
-      setInteractionResult(res);
-      showToast("Drug-drug interaction check completed.", "info");
-    } catch (err: unknown) {
-      const errorObj = err as { status?: number; message?: string };
-      if (errorObj?.status === 403) {
-        setInteractionNotice(
-          "Automated server interaction check is configured for patient-session endpoints. Cross-referencing against clinical high-risk polypharmacy guidelines."
-        );
-      } else {
-        setInteractionNotice(
-          err instanceof Error
-            ? `Interaction checker notice: ${err.message}`
-            : "Could not reach interaction service. Please verify manually."
-        );
-      }
-    }
+    setInteractionNotice(
+      "The interaction check is not available on this screen yet."
+    );
   };
 
   // Submit Prescription and trigger Care Plan Generation
@@ -271,22 +251,28 @@ function DoctorPrescribeContent({
 
     try {
       // 1. Prepare items payload
-      const cleanedItems: DoctorPrescriptionItem[] = medicines.map((m) => ({
-        medicine_name: m.medicine_name.trim(),
-        strength: m.strength?.trim() || null,
-        dose: m.dose?.trim() || null,
-        form: m.form || "tablet",
-        frequency: m.frequency,
-        times: m.times && m.times.length > 0 ? m.times : ["09:00"],
-        with_food: m.with_food || "after_food",
-        instructions: m.instructions?.trim() || null,
-        quantity_total: m.quantity_total ? Number(m.quantity_total) : null,
-        duration_days: m.duration_days ? Number(m.duration_days) : null,
-        refill_alert_days: Number(m.refill_alert_days ?? 5),
-        start_date: m.start_date || new Date().toISOString().slice(0, 10),
-        end_date: m.end_date || null,
-        active: true,
-      }));
+      const cleanedItems: DoctorPrescriptionItem[] = medicines.map((m) => {
+        const freq = m.frequency as FrequencyType;
+        const defaultTimes = freq in DEFAULT_TIMES ? DEFAULT_TIMES[freq] : [];
+        const times = m.times && m.times.length > 0 ? m.times : defaultTimes;
+        return {
+          medicine_name: m.medicine_name.trim(),
+          strength: m.strength?.trim() || null,
+          dose: m.dose?.trim() || null,
+          form: m.form || "tablet",
+          frequency: m.frequency,
+          times,
+          with_food: m.with_food || "after",
+          instructions: m.instructions?.trim() || null,
+          quantity_total: m.quantity_total ? Number(m.quantity_total) : null,
+          duration_days: m.duration_days ? Number(m.duration_days) : null,
+          refill_alert_days:
+            m.refill_alert_days != null ? Number(m.refill_alert_days) : undefined,
+          start_date: m.start_date || new Date().toISOString().slice(0, 10),
+          end_date: m.end_date || null,
+          active: true,
+        };
+      });
 
       // 2. Call createDoctorPrescription (transaction creates prescription, items, and condition)
       const res = await createRxMutation.mutateAsync({
@@ -322,7 +308,11 @@ function DoctorPrescribeContent({
             condition_id: res.condition_id,
           });
           showToast("AI draft care plan generated!", "success");
-          router.push(`/doctor/care-plans/${carePlanRes.care_plan_id || res.condition_id}`);
+          if (carePlanRes.care_plan_id) {
+            router.push(`/doctor/care-plans/${carePlanRes.care_plan_id}`);
+          } else {
+            router.push("/doctor");
+          }
           return;
         } catch (carePlanErr) {
           showToast(
@@ -330,11 +320,11 @@ function DoctorPrescribeContent({
               (carePlanErr instanceof Error ? carePlanErr.message : "check care plans tab"),
             "info"
           );
-          router.push(`/doctor/patients/${effectivePatientId}`);
+          router.push("/doctor");
           return;
         }
       } else {
-        router.push(`/doctor/patients/${effectivePatientId}`);
+        router.push("/doctor");
       }
     } catch (err) {
       showToast(
@@ -515,12 +505,9 @@ function DoctorPrescribeContent({
             <button
               type="button"
               onClick={handleCheckInteractions}
-              disabled={checkInteractionsMutation.isPending}
               className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 transition shadow-xs"
             >
-              {checkInteractionsMutation.isPending
-                ? "Checking…"
-                : "Check Interactions"}
+              Check Interactions
             </button>
             <button
               type="button"
@@ -540,19 +527,29 @@ function DoctorPrescribeContent({
         )}
 
         {interactionResult && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                Drug Interaction Safety Verification
+                Drug Interaction Analysis
               </h3>
               <span className="text-[11px] text-slate-500">
-                {interactionResult.interactions?.length || 0} alerts found
+                {interactionResult.interactions?.length || 0} interaction(s) found
               </span>
             </div>
 
+            {interactionResult.not_checked &&
+              interactionResult.not_checked.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                  <span>Not checked (unknown salt/formulation): </span>
+                  <span className="font-semibold">
+                    {interactionResult.not_checked.join(", ")}
+                  </span>
+                </div>
+              )}
+
             {interactionResult.interactions?.length === 0 ? (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-900">
-                ✓ No critical drug-drug interactions detected.
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-700">
+                No drug-drug interactions detected in checked sources.
               </div>
             ) : (
               interactionResult.interactions?.map((it, i) => (
@@ -568,15 +565,61 @@ function DoctorPrescribeContent({
                     <span>
                       {it.medicine_a} ↔ {it.medicine_b}
                     </span>
-                    <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-white/80">
-                      {it.severity}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {it.layer && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                          Layer: {it.layer}
+                        </span>
+                      )}
+                      <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-white/80">
+                        {it.severity}
+                      </span>
+                    </div>
                   </div>
                   <p className="mt-1">{it.effect}</p>
                   {it.advice && <p className="mt-1 font-semibold">{it.advice}</p>}
+                  {it.quote && (
+                    <p className="mt-1 text-[11px] italic text-slate-600 bg-white/50 p-1.5 rounded border border-slate-200">
+                      &ldquo;{it.quote}&rdquo;
+                    </p>
+                  )}
+                  {it.sources && it.sources.length > 0 && (
+                    <div className="mt-1.5 text-[11px] text-slate-500">
+                      <span>Sources: </span>
+                      {it.sources.map((src, sIdx) => (
+                        <a
+                          key={sIdx}
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-700 underline mr-2 hover:text-teal-900"
+                        >
+                          {src.title}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))
             )}
+
+            {interactionResult.sources_checked &&
+              interactionResult.sources_checked.length > 0 && (
+                <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                  <span>Sources checked: </span>
+                  {interactionResult.sources_checked.map((s, idx) => (
+                    <a
+                      key={idx}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal-700 underline mr-2 hover:text-teal-900"
+                    >
+                      {s.title}
+                    </a>
+                  ))}
+                </div>
+              )}
           </div>
         )}
 
@@ -690,9 +733,9 @@ function DoctorPrescribeContent({
                     }
                     className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
                   >
-                    <option value="after_food">After Food</option>
-                    <option value="before_food">Before Food / Empty Stomach</option>
-                    <option value="anytime">Anytime / With Water</option>
+                    <option value="after">After Food</option>
+                    <option value="before">Before Food / Empty Stomach</option>
+                    <option value="any">Any / With Water</option>
                   </select>
                 </div>
               </div>

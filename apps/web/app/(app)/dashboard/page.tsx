@@ -18,7 +18,7 @@ import { AiSafetyBanner, SkeletonCard } from "@/components/ui-primitives";
 
 export default function PatientDashboardPage() {
   const router = useRouter();
-  const { supabase, showToast, useMocks } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
   const { data: profile, isLoading: profileLoading } = useMyProfile();
 
   // Active prescribed medications
@@ -319,7 +319,7 @@ export default function PatientDashboardPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {carePlans.map((cp) => {
-              const plan = parseCarePlanJson(cp.plan_json, useMocks);
+              const plan = parseCarePlanJson(cp.plan_json);
               if (!plan) return null;
 
               return (

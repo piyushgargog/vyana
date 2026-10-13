@@ -19,7 +19,7 @@ function AppShellContent({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { supabase, useMocks, setUseMocks, showToast } = useVyanaWeb();
+  const { supabase, showToast } = useVyanaWeb();
   const { user, loading: sessionLoading } = useSession();
   const { data: consentRecord, isLoading: consentLoading } =
     useConsent(CONSENT_VERSION);
@@ -179,19 +179,6 @@ function AppShellContent({
                 {profile.full_name}
               </span>
             )}
-
-            <button
-              type="button"
-              onClick={() => setUseMocks(!useMocks)}
-              aria-pressed={useMocks}
-              className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${
-                useMocks
-                  ? "border-amber-300 bg-amber-50 text-amber-900"
-                  : "border-emerald-300 bg-emerald-50 text-emerald-900"
-              }`}
-            >
-              {useMocks ? "Mode: Demo Mocks" : "Mode: Live API"}
-            </button>
 
             <a
               href="tel:108"
