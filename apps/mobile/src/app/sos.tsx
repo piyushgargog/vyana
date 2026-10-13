@@ -38,6 +38,8 @@ export default function MobileSosScreen() {
   const sosMutation = useSos();
   const nearbyMutation = useNearbyHospitals();
   const pmjayMutation = usePmjayHospitals();
+  const { mutate: findNearby } = nearbyMutation;
+  const { mutate: findPmjay } = pmjayMutation;
   const { data: contacts = [] } = useEmergencyContacts();
   const { data: emergencyRequest } = useEmergencyRequest(
     requestId ?? undefined
@@ -65,13 +67,13 @@ export default function MobileSosScreen() {
         if (pos && 'coords' in pos) {
           const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setCoords(c);
-          nearbyMutation.mutate(c);
-          pmjayMutation.mutate(c);
+          findNearby(c);
+          findPmjay(c);
         }
       } catch {
         if (!ignore) {
-          setLocationError('Could not acquire GPS fix in time.');
-          pmjayMutation.mutate({ lat: 28.6139, lng: 77.209 });
+          // No fix: nothing is searched around a place the user is not at.
+          setLocationError('Could not get your location in time.');
         }
       } finally {
         if (!ignore) {
@@ -83,7 +85,7 @@ export default function MobileSosScreen() {
     return () => {
       ignore = true;
     };
-  }, [nearbyMutation, pmjayMutation]);
+  }, [findNearby, findPmjay]);
 
   const triggerSosCall = useCallback(async () => {
     setSosActive(true);
@@ -410,9 +412,7 @@ export default function MobileSosScreen() {
             <View key={`${ph.name}-${pIdx}`} style={styles.hospitalCard}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.hospitalName}>{ph.name}</Text>
-                <Text style={styles.hospitalAddress}>
-                  {ph.address || 'Empanelled healthcare provider'}
-                </Text>
+                {ph.address ? <Text style={styles.hospitalAddress}>{ph.address}</Text> : null}
                 {ph.specialities && ph.specialities.length > 0 && (
                   <Text style={styles.hospitalDistance}>
                     {ph.specialities.join(' · ')}
@@ -438,7 +438,13 @@ export default function MobileSosScreen() {
           ))
         ) : (
           <View style={styles.emptyPmjayBox}>
-            <Text style={styles.emptyText}>No official list found nearby</Text>
+            <Text style={styles.emptyText}>
+              {coords
+                ? 'No official list found nearby'
+                : locationLoading
+                  ? 'Finding your location…'
+                  : 'Location is off, so hospitals near you cannot be searched. Search by state on the national portal.'}
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open National PM-JAY Hospital Search portal"

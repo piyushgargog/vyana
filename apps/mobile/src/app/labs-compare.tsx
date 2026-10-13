@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -9,12 +9,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   PriceQuote,
   SourceStatus,
   useCompareLabTest,
   useLabsJob,
+  useMyProfile,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
@@ -45,8 +46,13 @@ export default function LabsCompareScreen() {
   const router = useRouter();
   const { showToast } = useVyanaMobile();
 
-  const [testName, setTestName] = useState('HbA1c');
-  const [city, setCity] = useState('Delhi');
+  // A report's follow-up test can open this screen with ?test_name=...; otherwise nothing is searched until the user taps Search.
+  const { test_name: testFromLink } = useLocalSearchParams<{ test_name?: string }>();
+  const { data: profile } = useMyProfile();
+  const [testName, setTestName] = useState(testFromLink ?? '');
+  // No city is chosen for the user: it is theirs from the profile, or they pick one.
+  const [cityChoice, setCityChoice] = useState<string | null>(null);
+  const city = cityChoice ?? profile?.city?.trim() ?? '';
 
   const compareMutation = useCompareLabTest();
   const jobId = compareMutation.data?.job_id;
@@ -57,24 +63,27 @@ export default function LabsCompareScreen() {
   const isRunning =
     compareMutation.isPending || (currentResult && currentResult.status === 'running');
 
-  // Trigger search on mount with default HbA1c in Delhi
+  // Only a test the user came here for starts a search by itself (once). An agent run costs money, so the
+  // screen never searches for a test nobody asked for.
+  const autoStarted = useRef(false);
+  const { mutate: compareLab } = compareMutation;
   useEffect(() => {
-    if (!compareMutation.data && !compareMutation.isPending) {
-      compareMutation.mutate(
-        { test_name: 'HbA1c', city: 'Delhi' },
-        {
-          onError: (err) => {
-            showToast(err.message || 'Could not initiate lab test comparison', 'error');
-          },
-        }
-      );
-    }
-  }, [compareMutation, showToast]);
+    if (autoStarted.current || !testFromLink || !city) return;
+    autoStarted.current = true;
+    compareLab(
+      { test_name: testFromLink, city },
+      { onError: (err) => showToast(err.message || 'Could not fetch lab prices', 'error') }
+    );
+  }, [testFromLink, city, compareLab, showToast]);
 
   const handleSearch = () => {
     const trimmed = testName.trim();
     if (!trimmed) {
       showToast('Please enter a test name', 'warning');
+      return;
+    }
+    if (!city) {
+      showToast('Choose your city first', 'warning');
       return;
     }
     compareMutation.mutate(
@@ -89,6 +98,10 @@ export default function LabsCompareScreen() {
 
   const handleSelectPreset = (preset: string) => {
     setTestName(preset);
+    if (!city) {
+      showToast('Choose your city, then tap Search', 'info');
+      return;
+    }
     compareMutation.mutate(
       { test_name: preset, city },
       {
@@ -182,7 +195,7 @@ export default function LabsCompareScreen() {
                   key={c}
                   accessibilityRole="button"
                   accessibilityLabel={`Filter city ${c}`}
-                  onPress={() => setCity(c)}
+                  onPress={() => setCityChoice(c)}
                   style={[styles.cityChip, isSelected && styles.cityChipActive]}
                 >
                   <Text style={[styles.cityChipText, isSelected && styles.cityChipTextActive]}>
@@ -222,7 +235,7 @@ export default function LabsCompareScreen() {
       {sources.length > 0 && (
         <View style={styles.sourcesCard}>
           <View style={styles.sourcesHeader}>
-            <Text style={styles.sourcesTitle}>Diagnostics Live Agent Status</Text>
+            <Text style={styles.sourcesTitle}>Where we are checking</Text>
             {isRunning && (
               <View style={styles.agentRunningBadge}>
                 <ActivityIndicator size="small" color="#0D9488" />
@@ -273,14 +286,14 @@ export default function LabsCompareScreen() {
       <View style={styles.resultsSection}>
         <View style={styles.resultsHeader}>
           <Text style={styles.resultsTitle}>
-            Quotes for &quot;{currentResult?.query ?? testName}&quot; ({city})
+            Quotes for &quot;{currentResult?.query ?? testName}&quot;{city ? ` (${city})` : ''}
           </Text>
           <Text style={styles.resultsCount}>
             {quotes.length} {quotes.length === 1 ? 'quote' : 'quotes'} available
           </Text>
         </View>
 
-        {quotes.length === 0 && !isRunning && (
+        {currentResult && quotes.length === 0 && !isRunning && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No quotes available</Text>
             <Text style={styles.emptySub}>

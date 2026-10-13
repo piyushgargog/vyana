@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -24,47 +24,42 @@ export default function PmjayHospitalsScreen() {
   const { showToast } = useVyanaMobile();
 
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [locLoading, setLocLoading] = useState(true);
+  // 'off': no permission or no fix. The search is never run around a place the user is not at.
+  const [locationState, setLocationState] = useState<'loading' | 'ready' | 'off'>('loading');
 
   const pmjayMutation = usePmjayHospitals();
+  const { mutate: searchPmjay } = pmjayMutation;
+  const started = useRef(false);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
+  const findLocation = useCallback(
+    async (ask: boolean) => {
+      setLocationState('loading');
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          if (mounted) {
-            const c = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-            setCoords(c);
-            pmjayMutation.mutate(c);
-          }
-        } else {
-          // Default to central Delhi coordinates if permission denied
-          const fallback = { lat: 28.6139, lng: 77.209 };
-          if (mounted) {
-            setCoords(fallback);
-            pmjayMutation.mutate(fallback);
-          }
-        }
+        let { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted' && ask) ({ status } = await Location.requestForegroundPermissionsAsync());
+        if (status !== 'granted') return setLocationState('off');
+        const pos = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+        ]);
+        if (!pos) return setLocationState('off');
+        const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCoords(c);
+        setLocationState('ready');
+        searchPmjay(c);
       } catch {
-        const fallback = { lat: 28.6139, lng: 77.209 };
-        if (mounted) {
-          setCoords(fallback);
-          pmjayMutation.mutate(fallback);
-        }
-      } finally {
-        if (mounted) setLocLoading(false);
+        setLocationState('off');
       }
-    })();
+    },
+    [searchPmjay]
+  );
 
-    return () => {
-      mounted = false;
-    };
-  }, [pmjayMutation]);
+  // Once, when the screen opens (an agent run costs money): later searches are the user's refresh.
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void findLocation(true);
+  }, [findLocation]);
 
   const handleOpenSource = (url: string | null | undefined, name: string) => {
     const targetUrl = url || PMJAY_PORTAL_URL;
@@ -80,14 +75,19 @@ export default function PmjayHospitalsScreen() {
   };
 
   const handleRefresh = () => {
-    if (coords) {
-      pmjayMutation.mutate(coords);
-    }
+    if (coords) searchPmjay(coords);
+  };
+
+  // Permission was refused for good: only the phone's settings can turn it on again.
+  const handleAllowLocation = async () => {
+    const { canAskAgain } = await Location.getForegroundPermissionsAsync();
+    if (canAskAgain) void findLocation(true);
+    else Linking.openSettings().catch(() => showToast('Open the phone settings and allow location for Vyana', 'info'));
   };
 
   const hospitals = pmjayMutation.data?.hospitals ?? [];
   const area = pmjayMutation.data?.area;
-  const isLoading = locLoading || pmjayMutation.isPending;
+  const isLoading = locationState === 'loading' || pmjayMutation.isPending;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -113,7 +113,7 @@ export default function PmjayHospitalsScreen() {
 
       {/* Official Government Verification Banner */}
       <View style={styles.officialNoticeCard}>
-        <Text style={styles.officialBadge}>GOVERNMENT SOURCE GUARANTEE (ADR-048)</Text>
+        <Text style={styles.officialBadge}>GOVERNMENT SOURCES ONLY</Text>
         <Text style={styles.officialTitle}>Official Portal Listings Only</Text>
         <Text style={styles.officialText}>
           Hospital empanelment records are fetched strictly from verified government pages
@@ -127,13 +127,13 @@ export default function PmjayHospitalsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.statusAreaLabel}>Search Location:</Text>
           <Text style={styles.statusAreaValue}>
-            {area ? `${area}` : coords ? `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}` : 'Detecting GPS…'}
+            {area ? `${area}` : coords ? `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}` : locationState === 'off' ? 'Location is off' : 'Finding your location…'}
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Refresh empanelled hospitals"
-          disabled={isLoading}
+          disabled={isLoading || !coords}
           onPress={handleRefresh}
           style={[styles.refreshBtn, isLoading && styles.btnDisabled]}
         >
@@ -154,7 +154,35 @@ export default function PmjayHospitalsScreen() {
           </View>
         )}
 
-        {!isLoading && hospitals.length === 0 && (
+        {locationState === 'off' && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>📍</Text>
+            <Text style={styles.emptyTitle}>Location is off</Text>
+            <Text style={styles.emptySub}>
+              To find empanelled hospitals near you, allow Vyana to use your location. Without it we
+              do not search, so we never show hospitals that are far from you. You can also search
+              by state on the national portal.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Allow location"
+              onPress={handleAllowLocation}
+              style={styles.portalBtn}
+            >
+              <Text style={styles.portalBtnText}>Allow location</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open National PM-JAY Hospital Search portal"
+              onPress={handleOpenPmjayPortal}
+              style={styles.portalBtn}
+            >
+              <Text style={styles.portalBtnText}>Open hospitals.pmjay.gov.in ↗</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {locationState === 'ready' && !isLoading && hospitals.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🏥</Text>
             <Text style={styles.emptyTitle}>No official list found nearby</Text>
@@ -196,7 +224,7 @@ export default function PmjayHospitalsScreen() {
             )}
 
             <View style={styles.sourceActionRow}>
-              <Text style={styles.sourceLabel}>Verified Government Source:</Text>
+              <Text style={styles.sourceLabel}>Government source:</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Open source URL for ${h.name}`}

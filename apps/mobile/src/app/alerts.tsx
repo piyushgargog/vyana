@@ -60,7 +60,7 @@ export default function DrugQualityAlertsScreen() {
       if (count > 0) {
         showToast(`Checked active medicines: ${count} relevant notice(s) found`, 'warning');
       } else {
-        showToast('Checked active medicines: No government quality alerts found', 'success');
+        showToast('No alert found in the sources checked. This does not mean a medicine is fine: ask your pharmacist if unsure.', 'info');
       }
       void refetch();
     } catch (err) {
