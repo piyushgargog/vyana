@@ -155,6 +155,48 @@ function RootNavigator() {
             title: 'Care Plan & Vitals',
           }}
         />
+        <Stack.Screen
+          name="labs-compare"
+          options={{
+            title: 'Compare Lab Prices',
+          }}
+        />
+        <Stack.Screen
+          name="labs/compare"
+          options={{
+            title: 'Compare Lab Prices',
+          }}
+        />
+        <Stack.Screen
+          name="alerts"
+          options={{
+            title: 'CDSCO Drug Quality Alerts',
+          }}
+        />
+        <Stack.Screen
+          name="schemes/pmjay"
+          options={{
+            title: 'PM-JAY Empanelled Hospitals',
+          }}
+        />
+        <Stack.Screen
+          name="pmjay"
+          options={{
+            title: 'PM-JAY Empanelled Hospitals',
+          }}
+        />
+        <Stack.Screen
+          name="care/meals"
+          options={{
+            title: 'Daily Meal Log',
+          }}
+        />
+        <Stack.Screen
+          name="meals"
+          options={{
+            title: 'Daily Meal Log',
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );

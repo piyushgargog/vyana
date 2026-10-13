@@ -11,13 +11,21 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  MEAL_CALORIES_MAX,
+  MEAL_DESCRIPTION_MAX,
+  MEAL_TYPES,
   parseCarePlanJson,
+  totalCalories,
+  useAddMeal,
   useAddVital,
   useCarePlan,
+  useDeleteMeal,
   useGenerateCarePlan,
+  useMeals,
   useVitals,
   VITAL_UNITS,
   type CarePlan as CarePlanType,
+  type MealType,
   type VitalType,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
@@ -40,6 +48,21 @@ export default function ConditionCarePlanScreen() {
   const [vitalVal, setVitalVal] = useState('');
   const { data: vitals = [] } = useVitals(selectedVital, 30);
   const addVitalMutation = useAddVital();
+
+  // Meal Log in Care Plan
+  const [mealDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const [mealType, setMealType] = useState<MealType>('breakfast');
+  const [mealDesc, setMealDesc] = useState('');
+  const [mealCalories, setMealCalories] = useState('');
+  const [mealError, setMealError] = useState<string | null>(null);
+
+  const { data: todayMeals = [] } = useMeals(mealDate);
+  const addMealMutation = useAddMeal();
+  const deleteMealMutation = useDeleteMeal();
+  const mealSummary = totalCalories(todayMeals);
 
   const activePlan: CarePlanType | null =
     parseCarePlanJson(dbPlan?.plan_json) ??
@@ -80,6 +103,64 @@ export default function ConditionCarePlanScreen() {
         err instanceof Error ? err.message : 'Could not log vital',
         'error'
       );
+    }
+  };
+
+  const handleAddMeal = async () => {
+    setMealError(null);
+    const desc = mealDesc.trim();
+    if (!desc) {
+      setMealError('Say what you ate');
+      showToast('Say what you ate', 'warning');
+      return;
+    }
+    if (desc.length > MEAL_DESCRIPTION_MAX) {
+      setMealError(`Keep it under ${MEAL_DESCRIPTION_MAX} characters`);
+      showToast(`Keep it under ${MEAL_DESCRIPTION_MAX} characters`, 'warning');
+      return;
+    }
+
+    let cals: number | null = null;
+    if (mealCalories.trim()) {
+      const parsed = Number(mealCalories.trim());
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > MEAL_CALORIES_MAX) {
+        setMealError(`Calories must be a whole number from 0 to ${MEAL_CALORIES_MAX}`);
+        showToast(`Calories must be a whole number from 0 to ${MEAL_CALORIES_MAX}`, 'warning');
+        return;
+      }
+      cals = parsed;
+    }
+
+    try {
+      await addMealMutation.mutateAsync({
+        meal: mealType,
+        description: desc,
+        calories: cals,
+      });
+      setMealDesc('');
+      setMealCalories('');
+      setMealError(null);
+      showToast('Meal logged in care plan', 'success');
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Could not log meal';
+      setMealError(msg);
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleDeleteMeal = async (id: string) => {
+    try {
+      await deleteMealMutation.mutateAsync(id);
+      showToast('Meal entry removed', 'info');
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Could not remove meal';
+      showToast(msg, 'error');
     }
   };
 
@@ -224,6 +305,152 @@ export default function ConditionCarePlanScreen() {
               )}
             </View>
           )}
+
+          {/* Patient Daily Meal Log & Calorie Tracker */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Daily Meal Log & Calories</Text>
+                <Text style={styles.sectionSub}>
+                  Today&apos;s diet tracking ({mealDate})
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open dedicated meal log screen"
+                onPress={() => router.push('/care/meals')}
+                style={styles.openMealsBtn}
+              >
+                <Text style={styles.openMealsBtnText}>Full Log →</Text>
+              </Pressable>
+            </View>
+
+            {/* Calorie Stats */}
+            <View style={styles.calorieStatBox}>
+              <View style={styles.calorieRow}>
+                <Text style={styles.calorieTotalText}>
+                  {mealSummary.total}{' '}
+                  <Text style={styles.calorieUnitText}>kcal logged</Text>
+                </Text>
+                <Text style={styles.calorieMealsCount}>
+                  {todayMeals.length} {todayMeals.length === 1 ? 'meal' : 'meals'}
+                </Text>
+              </View>
+              {mealSummary.unknown > 0 && (
+                <Text style={styles.calorieUnknownNote}>
+                  ℹ️ {mealSummary.unknown}{' '}
+                  {mealSummary.unknown === 1 ? 'meal' : 'meals'} without calories
+                </Text>
+              )}
+            </View>
+
+            {/* Today's Meals List */}
+            {todayMeals.length > 0 && (
+              <View style={styles.todayMealsList}>
+                {todayMeals.map((m) => (
+                  <View key={m.id} style={styles.inlineMealItem}>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.inlineMealHeader}>
+                        <Text style={styles.inlineMealBadge}>
+                          {m.meal.toUpperCase()}
+                        </Text>
+                        <Text style={styles.inlineMealCals}>
+                          {typeof m.calories === 'number'
+                            ? `${m.calories} kcal`
+                            : 'calories unrecorded'}
+                        </Text>
+                      </View>
+                      <Text style={styles.inlineMealDesc}>{m.description}</Text>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${m.meal}`}
+                      disabled={deleteMealMutation.isPending}
+                      onPress={() => handleDeleteMeal(m.id)}
+                      style={styles.inlineDeleteBtn}
+                    >
+                      <Text style={styles.inlineDeleteText}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Add Meal Form */}
+            <View style={styles.inlineMealForm}>
+              <Text style={styles.inlineFormTitle}>Log Today&apos;s Meal</Text>
+              <View style={styles.mealTypeRow}>
+                {MEAL_TYPES.map((t) => {
+                  const isSel = mealType === t;
+                  return (
+                    <Pressable
+                      key={t}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Pick meal ${t}`}
+                      onPress={() => setMealType(t)}
+                      style={[styles.miniTypeBtn, isSel && styles.miniTypeBtnActive]}
+                    >
+                      <Text
+                        style={[
+                          styles.miniTypeBtnText,
+                          isSel && styles.miniTypeBtnTextActive,
+                        ]}
+                      >
+                        {t}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <TextInput
+                accessibilityLabel="Meal description"
+                placeholder="What did you eat? (e.g. 2 Roti, Sabzi)"
+                placeholderTextColor="#94A3B8"
+                value={mealDesc}
+                onChangeText={(t) => {
+                  setMealDesc(t);
+                  if (mealError) setMealError(null);
+                }}
+                maxLength={MEAL_DESCRIPTION_MAX}
+                style={styles.inlineInput}
+              />
+
+              <TextInput
+                accessibilityLabel="Calories"
+                placeholder="Calories in kcal (optional, 0–5000)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                value={mealCalories}
+                onChangeText={(t) => {
+                  setMealCalories(t);
+                  if (mealError) setMealError(null);
+                }}
+                style={styles.inlineInput}
+              />
+
+              {mealError && (
+                <Text style={styles.inlineErrorText}>⚠️ {mealError}</Text>
+              )}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Log meal entry"
+                disabled={addMealMutation.isPending}
+                onPress={handleAddMeal}
+                style={[
+                  styles.inlineAddBtn,
+                  addMealMutation.isPending && styles.btnDisabled,
+                ]}
+              >
+                {addMealMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.inlineAddBtnText}>+ Log Meal</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
 
           {/* Critical Red Flag Symptoms */}
           {activePlan.red_flags && activePlan.red_flags.length > 0 && (
@@ -559,4 +786,103 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logVitalBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionSub: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  openMealsBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  openMealsBtnText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
+  calorieStatBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+  },
+  calorieRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  calorieTotalText: { fontSize: 18, fontWeight: '800', color: '#0F766E' },
+  calorieUnitText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  calorieMealsCount: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  calorieUnknownNote: { fontSize: 11, color: '#92400E', fontWeight: '600' },
+  todayMealsList: { gap: 8, paddingTop: 4 },
+  inlineMealItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    gap: 8,
+  },
+  inlineMealHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  inlineMealBadge: {
+    backgroundColor: '#CCFBF1',
+    color: '#0F766E',
+    fontSize: 9,
+    fontWeight: '800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  inlineMealCals: { fontSize: 11, fontWeight: '600', color: '#475569' },
+  inlineMealDesc: { fontSize: 13, color: '#0F172A', marginTop: 2, fontWeight: '500' },
+  inlineDeleteBtn: { padding: 4 },
+  inlineDeleteText: { fontSize: 12, color: '#B91C1C', fontWeight: '700' },
+  inlineMealForm: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    marginTop: 4,
+  },
+  inlineFormTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  mealTypeRow: { flexDirection: 'row', gap: 6 },
+  miniTypeBtn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  miniTypeBtnActive: {
+    backgroundColor: '#0F766E',
+    borderColor: '#0F766E',
+  },
+  miniTypeBtnText: { fontSize: 11, fontWeight: '600', color: '#475569', textTransform: 'capitalize' },
+  miniTypeBtnTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  inlineInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  inlineErrorText: { fontSize: 11, color: '#B91C1C', fontWeight: '600' },
+  inlineAddBtn: {
+    backgroundColor: '#0F766E',
+    borderRadius: 8,
+    paddingVertical: 9,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  inlineAddBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  btnDisabled: { opacity: 0.6 },
 });

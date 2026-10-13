@@ -16,6 +16,7 @@ import {
   useEmergencyContacts,
   useEmergencyRequest,
   useNearbyHospitals,
+  usePmjayHospitals,
   useSos,
   type EmergencySosRes,
 } from '@vyana/shared';
@@ -36,6 +37,7 @@ export default function MobileSosScreen() {
 
   const sosMutation = useSos();
   const nearbyMutation = useNearbyHospitals();
+  const pmjayMutation = usePmjayHospitals();
   const { data: contacts = [] } = useEmergencyContacts();
   const { data: emergencyRequest } = useEmergencyRequest(
     requestId ?? undefined
@@ -64,10 +66,12 @@ export default function MobileSosScreen() {
           const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setCoords(c);
           nearbyMutation.mutate(c);
+          pmjayMutation.mutate(c);
         }
       } catch {
         if (!ignore) {
           setLocationError('Could not acquire GPS fix in time.');
+          pmjayMutation.mutate({ lat: 28.6139, lng: 77.209 });
         }
       } finally {
         if (!ignore) {
@@ -79,7 +83,7 @@ export default function MobileSosScreen() {
     return () => {
       ignore = true;
     };
-  }, [nearbyMutation]);
+  }, [nearbyMutation, pmjayMutation]);
 
   const triggerSosCall = useCallback(async () => {
     setSosActive(true);
@@ -391,6 +395,62 @@ export default function MobileSosScreen() {
         )}
       </View>
 
+      {/* Ayushman Bharat (PM-JAY) Empanelled Hospitals */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>PM-JAY Empanelled Hospitals</Text>
+          {pmjayMutation.isPending && <ActivityIndicator size="small" color="#0D9488" />}
+        </View>
+        <Text style={styles.sectionSub}>
+          Cashless treatment under Ayushman Bharat (fetched strictly from verified government pages)
+        </Text>
+
+        {pmjayMutation.data?.hospitals && pmjayMutation.data.hospitals.length > 0 ? (
+          pmjayMutation.data.hospitals.map((ph, pIdx) => (
+            <View key={`${ph.name}-${pIdx}`} style={styles.hospitalCard}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.hospitalName}>{ph.name}</Text>
+                <Text style={styles.hospitalAddress}>
+                  {ph.address || 'Empanelled healthcare provider'}
+                </Text>
+                {ph.specialities && ph.specialities.length > 0 && (
+                  <Text style={styles.hospitalDistance}>
+                    {ph.specialities.join(' · ')}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.hospitalActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`View government page for ${ph.name}`}
+                  onPress={() => {
+                    const u = ph.source_url || 'https://hospitals.pmjay.gov.in';
+                    Linking.openURL(u).catch(() => {
+                      showToast('Could not open government page', 'error');
+                    });
+                  }}
+                  style={styles.sourceBtn}
+                >
+                  <Text style={styles.sourceBtnText}>Gov Source ↗</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyPmjayBox}>
+            <Text style={styles.emptyText}>No official list found nearby</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open National PM-JAY Hospital Search portal"
+              onPress={() => Linking.openURL('https://hospitals.pmjay.gov.in')}
+              style={styles.pmjayPortalBtn}
+            >
+              <Text style={styles.pmjayPortalBtnText}>Open hospitals.pmjay.gov.in ↗</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
       <MobileDisclaimerFooter />
     </ScrollView>
   );
@@ -606,4 +666,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dirBtnText: { color: '#0F172A', fontSize: 12, fontWeight: '600' },
+  sourceBtn: {
+    backgroundColor: '#0F766E',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  sourceBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  emptyPmjayBox: {
+    paddingVertical: 8,
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  pmjayPortalBtn: {
+    backgroundColor: '#0F766E',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  pmjayPortalBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
 });
