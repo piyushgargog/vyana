@@ -6,6 +6,8 @@ import { saltsFor } from "./safety/brand-salts";
 import { supabaseAdmin } from "./supabase-admin";
 import { fetchPages, search, type CallCounter } from "./tinyfish/client";
 import { isGovUrl } from "./tinyfish/sources";
+import { pushQualityAlerts, type AlertedPatient } from "./data/alert-push";
+import { sendPush } from "./push";
 
 /**
  * Medicine quality alerts (SPEC §9, §10, ADR-049): a code rule, no model. A result counts only when it is on a
@@ -148,8 +150,14 @@ export async function processMonitorResults(results: MonitorResult[], counter: C
     }
   }
   let added = 0;
-  for (const [patientId, found] of byPatient) added += await saveAlerts(patientId, found);
-  // Push notifications for these alerts come with V6 (push.ts); the app also reads drug_alerts directly.
+  const alerted: AlertedPatient[] = [];
+  for (const [patientId, found] of byPatient) {
+    const count = await saveAlerts(patientId, found);
+    added += count;
+    if (count > 0) alerted.push({ patient_id: patientId, count });
+  }
+  // One push per patient with new alerts (no medicine name on the lock screen); it never throws.
+  await pushQualityAlerts(supabaseAdmin(), sendPush, alerted);
   log({ event: "monitor_alerts", results: gov.length, patients: byPatient.size, added });
   return added;
 }

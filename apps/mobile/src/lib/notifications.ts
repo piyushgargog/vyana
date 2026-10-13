@@ -37,6 +37,9 @@ export const NOTIFICATION_CHANNELS: Record<ReminderKind, string> = {
  */
 export const CAREGIVER_CHANNEL = "caregiver-alerts";
 
+/** The Android channel of medicine quality alerts that the server pushes (`apps/web/lib/server/data/alert-push.ts`). */
+export const QUALITY_ALERT_CHANNEL = "quality-alerts";
+
 /** The identifiers we schedule start with these, so we never touch another notification. */
 const OWN_PREFIXES = ["dose:", "refill:", "followup:"];
 
@@ -76,6 +79,10 @@ export async function setupNotifications(): Promise<void> {
     await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNELS.follow_up, {
       name: "Check-up test reminders",
       importance: Notifications.AndroidImportance.DEFAULT,
+    });
+    await Notifications.setNotificationChannelAsync(QUALITY_ALERT_CHANNEL, {
+      name: "Medicine quality alerts",
+      importance: Notifications.AndroidImportance.HIGH,
     });
     await Notifications.setNotificationChannelAsync(CAREGIVER_CHANNEL, {
       name: "Alerts about people you look after",
