@@ -14,6 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   uploadFile,
   useAnalyzeReport,
+  useCorrectLabValue,
   type LabValue,
   type ReportAnalyzeRes,
 } from '@vyana/shared';
@@ -27,6 +28,7 @@ export default function ReportUploadScreen() {
   const router = useRouter();
   const { supabase, showToast } = useVyanaMobile();
   const analyzeMutation = useAnalyzeReport();
+  const correctMutation = useCorrectLabValue();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [reportDate, setReportDate] = useState(
@@ -36,6 +38,9 @@ export default function ReportUploadScreen() {
   const [analyzedData, setAnalyzedData] =
     useState<ReportAnalyzeRes | null>(null);
   const [editedValues, setEditedValues] = useState<LabValue[]>([]);
+  // What the patient typed per row, until it is saved through the server (ADR-062).
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
 
   const handleRunAnalyze = async (targetPath: string) => {
     try {
@@ -45,6 +50,7 @@ export default function ReportUploadScreen() {
       });
       setAnalyzedData(res);
       setEditedValues(res.values);
+      setDrafts({});
       setStep('review');
       showToast('Lab report analyzed successfully', 'success');
     } catch (err) {
@@ -136,27 +142,34 @@ export default function ReportUploadScreen() {
     }
   };
 
-  // When patient edits numeric value, recompute flag in code
-  const handleValueChange = (index: number, newNumStr: string) => {
-    setEditedValues((prev) => {
-      const copy = [...prev];
-      const target = { ...copy[index] };
-      const parsed = parseFloat(newNumStr);
-      if (!isNaN(parsed)) {
-        target.value = parsed;
-        if (target.ref_high !== null && parsed > target.ref_high) {
-          target.flag = 'high';
-        } else if (target.ref_low !== null && parsed < target.ref_low) {
-          target.flag = 'low';
-        } else if (target.ref_low !== null || target.ref_high !== null) {
-          target.flag = 'normal';
-        }
-      } else {
-        target.value = null;
-      }
-      copy[index] = target;
-      return copy;
-    });
+  // A corrected value is saved on the server, which recomputes the flag and the summary.
+  const handleSaveValue = async (index: number) => {
+    const val = editedValues[index];
+    const parsed = Number((drafts[index] ?? '').trim());
+    if (!val?.id) {
+      showToast('This value cannot be corrected here. Open the report again.', 'warning');
+      return;
+    }
+    if (!(drafts[index] ?? '').trim() || !Number.isFinite(parsed)) {
+      showToast('Enter the number exactly as it is written on the report', 'warning');
+      return;
+    }
+    setSavingIdx(index);
+    try {
+      const res = await correctMutation.mutateAsync({ value_id: val.id, value: parsed });
+      setEditedValues((prev) => prev.map((v, i) => (i === index ? { ...v, ...res.value } : v)));
+      setAnalyzedData((prev) => (prev ? { ...prev, summary: res.summary, follow_up_tests: res.follow_up_tests } : prev));
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      showToast(`${val.test_name} saved`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not save this value', 'error');
+    } finally {
+      setSavingIdx(null);
+    }
   };
 
   const handleDone = () => {
@@ -268,7 +281,7 @@ export default function ReportUploadScreen() {
             <Text style={styles.reviewStepBadge}>MANDATORY LAB REVIEW</Text>
             <Text style={styles.reviewTitle}>Review Extracted Lab Values</Text>
             <Text style={styles.reviewSub}>
-              Verify extracted values against your physical paper report. Test values and reference flags are verified and saved to your Health Records.
+              Check each value against your paper report. If a number is wrong, type the correct one and tap Save; the flag is worked out again on our server.
             </Text>
           </View>
 
@@ -336,7 +349,7 @@ export default function ReportUploadScreen() {
                           ? `< ${val.ref_high} ${val.unit ?? ''}`
                           : val.ref_low !== null
                             ? `> ${val.ref_low} ${val.unit ?? ''}`
-                            : 'Normal'}
+                            : 'No range on the report'}
                     </Text>
                   </View>
 
@@ -365,17 +378,33 @@ export default function ReportUploadScreen() {
                   </View>
                 </View>
 
-                {/* Editable Value Input */}
+                {/* Correct a value: saved through the server */}
                 <View style={styles.valueInputRow}>
-                  <Text style={styles.valueInputLabel}>Measured Value:</Text>
+                  <Text style={styles.valueInputLabel}>{val.corrected ? 'Corrected value:' : 'Measured value:'}</Text>
                   <TextInput
                     accessibilityLabel={`${val.test_name} value`}
-                    value={val.value !== null ? String(val.value) : ''}
-                    onChangeText={(t) => handleValueChange(idx, t)}
+                    value={drafts[idx] ?? (val.value !== null ? String(val.value) : val.value_text ?? '')}
+                    onChangeText={(t) => setDrafts((prev) => ({ ...prev, [idx]: t }))}
                     style={styles.numericInput}
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
+                    editable={savingIdx === null && val.value_text === null}
                   />
                   <Text style={styles.unitText}>{val.unit || ''}</Text>
+                  {drafts[idx] !== undefined && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Save corrected ${val.test_name}`}
+                      onPress={() => handleSaveValue(idx)}
+                      disabled={savingIdx !== null}
+                      style={styles.rowSaveBtn}
+                    >
+                      {savingIdx === idx ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.rowSaveBtnText}>Save</Text>
+                      )}
+                    </Pressable>
+                  )}
                 </View>
               </View>
             );
@@ -401,6 +430,15 @@ export default function ReportUploadScreen() {
 }
 
 const styles = StyleSheet.create({
+  rowSaveBtn: {
+    backgroundColor: '#0D9488',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  rowSaveBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   screen: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: 16, gap: 14 },
   topBar: {
