@@ -1,0 +1,26 @@
+# Vyana web + API (ADR-053). Build from the repo root:
+#   docker compose --env-file apps/web/.env.production up -d --build
+FROM node:24-alpine AS build
+RUN npm install -g pnpm@12.11.2
+WORKDIR /repo
+COPY . .
+RUN pnpm install --frozen-lockfile --filter @vyana/web...
+# Next inlines NEXT_PUBLIC_* while it builds; everything else is read at run time.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter @vyana/web build
+
+FROM node:24-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+COPY --from=build /repo/apps/web/.next/standalone ./
+COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /repo/apps/web/public ./apps/web/public
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "apps/web/server.js"]

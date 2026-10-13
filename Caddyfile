@@ -1,0 +1,11 @@
+# HTTPS for the domain in DOMAIN; Caddy gets and renews the certificate itself (ADR-053).
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000 {
+		# Agent jobs and the assistant stream can take a while.
+		transport http {
+			response_header_timeout 180s
+		}
+		flush_interval -1
+	}
+}

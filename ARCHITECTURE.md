@@ -124,6 +124,10 @@ Every API route has a request and response schema in `packages/shared/src/contra
 - Content from the web is treated as untrusted data, never as instructions.
 - See [`.github/SECURITY.md`](.github/SECURITY.md) for reporting.
 
+## Deployment
+
+The web app and API run as one container (Next.js standalone build) behind Caddy, which handles HTTPS, on a single server with Docker Compose: `Dockerfile`, `docker-compose.yml` and `Caddyfile` at the repository root. Supabase (Postgres, Auth, Storage, Realtime) is a hosted project. Secrets live in an env file on the server, outside git and outside the image; only the two public `NEXT_PUBLIC_*` values are passed in while the image is built. Start it with `docker compose --env-file apps/web/.env.production up -d --build`.
+
 ## CI
 
 Every pull request runs: lint + typecheck (+ OpenAPI drift check), unit tests, web production build, expo-doctor, CodeQL, secret scanning, dependency review and a Conventional Commit title check. `main` accepts changes only through pull requests that pass them.

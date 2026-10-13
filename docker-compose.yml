@@ -1,0 +1,29 @@
+# One instance, two containers (ADR-053). Secrets live in apps/web/.env.production on the server, never in git.
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?put it in apps/web/.env.production (RUNBOOK §4)}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?put it in apps/web/.env.production (RUNBOOK §4)}
+    env_file: apps/web/.env.production
+    restart: unless-stopped
+    expose:
+      - "3000"
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?put DOMAIN in apps/web/.env.production (RUNBOOK §4)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  caddy_data:
+  caddy_config:

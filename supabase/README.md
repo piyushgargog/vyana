@@ -63,7 +63,7 @@ with an active caregiver, and pushes each caregiver phone once (`missed_dose_ale
 secret is the value of `CRON_SECRET` on the server):
 
 ```sql
-select vault.create_secret('https://<your-app>.vercel.app', 'app_url');
+select vault.create_secret('https://<your-domain>', 'app_url');
 select vault.create_secret('<the value of CRON_SECRET>', 'cron_secret');
 ```
 
