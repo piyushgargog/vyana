@@ -123,7 +123,7 @@ export default function PrivacyPolicyPage() {
                   To enable cross-pharmacy medicine availability and Jan Aushadhi price discovery.
                 </li>
                 <li>
-                  To support OPD appointment bookings and digital token generation across partner hospital departments.
+                  To support OPD appointment bookings and digital token generation across the hospital departments listed in the app.
                 </li>
               </ul>
               <p className="text-xs text-slate-500 italic">
@@ -174,7 +174,7 @@ export default function PrivacyPolicyPage() {
                   <strong>A caregiver you explicitly invite:</strong> a family member or guardian who inputs your temporary 6-digit invite code. Caregivers receive read-only visibility into dose adherence, active medicines, and emergency alerts. You can revoke their access at any moment.
                 </li>
                 <li>
-                  <strong>Doctors of your booked hospital department:</strong> doctors who belong to the hospital department where you booked an appointment (<code className="text-xs bg-slate-100 px-1 py-0.5 rounded font-mono">is_doctor_of</code>) can view your consultation records to provide clinical care during your appointment.
+                  <strong>Doctors of your booked hospital department:</strong> doctors who belong to the hospital department where you booked an appointment can see your health records (medicines, prescriptions, reports and conditions) so they can treat you. A cancelled appointment ends this access.
                 </li>
                 <li>
                   <strong>A doctor you choose to share with:</strong> either via an in-person consultation token or through a time-limited (24-hour) emergency share link or Medical ID QR code that you actively generate. You can revoke share links at any time.
@@ -184,7 +184,7 @@ export default function PrivacyPolicyPage() {
                 </li>
               </ul>
               <p className="text-xs text-slate-500">
-                Row-Level Security (RLS) policies enforced in our database are designed to stop other people from viewing or editing your data.
+                Access rules inside our database are designed to stop anyone else from viewing or editing your data.
               </p>
 
               {/* Data Processors */}
