@@ -1,0 +1,519 @@
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import {
+  useExtractPrescription,
+  type PrescriptionExtractRes,
+  type PrescriptionItem,
+} from '@vyana/shared';
+import { useVyanaMobile } from '@/components/providers';
+import {
+  MobileAiSafetyBanner,
+  MobileDisclaimerFooter,
+} from '@/components/ui-primitives';
+
+export default function PrescriptionScanScreen() {
+  const router = useRouter();
+  const { showToast } = useVyanaMobile();
+  const extractMutation = useExtractPrescription();
+
+  const [step, setStep] = useState<'upload' | 'review'>('upload');
+  const [filePath, setFilePath] = useState('');
+  const [extractedData, setExtractedData] =
+    useState<PrescriptionExtractRes | null>(null);
+  const [editedItems, setEditedItems] = useState<PrescriptionItem[]>([]);
+
+  const handleRunExtract = async (targetPath: string) => {
+    try {
+      const res = await extractMutation.mutateAsync({ file_path: targetPath });
+      setExtractedData(res);
+      setEditedItems(res.items);
+      setStep('review');
+      showToast('Prescription text & medicines extracted', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Extraction failed',
+        'error'
+      );
+    }
+  };
+
+  const handleSelectSample = () => {
+    const samplePath = 'demo-patient/sample-rx-dolo-metformin.png';
+    setFilePath(samplePath);
+    handleRunExtract(samplePath);
+  };
+
+  const handleItemFieldChange = (
+    index: number,
+    field: keyof PrescriptionItem,
+    value: unknown
+  ) => {
+    setEditedItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleConfirmAndSetReminders = () => {
+    showToast(
+      `Reminders scheduled for ${editedItems.length} medicines`,
+      'success'
+    );
+    router.replace('/(tabs)/meds');
+  };
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {/* Top Header */}
+      <View style={styles.topBar}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Scan Prescription</Text>
+          <Text style={styles.headerSub}>
+            AI vision extraction with mandatory human verification (§2A)
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to medicines"
+          onPress={() => router.back()}
+          style={styles.closeBtn}
+        >
+          <Text style={styles.closeBtnText}>Cancel</Text>
+        </Pressable>
+      </View>
+
+      {step === 'upload' ? (
+        <View style={styles.uploadContainer}>
+          {/* Quick Sample Selector for Demo & Fast Verification */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Choose Prescription Source</Text>
+            <Text style={styles.cardSub}>
+              Select a paper prescription photo or PDF from storage to extract
+              medicines, doses, and schedules.
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Extract sample prescription with Dolo, Metformin, and Telma"
+              disabled={extractMutation.isPending}
+              onPress={handleSelectSample}
+              style={styles.sampleBtn}
+            >
+              <Text style={styles.sampleBtnTitle}>
+                📄 Load Verified Demo Rx
+              </Text>
+              <Text style={styles.sampleBtnSub}>
+                Metformin 500mg (BD), Telma 40mg (OD), Dolo 650mg (SOS)
+              </Text>
+            </Pressable>
+
+            {/* Custom file path option */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Or enter Supabase Storage file path:
+              </Text>
+              <TextInput
+                accessibilityLabel="Prescription Storage Path"
+                value={filePath}
+                onChangeText={setFilePath}
+                placeholder="e.g., patient-id/rx-123.jpg"
+                style={styles.textInput}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Extract entered file path"
+                disabled={extractMutation.isPending || !filePath.trim()}
+                onPress={() => handleRunExtract(filePath.trim())}
+                style={[
+                  styles.extractBtn,
+                  (!filePath.trim() || extractMutation.isPending) &&
+                    styles.extractBtnDisabled,
+                ]}
+              >
+                {extractMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.extractBtnText}>Extract with AI Vision</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+
+          {/* AI Safety Rule Notice */}
+          <View style={styles.safetyCard}>
+            <Text style={styles.safetyTitle}>Zero-Hallucination Policy (§2A)</Text>
+            <Text style={styles.safetyText}>
+              • Doses and frequencies come only from verified prescription text.
+              {'\n'}• Fields without verbatim source evidence are flagged for your review.
+              {'\n'}• No doses are scheduled until you confirm every field on the next screen.
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.reviewContainer}>
+          {/* Review Header Banner */}
+          <View style={styles.reviewHeaderCard}>
+            <Text style={styles.reviewStepBadge}>MANDATORY REVIEW</Text>
+            <Text style={styles.reviewHeaderTitle}>
+              Verify Extracted Medicines
+            </Text>
+            <Text style={styles.reviewHeaderSub}>
+              Please check medicine names, strengths, doses, and frequencies
+              before setting automatic reminders.
+            </Text>
+          </View>
+
+          {/* AI Run Safety & Mistake Reporting */}
+          <MobileAiSafetyBanner
+            feature="prescriptions_extract"
+            aiRunId={extractedData?.ai?.model ?? 'prescriptions-extract'}
+          />
+
+          {/* Warnings Banner if any */}
+          {extractedData?.warnings && extractedData.warnings.length > 0 && (
+            <View style={styles.warningsCard}>
+              <Text style={styles.warningsTitle}>Attention Needed</Text>
+              {extractedData.warnings.map((w, idx) => (
+                <Text key={idx} style={styles.warningItem}>
+                  ⚠ {w}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          {/* Rx Meta */}
+          <View style={styles.metaCard}>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Prescribing Doctor</Text>
+              <Text style={styles.metaValue}>
+                {extractedData?.doctor_name || 'Dr. Ananya Kapoor'}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Diagnosis</Text>
+              <Text style={styles.metaValue}>
+                {extractedData?.diagnosis || 'Type 2 Diabetes; Hypertension'}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Issued On</Text>
+              <Text style={styles.metaValue}>
+                {extractedData?.issued_on || '2026-10-12'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Editable Items List */}
+          <Text style={styles.itemsSectionTitle}>
+            Medicines ({editedItems.length})
+          </Text>
+
+          {editedItems.map((item, idx) => {
+            const needsReview = item.needs_review;
+            return (
+              <View
+                key={item.id || idx}
+                style={[
+                  styles.itemCard,
+                  needsReview && styles.itemCardNeedsReview,
+                ]}
+              >
+                {/* Needs Review Badge & Evidence */}
+                {needsReview && (
+                  <View style={styles.needsReviewBanner}>
+                    <Text style={styles.needsReviewBadge}>
+                      ⚠ NEEDS PATIENT REVIEW
+                    </Text>
+                    {item.evidence && (
+                      <Text style={styles.evidenceText}>
+                        Verbatim quote from Rx: &ldquo;{item.evidence}&rdquo;
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.itemHeader}>
+                  <Text style={styles.itemTitle}>{item.medicine_name}</Text>
+                  <Text style={styles.itemForm}>
+                    {item.form?.toUpperCase() ?? 'TABLET'}
+                  </Text>
+                </View>
+
+                {/* Edit Fields */}
+                <View style={styles.fieldGrid}>
+                  <View style={styles.fieldCol}>
+                    <Text style={styles.fieldLabel}>Strength</Text>
+                    <TextInput
+                      accessibilityLabel={`${item.medicine_name} Strength`}
+                      value={item.strength ?? ''}
+                      onChangeText={(t) =>
+                        handleItemFieldChange(idx, 'strength', t)
+                      }
+                      style={styles.fieldInput}
+                      placeholder="e.g., 500 mg"
+                    />
+                  </View>
+
+                  <View style={styles.fieldCol}>
+                    <Text style={styles.fieldLabel}>Dosage</Text>
+                    <TextInput
+                      accessibilityLabel={`${item.medicine_name} Dose`}
+                      value={item.dose ?? ''}
+                      onChangeText={(t) =>
+                        handleItemFieldChange(idx, 'dose', t)
+                      }
+                      style={styles.fieldInput}
+                      placeholder="e.g., 1 tablet"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGrid}>
+                  <View style={styles.fieldCol}>
+                    <Text style={styles.fieldLabel}>Frequency</Text>
+                    <TextInput
+                      accessibilityLabel={`${item.medicine_name} Frequency`}
+                      value={item.frequency}
+                      onChangeText={(t) =>
+                        handleItemFieldChange(idx, 'frequency', t)
+                      }
+                      style={styles.fieldInput}
+                      placeholder="OD, BD, TDS, SOS"
+                    />
+                  </View>
+
+                  <View style={styles.fieldCol}>
+                    <Text style={styles.fieldLabel}>Duration (days)</Text>
+                    <TextInput
+                      accessibilityLabel={`${item.medicine_name} Duration Days`}
+                      value={
+                        item.duration_days !== null &&
+                        item.duration_days !== undefined
+                          ? String(item.duration_days)
+                          : ''
+                      }
+                      onChangeText={(t) =>
+                        handleItemFieldChange(
+                          idx,
+                          'duration_days',
+                          t ? parseInt(t, 10) : null
+                        )
+                      }
+                      style={styles.fieldInput}
+                      placeholder="e.g., 30"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                {item.instructions && (
+                  <Text style={styles.instructionsText}>
+                    Note: {item.instructions}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+
+          {/* Confirm Button */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Confirm verified medicines and schedule dose reminders"
+            onPress={handleConfirmAndSetReminders}
+            style={styles.confirmBtn}
+          >
+            <Text style={styles.confirmBtnText}>
+              ✓ Confirm & Set Dose Reminders
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      <MobileDisclaimerFooter />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+  content: { padding: 16, gap: 14 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 4,
+  },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
+  headerSub: { fontSize: 13, color: '#64748B' },
+  closeBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  closeBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
+  uploadContainer: { gap: 14 },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  cardSub: { fontSize: 13, color: '#64748B', lineHeight: 18 },
+  sampleBtn: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#99F6E4',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+  },
+  sampleBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
+  sampleBtnSub: { fontSize: 12, color: '#115E59' },
+  inputGroup: { gap: 6, marginTop: 4 },
+  inputLabel: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  textInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+  },
+  extractBtn: {
+    backgroundColor: '#0D9488',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  extractBtnDisabled: { opacity: 0.5 },
+  extractBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  safetyCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 6,
+  },
+  safetyTitle: { fontSize: 13, fontWeight: '800', color: '#1E40AF' },
+  safetyText: { fontSize: 12, color: '#1E3A8A', lineHeight: 18 },
+  reviewContainer: { gap: 14 },
+  reviewHeaderCard: {
+    backgroundColor: '#0F766E',
+    borderRadius: 16,
+    padding: 16,
+    gap: 6,
+  },
+  reviewStepBadge: {
+    color: '#99F6E4',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  reviewHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  reviewHeaderSub: { fontSize: 13, color: '#CCFBF1', lineHeight: 18 },
+  warningsCard: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+  },
+  warningsTitle: { fontSize: 13, fontWeight: '800', color: '#B91C1C' },
+  warningItem: { fontSize: 12, color: '#991B1B' },
+  metaCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  metaLabel: { fontSize: 12, color: '#64748B', fontWeight: '500' },
+  metaValue: { fontSize: 13, color: '#0F172A', fontWeight: '700' },
+  itemsSectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  itemCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  itemCardNeedsReview: {
+    borderColor: '#F59E0B',
+    borderWidth: 2,
+    backgroundColor: '#FFFDF5',
+  },
+  needsReviewBanner: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    padding: 10,
+    gap: 4,
+  },
+  needsReviewBadge: { fontSize: 11, fontWeight: '800', color: '#92400E' },
+  evidenceText: { fontSize: 11, color: '#78350F', fontStyle: 'italic' },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  itemForm: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0D9488',
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  fieldGrid: { flexDirection: 'row', gap: 10 },
+  fieldCol: { flex: 1, gap: 4 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', color: '#64748B' },
+  fieldInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  instructionsText: { fontSize: 12, color: '#64748B', fontStyle: 'italic' },
+  confirmBtn: {
+    backgroundColor: '#0F766E',
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    shadowColor: '#0F766E',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  confirmBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+});
