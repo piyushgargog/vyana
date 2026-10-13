@@ -184,7 +184,7 @@ export default function MobileProfileTab() {
           onPress={() => router.push('/medical-id')}
           style={styles.quickBtn}
         >
-          <Text style={styles.quickBtnText}>Offline Medical ID QR</Text>
+          <Text style={styles.quickBtnText}>Medical ID QR</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -193,6 +193,14 @@ export default function MobileProfileTab() {
           style={styles.quickBtn}
         >
           <Text style={styles.quickBtnText}>Caregiver Circle</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Symptom Triage"
+          onPress={() => router.push('/triage')}
+          style={styles.quickBtn}
+        >
+          <Text style={styles.quickBtnText}>Symptom Triage</Text>
         </Pressable>
       </View>
 

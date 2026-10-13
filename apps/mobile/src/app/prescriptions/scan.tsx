@@ -14,6 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   DEFAULT_TIMES,
   uploadFile,
+  useCheckInteractions,
   useExtractPrescription,
   type FrequencyType,
   type PrescriptionExtractRes,
@@ -30,6 +31,7 @@ export default function PrescriptionScanScreen() {
   const router = useRouter();
   const { supabase, showToast } = useVyanaMobile();
   const extractMutation = useExtractPrescription();
+  const checkInteractionsMutation = useCheckInteractions();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [isUploading, setIsUploading] = useState(false);
@@ -209,6 +211,11 @@ export default function PrescriptionScanScreen() {
 
       // 3. Schedule reminders
       await syncReminders(supabase);
+
+      // 4. Auto-check drug interactions for newly added prescription
+      await checkInteractionsMutation
+        .mutateAsync({ prescription_id: newRx.id })
+        .catch(() => {});
 
       showToast(
         `Confirmed ${editedItems.length} medicines and scheduled reminders`,

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, router } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { MobileAppProviders } from '@/components/providers';
@@ -10,20 +10,34 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   // Keeps phone's dose & follow-up test reminders in sync with patient records
   useReminderSync();
 
-  // A tapped reminder opens its screen: a dose → today's schedule, a refill → medicines, a check-up test → reports.
-  useEffect(
-    () =>
-      onNotificationTap((data) => {
-        if (data.kind === 'dose') router.push('/(tabs)');
-        else if (data.kind === 'refill') router.push('/(tabs)/meds');
-        else if (data.kind === 'follow_up') router.push('/(tabs)/reports');
-      }),
-    []
-  );
+  // Handles notification taps: caregiver alerts, missed doses, dose reminders, refills, and follow-up tests
+  useEffect(() => {
+    const unsubscribe = onNotificationTap((data) => {
+      if (
+        data.kind === 'caregiver_alert' ||
+        data.type === 'missed_dose' ||
+        data.patient_id
+      ) {
+        if (data.patient_id) {
+          router.push(`/caregiver?patient_id=${encodeURIComponent(data.patient_id)}`);
+        } else {
+          router.push('/caregiver');
+        }
+      } else if (data.kind === 'dose') {
+        router.push('/(tabs)');
+      } else if (data.kind === 'refill') {
+        router.push('/(tabs)/meds');
+      } else if (data.kind === 'follow_up') {
+        router.push('/(tabs)/reports');
+      }
+    });
+    return unsubscribe;
+  }, [router]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -75,6 +89,30 @@ function RootNavigator() {
           name="timeline"
           options={{
             title: 'Health Timeline',
+          }}
+        />
+        <Stack.Screen
+          name="triage"
+          options={{
+            title: 'Symptom Triage',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/index"
+          options={{
+            title: 'Caregiver Circle & Dashboard',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/invite"
+          options={{
+            title: 'Invite Caregiver',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/enter-code"
+          options={{
+            title: 'Enter Caregiver Code',
           }}
         />
         <Stack.Screen
