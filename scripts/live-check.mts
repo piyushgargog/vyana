@@ -138,7 +138,7 @@ await check("emergency: nearby hospitals never fail; SOS (patient only) returns 
   const near = await api("POST", "/api/emergency/nearby", P, { lat: 28.5672, lng: 77.21 });
   expect(near.status === 200 && Array.isArray(near.json?.hospitals), `nearby ${near.status}`);
   const sos = await api("POST", "/api/emergency/sos", P, { lat: 28.5672, lng: 77.21, note: "live check" });
-  const mapLink = String(sos.json?.sms_body ?? "").match(/https?://S+/)?.[0];
+  const mapLink = String(sos.json?.sms_body ?? "").match(/https?:\/\/\S+/)?.[0];
   expect(sos.status === 200 && sos.json?.request_id && mapLink && new URL(mapLink).hostname === "maps.google.com", `sos ${sos.status} ${sos.text.slice(0, 120)}`);
   return `${near.json?.hospitals.length} hospitals, ${sos.json?.contacts.length} contacts`;
 });
