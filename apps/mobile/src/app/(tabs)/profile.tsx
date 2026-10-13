@@ -26,7 +26,7 @@ import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 
 export default function MobileProfileTab() {
   const router = useRouter();
-  const { supabase, useMocks, setUseMocks, showToast } = useVyanaMobile();
+  const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
@@ -129,18 +129,42 @@ export default function MobileProfileTab() {
     }
   };
 
+  const [deletePassword, setDeletePassword] = useState('');
+
   const handleConfirmDeleteAccount = async () => {
+    if (!deletePassword) {
+      showToast('Please enter your password to confirm deletion', 'warning');
+      return;
+    }
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email;
+      if (userEmail) {
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: deletePassword,
+        });
+        if (reauthError) {
+          showToast(`Authentication failed: ${reauthError.message}`, 'error');
+          return;
+        }
+      }
       await deleteAccountMutation.mutateAsync();
       await supabase.auth.signOut();
       setConfirmDeleteStep(false);
+      setDeletePassword('');
       showToast('Account & personal health records deleted', 'warning');
       router.replace('/(auth)/login');
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : 'Could not delete account',
-        'error'
-      );
+    } catch (err: unknown) {
+      const errorObj = err as { status?: number; code?: string; message?: string };
+      if (errorObj?.status === 403 || errorObj?.code === 'REAUTH_REQUIRED') {
+        showToast('Recent login required (403). Please enter password again.', 'error');
+      } else {
+        showToast(
+          err instanceof Error ? err.message : 'Could not delete account',
+          'error'
+        );
+      }
     }
   };
 
@@ -174,19 +198,7 @@ export default function MobileProfileTab() {
 
       {/* Personal Profile & Allergies */}
       <View style={styles.card}>
-        <View style={styles.headerRow}>
-          <Text style={styles.cardTitle}>Personal Profile & Allergies</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Toggle Demo Mocks Mode"
-            onPress={() => setUseMocks(!useMocks)}
-            style={styles.modeChip}
-          >
-            <Text style={styles.modeChipText}>
-              {useMocks ? 'Demo Mocks: ON' : 'Live API: ON'}
-            </Text>
-          </Pressable>
-        </View>
+        <Text style={styles.cardTitle}>Personal Profile & Allergies</Text>
 
         <Text style={styles.label}>Full Name</Text>
         <TextInput
@@ -420,8 +432,17 @@ export default function MobileProfileTab() {
             </Text>
             <Text style={styles.confirmDeleteSub}>
               This action permanently deletes your profile, prescriptions, lab
-              reports, vitals, and storage files. This cannot be undone.
+              reports, vitals, and storage files. This cannot be undone. Enter
+              your password to verify:
             </Text>
+            <TextInput
+              accessibilityLabel="Confirm Password to Delete Account"
+              secureTextEntry
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              placeholder="Enter your current password"
+              style={styles.input}
+            />
             <View style={styles.row}>
               <Pressable
                 accessibilityRole="button"
