@@ -23,7 +23,8 @@ The name comes from Ayurveda. **Vyana** is the prana that starts at the heart an
 | 🤖 | **AI health assistant** | Chat in English, Hindi or Hinglish; it knows your medicines and reports and cites trusted sources |
 | 🚑 | **Emergency** | One tap calls 108, shares your live location, opens Blinkit Ambulance where available, lists nearby emergency hospitals, and shows your medical ID QR |
 | 👨‍👩‍👧 | **Caregiver mode** | Family members can follow a patient's medicines and get an alert when a dose is missed |
-| ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions and a symptom check that points you to the right department, or to 108 |
+| ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions, a symptom check that points you to the right department or to 108, and alerts when a medicine you take appears in a government quality notice |
+| 🔎 | **More from the live web** | Lab test price comparison and Ayushman Bharat (PM-JAY) hospitals near you |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
 ## How TinyFish is used
@@ -38,7 +39,9 @@ Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | Care plans | **Search** + **Fetch** of guideline pages; every bullet quotes its page | `POST /api/care-plan` | [`care-plan.ts`](apps/web/lib/server/care-plan.ts) |
 | Drug interaction check | **Search** + **Fetch** on trusted medicine sites; each interaction shown with its exact sentence | `POST /api/medicines/interactions` | [`interactions.ts`](apps/web/lib/server/interactions.ts) |
 | AI assistant | **Search** + **Fetch** as the assistant's tools, trusted health sites only; only fetched links can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
-| Medicine quality alerts (planned) | **Monitor** + **Search** + **Fetch** | | |
+| Lab test price compare | **Agent** per lab in the background; each price is confirmed on the lab's page with **Fetch** | `POST /api/labs/compare`, `GET /api/labs/compare/{job_id}` | [`tinyfish/labs.ts`](apps/web/lib/server/tinyfish/labs.ts) |
+| PM-JAY hospitals | **Search** + **Fetch**, government pages only | `POST /api/schemes/pmjay-hospitals` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
+| Medicine quality alerts | **Monitor** watches CDSCO notices and calls a webhook; **Search** + **Fetch** for the on-demand check; government sources only | `POST /api/webhooks/tinyfish-monitor`, `POST /api/alerts/check` | [`alerts.ts`](apps/web/lib/server/alerts.ts) |
 
 Every TinyFish call goes through one client ([`tinyfish/client.ts`](apps/web/lib/server/tinyfish/client.ts)) with timeouts, a per-minute agent limit and an offline mock mode. Public results are cached in Postgres, and `pnpm prewarm` fills the cache before a demo. Live checks: `pnpm smoke:tinyfish`, `pnpm smoke:basket`, and `pnpm verify:interactions`, `verify:red-flags` and `verify:brands`, which re-check the reviewed safety lists against their source pages.
 
@@ -59,7 +62,8 @@ Details: [`ARCHITECTURE.md`](ARCHITECTURE.md#ai-safety).
 **Backend:** Next.js Route Handlers
 **Database:** Supabase (Postgres, Auth, Storage, Realtime)
 **Web agents:** TinyFish
-**AI:** Vercel AI SDK
+**AI:** Vercel AI SDK, provider-agnostic (Gemini, Groq, NVIDIA, OpenRouter, Hugging Face)
+**Hosting:** Docker Compose · Caddy · Cloudflare, on one server
 **Tooling:** TypeScript · pnpm + Turborepo
 
 ## Repository layout
@@ -68,7 +72,9 @@ Details: [`ARCHITECTURE.md`](ARCHITECTURE.md#ai-safety).
 apps/web         Next.js: patient web, doctor portal, admin, API routes
 apps/mobile      Expo: patient mobile app
 packages/shared  @vyana/shared: contracts, types, API client, data hooks
-supabase/        migrations, RLS policies, seed data
+supabase/        migrations, RLS policies, seed data, database tests
+scripts/         live checks, safety evaluation, cache prewarm, OpenAPI generator
+Dockerfile · docker-compose.yml · Caddyfile    deployment
 ```
 
 ## Getting started
@@ -85,6 +91,10 @@ pnpm dev:mobile    # Expo dev server (scan the QR code with Expo Go)
 
 Environment variables: copy `apps/web/.env.example` and `apps/mobile/.env.example` to `.env.local` / `.env` and fill them in.
 
+Useful checks: `pnpm live:check` (the API against a running Supabase), `pnpm eval:safety` (AI safety cases per provider), `pnpm prewarm` (fill the cache before a demo).
+
+**Deploy:** `docker compose --env-file apps/web/.env.production up -d --build` runs the app behind Caddy on any server with Docker; see [Deployment](ARCHITECTURE.md#deployment).
+
 ## Documentation
 
 | Doc | What it covers |
@@ -93,6 +103,8 @@ Environment variables: copy `apps/web/.env.example` and `apps/mobile/.env.exampl
 | [`apps/web/openapi.yaml`](apps/web/openapi.yaml) | HTTP API reference (OpenAPI 3.1, generated from the contracts) |
 | [`CHANGELOG.md`](CHANGELOG.md) | What changed and when |
 | [`apps/web/tests/README.md`](apps/web/tests/README.md) | How the backend is tested |
+| [`supabase/README.md`](supabase/README.md) · [`supabase/DATA-FLOW.md`](supabase/DATA-FLOW.md) | Database setup and how data moves between the phone, Supabase, the API and the AI model |
+| [`apps/mobile/BUILD.md`](apps/mobile/BUILD.md) | Building the Android preview (APK) |
 | [`AGENTS.md`](AGENTS.md) | Rules for AI coding agents working in this repo |
 | [`ACCESSIBILITY.md`](.github/ACCESSIBILITY.md) | Accessibility target (WCAG 2.2 AA) and how to report a barrier |
 

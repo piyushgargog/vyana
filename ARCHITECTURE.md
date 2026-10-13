@@ -8,6 +8,8 @@ flowchart LR
     M["Mobile app<br/>Expo · React Native"]
     W["Web app<br/>Next.js pages"]
   end
+  CF["Cloudflare<br/>proxy · TLS"]
+  CD["Caddy<br/>HTTPS · headers"]
   subgraph Server["Next.js API routes (apps/web/app/api)"]
     API["Route handlers<br/>auth · validation · errors"]
     TF["TinyFish layer<br/>Search · Fetch · Agent · Monitor"]
@@ -22,7 +24,7 @@ flowchart LR
   end
   WEB(("Live web<br/>pharmacies · labs · NMC register<br/>hospitals · CDSCO · health sites"))
 
-  M & W -- "@vyana/shared hooks<br/>(Bearer JWT)" --> API
+  M & W -- "@vyana/shared hooks<br/>(Bearer JWT)" --> CF --> CD --> API
   M & W -- "direct CRUD under RLS" --> DB
   M & W -- "uploads" --> ST
   RT -- "live status" --> M & W
@@ -59,7 +61,9 @@ flowchart LR
 | Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
 | Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
 | Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
-| Medicine quality alerts | **Monitor** + **Search** + **Fetch** | A monitor watches CDSCO quality alerts and calls a webhook; matches against users' medicines become push notifications |
+| Medicine quality alerts | **Monitor** + **Search** + **Fetch** | A monitor watches CDSCO quality alerts and calls a webhook; government sources only; matches against users' medicines become push notifications |
+| Lab test price compare | **Agent** (async), **Search**, **Fetch** | One agent per lab in the background, like the basket; a price counts only when it appears on the lab's page |
+| PM-JAY hospitals | **Search** + **Fetch** | Empanelled hospitals near the user from government pages; names, addresses and specialities verbatim |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
 
@@ -120,6 +124,8 @@ Every API route has a request and response schema in `packages/shared/src/contra
 ## Security boundaries
 
 - Only `apps/web` server code holds secrets (Supabase service role, TinyFish, LLM). The mobile app and the browser never see them.
+- The server sits behind Cloudflare; its firewall accepts web traffic only from Cloudflare, and SSH only from the administrator's address, so the server's own address is never public. Caddy adds security headers (HSTS, content-type, frame, referrer and permissions policies).
+- An AI provider sees patient text only after names, phone numbers, addresses and IDs are removed, and only if its data terms are recorded; the code refuses other providers in production.
 - The service-role client is used only for server-owned writes, after an explicit ownership check.
 - Content from the web is treated as untrusted data, never as instructions.
 - See [`.github/SECURITY.md`](.github/SECURITY.md) for reporting.
@@ -127,6 +133,12 @@ Every API route has a request and response schema in `packages/shared/src/contra
 ## Deployment
 
 The web app and API run as one container (Next.js standalone build) behind Caddy, which handles HTTPS, on a single server with Docker Compose: `Dockerfile`, `docker-compose.yml` and `Caddyfile` at the repository root. Supabase (Postgres, Auth, Storage, Realtime) is a hosted project. Secrets live in an env file on the server, outside git and outside the image; only the two public `NEXT_PUBLIC_*` values are passed in while the image is built. Start it with `docker compose --env-file apps/web/.env.production up -d --build`.
+
+```text
+Browser / app → Cloudflare (proxy, TLS) → firewall (Cloudflare only) → Caddy (HTTPS, headers) → web container → Supabase · TinyFish · AI provider
+```
+
+The web container publishes no port; Caddy reaches it over the Compose network. Updates are `git pull` and the same `docker compose` command; a rollback is checking out the previous commit and running it again.
 
 ## CI
 
