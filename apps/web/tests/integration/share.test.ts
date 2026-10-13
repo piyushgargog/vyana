@@ -1,0 +1,196 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ShareRes } from "@vyana/shared";
+import { ageFromDob, SHARE_TOKEN_FORMAT } from "@/lib/server/data/share";
+import { memoryDb, type Row } from "../fixtures/memory-db";
+
+const PATIENT = "11111111-1111-4111-8111-111111111111";
+const OTHER = "22222222-2222-4222-8222-222222222222";
+const NOW = new Date("2026-10-13T06:00:00Z");
+const hex = (c: string) => c.repeat(48);
+const T_MEDICAL = hex("a");
+const T_TIMELINE = hex("b");
+const T_EXPIRED = hex("c");
+const T_REVOKED = hex("d");
+const T_EDGE = hex("e");
+
+let db: ReturnType<typeof memoryDb>;
+vi.mock("@/lib/server/supabase-admin", () => ({
+  supabaseAdmin: () => db.sb,
+  requireEnv: (name: string) => process.env[name] ?? "",
+}));
+
+const { GET } = await import("@/app/api/share/[token]/route");
+
+const get = (token: string, headers: Record<string, string> = {}) =>
+  GET(new Request(`http://localhost/api/share/${token}`, { headers }), { params: Promise.resolve({ token }) });
+
+function world(): Record<string, Row[]> {
+  return {
+    share_links: [
+      { token: T_MEDICAL, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-14T06:00:00Z", revoked: false },
+      { token: T_TIMELINE, patient_id: PATIENT, kind: "timeline", expires_at: "2026-10-14T06:00:00Z", revoked: false },
+      { token: T_EXPIRED, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-13T05:59:59Z", revoked: false },
+      { token: T_REVOKED, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-20T00:00:00Z", revoked: true },
+      { token: T_EDGE, patient_id: PATIENT, kind: "medical_id", expires_at: NOW.toISOString(), revoked: false },
+    ],
+    profiles: [
+      { id: PATIENT, full_name: "Aryan Sharma", dob: "1990-05-15", blood_group: "O+", allergies: ["Penicillin"], phone: "+91 00000 00001" },
+      { id: OTHER, full_name: "Someone Else", dob: "1980-01-01", blood_group: "A+", allergies: ["Peanuts"] },
+    ],
+    conditions: [
+      { id: "c1", patient_id: PATIENT, name: "Type 2 Diabetes", active: true, created_at: "2026-01-01T00:00:00Z", diagnosed_on: "2022-01-15", source: "doctor" },
+      { id: "c2", patient_id: PATIENT, name: "Old sprain", active: false, created_at: "2026-01-02T00:00:00Z", diagnosed_on: "2020-02-02", source: "patient" },
+      { id: "c3", patient_id: OTHER, name: "Asthma", active: true, created_at: "2026-01-03T00:00:00Z", diagnosed_on: null, source: "patient" },
+    ],
+    prescription_items: [
+      { id: "i1", patient_id: PATIENT, medicine_name: "Metformin", strength: "500 mg", dose: "1 tablet", frequency: "BD", active: true, end_date: null, created_at: "2026-01-01T00:00:00Z" },
+      { id: "i2", patient_id: PATIENT, medicine_name: "Antibiotic", strength: null, dose: null, frequency: "TDS", active: true, end_date: "2026-10-01", created_at: "2026-01-02T00:00:00Z" },
+      { id: "i3", patient_id: PATIENT, medicine_name: "Switched off", strength: null, dose: null, frequency: "OD", active: false, end_date: null, created_at: "2026-01-03T00:00:00Z" },
+      { id: "i4", patient_id: OTHER, medicine_name: "Not mine", strength: null, dose: null, frequency: "OD", active: true, end_date: null, created_at: "2026-01-04T00:00:00Z" },
+    ],
+    emergency_contacts: [
+      { patient_id: PATIENT, name: "Sunita Sharma", phone: "+91 00000 00006", created_at: "2026-01-01T00:00:00Z" },
+      { patient_id: OTHER, name: "Not mine", phone: "+91 00000 00099", created_at: "2026-01-01T00:00:00Z" },
+    ],
+    prescriptions: [
+      { id: "rx1", patient_id: PATIENT, issued_on: "2026-09-29", diagnosis: "Type 2 Diabetes", doctor_name: "Dr. Rajesh Mehta", source: "doctor" },
+      { id: "rx2", patient_id: OTHER, issued_on: "2026-09-01", diagnosis: "Asthma", doctor_name: null, source: "upload" },
+    ],
+    lab_reports: [
+      { id: "lab1", patient_id: PATIENT, report_date: "2026-10-06", created_at: "2026-10-06T10:00:00Z", lab_name: "Sample Diagnostics", summary: "HbA1c improved to 6.8%." },
+    ],
+    appointments: [
+      { id: "ap1", patient_id: PATIENT, appointment_date: "2026-09-29", token_no: 12, status: "completed", reason: "Checkup", hospitals: { name: "AIIMS" }, departments: { name: "General Medicine" } },
+    ],
+  };
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+  db = memoryDb(world());
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("GET /api/share/[token]", () => {
+  it("opens the medical ID of a valid link without any sign-in", async () => {
+    const res = await get(T_MEDICAL);
+    expect(res.status).toBe(200);
+    const body = ShareRes.parse(await res.json());
+    expect(body).toEqual({
+      kind: "medical_id",
+      profile: {
+        full_name: "Aryan Sharma",
+        age: 36,
+        blood_group: "O+",
+        allergies: ["Penicillin"],
+        conditions: ["Type 2 Diabetes"],
+        active_medicines: [{ name: "Metformin", strength: "500 mg", dose: "1 tablet", frequency: "BD" }],
+        emergency_contacts: [{ name: "Sunita Sharma", phone: "+91 00000 00006" }],
+      },
+      timeline: null,
+      expires_at: "2026-10-14T06:00:00.000Z",
+    });
+  });
+
+  it("tells caches, search engines and referrers to leave it alone", async () => {
+    const res = await get(T_MEDICAL);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+  });
+
+  it("leaves out inactive conditions, switched-off and ended medicines, and everything of another patient", async () => {
+    const text = JSON.stringify(await (await get(T_MEDICAL)).json());
+    for (const hidden of ["Old sprain", "Switched off", "Antibiotic", "Not mine", "Asthma", "Peanuts", "Someone Else"]) expect(text).not.toContain(hidden);
+  });
+
+  it("does not hand out the patient id, the token or contact details of the patient themselves", async () => {
+    const text = JSON.stringify(await (await get(T_MEDICAL)).json());
+    expect(text).not.toContain(PATIENT);
+    expect(text).not.toContain(T_MEDICAL);
+    expect(text).not.toContain("+91 00000 00001"); // the patient's own phone
+  });
+
+  it("opens a timeline link: the basics without emergency contacts, and the history newest first", async () => {
+    const res = await get(T_TIMELINE);
+    expect(res.status).toBe(200);
+    const body = ShareRes.parse(await res.json());
+    expect(body.kind).toBe("timeline");
+    expect(body.profile.full_name).toBe("Aryan Sharma");
+    expect(body.profile.emergency_contacts).toEqual([]);
+    expect(body.timeline?.map((e) => [e.date, e.kind])).toEqual([
+      ["2026-10-06", "report"],
+      ["2026-09-29", "appointment"],
+      ["2026-09-29", "prescription"],
+      ["2022-01-15", "condition"],
+      ["2020-02-02", "condition"],
+    ]);
+    expect(body.timeline?.[0]).toMatchObject({ title: "Lab report: Sample Diagnostics", summary: "HbA1c improved to 6.8%." });
+    expect(JSON.stringify(body)).not.toContain("Asthma"); // another patient's prescription and condition
+  });
+
+  it("answers 404 for an expired link, even by a second", async () => {
+    const res = await get(T_EXPIRED);
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("NOT_FOUND");
+  });
+
+  it("answers 404 for a link that expires at this very moment", async () => {
+    expect((await get(T_EDGE)).status).toBe(404);
+  });
+
+  it("answers 404 for a revoked link, and for one that never existed", async () => {
+    expect((await get(T_REVOKED)).status).toBe(404);
+    expect((await get(hex("f"))).status).toBe(404);
+  });
+
+  it("gives the same answer for every kind of 404, so nobody can tell them apart", async () => {
+    const bodies = await Promise.all([T_EXPIRED, T_REVOKED, hex("f"), "short", "../etc/passwd"].map(async (t) => (await get(t)).json().then((j) => JSON.stringify(j.error))));
+    expect(new Set(bodies).size).toBe(1);
+    expect(bodies[0]).toContain("expired or was turned off");
+  });
+
+  it("never asks the database about something that cannot be a token", async () => {
+    for (const bad of ["", "short", hex("A"), hex("g"), "a".repeat(47), "a".repeat(49), `${hex("a")}%20`, "../../x", "' or 1=1 --"]) {
+      expect((await get(bad)).status, bad).toBe(404);
+    }
+    expect(db.requests).toHaveLength(0);
+  });
+
+  it("does not take a signed-in user's token as a shortcut", async () => {
+    expect((await get(hex("f"), { authorization: "Bearer anything" })).status).toBe(404);
+  });
+
+  it("opens again after the link is renewed, and closes when it is revoked", async () => {
+    expect((await get(T_MEDICAL)).status).toBe(200);
+    db.table("share_links").find((l) => l.token === T_MEDICAL)!.revoked = true;
+    expect((await get(T_MEDICAL)).status).toBe(404);
+  });
+});
+
+describe("token format", () => {
+  it("is 48 lower-case hex characters, what gen_random_bytes(24) produces", () => {
+    expect(SHARE_TOKEN_FORMAT.test(hex("a"))).toBe(true);
+    expect(SHARE_TOKEN_FORMAT.test("0123456789abcdef".repeat(3))).toBe(true);
+    expect(SHARE_TOKEN_FORMAT.test(hex("A"))).toBe(false);
+  });
+});
+
+describe("ageFromDob", () => {
+  const today = new Date("2026-10-13T06:00:00Z");
+  it("counts whole years and the birthday itself", () => {
+    expect(ageFromDob("1990-10-13", today)).toBe(36);
+    expect(ageFromDob("1990-10-14", today)).toBe(35);
+    expect(ageFromDob("1990-05-15", today)).toBe(36);
+    expect(ageFromDob("2026-10-13", today)).toBe(0);
+  });
+  it("is null without a usable date, or for a date in the future", () => {
+    expect(ageFromDob(null, today)).toBeNull();
+    expect(ageFromDob("", today)).toBeNull();
+    expect(ageFromDob("not-a-date", today)).toBeNull();
+    expect(ageFromDob("2030-01-01", today)).toBeNull();
+  });
+});
