@@ -32,7 +32,6 @@ export default function PrescriptionScanScreen() {
   const checkInteractionsMutation = useCheckInteractions();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
-  const [filePath, setFilePath] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [extractedData, setExtractedData] =
@@ -75,7 +74,6 @@ export default function PrescriptionScanScreen() {
         { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
         ext
       );
-      setFilePath(uploadedPath);
       await handleRunExtract(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Camera upload failed', 'error');
@@ -105,7 +103,6 @@ export default function PrescriptionScanScreen() {
         { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
         ext
       );
-      setFilePath(uploadedPath);
       await handleRunExtract(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Gallery upload failed', 'error');
@@ -129,7 +126,6 @@ export default function PrescriptionScanScreen() {
         { uri: asset.uri, mimeType: 'application/pdf' },
         'pdf'
       );
-      setFilePath(uploadedPath);
       await handleRunExtract(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Document upload failed', 'error');
@@ -157,58 +153,55 @@ export default function PrescriptionScanScreen() {
     }
     setIsSaving(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user) {
-        throw new Error('User session not found');
+      const prescriptionId = extractedData?.prescription_id;
+
+      // 1. Delete any items removed by the user during review
+      const currentIds = new Set(editedItems.map((i) => i.id));
+      const removedIds = (extractedData?.items || [])
+        .filter((i) => !currentIds.has(i.id))
+        .map((i) => i.id);
+
+      if (removedIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from('prescription_items')
+          .delete()
+          .in('id', removedIds);
+        if (delErr) throw delErr;
       }
-      const userId = authData.user.id;
 
-      // 1. Insert prescription row
-      const { data: newRx, error: rxErr } = await supabase
-        .from('prescriptions')
-        .insert({
-          patient_id: userId,
-          source: 'upload',
-          file_path: filePath,
-          doctor_id: null,
-          issued_on: new Date().toISOString().slice(0, 10),
-        })
-        .select()
-        .single();
-      if (rxErr || !newRx) throw rxErr || new Error('Could not create prescription record');
-
-      // 2. Insert reviewed prescription items
-      const itemsToInsert = editedItems.map((item) => ({
-        prescription_id: newRx.id,
-        patient_id: userId,
-        medicine_name: item.medicine_name.trim(),
-        strength: item.strength?.trim() || null,
-        dose: item.dose?.trim() || null,
-        form: item.form || 'tablet',
-        frequency: item.frequency || 'OD',
-        times: item.times && item.times.length > 0 ? item.times : ['09:00'],
-        with_food: (item.with_food as 'before' | 'after' | 'any') || 'after',
-        instructions: item.instructions?.trim() || null,
-        duration_days: item.duration_days ? Number(item.duration_days) : null,
-        start_date: item.start_date || new Date().toISOString().slice(0, 10),
-        end_date: item.end_date || null,
-        active: true,
-      }));
-      const { error: itemsErr } = await supabase
-        .from('prescription_items')
-        .insert(itemsToInsert);
-      if (itemsErr) throw itemsErr;
+      // 2. Update existing items in DB with patient-verified values (no invented defaults)
+      for (const item of editedItems) {
+        const { error: updateErr } = await supabase
+          .from('prescription_items')
+          .update({
+            medicine_name: item.medicine_name.trim(),
+            strength: item.strength?.trim() || null,
+            dose: item.dose?.trim() || null,
+            form: item.form,
+            frequency: item.frequency,
+            times: item.times,
+            with_food: item.with_food,
+            instructions: item.instructions?.trim() || null,
+            duration_days: item.duration_days ? Number(item.duration_days) : null,
+            start_date: item.start_date,
+            end_date: item.end_date || null,
+          })
+          .eq('id', item.id);
+        if (updateErr) throw updateErr;
+      }
 
       // 3. Schedule reminders
       await syncReminders(supabase);
 
       // 4. Auto-check drug interactions for newly added prescription
-      await checkInteractionsMutation
-        .mutateAsync({ prescription_id: newRx.id })
-        .catch(() => {});
+      if (prescriptionId) {
+        await checkInteractionsMutation
+          .mutateAsync({ prescription_id: prescriptionId })
+          .catch(() => {});
+      }
 
       showToast(
-        `Saved ${editedItems.length} medicines and scheduled reminders`,
+        `Confirmed ${editedItems.length} medicines and scheduled reminders`,
         'success'
       );
       router.replace('/(tabs)/meds');

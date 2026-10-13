@@ -29,12 +29,10 @@ export default function ReportUploadScreen() {
   const analyzeMutation = useAnalyzeReport();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
-  const [filePath, setFilePath] = useState('');
   const [reportDate, setReportDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
   const [isUploading, setIsUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [analyzedData, setAnalyzedData] =
     useState<ReportAnalyzeRes | null>(null);
   const [editedValues, setEditedValues] = useState<LabValue[]>([]);
@@ -78,7 +76,6 @@ export default function ReportUploadScreen() {
         { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
         ext
       );
-      setFilePath(uploadedPath);
       await handleRunAnalyze(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Camera upload failed', 'error');
@@ -108,7 +105,6 @@ export default function ReportUploadScreen() {
         { uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' },
         ext
       );
-      setFilePath(uploadedPath);
       await handleRunAnalyze(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Gallery upload failed', 'error');
@@ -132,7 +128,6 @@ export default function ReportUploadScreen() {
         { uri: asset.uri, mimeType: 'application/pdf' },
         'pdf'
       );
-      setFilePath(uploadedPath);
       await handleRunAnalyze(uploadedPath);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Document upload failed', 'error');
@@ -164,37 +159,12 @@ export default function ReportUploadScreen() {
     });
   };
 
-  const handleSaveToRecords = async () => {
-    setIsSaving(true);
-    try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user) {
-        throw new Error('User session not found');
-      }
-
-      const { error: saveErr } = await supabase.from('lab_reports').insert({
-        patient_id: authData.user.id,
-        file_path: filePath,
-        report_date: reportDate || null,
-        lab_name: analyzedData?.lab_name || null,
-        summary: analyzedData?.summary || null,
-        extracted_json: { values: editedValues, summary: analyzedData?.summary },
-        status: 'reviewed',
-      });
-      if (saveErr) throw saveErr;
-
-      showToast(
-        `Saved ${editedValues.length} lab results to your health record`,
-        'success'
-      );
+  const handleDone = () => {
+    showToast('Lab report analyzed and added to health records', 'success');
+    if (analyzedData?.report_id) {
+      router.replace(`/reports/${analyzedData.report_id}` as never);
+    } else {
       router.replace('/(tabs)/reports');
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : 'Could not save lab report',
-        'error'
-      );
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -416,21 +386,16 @@ export default function ReportUploadScreen() {
             );
           })}
 
-          {/* Save Button */}
+          {/* Done Button */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save verified lab report to health records"
-            disabled={isSaving}
-            onPress={handleSaveToRecords}
-            style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
+            accessibilityLabel="Done reviewing report. Return to health records"
+            onPress={handleDone}
+            style={styles.saveBtn}
           >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.saveBtnText}>
-                ✓ Save to Health Records & Timeline
-              </Text>
-            )}
+            <Text style={styles.saveBtnText}>
+              ✓ Done · View in Health Records
+            </Text>
           </Pressable>
         </View>
       )}
