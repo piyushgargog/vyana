@@ -102,9 +102,9 @@ export default function MedicalIdScreen() {
 
       {/* Offline Medical ID Summary */}
       <View style={styles.offlineBadgeCard}>
-        <Text style={styles.offlineBadgeTitle}>EMERGENCY MEDICAL ID</Text>
+        <Text style={styles.offlineBadgeTitle}>OFFLINE SCANNABLE MEDICAL ID</Text>
         <Text style={styles.offlineBadgeText}>
-          Self-contained emergency summary with blood group, allergies, active medicines, and emergency contacts for first responders.
+          Self-contained offline QR code. Any phone camera or first responder can scan to read your blood group, allergies, active medicines, and emergency contacts without internet.
         </Text>
       </View>
 
@@ -113,10 +113,10 @@ export default function MedicalIdScreen() {
         <MobileQrGrid
           data={qrData}
           size={270}
-          label="Emergency Medical ID QR Display"
+          label="Offline Emergency Medical ID QR Code"
         />
         <Text style={styles.qrCaption}>
-          Medical ID QR Display · Use 24h Share Link below for full verified digital access
+          Scan with phone camera or QR scanner · Or use 24h Share Link below
         </Text>
       </View>
 

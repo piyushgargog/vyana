@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import {
+  buildQrMatrix,
   computeItemRefill,
   generateQrMatrix,
   parseCarePlanJson,
@@ -14,7 +15,7 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from './providers';
 
-export { computeItemRefill, generateQrMatrix, parseCarePlanJson };
+export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
 
 export function MobileQrGrid({
   data,
@@ -25,9 +26,9 @@ export function MobileQrGrid({
   size?: number;
   label?: string;
 }) {
-  const grid = 25;
-  const matrix = generateQrMatrix(data, grid);
-  const cellSize = Math.floor((size - 24) / grid);
+  const matrix = buildQrMatrix(data, 'L');
+  const grid = matrix.length;
+  const cellSize = Math.max(2, Math.floor((size - 24) / grid));
 
   return (
     <View
