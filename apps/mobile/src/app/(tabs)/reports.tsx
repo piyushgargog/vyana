@@ -11,6 +11,7 @@ import { useLabReports, useLabValueHistory } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
   MobileTrendChart,
 } from '@/components/ui-primitives';
 
@@ -82,15 +83,20 @@ export default function MobileReportsTab() {
 
       {/* Lab Reports List */}
       {reportsLoading ? (
-        <View style={styles.reportCard}>
-          <Text style={styles.summaryText}>Loading lab reports…</Text>
-        </View>
+        <MobileSkeletonCard lines={3} />
       ) : reports.length === 0 ? (
         <View style={styles.reportCard}>
           <Text style={styles.summaryText}>
-            No lab reports uploaded yet. Tap &ldquo;+ Upload Lab Report&rdquo;
-            to analyze a report.
+            No lab reports uploaded yet. Upload a report photo or PDF to see extracted values, abnormal flags, and health trends.
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Upload your first lab report"
+            onPress={() => router.push('/reports/upload')}
+            style={[styles.uploadBtn, { marginTop: 12 }]}
+          >
+            <Text style={styles.uploadBtnText}>+ Upload First Report</Text>
+          </Pressable>
         </View>
       ) : (
         reports.map((rep) => (

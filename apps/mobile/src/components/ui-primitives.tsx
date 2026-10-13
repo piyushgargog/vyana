@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Animated,
+  DimensionValue,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   View,
+  ViewStyle,
 } from 'react-native';
 import {
   buildQrMatrix,
@@ -228,6 +232,89 @@ export function MobileAiSafetyBanner({
   );
 }
 
+export function MobileSkeleton({
+  width = '100%',
+  height = 16,
+  borderRadius = 8,
+  style,
+}: {
+  width?: number | `${number}%` | 'auto';
+  height?: number;
+  borderRadius?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const [opacity] = useState(() => new Animated.Value(0.35));
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.85,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.35,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      accessibilityRole="none"
+      accessibilityLabel="Loading content"
+      style={[
+        {
+          width: width as DimensionValue,
+          height,
+          borderRadius,
+          backgroundColor: '#E2E8F0',
+          opacity,
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+export function MobileSkeletonCard({
+  lines = 3,
+  style,
+}: {
+  lines?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[styles.skeletonCard, style]}>
+      <MobileSkeleton width="45%" height={18} borderRadius={6} />
+      {Array.from({ length: lines }).map((_, idx) => (
+        <MobileSkeleton
+          key={idx}
+          width={idx === lines - 1 ? '70%' : '100%'}
+          height={14}
+          borderRadius={6}
+          style={{ marginTop: 8 }}
+        />
+      ))}
+    </View>
+  );
+}
+
+export function MobileSkeletonList({ count = 3 }: { count?: number }) {
+  return (
+    <View style={styles.skeletonList}>
+      {Array.from({ length: count }).map((_, idx) => (
+        <MobileSkeletonCard key={idx} />
+      ))}
+    </View>
+  );
+}
+
 export function MobileDisclaimerFooter() {
   return (
     <View style={styles.footer}>
@@ -384,5 +471,16 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 12,
+  },
+  skeletonList: {
+    paddingVertical: 4,
   },
 });

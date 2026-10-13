@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Vyana · व्यान — Complete Healthcare Companion",
   description:
     "Vyana (व्यान) — The breath that reaches every corner. One-stop healthcare platform for patients, doctors, and caregivers in India.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

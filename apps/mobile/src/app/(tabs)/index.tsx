@@ -26,6 +26,7 @@ import {
   computeItemRefill,
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
 } from '@/components/ui-primitives';
 
 export default function PatientHomeScreen() {
@@ -263,11 +264,21 @@ export default function PatientHomeScreen() {
         </View>
 
         {itemsLoading ? (
-          <Text style={styles.sectionSub}>Loading active medicines…</Text>
+          <MobileSkeletonCard lines={2} style={{ marginVertical: 4 }} />
         ) : scheduledSlots.length === 0 ? (
-          <Text style={styles.sectionSub}>
-            No scheduled doses for today. Scan a prescription to add medicines.
-          </Text>
+          <View style={{ gap: 8, paddingVertical: 4 }}>
+            <Text style={styles.sectionSub}>
+              No scheduled doses for today. Scan a prescription to add medicines.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scan Prescription to add medicines"
+              onPress={() => router.push('/prescriptions/scan')}
+              style={styles.actionBtnOutline}
+            >
+              <Text style={styles.actionBtnOutlineText}>+ Scan Prescription</Text>
+            </Pressable>
+          </View>
         ) : (
           scheduledSlots.map((slot) => {
             const isTaken = slot.status === 'taken';
@@ -422,7 +433,17 @@ export default function PatientHomeScreen() {
             </Text>
           </View>
         ) : (
-          <Text style={styles.sectionSub}>No upcoming OPD tokens booked.</Text>
+          <View style={{ gap: 8 }}>
+            <Text style={styles.sectionSub}>No upcoming OPD tokens booked.</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Book Hospital OPD Appointment"
+              onPress={() => router.push('/appointments/book')}
+              style={styles.actionBtnOutline}
+            >
+              <Text style={styles.actionBtnOutlineText}>+ Book Hospital Appointment</Text>
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -769,4 +790,20 @@ const styles = StyleSheet.create({
   },
   gridTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
   gridSub: { fontSize: 11, color: '#64748B' },
+  actionBtnOutline: {
+    borderWidth: 1.5,
+    borderColor: '#0D9488',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDFA',
+  },
+  actionBtnOutlineText: {
+    color: '#0F766E',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

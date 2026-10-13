@@ -345,3 +345,33 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
     </div>
   );
 }
+
+export function SkeletonList({
+  count = 3,
+  lines = 3,
+}: {
+  count?: number;
+  lines?: number;
+}) {
+  return (
+    <div className="space-y-4" role="status" aria-label="Loading list">
+      {Array.from({ length: count }).map((_, idx) => (
+        <SkeletonCard key={idx} lines={lines} />
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonRow() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading row"
+      className="animate-pulse flex items-center justify-between gap-4 p-4 border-b border-slate-100"
+    >
+      <div className="h-4 w-1/3 rounded bg-slate-200" />
+      <div className="h-4 w-1/5 rounded bg-slate-100" />
+      <div className="h-7 w-20 rounded-lg bg-slate-200" />
+    </div>
+  );
+}

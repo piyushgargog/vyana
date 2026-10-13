@@ -20,6 +20,7 @@ import {
   computeItemRefill,
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
 } from '@/components/ui-primitives';
 
 export default function MobileMedsTab() {
@@ -221,9 +222,7 @@ export default function MobileMedsTab() {
 
       {/* Prescriptions List */}
       {rxLoading ? (
-        <View style={styles.card}>
-          <Text style={styles.cardSub}>Loading prescriptions…</Text>
-        </View>
+        <MobileSkeletonCard lines={3} />
       ) : rxList.length === 0 ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>No Prescriptions Yet</Text>
@@ -231,6 +230,14 @@ export default function MobileMedsTab() {
             Scan a prescription image or receive an e-prescription from your
             doctor to see your medicines here.
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan a prescription now"
+            onPress={() => router.push('/prescriptions/scan')}
+            style={[styles.orderWholeBtn, { marginTop: 12 }]}
+          >
+            <Text style={styles.orderWholeBtnText}>+ Scan Prescription Now</Text>
+          </Pressable>
         </View>
       ) : (
         rxList.map((rx) => (

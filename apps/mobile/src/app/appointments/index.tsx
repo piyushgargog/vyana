@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Pressable,
   ScrollView,
@@ -18,7 +17,11 @@ import {
   type MyAppointment,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
-import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import {
+  MobileDisclaimerFooter,
+  MobileSkeletonCard,
+  MobileSkeletonList,
+} from '@/components/ui-primitives';
 
 export default function AppointmentsIndexScreen() {
   const router = useRouter();
@@ -123,10 +126,7 @@ export default function AppointmentsIndexScreen() {
         /* My Tokens Tab */
         <View style={styles.tabContent}>
           {apptsLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color="#0D9488" />
-              <Text style={styles.loadingText}>Loading your appointments…</Text>
-            </View>
+            <MobileSkeletonCard lines={3} />
           ) : myAppointments.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No OPD Tokens Booked</Text>
@@ -234,13 +234,24 @@ export default function AppointmentsIndexScreen() {
           />
 
           {hospitalsLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color="#0D9488" />
-              <Text style={styles.loadingText}>Loading hospitals…</Text>
-            </View>
+            <MobileSkeletonList count={3} />
           ) : filteredHospitals.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No Hospitals Found</Text>
+              <Text style={styles.emptySub}>
+                Try clearing your search query or selecting &quot;All Hospitals&quot;.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear Search and Filters"
+                onPress={() => {
+                  setSearchQuery('');
+                  setKindFilter('all');
+                }}
+                style={styles.emptyActionBtn}
+              >
+                <Text style={styles.emptyActionBtnText}>Clear Search & Filters</Text>
+              </Pressable>
             </View>
           ) : (
             filteredHospitals.map((h: DbHospital) => (
