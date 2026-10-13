@@ -274,9 +274,13 @@ export default function DoctorVerifyPage() {
           )}
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-            <p className="text-[11px] text-slate-500">
-              Mock mode: Delhi Medical Council / 12345 with the name Sneha Gupta verifies (seeded doctor2).
-            </p>
+            {process.env.NODE_ENV !== "production" ? (
+              <p className="text-[11px] text-slate-500">
+                Mock mode: Delhi Medical Council / 12345 with the name Sneha Gupta verifies (seeded doctor2).
+              </p>
+            ) : (
+              <span />
+            )}
             <button
               type="submit"
               disabled={verifyMutation.isPending}
