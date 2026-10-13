@@ -2,6 +2,8 @@
 
 Schema, row level security (RLS), storage buckets, realtime and demo data for Vyana.
 
+How the data moves through the app, and who can reach it at each step: [`DATA-FLOW.md`](DATA-FLOW.md).
+
 | Path | What |
 | --- | --- |
 | `migrations/0001_schema.sql` | Tables and sign-up trigger (plan 5.1 + 5.6) |
