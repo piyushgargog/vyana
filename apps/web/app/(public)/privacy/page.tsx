@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
           {/* Title Header */}
           <div className="border-b border-slate-100 pb-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900 mb-3">
-              DPDP Act 2023 Compliant · Plain-Language Privacy Notice
+              Written with India&apos;s DPDP Act 2023 in mind · Plain-Language Privacy Notice
             </div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
               Privacy Policy
@@ -144,7 +144,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="list-disc pl-6 space-y-1.5 text-slate-800">
                 <li>
-                  <strong>Redaction before processing:</strong> all personal identifiers (such as patient names, phone numbers, and addresses) are redacted in code before text is transmitted to an AI provider.
+                  <strong>Document and photo processing:</strong> A photo you upload is read by an AI model from a provider that keeps no copy of the data (zero data retention). After it is read, names and contact details are removed from the text before any further AI step.
                 </li>
                 <li>
                   <strong>Checked answers:</strong> all AI-generated health advice is verified against clinical blocklists and curated health sources. The AI is strictly barred from diagnosing conditions or recommending prescription drug dosages.
@@ -174,12 +174,48 @@ export default function PrivacyPolicyPage() {
                   <strong>A caregiver you explicitly invite:</strong> a family member or guardian who inputs your temporary 6-digit invite code. Caregivers receive read-only visibility into dose adherence, active medicines, and emergency alerts. You can revoke their access at any moment.
                 </li>
                 <li>
-                  <strong>A doctor you choose to share with:</strong> either via an in-person consultation token or through a time-limited (24-hour) emergency share link or QR code that you actively generate. You can revoke share links at any time.
+                  <strong>Doctors of your booked hospital department:</strong> doctors who belong to the hospital department where you booked an appointment (<code className="text-xs bg-slate-100 px-1 py-0.5 rounded font-mono">is_doctor_of</code>) can view your consultation records to provide clinical care during your appointment.
+                </li>
+                <li>
+                  <strong>A doctor you choose to share with:</strong> either via an in-person consultation token or through a time-limited (24-hour) emergency share link or Medical ID QR code that you actively generate. You can revoke share links at any time.
+                </li>
+                <li>
+                  <strong>The Vyana team (administrators):</strong> our administrative team can access records only when necessary to verify doctor credentials on official registers or to give support upon your request.
                 </li>
               </ul>
               <p className="text-xs text-slate-500">
-                Row-Level Security (RLS) policies enforced in our database guarantee that unauthorized users cannot view or edit your medical data.
+                Row-Level Security (RLS) policies enforced in our database are designed to stop other people from viewing or editing your data.
               </p>
+
+              {/* Data Processors */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 mt-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Third-Party Data Processors
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Vyana relies on the following infrastructure and service providers to process and deliver our services:
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700">
+                  <li>
+                    <strong>Supabase:</strong> database and file storage, Mumbai.
+                  </li>
+                  <li>
+                    <strong>Amazon Web Services:</strong> our server, Mumbai.
+                  </li>
+                  <li>
+                    <strong>Cloudflare:</strong> in front of the site.
+                  </li>
+                  <li>
+                    <strong>Groq:</strong> AI models, zero data retention.
+                  </li>
+                  <li>
+                    <strong>Resend:</strong> account emails.
+                  </li>
+                  <li>
+                    <strong>TinyFish:</strong> searches public web pages only (pharmacies, hospitals, the NMC register) and never receives your health data.
+                  </li>
+                </ul>
+              </div>
             </section>
 
             {/* 5. How to download and delete data */}
