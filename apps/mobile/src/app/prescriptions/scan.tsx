@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   uploadFile,
+  useCheckInteractions,
   useExtractPrescription,
   type PrescriptionExtractRes,
   type PrescriptionItem,
@@ -28,6 +29,7 @@ export default function PrescriptionScanScreen() {
   const router = useRouter();
   const { supabase, showToast } = useVyanaMobile();
   const extractMutation = useExtractPrescription();
+  const checkInteractionsMutation = useCheckInteractions();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [filePath, setFilePath] = useState('');
@@ -199,6 +201,11 @@ export default function PrescriptionScanScreen() {
 
       // 3. Schedule reminders
       await syncReminders(supabase);
+
+      // 4. Auto-check drug interactions for newly added prescription
+      await checkInteractionsMutation
+        .mutateAsync({ prescription_id: newRx.id })
+        .catch(() => {});
 
       showToast(
         `Saved ${editedItems.length} medicines and scheduled reminders`,

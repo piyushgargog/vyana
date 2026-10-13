@@ -265,7 +265,10 @@ export default function DoctorVerifyPage() {
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+            <p className="text-[11px] text-slate-500">
+              Mock mode: Delhi Medical Council / 12345 with the name Sneha Gupta verifies (seeded doctor2).
+            </p>
             <button
               type="submit"
               disabled={verifyMutation.isPending}
@@ -285,7 +288,9 @@ export default function DoctorVerifyPage() {
           className={`rounded-2xl border p-5 sm:p-6 shadow-sm space-y-3 ${
             verifyResult.status === "verified"
               ? "border-emerald-300 bg-emerald-50/70"
-              : "border-amber-300 bg-amber-50/70"
+              : verifyResult.status === "failed"
+                ? "border-red-300 bg-red-50/70"
+                : "border-amber-300 bg-amber-50/70"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -296,7 +301,9 @@ export default function DoctorVerifyPage() {
               className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase ${
                 verifyResult.status === "verified"
                   ? "bg-emerald-200 text-emerald-950"
-                  : "bg-amber-200 text-amber-950"
+                  : verifyResult.status === "failed"
+                    ? "bg-red-200 text-red-950"
+                    : "bg-amber-200 text-amber-950"
               }`}
             >
               {verifyResult.status}
@@ -306,7 +313,7 @@ export default function DoctorVerifyPage() {
           {verifyResult.status === "verified" ? (
             <div className="space-y-2 text-xs text-emerald-950">
               <p className="text-sm font-bold text-emerald-900">
-                Practitioner Match Confirmed:
+                Register Record Match Confirmed:
               </p>
               <div className="rounded-xl bg-white p-3 border border-emerald-200 space-y-1">
                 <p>
@@ -323,20 +330,33 @@ export default function DoctorVerifyPage() {
                 </p>
                 <p>
                   <strong>Registration Year:</strong>{" "}
-                  {verifyResult.match?.year_of_registration || yearOfReg}
+                  {verifyResult.match?.year_of_registration ?? yearOfReg}
                 </p>
                 <p className="text-[11px] text-slate-500 pt-1">
                   Verified timestamp: {verifyResult.checked_at}
                 </p>
               </div>
             </div>
+          ) : verifyResult.status === "failed" ? (
+            <div className="space-y-2 text-xs text-red-950">
+              <p className="text-sm font-bold text-red-900">
+                {verifyResult.match?.name
+                  ? `The register shows: ${verifyResult.match.name}`
+                  : "Not found on the register"}
+              </p>
+              <p className="text-slate-600">
+                {verifyResult.match?.name
+                  ? "The practitioner name on your account does not match the name recorded in the state medical council register for this number."
+                  : "Please verify that the registration number matches your state council certificate exactly."}
+              </p>
+            </div>
           ) : (
             <div className="space-y-2 text-xs text-amber-950">
-              <p className="text-sm font-semibold">
-                No automatic match found in public registry.
+              <p className="text-sm font-bold text-amber-900">
+                The register couldn&apos;t be checked right now. Try again later.
               </p>
-              <p>
-                Please verify that the registration number matches your state council certificate exactly.
+              <p className="text-slate-600">
+                The national register did not respond within the timeout window. Your status remains pending.
               </p>
             </div>
           )}

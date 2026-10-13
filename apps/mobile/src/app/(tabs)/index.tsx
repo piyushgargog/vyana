@@ -209,11 +209,19 @@ export default function PatientHomeScreen() {
         <View style={styles.quickNavRow}>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Open Symptom Triage"
+            onPress={() => router.push('/triage')}
+            style={styles.secondaryLinkBtn}
+          >
+            <Text style={styles.secondaryLinkText}>Symptom Triage →</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="Open Caregiver Circle"
             onPress={() => router.push('/caregiver')}
             style={styles.secondaryLinkBtn}
           >
-            <Text style={styles.secondaryLinkText}>Caregiver Circle →</Text>
+            <Text style={styles.secondaryLinkText}>Caregivers →</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -221,7 +229,7 @@ export default function PatientHomeScreen() {
             onPress={() => router.push('/timeline')}
             style={styles.secondaryLinkBtn}
           >
-            <Text style={styles.secondaryLinkText}>Health Timeline →</Text>
+            <Text style={styles.secondaryLinkText}>Timeline →</Text>
           </Pressable>
         </View>
       </View>

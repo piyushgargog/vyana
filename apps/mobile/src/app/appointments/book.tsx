@@ -21,9 +21,11 @@ import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 
 export default function AppointmentBookScreen() {
   const router = useRouter();
-  const { hospitalId: initialHospitalId } = useLocalSearchParams<{
-    hospitalId?: string;
-  }>();
+  const { hospitalId: initialHospitalId, department: initialDepartment } =
+    useLocalSearchParams<{
+      hospitalId?: string;
+      department?: string;
+    }>();
   const { showToast } = useVyanaMobile();
 
   const { data: hospitals = [] } = useHospitals();
@@ -49,7 +51,17 @@ export default function AppointmentBookScreen() {
     [hospital?.departments]
   );
   const [userDeptId, setUserDeptId] = useState<string>('');
-  const selectedDeptId = userDeptId || departments[0]?.id || '';
+
+  // Auto-select department if routed from symptom triage
+  const matchedDeptId = useMemo(() => {
+    if (!initialDepartment || departments.length === 0) return '';
+    const match = departments.find(
+      (d) => d.name.toLowerCase() === initialDepartment.toLowerCase()
+    );
+    return match?.id || '';
+  }, [initialDepartment, departments]);
+
+  const selectedDeptId = userDeptId || matchedDeptId || departments[0]?.id || '';
 
   // Safe pure date initialization
   const [dateDefaults] = useState(() => {
@@ -278,6 +290,17 @@ export default function AppointmentBookScreen() {
                 })}
               </View>
             )}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Unsure which department? Use Symptom Triage"
+              onPress={() => router.push('/triage')}
+              style={styles.triageHelpBtn}
+            >
+              <Text style={styles.triageHelpText}>
+                💡 Not sure which department? Try Symptom Triage →
+              </Text>
+            </Pressable>
           </View>
 
           {/* 3. Appointment Date */}
@@ -570,4 +593,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   homeBtnText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
+  triageHelpBtn: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  triageHelpText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
 });

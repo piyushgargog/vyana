@@ -1,17 +1,41 @@
 import React, { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { MobileAppProviders } from '@/components/providers';
 import { useReminderSync } from '@/lib/useReminderSync';
+import { onNotificationTap } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   // Keeps phone's dose & follow-up test reminders in sync with patient records
   useReminderSync();
+
+  // Missed-dose notification and caregiver alert tap-through
+  useEffect(() => {
+    const unsubscribe = onNotificationTap((data) => {
+      if (
+        data.kind === 'caregiver_alert' ||
+        data.type === 'missed_dose' ||
+        data.patient_id
+      ) {
+        if (data.patient_id) {
+          router.push(`/caregiver?patient_id=${encodeURIComponent(data.patient_id)}`);
+        } else {
+          router.push('/caregiver');
+        }
+      } else if (data.kind === 'refill') {
+        router.push('/(tabs)/meds');
+      } else if (data.kind === 'dose') {
+        router.push('/(tabs)/index');
+      }
+    });
+    return unsubscribe;
+  }, [router]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -63,6 +87,30 @@ function RootNavigator() {
           name="timeline"
           options={{
             title: 'Health Timeline',
+          }}
+        />
+        <Stack.Screen
+          name="triage"
+          options={{
+            title: 'Symptom Triage',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/index"
+          options={{
+            title: 'Caregiver Circle & Dashboard',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/invite"
+          options={{
+            title: 'Invite Caregiver',
+          }}
+        />
+        <Stack.Screen
+          name="caregiver/enter-code"
+          options={{
+            title: 'Enter Caregiver Code',
           }}
         />
         <Stack.Screen
