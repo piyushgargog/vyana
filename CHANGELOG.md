@@ -65,6 +65,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 - Missed-dose alerts for caregivers: every 15 minutes the database calls `POST /api/cron/missed-doses`; a dose that was due 60+ minutes ago and never logged sends one push to each caregiver phone (no medicine name on the lock screen). A push helper for Expo notifications (`lib/server/push.ts`) removes dead tokens.
 
+- Share with a doctor or a first responder: `GET /api/share/[token]` opens a read-only record (the medical ID, or the timeline) from an unguessable expiring link, with no sign-in; an unknown, expired or turned-off link is one and the same 404. The offline Medical ID QR (`buildMedicalIdQr` / `parseMedicalIdQr`) carries name, blood group, allergies, medicines and one emergency contact in under 600 characters, readable without internet.
+
 ### Changed
 - **API contract:** emergency requests now reject a latitude outside −90…90 or a longitude outside −180…180, and an SOS note over 500 characters.
 - **API contract:** a single-medicine price check is now a one-item basket job. `POST /api/medicines/compare` and `MedicinesCompareRes` are removed; `medicines.compare` / `useCompareMedicine` keep their names, post to `/api/prescriptions/basket` and return `BasketCompareRes` (poll with `useBasketJob`).
