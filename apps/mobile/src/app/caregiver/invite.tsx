@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useCareInvite } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
-import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { MobileDisclaimerFooter, MobileQrGrid } from '@/components/ui-primitives';
 
 export default function CaregiverInviteScreen() {
   const router = useRouter();
@@ -83,6 +83,10 @@ export default function CaregiverInviteScreen() {
             <Text style={styles.expiryBadge}>
               ⏱ Valid for 24 hours · Single-use
             </Text>
+
+            <View style={{ alignItems: 'center', marginVertical: 12 }}>
+              <MobileQrGrid data={inviteCode} size={180} label="Caregiver Invite QR Code" />
+            </View>
 
             <Pressable
               accessibilityRole="button"
