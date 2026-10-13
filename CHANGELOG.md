@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Lab test price compare: `POST /api/labs/compare` finds each lab's own page for a test in a city (Healthians, Redcliffe, Thyrocare, 1mg Labs) and checks the price in the background; `GET /api/labs/compare/{job_id}` reports progress. A price counts only when it appears on the lab's page, and the cheapest is always a confirmed price.
 - Medicine quality alerts: `POST /api/alerts/check` looks for government (CDSCO) quality alerts and recalls that name the patient's medicines, and `POST /api/webhooks/tinyfish-monitor` saves new ones from a TinyFish Monitor for every patient they concern. A fixed rule decides (the medicine by brand or salt, plus alert wording), with no AI; news and other sites are ignored.
 - Ayushman Bharat (PM-JAY) hospital finder: `POST /api/schemes/pmjay-hospitals` lists hospitals near a location that a government page lists as empanelled, with their address and specialities as written on that page. Third-party lists are never used; when nothing official is found, the app links to the official site.
 - Booking: a patient can hold only one active OPD token per department and day, so nobody can use up a department's daily tokens. Cancelling a token frees the slot; the cancelled number is never given out again.

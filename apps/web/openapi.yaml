@@ -41,13 +41,13 @@ paths:
     post:
       tags:
         - Prices
-      summary: Compare a lab test's price across labs in a city
+      summary: Start a lab test price compare in a city
       description: |-
-        Web agents on Healthians, Redcliffe, Thyrocare and 1mg Labs. Cached for 24 h.
+        Search finds each lab's own page for the test (Healthians, Redcliffe, Thyrocare, 1mg Labs) and one web agent per lab starts reading it in the background. Returns a `job_id` at once (`status: running`, every lab `pending`), or the finished result from the 24 h cache (`cached: true`). Poll GET /api/labs/compare/{job_id}.
 
         **Who can call it:** any signed-in user.
 
-        **TinyFish:** Agent ×4.
+        **TinyFish:** Search, Agent ×4 (async).
       operationId: post_labs_compare
       requestBody:
         required: true
@@ -68,6 +68,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "401":
+          description: Missing or invalid token (`UNAUTHORIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "403":
+          description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "502":
+          description: An upstream service failed (`UPSTREAM_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "504":
+          description: An upstream service timed out (`UPSTREAM_TIMEOUT`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/labs/compare/{job_id}:
+    get:
+      tags:
+        - Prices
+      summary: Check a lab test price compare
+      description: |-
+        Reports every lab. A finished lab's test page must be on the lab's own site, and a price counts (`price_verified`) only when it appears on that page. Verified prices come first, by price; `cheapest` is the lowest verified one. Only the user who started the job can read it.
+
+        **Who can call it:** the user who started the job.
+
+        **TinyFish:** Fetch (price check).
+      operationId: get_labs_compare_job_id
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Opaque job id returned by POST /api/labs/compare
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabsCompareRes"
         "401":
           description: Missing or invalid token (`UNAUTHORIZED`)
           content:
@@ -1725,7 +1775,17 @@ components:
     LabsCompareRes:
       type: object
       properties:
+        job_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum:
+            - running
+            - done
         query:
+          type: string
+        city:
           type: string
         quotes:
           type: array
@@ -1775,6 +1835,8 @@ components:
                   - "null"
               fetched_at:
                 type: string
+              price_verified:
+                type: boolean
             required:
               - kind
               - query
@@ -1807,6 +1869,7 @@ components:
               status:
                 type: string
                 enum:
+                  - pending
                   - ok
                   - not_found
                   - timeout
@@ -1862,6 +1925,8 @@ components:
                     - "null"
                 fetched_at:
                   type: string
+                price_verified:
+                  type: boolean
               required:
                 - kind
                 - query
@@ -1878,7 +1943,10 @@ components:
         cached:
           type: boolean
       required:
+        - job_id
+        - status
         - query
+        - city
         - quotes
         - sources
         - cheapest
