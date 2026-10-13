@@ -106,3 +106,4 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Personal-detail removal no longer swallows medical values written after an address, and removes the name after a "Patient:" label.
 - Demo hospitals: the GTB Hospital and Max Saket addresses now match the hospitals' own listings (Tahirpur Road, GTB Enclave; Mandir Marg).
 - The storage database test passes on a real Supabase, where a direct delete from `storage.objects` raises an error instead of deleting nothing.
+- A real, scannable QR code for the Medical ID: `buildQrMatrix` in `@vyana/shared` (the old `generateQrMatrix` only drew a pattern that looked like a QR code, and no phone could read it). The tests decode the code with an independent decoder, including Hindi text and the longest Medical ID. The Medical ID screens still have to switch to it (see the pull request).
