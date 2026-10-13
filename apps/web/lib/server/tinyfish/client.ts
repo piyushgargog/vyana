@@ -29,8 +29,30 @@ export interface CallOptions {
 
 const isMock = () => process.env.TINYFISH_MOCK === "1";
 
-function headers(json: boolean): HeadersInit {
-  const h: Record<string, string> = { "X-API-Key": requireEnv("TINYFISH_API_KEY") };
+/**
+ * The key pool (ADR-039 addendum): `TINYFISH_API_KEYS` (comma-separated) or the single `TINYFISH_API_KEY`. Several
+ * keys let agent runs go out in parallel (each account runs 2 at a time). Only add keys once TinyFish's terms allow
+ * using several accounts together.
+ */
+export function apiKeys(): string[] {
+  const pool = (process.env.TINYFISH_API_KEYS ?? "").split(",").map((k) => k.trim()).filter(Boolean);
+  return pool.length ? pool : [requireEnv("TINYFISH_API_KEY")];
+}
+
+let nextKey = 0;
+
+/**
+ * A run belongs to the key that started it, so with a pool its id carries the key's number: `2~<id>`. With one key the
+ * id is TinyFish's own, exactly as before.
+ */
+export function splitRunId(runId: string): { key: number; id: string } {
+  const m = /^(\d{1,2})~(.+)$/.exec(runId);
+  return m ? { key: Number(m[1]), id: m[2] } : { key: 0, id: runId };
+}
+
+function headers(json: boolean, key = 0): HeadersInit {
+  const keys = apiKeys();
+  const h: Record<string, string> = { "X-API-Key": keys[key % keys.length] };
   if (json) h["Content-Type"] = "application/json";
   return h;
 }
@@ -400,20 +422,30 @@ export async function startAgent(
   }
   count(opts);
   try {
-    const res = await fetch(`${AGENT_URL}/automation/run-async`, {
-      method: "POST",
-      headers: headers(true),
-      body: JSON.stringify(agentBody(params, params.maxSeconds)),
-      signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
-    });
-    if (!res.ok) {
-      log({ event: "tinyfish_http_error", api: "run-async", status: res.status });
-      return { status: "error", error: `http_${res.status}` };
+    const pool = apiKeys().length;
+    const first = nextKey++ % pool; // rotate: each new run starts on the next key
+    let res: Response | undefined;
+    let used = first;
+    // Out of credits (402) or rate limited (429) on one key: try the next one before giving up.
+    for (let attempt = 0; attempt < pool; attempt++) {
+      used = (first + attempt) % pool;
+      res = await fetch(`${AGENT_URL}/automation/run-async`, {
+        method: "POST",
+        headers: headers(true, used),
+        body: JSON.stringify(agentBody(params, params.maxSeconds)),
+        signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
+      });
+      if (res.status !== 402 && res.status !== 429) break;
+      log({ event: "tinyfish_key_skipped", status: res.status, key: used });
+    }
+    if (!res || !res.ok) {
+      log({ event: "tinyfish_http_error", api: "run-async", status: res?.status });
+      return { status: "error", error: `http_${res?.status}` };
     }
     const body = z.object({ run_id: z.string().nullable(), error: RunError }).safeParse(await res.json().catch(() => null));
     if (!body.success || !body.data.run_id) return { status: "error", error: body.success ? (body.data.error?.code ?? "no_run_id") : "invalid_response" };
-    log({ event: "tinyfish_agent_started", host: new URL(params.url).hostname, run_id: body.data.run_id });
-    return { status: "started", runId: body.data.run_id };
+    log({ event: "tinyfish_agent_started", host: new URL(params.url).hostname, run_id: body.data.run_id, key: used });
+    return { status: "started", runId: pool > 1 ? `${used}~${body.data.run_id}` : body.data.run_id };
   } catch (err) {
     return { status: "error", error: err instanceof Error && err.name === "TimeoutError" ? "client_timeout" : "network" };
   }
@@ -440,8 +472,9 @@ export async function getRun(runId: string, opts?: CallOptions): Promise<RunStat
   }
   count(opts);
   try {
-    const res = await fetch(`${AGENT_URL}/runs/${encodeURIComponent(runId)}`, {
-      headers: headers(false),
+    const { key, id } = splitRunId(runId);
+    const res = await fetch(`${AGENT_URL}/runs/${encodeURIComponent(id)}`, {
+      headers: headers(false, key),
       signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
     });
     if (res.status === 404) return { status: "FAILED", result: null, error: "unknown_run", startedAt: null };
@@ -467,9 +500,10 @@ export async function cancelRun(runId: string, opts?: CallOptions): Promise<void
   if (isMock()) return;
   count(opts);
   try {
-    await fetch(`${AGENT_URL}/runs/${encodeURIComponent(runId)}/cancel`, {
+    const { key, id } = splitRunId(runId);
+    await fetch(`${AGENT_URL}/runs/${encodeURIComponent(id)}/cancel`, {
       method: "POST",
-      headers: headers(false),
+      headers: headers(false, key),
       signal: AbortSignal.timeout(opts?.timeoutMs ?? TIMEOUTS.monitor),
     });
   } catch {
