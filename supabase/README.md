@@ -13,6 +13,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
 | `migrations/0007_one_token_per_day.sql` | `book_appointment` gives a patient at most one active token per department and day (a unique index backs it) |
 | `migrations/0008_missed_dose_cron.sql` | pg_cron calls `POST /api/cron/missed-doses` every 15 minutes through `run_missed_dose_check()` (address and secret come from the Vault) |
 | `migrations/0009_share_link_cap.sql` | a share link expires within 30 days of its creation (a CHECK on `share_links`, one hour of slack for phone clocks) |
+| `migrations/0010_account_deletion.sql` | A doctor or a caregiver can delete their account: links from other people's records to them (`doctor_id`, `diagnosed_by`, `reviewed_by`, `used_by`) are cleared instead of blocking the deletion |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |
@@ -83,6 +84,7 @@ The tests sign in as real roles (`authenticated`, `anon`) with a JWT subject and
 - the e-Rx flow: a doctor prescribes only for patients of their own department and only in their own name
 - admin access, share link revoke, and a caregiver who leaves by deleting the link
 - storage: a user reaches only their own folder, and both buckets are private
+- deleting an account: a patient, a doctor and a caregiver can all be deleted, every row of the patient goes, other people's records stay
 - every foreign key has an index, and every `security definer` function sets its `search_path`
 
 ## Database types

@@ -1,6 +1,6 @@
 // A small in-memory stand-in for the parts of supabase-js that the data routes use. Rows are plain objects,
 // filters are applied in memory, and nothing touches the network. Embedded selects (`hospitals(name)`) are not
-// resolved: put the embedded object in the row if a test needs it.
+// resolved: put the embedded object in the row if a test needs it. `range(from, to)` is inclusive, as in supabase-js.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type Row = Record<string, unknown>;
@@ -19,6 +19,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
       let ignoreDuplicates = false;
       let sortBy: { column: string; ascending: boolean } | null = null;
       let max = Infinity;
+      let window: [number, number] | null = null;
       const same = (a: Row, b: Row) => a.item_id === b.item_id && time(a.scheduled_for) === time(b.scheduled_for);
 
       const run = () => {
@@ -45,6 +46,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
           const { column, ascending } = sortBy;
           rows = [...rows].sort((a, b) => (String(a[column]) < String(b[column]) ? -1 : String(a[column]) > String(b[column]) ? 1 : 0) * (ascending ? 1 : -1));
         }
+        if (window) rows = rows.slice(window[0], window[1] + 1);
         return { data: rows.slice(0, max).map((r) => ({ ...r })), error: null };
       };
 
@@ -56,6 +58,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
         gte: (c: string, v: unknown) => (filters.push((r) => time(r[c]) >= time(v)), chain),
         order: (column: string, opts?: { ascending?: boolean }) => ((sortBy = { column, ascending: opts?.ascending ?? true }), chain),
         limit: (n: number) => ((max = n), chain),
+        range: (from: number, to: number) => ((window = [from, to]), chain),
         delete: () => ((op = "delete"), chain),
         upsert: (rows: Row[], opts: { ignoreDuplicates?: boolean }) => ((op = "upsert"), (upserts = rows), (ignoreDuplicates = !!opts.ignoreDuplicates), chain),
         maybeSingle: async () => {
