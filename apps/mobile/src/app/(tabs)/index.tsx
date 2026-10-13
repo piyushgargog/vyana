@@ -507,6 +507,16 @@ export default function PatientHomeScreen() {
               href: '/labs-compare',
             },
             {
+              title: 'PM-JAY Hospitals',
+              sub: 'Ayushman Bharat Empanelled',
+              href: '/schemes/pmjay',
+            },
+            {
+              title: 'Daily Meal Log',
+              sub: 'Nutrition & Calories Tracker',
+              href: '/care/meals',
+            },
+            {
               title: 'Health Timeline',
               sub: 'Chronological Chart & Share',
               href: '/timeline',
