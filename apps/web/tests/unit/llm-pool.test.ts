@@ -156,7 +156,7 @@ describe("failover (retryable failures only)", () => {
     expect(types("groq|k2|main-model")).toContain("assistant:reasoning+text"); // same model: kept
     script.set("groq|k2|main-model", 429);
     const answered = (await generateText({ model: getModel("text"), messages, maxRetries: 0 })).text;
-    expect(answered).toMatch(/^groq|k[12]|small-model$/);
+    expect(["groq|k1|small-model", "groq|k2|small-model"]).toContain(answered);
     expect(types(answered).filter((t) => t.startsWith("assistant"))).toEqual(["assistant:text"]); // other model: dropped
   });
 
