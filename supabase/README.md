@@ -53,8 +53,8 @@ Run the seed again at any time: it replaces the dose logs and vitals and leaves 
 ## Missed-dose alerts (pg_cron)
 
 Every 15 minutes the database calls `POST {app_url}/api/cron/missed-doses` with the header `x-cron-secret`. The route
-finds doses that were due 60+ minutes ago and never logged, for patients with an active caregiver, and pushes each
-caregiver phone once (`missed_dose_alerts` keeps it to once). Set the address and the secret once per project (the
+finds doses that were due 60+ minutes ago and are not logged as taken or skipped (no log, or a log saying missed), for patients
+with an active caregiver, and pushes each caregiver phone once (`missed_dose_alerts` keeps it to once). Set the address and the secret once per project (the
 secret is the value of `CRON_SECRET` on the server):
 
 ```sql
