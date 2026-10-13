@@ -134,6 +134,19 @@ export function isRetryable(err: unknown): boolean {
 
 const label = (c: Candidate) => `${c.provider}:${c.id}`;
 
+/**
+ * The prompt without the reasoning parts of earlier assistant steps. A model refuses another model's reasoning
+ * (`'reasoning_content' is unsupported`), so a fallback to a different model gets the prompt without it (P24).
+ */
+export function withoutReasoning<P extends { prompt: unknown }>(params: P): P {
+  const prompt = (params.prompt as { role: string; content: unknown }[]).flatMap((m) => {
+    if (m.role !== "assistant" || !Array.isArray(m.content)) return [m];
+    const content = (m.content as { type: string }[]).filter((p) => p.type !== "reasoning");
+    return content.length ? [{ ...m, content }] : [];
+  });
+  return { ...params, prompt };
+}
+
 /** Where a fallback leaves its name in the result's provider metadata, so `ai_runs` records the model that really answered. */
 export const POOL_KEY = "vyana_pool";
 
@@ -183,17 +196,19 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
     model: primary,
     middleware: {
       wrapGenerate: async ({ doGenerate, params }) => {
+        const forModel = (c: Candidate) => (c.id === first.id && c.provider === first.provider ? params : withoutReasoning(params));
         try {
           return await doGenerate();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doGenerate(params).then((r) => ({ ...r, providerMetadata: { ...r.providerMetadata, [POOL_KEY]: { fallback: label(c) } } })));
+          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doGenerate(forModel(c)).then((r) => ({ ...r, providerMetadata: { ...r.providerMetadata, [POOL_KEY]: { fallback: label(c) } } })));
         }
       },
       wrapStream: async ({ doStream, params }) => {
+        const forModel = (c: Candidate) => (c.id === first.id && c.provider === first.provider ? params : withoutReasoning(params));
         try {
           return await doStream();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m) => m.doStream(params));
+          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doStream(forModel(c)));
         }
       },
     },

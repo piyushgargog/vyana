@@ -10,6 +10,7 @@ import { MockLanguageModelV4 } from "ai/test";
 type Behaviour = number | "ok"; // an HTTP status to fail with, or "ok"
 const script = new Map<string, Behaviour>(); // "provider|key|model" -> behaviour (default "ok")
 const calls: string[] = [];
+const prompts = new Map<string, unknown>(); // "provider|key|model" -> the last prompt it received
 
 const usage = {
   inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
@@ -26,7 +27,8 @@ function scripted(provider: string, apiKey: string, id: string) {
   return new MockLanguageModelV4({
     provider,
     modelId: id,
-    doGenerate: async () => {
+    doGenerate: async (options) => {
+      prompts.set(name, options.prompt);
       attempt();
       return { content: [{ type: "text", text: name }], finishReason: { unified: "stop", raw: undefined }, usage, warnings: [] };
     },
@@ -137,6 +139,25 @@ describe("failover (retryable failures only)", () => {
     script.set("groq|k1|main-model", 429);
     const result = streamText({ model: getModel("text"), prompt: "hi", maxRetries: 0 });
     expect(await result.text).toBe("groq|k2|main-model");
+  });
+
+  it("drops earlier reasoning only for a different model (P24)", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
+    const messages = [
+      { role: "user" as const, content: "hi" },
+      { role: "assistant" as const, content: [{ type: "reasoning" as const, text: "thinking" }, { type: "text" as const, text: "hello" }] },
+      { role: "assistant" as const, content: [{ type: "reasoning" as const, text: "only thoughts" }] },
+      { role: "user" as const, content: "and now?" },
+    ];
+    const types = (name: string) => (prompts.get(name) as { role: string; content: { type: string }[] | string }[]).map((m) => (typeof m.content === "string" ? m.role : `${m.role}:${m.content.map((p) => p.type).join("+")}`));
+    script.set("groq|k1|main-model", 429);
+    expect((await generateText({ model: getModel("text"), messages, maxRetries: 0 })).text).toBe("groq|k2|main-model");
+    expect(types("groq|k2|main-model")).toContain("assistant:reasoning+text"); // same model: kept
+    script.set("groq|k2|main-model", 429);
+    const answered = (await generateText({ model: getModel("text"), messages, maxRetries: 0 })).text;
+    expect(answered).toMatch(/^groq|k[12]|small-model$/);
+    expect(types(answered).filter((t) => t.startsWith("assistant"))).toEqual(["assistant:text"]); // other model: dropped
   });
 
   it("marks the result when a fallback answered, so ai_runs records the model that really did", async () => {

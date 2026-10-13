@@ -138,7 +138,11 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
       // Copied chunk by chunk (not merged) so the notes can follow the model's last chunk and come before "finish".
       const reader = toUIMessageStream({ stream: result.stream, sendStart: false, sendFinish: false, onError: errorText }).getReader();
       for (let next = await reader.read(); !next.done; next = await reader.read()) {
-        if (next.value.type === "error") failed = true;
+        if (next.value.type === "error") {
+          failed = true;
+          // Shown as text too, so the patient never sees an empty answer (P24).
+          writeText(writer, "vyana-error", SAFE_ERROR);
+        }
         writer.write(next.value);
       }
       if (failed) return;

@@ -200,6 +200,8 @@ describe("POST /api/assistant/chat", () => {
     const chunks = await chunksOf(await chat({ messages: [userMessage("hello")] }));
     await settled();
     expect(chunks.some((c) => c.type === "error")).toBe(true);
+    // The patient sees a sentence, never an empty answer (P24).
+    expect(chunks.some((c) => c.type === "text-delta" && "delta" in c && c.delta === "Something went wrong while answering. Please try again.")).toBe(true);
     expect(chunks.some((c) => c.type === "finish")).toBe(false);
     expect(db.rows.chat_messages.map((m) => m.role)).toEqual(["user"]);
     expect(db.rows.ai_runs[0].status).toBe("rejected");
