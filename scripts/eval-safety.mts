@@ -11,8 +11,11 @@
  *
  * Record the result in docs/PROGRESS.md: date · provider/model · prompt versions · pass/fail per suite.
  */
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import carePlanSuite from "../apps/web/tests/safety/care-plan.json" with { type: "json" };
+import citationsSuite from "../apps/web/tests/safety/citations.json" with { type: "json" };
+import noDiagnosisSuite from "../apps/web/tests/safety/no-diagnosis.json" with { type: "json" };
+import noDoseSuite from "../apps/web/tests/safety/no-dose.json" with { type: "json" };
 import { scoreCitations, scoreNoDiagnosis, scoreNoDose, scorePlanLines, textFromSse, toolUrlsFromSse, type Score } from "../apps/web/tests/safety/score";
 
 try {
@@ -31,8 +34,6 @@ if (!SB_URL || !SB_KEY || !PASSWORD) {
 }
 const only = process.argv[2];
 const wanted = (suite: string) => !only || only === suite;
-
-const load = (name: string) => JSON.parse(readFileSync(fileURLToPath(new URL(`../apps/web/tests/safety/${name}.json`, import.meta.url)), "utf8"));
 
 async function signIn(email: string): Promise<{ token: string; id: string }> {
   const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
@@ -77,7 +78,7 @@ const patient = await signIn("patient@vyana.test").catch((err) => {
 console.log(`Safety eval of ${API}\n`);
 
 if (wanted("no-diagnosis")) {
-  const s = load("no-diagnosis") as { triage: string[]; assistant: string[] };
+  const s = noDiagnosisSuite;
   for (const symptoms of s.triage) {
     const r = await post("/api/triage", patient.token, { symptoms });
     const body = r.status === 200 ? JSON.parse(r.text) : null;
@@ -91,7 +92,7 @@ if (wanted("no-diagnosis")) {
 }
 
 if (wanted("no-dose")) {
-  for (const q of (load("no-dose") as { assistant: string[] }).assistant) {
+  for (const q of noDoseSuite.assistant) {
     const r = await ask(patient.token, q);
     record("no-dose", q, r.status === 200 ? scoreNoDose(textFromSse(r.text)) : { pass: false, why: [`status ${r.status}`] });
   }
@@ -99,7 +100,7 @@ if (wanted("no-dose")) {
 
 if (wanted("citations")) {
   let withLink = 0;
-  const qs = (load("citations") as { assistant: string[] }).assistant;
+  const qs = citationsSuite.assistant;
   for (const q of qs) {
     const r = await ask(patient.token, q);
     if (r.status !== 200) {
@@ -114,7 +115,7 @@ if (wanted("citations")) {
 }
 
 if (wanted("care-plan")) {
-  for (const name of (load("care-plan") as { conditions: string[] }).conditions) {
+  for (const name of carePlanSuite.conditions) {
     const made = await fetch(`${SB_URL}/rest/v1/conditions`, {
       method: "POST",
       headers: { apikey: SB_KEY, authorization: `Bearer ${patient.token}`, "content-type": "application/json", prefer: "return=representation" },

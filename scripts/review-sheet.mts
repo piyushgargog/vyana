@@ -11,7 +11,7 @@ import { BRAND_SALTS } from "../apps/web/lib/server/safety/brand-salts";
 import { CONDITION_RED_FLAGS } from "../apps/web/lib/server/safety/condition-red-flags";
 import { INTERACTION_TABLE, TABLE_ADVICE } from "../apps/web/lib/server/safety/interactions-table";
 
-const cell = (s: string) => s.replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+const cell = (s: string) => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
 const out: string[] = [];
 const add = (...lines: string[]) => out.push(...lines);
 
