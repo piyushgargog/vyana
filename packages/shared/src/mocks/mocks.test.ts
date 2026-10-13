@@ -15,6 +15,7 @@ import {
   PmjayHospitalsRes,
   PrescriptionExtractRes,
   ReportAnalyzeRes,
+  LabValueCorrectRes,
   ShareRes,
   TriageRes,
 } from "../contracts";
@@ -33,6 +34,7 @@ import {
   pmjayHospitalsMock,
   prescriptionsExtractMock,
   reportsAnalyzeMock,
+  labValueCorrectMock,
   shareMock,
   triageEmergencyMock,
   triageMock,
@@ -45,6 +47,7 @@ const cases: [string, ZodType, unknown][] = [
   ["doctors/verify", DoctorVerifyRes, doctorsVerifyMock],
   ["prescriptions/extract", PrescriptionExtractRes, prescriptionsExtractMock],
   ["reports/analyze", ReportAnalyzeRes, reportsAnalyzeMock],
+  ["reports/values/correct", LabValueCorrectRes, labValueCorrectMock],
   ["alerts/check", AlertsCheckRes, alertsCheckMock],
   ["prescriptions/basket", BasketCompareRes, basketCompareMock],
   ["prescriptions/basket (running)", BasketCompareRes, basketJobRunningMock],

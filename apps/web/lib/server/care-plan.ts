@@ -203,6 +203,7 @@ export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePla
 
   const { object, ai } = await runAi({
     feature: "care_plan",
+    data: "public", // the condition name and public guideline pages only (ADR-056)
     kind: "text",
     schema: CarePlanLlm,
     system: CARE_PLAN_SYSTEM,

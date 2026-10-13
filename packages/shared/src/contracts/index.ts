@@ -58,6 +58,7 @@ export const PrescriptionItem = z.object({
 });
 
 export const LabValue = z.object({
+  id: z.guid().optional(),                            // CONTRACT CHANGED 13 Oct (ADR-062): the saved lab_values row
   test_name: z.string(),
   value: z.number().nullable(),
   value_text: z.string().nullable(),
@@ -66,6 +67,7 @@ export const LabValue = z.object({
   ref_high: z.number().nullable(),
   flag: z.enum(["low","normal","high","unknown"]),
   ...aiReviewFields,
+  corrected: z.boolean().optional(),                  // the patient corrected this value (ADR-062)
 });
 
 export const DrugAlert = z.object({
@@ -148,6 +150,22 @@ export const ReportAnalyzeRes = z.object({
   ai: AiMeta,
 });
 
+// ---------- POST /api/reports/values/correct ---------- (P23, ADR-062)
+export const LabValueCorrectReq = z
+  .object({
+    value_id: z.guid(),
+    value: z.number().finite().nullable(),
+    value_text: z.string().trim().min(1).max(60).nullable().optional(), // a written result, e.g. "Negative"
+    unit: z.string().trim().min(1).max(20).nullable().optional(),       // omitted = keep the stored unit
+  })
+  .refine((b) => b.value !== null || !!b.value_text, { message: "Send a value or a value_text", path: ["value"] });
+export const LabValueCorrectRes = z.object({
+  report_id: z.guid(),
+  value: LabValue,
+  summary: z.string(),
+  follow_up_tests: z.array(z.string()),
+});
+
 // ---------- POST /api/prescriptions/basket ----------
 export const BasketItemInput = z.object({
   medicine: z.string().min(2),
@@ -209,7 +227,8 @@ export const GenerateCarePlanReq = z.object({ condition_id: z.guid(), language: 
 export const GenerateCarePlanRes = z.object({ care_plan_id: z.guid(), status: CarePlanStatus, plan: CarePlan, ai: AiMeta });
 
 // ---------- POST /api/medicines/interactions ----------
-export const InteractionsReq = z.object({ prescription_id: z.guid().optional() }); // empty = all active medicines
+// empty = all active medicines. CONTRACT CHANGED 13 Oct (ADR-061): a doctor sends prescription_id or patient_id.
+export const InteractionsReq = z.object({ prescription_id: z.guid().optional(), patient_id: z.guid().optional() });
 export const Interaction = z.object({
   medicine_a: z.string(),
   medicine_b: z.string(),
@@ -329,6 +348,8 @@ export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;
 export type ReportAnalyzeReq = z.infer<typeof ReportAnalyzeReq>;
 export type ReportAnalyzeRes = z.infer<typeof ReportAnalyzeRes>;
+export type LabValueCorrectReq = z.infer<typeof LabValueCorrectReq>;
+export type LabValueCorrectRes = z.infer<typeof LabValueCorrectRes>;
 export type Language = z.infer<typeof Language>;
 export type AiMeta = z.infer<typeof AiMeta>;
 export type BasketItemInput = z.infer<typeof BasketItemInput>;

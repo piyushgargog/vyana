@@ -5,9 +5,14 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Fixed
+- How often a medicine is taken is now read from the written schedule in code ("1-0-1" is twice a day). A live photo scan had read "1-0-1" as once a day; the code's reading now wins, and the item is marked for the patient to check.
+- The example env file no longer puts comments after values. Docker Compose reads `KEY=  # text` as the value `# text`, which silently turned an empty key pool and an empty push token into text on the server.
 - The API now accepts the ids of the demo records. Its strict id check rejected the simple ids in the seed (for example the demo diabetes condition and prescription, and every seeded hospital), so those requests answered 400. Found by running the live check against a real Supabase stack.
 
 ### Added
+- A doctor can now run the medicine interaction check for their own patient, from a saved prescription (`prescription_id`) or for all of the patient's current medicines (`patient_id`). The server checks that the doctor treats this patient; any other doctor gets 403. The result is stored for the patient.
+- A patient can correct a value the AI read from their own lab report (`POST /api/reports/values/correct`, hook `useCorrectLabValue`). The server recomputes the flag from the report's range, rebuilds the summary in code and keeps the old value for the record. The report analysis now returns each value's `id` for this.
+- The AI layer can use several API keys, models and providers: extra keys per provider (`GROQ_API_KEYS`, …) are used round-robin, and `LLM_FALLBACKS` / `LLM_VISION_FALLBACKS` name models that take over on a rate limit, a too-large request, an outage or a timeout. Calls that carry no patient data (nearby hospitals, hospital timings, PM-JAY, care plans from public pages) may use any provider; patient data still goes only to providers with recorded data terms. `ai_runs` records the model that actually answered.
 - The server sends security headers (HSTS, content-type, frame, referrer and permissions policies), no longer names its software, and sends `www` to the main address.
 - Docker deployment: a `Dockerfile` (Next.js standalone build), `docker-compose.yml` and a `Caddyfile` (automatic HTTPS) run the web app and API on a single server. `pnpm monitor:create <url>` creates the drug quality alert Monitor after deployment.
 - AI providers: the app can use Gemini, Groq, NVIDIA, OpenRouter or Hugging Face (free tiers). Their data terms were read and recorded; in production only a provider with recorded terms (Groq, with Zero Data Retention) can receive patient text, so a free tier that trains on prompts is limited to testing and the demo.
@@ -103,3 +108,4 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Personal-detail removal no longer swallows medical values written after an address, and removes the name after a "Patient:" label.
 - Demo hospitals: the GTB Hospital and Max Saket addresses now match the hospitals' own listings (Tahirpur Road, GTB Enclave; Mandir Marg).
 - The storage database test passes on a real Supabase, where a direct delete from `storage.objects` raises an error instead of deleting nothing.
+- A real, scannable QR code for the Medical ID: `buildQrMatrix` in `@vyana/shared` (the old `generateQrMatrix` only drew a pattern that looked like a QR code, and no phone could read it). The tests decode the code with an independent decoder, including Hindi text and the longest Medical ID. The Medical ID screens still have to switch to it (see the pull request).

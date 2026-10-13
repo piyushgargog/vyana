@@ -52,6 +52,32 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+type Frequency = PrescriptionItem["frequency"];
+
+/**
+ * How often a medicine is taken, read from the words the prescription uses (ADR-058, PLAN §2A rule 4): the model only
+ * quotes them, the code says what they mean. `1-0-1` is twice a day. Returns null when the words don't say.
+ */
+export function frequencyOf(evidence: string | null): Frequency | null {
+  if (!evidence) return null;
+  const e = evidence.toLowerCase();
+  // Morning-noon-night style: three or four 0/1 doses, separated by - / x or spaces. Count the ones.
+  const pattern = e.match(/(?<![\d.])([01])\s*[-–—/x×]\s*([01])\s*[-–—/x×]\s*([01])(?:\s*[-–—/x×]\s*([01]))?(?![\d.])/);
+  if (pattern) {
+    const taken = pattern.slice(1).reduce((n, d) => n + (d === "1" ? 1 : 0), 0);
+    return ({ 1: "OD", 2: "BD", 3: "TDS", 4: "QID" } as Record<number, Frequency>)[taken] ?? null;
+  }
+  // Words and abbreviations (a letter on either side means it is part of another word); the order matters:
+  // "twice daily" is BD, not OD.
+  if (/(?<![a-z])(?:sos|prn|when needed|as needed|if required|if needed)(?![a-z])/.test(e)) return "SOS";
+  if (/(?<![a-z])(?:q\.?i\.?d|four times|4 times)(?![a-z])/.test(e)) return "QID";
+  if (/(?<![a-z])(?:t\.?d\.?s|t\.?i\.?d|three times|3 times|thrice)(?![a-z])/.test(e)) return "TDS";
+  if (/(?<![a-z])(?:b\.?d|b\.?i\.?d|twice|two times|2 times)(?![a-z])/.test(e)) return "BD";
+  if (/(?<![a-z])(?:h\.?s|at bedtime|bedtime)(?![a-z])/.test(e)) return "HS";
+  if (/(?<![a-z])(?:o\.?d|once|daily|every day|one time)(?![a-z])/.test(e)) return "OD";
+  return null;
+}
+
 /** A value counts only when its evidence is in the text; a number must also appear inside its evidence. */
 function proven<T>(text: string, f: Field<T>): T | null {
   if (f.value === null || f.value === undefined || !evidenceFound(text, f.evidence)) return null;
@@ -81,7 +107,10 @@ export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, 
     }
     const strength = back(proven(text, it.strength));
     const dose = back(proven(text, it.dose));
-    const frequency = proven(text, it.frequency);
+    const modelFrequency = proven(text, it.frequency);
+    // The code, not the model, says what the written schedule means (ADR-058): a disagreement is corrected and flagged.
+    const written = modelFrequency ? frequencyOf(it.frequency.evidence) : null;
+    const frequency = written ?? modelFrequency;
     const form = proven(text, it.form);
     const withFood = proven(text, it.with_food);
     const duration = proven(text, it.duration_days);
@@ -100,7 +129,7 @@ export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, 
     missedWhenGiven(it.duration_days, duration, "duration");
     missedWhenGiven(it.instructions, instructions, "instructions");
     if (timesRaw.length !== (it.times.value ?? []).length || times.length !== timesRaw.length) failed.push("times");
-    if (!frequency) failed.push("how often");
+    if (!frequency || (written !== null && written !== modelFrequency)) failed.push("how often");
 
     const freq = frequency ?? "custom";
     const finalTimes = times.length ? times : freq === "SOS" || freq === "custom" ? [] : [...DEFAULT_TIMES[freq]];

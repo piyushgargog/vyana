@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AiMeta, Interaction, InteractionsReq, InteractionsRes, SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
 import { requireRole, type AuthedUser } from "./auth";
+import { badRequest, forbidden } from "./errors";
 import { createHash } from "node:crypto";
 import { TTL, cached } from "./cache";
 import { log } from "./log";
@@ -144,11 +145,35 @@ const Confirmations = z.object({
 const display = (r: { medicine_name: string; strength: string | null }) => (r.strength ? `${r.medicine_name} ${r.strength}` : r.medicine_name);
 const meta = (model: string): AiMeta => ({ model, prompt_version: INTERACTIONS_PROMPT_VERSION, generated_at: new Date().toISOString() });
 
-export async function checkInteractions({ sb, user, profile }: AuthedUser, body: InteractionsReq, counter: CallCounter): Promise<InteractionsRes> {
-  requireRole(profile, "patient");
+/** Whose medicines are checked: the patient themselves, or a patient of the calling doctor (ADR-061). */
+export async function patientFor({ sb, user, profile }: Pick<AuthedUser, "sb" | "user" | "profile">, body: InteractionsReq): Promise<string> {
+  requireRole(profile, "patient", "doctor");
+  if (profile.role === "patient") {
+    if (body.patient_id && body.patient_id !== user.id) throw forbidden();
+    return user.id;
+  }
+  let patientId = body.patient_id;
+  if (body.prescription_id) {
+    // Read as the doctor: RLS hides prescriptions of other doctors' patients.
+    const { data, error } = await sb.from("prescriptions").select("patient_id").eq("id", body.prescription_id).maybeSingle();
+    if (error) throw error;
+    const rx = data as { patient_id: string } | null;
+    if (!rx || (patientId && patientId !== rx.patient_id)) throw forbidden();
+    patientId = rx.patient_id;
+  }
+  if (!patientId) throw badRequest("Send prescription_id or patient_id.");
+  const { data: isDoctor, error } = await sb.rpc("is_doctor_of", { p: patientId });
+  if (error) throw error;
+  if (isDoctor !== true) throw forbidden();
+  return patientId;
+}
 
-  // The caller's medicines, read through RLS.
-  const query = sb.from("prescription_items").select("medicine_name, strength").eq("patient_id", user.id);
+export async function checkInteractions(authed: AuthedUser, body: InteractionsReq, counter: CallCounter): Promise<InteractionsRes> {
+  const { sb, user } = authed;
+  const patientId = await patientFor(authed, body);
+
+  // The patient's medicines, read through RLS (the patient's own, or a doctor's patient).
+  const query = sb.from("prescription_items").select("medicine_name, strength").eq("patient_id", patientId);
   const { data, error } = await (body.prescription_id ? query.eq("prescription_id", body.prescription_id) : query.eq("active", true));
   if (error) throw error;
   const rows = (data ?? []) as { medicine_name: string; strength: string | null }[];
@@ -170,7 +195,7 @@ export async function checkInteractions({ sb, user, profile }: AuthedUser, body:
   const { data: saved } = await admin
     .from("interaction_checks")
     .select("id, result_json, created_at")
-    .eq("patient_id", user.id)
+    .eq("patient_id", patientId)
     .eq("medicines_key", medicinesKey)
     .maybeSingle();
   const savedRow = saved as { id: string; result_json: InteractionsRes; created_at: string } | null;
@@ -297,7 +322,7 @@ export async function checkInteractions({ sb, user, profile }: AuthedUser, body:
   };
 
   // Saved per patient and medicine set (inserts are closed to users).
-  const row = { patient_id: user.id, medicines_key: medicinesKey, result_json: res, created_at: new Date().toISOString() };
+  const row = { patient_id: patientId, medicines_key: medicinesKey, result_json: res, created_at: new Date().toISOString() };
   const { error: saveError } = savedRow
     ? await admin.from("interaction_checks").update(row).eq("id", savedRow.id)
     : await admin.from("interaction_checks").insert(row);

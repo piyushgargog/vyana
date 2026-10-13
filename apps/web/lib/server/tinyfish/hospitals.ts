@@ -142,6 +142,7 @@ export async function findNearbyHospitals(
     if (!pages.length) return null;
     const { object } = await runAi({
       feature: "hospitals_nearby",
+      data: "public", // public web pages only (ADR-056)
       kind: "text",
       schema: NearbyLlm,
       system: NEARBY_SYSTEM,
@@ -243,6 +244,7 @@ export async function hospitalOpdInfo(
 
   const { object } = await runAi({
     feature: "hospital_opd",
+    data: "public", // public web pages only (ADR-056)
     kind: "text",
     schema: OpdLlm,
     system: OPD_SYSTEM,
@@ -324,6 +326,7 @@ export async function findPmjayHospitals(lat: number, lng: number, ctx: { userId
     if (!pages.length) return null;
     const { object } = await runAi({
       feature: "pmjay_hospitals",
+      data: "public", // public web pages only (ADR-056)
       kind: "text",
       schema: PmjayLlm,
       system: PMJAY_SYSTEM,

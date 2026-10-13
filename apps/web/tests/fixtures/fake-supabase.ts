@@ -23,6 +23,8 @@ export const db = {
   storage: new Map<string, Blob>(),
   /** Tables whose next insert fails (to test rollbacks). */
   failInsert: new Set<string>(),
+  /** What is_doctor_of answers: "doctorId:patientId" pairs. */
+  doctorOf: new Set<string>(),
 };
 
 const PROFILES: Row[] = [
@@ -37,6 +39,7 @@ export function resetDb() {
   db.inserts.length = 0;
   db.storage.clear();
   db.failInsert.clear();
+  db.doctorOf.clear();
 }
 resetDb();
 
@@ -129,7 +132,11 @@ export const fakeSupabaseModule = {
       }),
     },
   }),
-  supabaseForUser: () => ({ from: query }),
+  supabaseForUser: (token: string) => ({
+    from: query,
+    rpc: async (fn: string, args: { p: string }) =>
+      fn === "is_doctor_of" ? { data: db.doctorOf.has(`${users[token]}:${args.p}`), error: null } : { data: null, error: new Error(`no rpc ${fn}`) },
+  }),
   requireEnv: (name: string) => {
     const v = process.env[name];
     if (!v) throw new Error(`Missing environment variable ${name}`);

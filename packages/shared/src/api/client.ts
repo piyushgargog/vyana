@@ -30,6 +30,8 @@ import {
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
+  LabValueCorrectReq,
+  LabValueCorrectRes,
   ReportAnalyzeRes,
   ShareRes,
   TriageReq,
@@ -71,7 +73,7 @@ export type ApiClient = {
   schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
-  reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes> };
+  reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes>; correctValue(body: LabValueCorrectReq): Promise<LabValueCorrectRes> };
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
   interactions: { check(body: InteractionsReq): Promise<InteractionsRes> };
   triage: { assess(body: TriageReq): Promise<TriageRes> };
@@ -189,7 +191,10 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
-    reports: { analyze: (body) => post("/api/reports/analyze", ReportAnalyzeReq, ReportAnalyzeRes, body, mocks.reportsAnalyzeMock) },
+    reports: {
+      analyze: (body) => post("/api/reports/analyze", ReportAnalyzeReq, ReportAnalyzeRes, body, mocks.reportsAnalyzeMock),
+      correctValue: (body) => post("/api/reports/values/correct", LabValueCorrectReq, LabValueCorrectRes, body, mocks.labValueCorrectMock),
+    },
     carePlans: { generate: (body) => post("/api/care-plan", GenerateCarePlanReq, GenerateCarePlanRes, body, mocks.carePlanMock) },
     interactions: { check: (body) => post("/api/medicines/interactions", InteractionsReq, InteractionsRes, body, mocks.interactionsMock) },
     triage: { assess: (body) => post("/api/triage", TriageReq, TriageRes, body, mocks.triageMock) },

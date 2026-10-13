@@ -1,17 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiErrorBody, PrescriptionExtractRes, ReportAnalyzeRes } from "@vyana/shared";
-import { USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
+import { ApiErrorBody, LabValueCorrectRes, PrescriptionExtractRes, ReportAnalyzeRes } from "@vyana/shared";
+import { OTHER_TOKEN, USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
 const { POST: extract } = await import("@/app/api/prescriptions/extract/route");
 const { POST: analyze } = await import("@/app/api/reports/analyze/route");
+const { POST: correct } = await import("@/app/api/reports/values/correct/route");
 
-const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: unknown) =>
+const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: unknown, token = VALID_TOKEN) =>
   handler(
     new Request("http://localhost/api", {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${VALID_TOKEN}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     }),
     undefined,
@@ -132,5 +133,50 @@ describe("POST /api/reports/analyze", () => {
     const res = await post(analyze, { file_path: path });
     expect(res.status).toBe(502);
     expect(db.rows.lab_reports[0].status).toBe("failed");
+  });
+});
+
+describe("POST /api/reports/values/correct", () => {
+  const path = `${USER_ID}/report-1.png`;
+  const analyzed = async () => {
+    upload("lab-reports", path);
+    return ReportAnalyzeRes.parse(await (await post(analyze, { file_path: path })).json());
+  };
+
+  it("the analysis returns each saved value's id", async () => {
+    const report = await analyzed();
+    expect(report.values.map((v) => v.id)).toEqual(db.rows.lab_values.map((r) => r.id));
+  });
+
+  it("saves the corrected value with a flag computed on the server and keeps the old one", async () => {
+    const report = await analyzed();
+    const hba1c = report.values[0];
+    const res = await post(correct, { value_id: hba1c.id, value: 5.2 });
+    expect(res.status).toBe(200);
+    const body = LabValueCorrectRes.parse(await res.json());
+
+    expect(body.value).toMatchObject({ test_name: "HbA1c", value: 5.2, flag: "normal", corrected: true, needs_review: false });
+    expect(body.follow_up_tests).toEqual(["Fasting Blood Sugar"]);
+    expect(body.summary).toBe("1 of 3 values are outside their reference range: Fasting Blood Sugar. Please discuss these results with your doctor.");
+    expect(db.rows.lab_values[0]).toMatchObject({ value: 5.2, flag: "normal" });
+    const saved = db.rows.lab_reports[0] as { summary: string; extracted_json: { values: { id: string; value: number; corrected?: boolean; evidence?: string }[] } };
+    expect(saved.summary).toBe(body.summary);
+    expect(saved.extracted_json.values[0]).toMatchObject({ id: hba1c.id, value: 5.2, corrected: true, evidence: hba1c.evidence });
+    const record = db.rows.ai_runs.find((r) => r.feature === "lab_value_correction");
+    expect(record).toMatchObject({ user_id: USER_ID, model: null, output_json: { before: { value: 7.4, flag: "high" }, after: { value: 5.2, flag: "normal" } } });
+  });
+
+  it("another person's value is not found", async () => {
+    const report = await analyzed();
+    const res = await post(correct, { value_id: report.values[0].id, value: 5.2 }, OTHER_TOKEN);
+    expect(res.status).toBe(404);
+    expect(db.rows.lab_values[0]).toMatchObject({ value: 7.4, flag: "high" });
+  });
+
+  it("refuses an empty correction", async () => {
+    const report = await analyzed();
+    const res = await post(correct, { value_id: report.values[0].id, value: null });
+    expect(res.status).toBe(400);
+    ApiErrorBody.parse(await res.json());
   });
 });

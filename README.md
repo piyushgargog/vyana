@@ -6,6 +6,8 @@
 
 The name comes from Ayurveda. **Vyana** is the prana that starts at the heart and spreads through the whole body, carrying life to every part of it. The app works the same way. Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the live web (pharmacies, labs, the NMC medical register, hospitals) and bring back what your health needs.
 
+**Live:** [vyanahealth.app](https://vyanahealth.app) (web app and API, hosted in Mumbai behind Cloudflare). Sign up with an email address; please use made-up details only, not your real health data.
+
 *A portfolio project by four developers.*
 
 ---
