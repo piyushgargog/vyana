@@ -90,3 +90,4 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Shared React modules are marked as client modules, so Next.js server components can import `@vyana/shared`.
 - Severe burns ("severe burn", "jal gaya") are now treated as emergencies.
 - Personal-detail removal no longer swallows medical values written after an address, and removes the name after a "Patient:" label.
+- Demo hospitals: the GTB Hospital and Max Saket addresses now match the hospitals' own listings (Tahirpur Road, GTB Enclave; Mandir Marg).
