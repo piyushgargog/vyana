@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import {
+  buildQrMatrix,
   computeItemRefill,
   generateQrMatrix,
   parseCarePlanJson,
@@ -9,37 +10,38 @@ import {
 } from "@vyana/shared";
 import { useVyanaWeb } from "./providers";
 
-export { computeItemRefill, generateQrMatrix, parseCarePlanJson };
+export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
 
 export function QrCodeSvg({
   data,
-  size = 200,
+  size = 280,
   label = "Medical ID QR Code",
 }: {
   data: string;
   size?: number;
   label?: string;
 }) {
-  const grid = 25;
-  const matrix = generateQrMatrix(data, grid);
+  const matrix = buildQrMatrix(data);
+  const grid = matrix.length;
+  const quiet = 4;
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox={`0 0 ${grid + 4} ${grid + 4}`}
+      viewBox={`0 0 ${grid + quiet * 2} ${grid + quiet * 2}`}
       role="img"
       aria-label={label}
       className="rounded-xl bg-white p-2 border border-slate-200 shadow-sm"
     >
-      <rect width={grid + 4} height={grid + 4} fill="#ffffff" />
+      <rect width={grid + quiet * 2} height={grid + quiet * 2} fill="#ffffff" />
       {matrix.map((row, r) =>
         row.map((cell, c) =>
           cell ? (
             <rect
               key={`${r}-${c}`}
-              x={c + 2}
-              y={r + 2}
+              x={c + quiet}
+              y={r + quiet}
               width={1}
               height={1}
               fill="#0f172a"
