@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **do not open a public issue** for security problems. Report them privately through
-[GitHub private vulnerability reporting](https://github.com/piyushgargog/vyana/security/advisories/new).
+[GitHub private vulnerability reporting](https://github.com/piyushgargog/vyana/security/advisories/new), or by email to piyushgarg@vyanahealth.app.
 We will reply as soon as possible.
 
 ## How we protect this project
