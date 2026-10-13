@@ -72,6 +72,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 - Share with a doctor or a first responder: `GET /api/share/[token]` opens a read-only record (the medical ID, or the timeline) from an unguessable expiring link, with no sign-in; an unknown, expired or turned-off link is one and the same 404. The offline Medical ID QR (`buildMedicalIdQr` / `parseMedicalIdQr`) carries name, blood group, allergies, medicines and one emergency contact in under 600 characters, readable without internet.
 
+- Share links last 30 days at most: the database refuses a longer `expires_at` (migration `0009`), including when an old link is extended, and `createShareLink` rejects 0 or more than 720 hours before asking the database. The 404 of `GET /api/share/[token]` now also carries `cache-control: no-store`, and the age and the "medicine still running" check use the day in India.
+
 ### Changed
 - **API contract:** emergency requests now reject a latitude outside −90…90 or a longitude outside −180…180, and an SOS note over 500 characters.
 - **API contract:** a single-medicine price check is now a one-item basket job. `POST /api/medicines/compare` and `MedicinesCompareRes` are removed; `medicines.compare` / `useCompareMedicine` keep their names, post to `/api/prescriptions/basket` and return `BasketCompareRes` (poll with `useBasketJob`).

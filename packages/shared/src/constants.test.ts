@@ -10,6 +10,7 @@ import {
   EMERGENCY_NUMBER,
   MISSED_DOSE_GRACE_MINUTES,
   ORS_URL,
+  SHARE_LINK_MAX_TTL_HOURS,
   REALTIME,
   VITAL_UNITS,
 } from "./constants";
@@ -78,6 +79,10 @@ describe("Scope v2 constants", () => {
 
   it("waits 60 minutes before a missed dose alert", () => {
     expect(MISSED_DOSE_GRACE_MINUTES).toBe(60);
+  });
+
+  it("lets a share link live 30 days at most", () => {
+    expect(SHARE_LINK_MAX_TTL_HOURS).toBe(720);
   });
 });
 

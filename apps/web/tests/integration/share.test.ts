@@ -102,6 +102,16 @@ describe("GET /api/share/[token]", () => {
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
   });
 
+  it("keeps the 404 out of caches and search engines too", async () => {
+    for (const t of [T_EXPIRED, T_REVOKED, hex("f"), "short"]) {
+      const res = await get(t);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("cache-control"), t).toBe("no-store");
+      expect(res.headers.get("x-robots-tag"), t).toBe("noindex, nofollow");
+      expect(res.headers.get("referrer-policy"), t).toBe("no-referrer");
+    }
+  });
+
   it("leaves out inactive conditions, switched-off and ended medicines, and everything of another patient", async () => {
     const text = JSON.stringify(await (await get(T_MEDICAL)).json());
     for (const hidden of ["Old sprain", "Switched off", "Antibiotic", "Not mine", "Asthma", "Peanuts", "Someone Else"]) expect(text).not.toContain(hidden);
@@ -130,6 +140,17 @@ describe("GET /api/share/[token]", () => {
     ]);
     expect(body.timeline?.[0]).toMatchObject({ title: "Lab report: Sample Diagnostics", summary: "HbA1c improved to 6.8%." });
     expect(JSON.stringify(body)).not.toContain("Asthma"); // another patient's prescription and condition
+  });
+
+  it("lists a medicine whose last day is today in India, and drops it from the next day there", async () => {
+    // Antibiotic ends 2026-10-01. At 2026-10-01 20:00 UTC it is already 2 October in India, so it is over.
+    vi.setSystemTime(new Date("2026-10-01T20:00:00Z"));
+    db.table("share_links").find((l) => l.token === T_MEDICAL)!.expires_at = "2026-10-05T00:00:00Z";
+    let names = ((await (await get(T_MEDICAL)).json()) as { profile: { active_medicines: { name: string }[] } }).profile.active_medicines.map((m) => m.name);
+    expect(names).not.toContain("Antibiotic");
+    vi.setSystemTime(new Date("2026-10-01T18:00:00Z")); // 23:30 on 1 October in India
+    names = ((await (await get(T_MEDICAL)).json()) as { profile: { active_medicines: { name: string }[] } }).profile.active_medicines.map((m) => m.name);
+    expect(names).toContain("Antibiotic");
   });
 
   it("answers 404 for an expired link, even by a second", async () => {
@@ -186,6 +207,11 @@ describe("ageFromDob", () => {
     expect(ageFromDob("1990-10-14", today)).toBe(35);
     expect(ageFromDob("1990-05-15", today)).toBe(36);
     expect(ageFromDob("2026-10-13", today)).toBe(0);
+  });
+  it("counts the day in India: after 18:30 UTC it is already the next day there", () => {
+    // 2026-10-12 19:00 UTC is 2026-10-13 00:30 in India: the birthday has come.
+    expect(ageFromDob("1990-10-13", new Date("2026-10-12T19:00:00Z"))).toBe(36);
+    expect(ageFromDob("1990-10-13", new Date("2026-10-12T18:29:00Z"))).toBe(35);
   });
   it("is null without a usable date, or for a date in the future", () => {
     expect(ageFromDob(null, today)).toBeNull();

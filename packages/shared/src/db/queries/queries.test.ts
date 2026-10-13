@@ -435,6 +435,15 @@ describe("care plans, caregivers, sharing", () => {
     expect(f.argsOf("select")).toEqual(["token, expires_at"]);
   });
 
+  it("refuses a share link of no time, of a negative or odd time, or of more than 30 days, before asking the database", async () => {
+    const f = fakeSupabase({ responses: { share_links: [ok({ token: "t", expires_at: "x" })] } });
+    for (const hours of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 30 * 24 + 1]) {
+      await expect(createShareLink(f.sb, "medical_id", hours, "https://vyana.app")).rejects.toMatchObject({ code: "invalid_ttl" });
+    }
+    expect(f.argsOf("insert")).toEqual([]);
+    await expect(createShareLink(f.sb, "timeline", 30 * 24, "https://vyana.app")).resolves.toMatchObject({ token: "t" });
+  });
+
   it("revokes a share link by token", async () => {
     const f = fakeSupabase({ responses: { share_links: [ok(null)] } });
     await revokeShareLink(f.sb, "tok123");

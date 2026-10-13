@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildTimeline, type ShareRes, type TimelineSources } from "@vyana/shared";
 import { notFound } from "../errors";
+import { istDate } from "./missed-doses";
 
 /** `share_links.token` is 24 random bytes as hex. Anything else cannot be a token, so it never reaches the database. */
 export const SHARE_TOKEN_FORMAT = /^[0-9a-f]{48}$/;
@@ -13,13 +14,17 @@ const GONE = "This link has expired or was turned off.";
 const TIMELINE_ROWS = 100;
 const TIMELINE_ENTRIES = 100;
 
-/** Age in whole years on `today` from a `YYYY-MM-DD` date of birth, or null if there is none. */
-export function ageFromDob(dob: string | null, today: Date): number | null {
+/**
+ * Age in whole years from a `YYYY-MM-DD` date of birth, or null if there is none. The day is the day in India
+ * (the server runs in UTC), so a birthday counts from midnight in India, not from 05:30 in the morning.
+ */
+export function ageFromDob(dob: string | null, now: Date): number | null {
   if (!dob) return null;
   const [y, m, d] = dob.split("-").map(Number);
   if (!y || !m || !d) return null;
-  let age = today.getUTCFullYear() - y;
-  if (today.getUTCMonth() + 1 < m || (today.getUTCMonth() + 1 === m && today.getUTCDate() < d)) age--;
+  const [ty, tm, td] = istDate(now).split("-").map(Number);
+  let age = ty - y;
+  if (tm < m || (tm === m && td < d)) age--;
   return age >= 0 ? age : null;
 }
 
@@ -61,7 +66,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   if (!row || row.revoked || new Date(row.expires_at).getTime() <= now.getTime()) throw notFound(GONE);
 
   const patient = row.patient_id;
-  const today = now.toISOString().slice(0, 10);
+  const today = istDate(now);
 
   const [profile, conditions, items, contacts] = await Promise.all([
     rows<{ full_name: string | null; dob: string | null; blood_group: string | null; allergies: string[] | null }>(

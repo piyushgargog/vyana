@@ -12,6 +12,7 @@ Schema, row level security (RLS), storage buckets, realtime and demo data for Vy
 | `migrations/0006_diagnosis_condition.sql` | A doctor's diagnosis on an e-Rx creates the patient's condition (one per prescription; an edited diagnosis updates it) |
 | `migrations/0007_one_token_per_day.sql` | `book_appointment` gives a patient at most one active token per department and day (a unique index backs it) |
 | `migrations/0008_missed_dose_cron.sql` | pg_cron calls `POST /api/cron/missed-doses` every 15 minutes through `run_missed_dose_check()` (address and secret come from the Vault) |
+| `migrations/0009_share_link_cap.sql` | a share link expires within 30 days of its creation (a CHECK on `share_links`, one hour of slack for phone clocks) |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |
