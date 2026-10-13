@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
-import { historyFrom } from "@/lib/server/assistant/chat";
+import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
 import { isTrustedHealthUrl } from "@/lib/server/tinyfish/sources";
 
@@ -96,6 +96,37 @@ describe("ReplyGuard", () => {
     expect(g.needsReview).toBe(false);
   });
 
+  it("never shows a sentence that gives a dose, and asks to see a doctor or pharmacist (ADR-065)", async () => {
+    const g = guardFor();
+    const { shown } = await through(g, ["Ibuprofen is a pain reliever. Adults usually take 200", " mg to 400 mg every 6 hours. Talk to ", "someone first."]);
+    expect(shown.join("")).toBe("Ibuprofen is a pain reliever. Talk to someone first.");
+    expect(g.droppedSentences).toBe(1);
+    expect(g.closingNotes()).toContain("doctor or pharmacist");
+    expect(g.text).not.toMatch(/\d+ mg/);
+    expect(g.needsReview).toBe(true);
+  });
+
+  it("may read the patient's own saved medicine back to them", async () => {
+    const g = guardFor();
+    g.allowOwnDoses(["500 mg", "1 tablet", "BD"]);
+    const { shown } = await through(g, ["You take Metformin 500 mg, 1 tablet. Paracetamol 650 mg is common. "]);
+    expect(shown.join("")).toBe("You take Metformin 500 mg, 1 tablet. ");
+    expect(g.droppedSentences).toBe(1);
+  });
+
+  it("keeps advice not to change a dose (only the note is added)", async () => {
+    const g = guardFor();
+    const { shown } = await through(g, ["Please don't double the dose on your own. "]);
+    expect(shown.join("")).toBe("Please don't double the dose on your own. ");
+    expect(g.closingNotes()).toContain("asking your doctor");
+  });
+
+  it("adds the dose note to any dose question, even without a dose in the reply", async () => {
+    const g = new ReplyGuard({ language: "hinglish", placeholders: {}, doseQuestion: true });
+    await through(g, ["Yeh aapke doctor hi bata sakte hain. "]);
+    expect(g.closingNotes()).toContain("doctor ya pharmacist");
+  });
+
   it("needs no source for a reply built from the user's own records", async () => {
     const g = guardFor();
     g.noteToolCall("get_my_lab_values");
@@ -138,5 +169,14 @@ describe("assistant tools", () => {
     expect(out.results.every((r) => isTrustedHealthUrl(r.url))).toBe(true);
     guard.clean(`${out.results[0].url} `);
     expect(guard.removed).toEqual([]);
+  });
+});
+
+describe("isDoseQuestion", () => {
+  it("finds questions about how much, how often or changing a medicine", () => {
+    for (const q of ["How many Dolo 650 can I take in a day?", "Can I take 2 Pan 40 instead of 1?", "Insulin kitna badhana chahiye?", "Can I skip my thyroid tablet on weekends?", "दवा कितनी लेनी है?", "Should I double my metformin?"]) {
+      expect(isDoseQuestion(q), q).toBe(true);
+    }
+    for (const q of ["What is the Ayushman Bharat scheme?", "My HbA1c is 7.4, is that high?"]) expect(isDoseQuestion(q), q).toBe(false);
   });
 });

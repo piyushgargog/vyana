@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Fixed
+- The assistant no longer shows dose amounts, counts or schedules ("200 mg", "3 times a day"): such a sentence is held back unless it repeats the patient's own saved medicine, and any dose question ends with "ask your doctor or pharmacist".
 - The assistant no longer answers with an empty reply when its main model hits a rate limit: the fallback model now gets the conversation without the main model's reasoning, which it refused. If an answer still fails, the patient sees "Something went wrong while answering. Please try again."
 - How often a medicine is taken is now read from the written schedule in code ("1-0-1" is twice a day). A live photo scan had read "1-0-1" as once a day; the code's reading now wins, and the item is marked for the patient to check.
 - The example env file no longer puts comments after values. Docker Compose reads `KEY=  # text` as the value `# text`, which silently turned an empty key pool and an empty push token into text on the server.

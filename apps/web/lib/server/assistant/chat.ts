@@ -16,6 +16,7 @@ import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
 import { getModel, isLlmMock } from "../llm";
 import { log } from "../log";
+import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
 import { redact } from "../safety/redact";
 import { ReplyGuard } from "./guard";
@@ -29,6 +30,11 @@ const HISTORY = 20;
 const MAX_TEXT = 4_000;
 /** Separates messages while the whole history is redacted in one pass (one placeholder per person). */
 const SEPARATOR = "\n\n␞\n\n";
+/** The question asks how much or how often to take a medicine, or whether to change it (ADR-065). */
+export const isDoseQuestion = (q: string): boolean =>
+  findDosePatterns(q).length > 0 ||
+  /\b(?:how (?:much|many)|what dose|dosage|dose|double|skip|stop taking|halve|increase|reduce|take (?:\d|two|three|half)|instead of \d|kitn[aie]|badha|kam kar|chhod)\b|कितनी|कितना|खुराक/iu.test(q);
+
 const SAFE_ERROR = "Something went wrong while answering. Please try again.";
 
 export const ChatBody = z.object({
@@ -96,7 +102,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
 
   const emergency = matchRedFlags(question).length > 0;
   const { messages, placeholders } = redactHistory(turns, profile.full_name ? [profile.full_name] : []);
-  const guard = new ReplyGuard({ language, placeholders });
+  const guard = new ReplyGuard({ language, placeholders, doseQuestion: isDoseQuestion(question) });
   // The reply streams after the route has logged its line, so TinyFish calls are counted and logged here.
   const counter = { tinyfishCalls: 0 };
   const runId = await startAiRun(

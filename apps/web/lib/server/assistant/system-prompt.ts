@@ -51,6 +51,13 @@ export const NO_SOURCE_NOTE: Record<Language, string> = {
 };
 
 /** Added when the finished reply contains dose-change or diagnosis wording (§2A rule 6). */
+/** Added when a dose sentence was held back, or the question asked about a dose (ADR-065). */
+export const DOSE_NOTE: Record<Language, string> = {
+  en: "\n\n_Vyana can't tell you how much medicine to take or when to change it. Please ask your doctor or pharmacist._",
+  hi: "\n\n_Vyana यह नहीं बता सकता कि दवा कितनी लेनी है या कब बदलनी है। कृपया अपने डॉक्टर या फार्मासिस्ट से पूछें।_",
+  hinglish: "\n\n_Vyana yeh nahi bata sakta ki dawai kitni leni hai ya kab badalni hai. Apne doctor ya pharmacist se poochhein._",
+};
+
 export const ASK_DOCTOR_NOTE: Record<Language, string> = {
   en: "\n\n_Vyana can't diagnose or change medicines. Please don't start, stop or change a dose without asking your doctor._",
   hi: "\n\n_Vyana बीमारी की पहचान या दवा में बदलाव नहीं कर सकता। अपने डॉक्टर से पूछे बिना कोई दवा या उसकी मात्रा शुरू, बंद या न बदलें।_",

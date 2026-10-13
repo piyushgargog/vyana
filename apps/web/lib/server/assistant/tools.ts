@@ -77,7 +77,12 @@ export function assistantTools({ userId, sb, guard, counter }: ToolContext) {
           .select("medicine_name, strength, form, dose, frequency, times, with_food, start_date, end_date")
           .eq("patient_id", userId)
           .eq("active", true);
-        return error ? failed("Your medicines couldn't be loaded.") : { medicines: data ?? [] };
+        if (error) return failed("Your medicines couldn't be loaded.");
+        // The reply may read these back to the patient; any other dose is held back (ADR-065).
+        for (const m of (data ?? []) as { strength: string | null; dose: string | null; frequency: string | null }[]) {
+          guard.allowOwnDoses([m.strength, m.dose, m.frequency]);
+        }
+        return { medicines: data ?? [] };
       },
     }),
 

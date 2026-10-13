@@ -4,12 +4,14 @@ import type { Language, SourceLink } from "@vyana/shared";
 import { checkDiagnosisLanguage, findDosePatterns } from "../safety/blocklists";
 import { canonicalUrl, filterCitationsInText, findUrls } from "../safety/citations";
 import { restore } from "../safety/redact";
-import { ASK_DOCTOR_NOTE, NO_SOURCE_NOTE } from "./system-prompt";
+import { ASK_DOCTOR_NOTE, DOSE_NOTE, NO_SOURCE_NOTE } from "./system-prompt";
 
 /**
  * Everything the assistant's reply passes through before the user sees it (PLAN §2A rule 5, ADR-043): links our
  * tools didn't return are removed while the text streams, placeholders from redaction are restored, and fixed
  * notes are added at the end when the reply has no source or contains dose-change or diagnosis wording.
+ * A sentence with a dose amount, count or schedule is never shown unless it repeats the patient's own saved
+ * medicine (ADR-065).
  */
 
 /** Tools that answer from the user's own records or our price checks, so the reply needs no web source. */
@@ -47,18 +49,60 @@ export function readyLength(buffer: string): number {
   return cut;
 }
 
+/** How much of `text` is whole sentences: up to the last ". ", "! ", "? ", "। " or line break. */
+export function sentencesLength(text: string): number {
+  let end = 0;
+  for (const m of text.matchAll(/[.!?।](?=\s)\s*|\n+/gu)) end = (m.index ?? 0) + m[0].length;
+  return end;
+}
+
+const squash = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+
 export class ReplyGuard {
   private readonly allowed = new Set<string>();
   private readonly titles = new Map<string, string>();
   private readonly shown = new Map<string, SourceLink>();
   private usedDataTool = false;
   private modelText = "";
+  /** The patient's own medicines (strength, dose, frequency), which the reply may repeat. */
+  private readonly ownDoses: string[] = [];
+  /** Text per stream part that waits for the end of its sentence. */
+  private readonly sentenceBuffers = new Map<string, string>();
+  /** The last character `clean` returned (the sentence stage may still hold it). */
+  private cleanTail = "";
+  /** Sentences held back because they gave a dose. */
+  droppedSentences = 0;
   /** URLs the model wrote that our tools never returned. */
   readonly removed: string[] = [];
   /** Fixed lines added at the end of the reply. */
   notes: string[] = [];
 
-  constructor(private readonly opts: { language: Language; placeholders: Record<string, string> }) {}
+  constructor(private readonly opts: { language: Language; placeholders: Record<string, string>; doseQuestion?: boolean }) {}
+
+  /** Called by `get_my_medicines`: the patient's own strengths, doses and frequencies may be read back to them. */
+  allowOwnDoses(values: (string | null | undefined)[]): void {
+    for (const v of values) if (v && v.trim()) this.ownDoses.push(squash(v));
+  }
+
+  /** A sentence gives a dose that is not the patient's own medicine. "Don't double the dose" only adds the note. */
+  givesDose(sentence: string): boolean {
+    const hits = findDosePatterns(sentence).filter((h) => h.rule !== "change the dose");
+    return hits.some((h) => !this.ownDoses.some((own) => own.includes(squash(h.text))));
+  }
+
+  /** The whole sentences of `text` (all of it when `flush`), without the ones that give a dose. */
+  private sentences(id: string, text: string, flush: boolean): string {
+    const buffer = (this.sentenceBuffers.get(id) ?? "") + text;
+    const n = flush ? buffer.length : sentencesLength(buffer);
+    this.sentenceBuffers.set(id, buffer.slice(n));
+    let out = "";
+    for (const sentence of buffer.slice(0, n).split(/(?<=[.!?।]\s+|\n+)(?=\S)/u)) {
+      if (this.givesDose(sentence)) this.droppedSentences++;
+      else out += sentence;
+    }
+    this.modelText += out;
+    return out;
+  }
 
   /** Called by the tools for every URL they return in this request. */
   allow(url: string | null | undefined, title?: string | null): void {
@@ -78,8 +122,8 @@ export class ReplyGuard {
     }
     let out = restore(cleaned, this.opts.placeholders);
     // A removed link leaves its surrounding spaces behind; don't show two in a row.
-    if (removed.length && /\s$/.test(this.modelText)) out = out.replace(/^[ \t]+/, "");
-    this.modelText += out;
+    if (removed.length && /\s$/.test(this.cleanTail)) out = out.replace(/^[ \t]+/, "");
+    this.cleanTail = (this.cleanTail + out).slice(-1);
     return out;
   }
 
@@ -92,7 +136,8 @@ export class ReplyGuard {
     }
     const doseChange = findDosePatterns(this.modelText).some((h) => h.rule === "change the dose");
     const diagnosis = checkDiagnosisLanguage(this.modelText).phrases.length > 0;
-    if (doseChange || diagnosis) notes.push(ASK_DOCTOR_NOTE[lang]);
+    if (this.droppedSentences > 0 || this.opts.doseQuestion) notes.push(DOSE_NOTE[lang]);
+    else if (doseChange || diagnosis) notes.push(ASK_DOCTOR_NOTE[lang]);
     this.notes = notes;
     return notes.join("");
   }
@@ -111,7 +156,7 @@ export class ReplyGuard {
   }
 
   get needsReview(): boolean {
-    return this.removed.length > 0 || this.notes.length > 0;
+    return this.removed.length > 0 || this.notes.length > 0 || this.droppedSentences > 0;
   }
 
   /**
@@ -129,13 +174,16 @@ export class ReplyGuard {
               const buffer = (pending.get(part.id) ?? "") + part.text;
               const n = readyLength(buffer);
               pending.set(part.id, buffer.slice(n));
-              if (n > 0) controller.enqueue({ ...part, text: this.clean(buffer.slice(0, n)) });
+              const shown = n > 0 ? this.sentences(part.id, this.clean(buffer.slice(0, n)), false) : "";
+              if (shown) controller.enqueue({ ...part, text: shown });
               return;
             }
             case "text-end": {
               const rest = pending.get(part.id) ?? "";
               pending.delete(part.id);
-              if (rest) controller.enqueue({ type: "text-delta", id: part.id, text: this.clean(rest) } as TextStreamPart<TOOLS>);
+              const shown = this.sentences(part.id, rest ? this.clean(rest) : "", true);
+              this.sentenceBuffers.delete(part.id);
+              if (shown) controller.enqueue({ type: "text-delta", id: part.id, text: shown } as TextStreamPart<TOOLS>);
               controller.enqueue(part);
               return;
             }
