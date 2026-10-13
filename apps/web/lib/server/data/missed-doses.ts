@@ -37,6 +37,11 @@ export interface DoseRef {
   scheduled_for: string;
 }
 
+/** A dose log as the check reads it. Only `taken` and `skipped` mean the dose was handled; `missed` means it was not. */
+export interface DoseLogRef extends DoseRef {
+  status?: string | null;
+}
+
 export interface DueDose {
   item_id: string;
   patient_id: string;
@@ -81,13 +86,15 @@ export function listOverdueDoses(items: CareItem[], now: Date): DueDose[] {
 }
 
 /**
- * Of the overdue doses, those that nobody logged (no dose log of that medicine within 30 minutes of the
- * time, whatever its status) and that were not alerted yet (a `missed_dose_alerts` row for exactly that
- * medicine and time). `checked` is how many overdue doses were looked at.
+ * Of the overdue doses, those that were not handled and not alerted yet. A dose is handled when the patient logged
+ * it as `taken` or `skipped` within 30 minutes of its time; no log, or a log saying `missed`, leaves it open, so a
+ * caregiver also hears about a dose the patient says they missed (decided by Piyush, 13 Oct). It was alerted when
+ * a `missed_dose_alerts` row exists for exactly that medicine and time. `checked` is how many overdue doses were
+ * looked at.
  */
 export function findMissedDoses(
   items: CareItem[],
-  logs: DoseRef[],
+  logs: DoseLogRef[],
   alerts: DoseRef[],
   now: Date,
 ): { checked: number; missed: DueDose[] } {
@@ -96,10 +103,19 @@ export function findMissedDoses(
   const missed = overdue.filter((dose) => {
     if (alerted.has(`${dose.item_id}|${dose.due.getTime()}`)) return false;
     return !logs.some(
-      (log) => log.item_id === dose.item_id && Math.abs(new Date(log.scheduled_for).getTime() - dose.due.getTime()) <= LOG_MATCH_MINUTES * MINUTE,
+      (log) =>
+        log.status !== "missed" &&
+        log.item_id === dose.item_id &&
+        Math.abs(new Date(log.scheduled_for).getTime() - dose.due.getTime()) <= LOG_MATCH_MINUTES * MINUTE,
     );
   });
   return { checked: overdue.length, missed };
+}
+
+/** The first word of a name, or null: "Aryan Sharma" gives "Aryan". */
+export function firstName(fullName: string | null | undefined): string | null {
+  const first = (fullName ?? "").trim().split(/\s+/)[0];
+  return first ? first : null;
 }
 
 const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
@@ -155,7 +171,9 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   const itemIds = [...new Set(overdue.map((d) => d.item_id))];
   const since = new Date(Math.min(...overdue.map((d) => d.due.getTime())) - LOG_MATCH_MINUTES * MINUTE).toISOString();
   const [logs, alerts] = await Promise.all([
-    readChunked<DoseRef>(itemIds, (part) => sb.from("dose_logs").select("item_id, scheduled_for").in("item_id", part).gte("scheduled_for", since)),
+    readChunked<DoseLogRef>(itemIds, (part) =>
+      sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
+    ),
     readChunked<DoseRef>(itemIds, (part) =>
       sb.from("missed_dose_alerts").select("item_id, scheduled_for").in("item_id", part).gte("scheduled_for", since),
     ),
@@ -192,9 +210,9 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   const profiles = await readChunked<{ id: string; full_name: string | null }>(patientIds, (part) =>
     sb.from("profiles").select("id, full_name").in("id", part),
   );
-  for (const p of profiles) if (p.full_name) names.set(p.id, p.full_name);
+  for (const p of profiles) if (firstName(p.full_name)) names.set(p.id, firstName(p.full_name) as string);
 
-  // No medicine name and no condition: a locked screen shows this text.
+  // No medicine name, no condition and only the first name: a locked screen shows this text.
   const messages: PushMessage[] = claimed.flatMap((m) =>
     tokensOf(m.patient_id).map((to) => ({
       to,

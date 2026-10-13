@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CATCH_UP_MINUTES,
   findMissedDoses,
+  firstName,
   GRACE_MINUTES,
   istDate,
   istInstant,
@@ -76,12 +77,20 @@ describe("findMissedDoses", () => {
     expect(r.missed.map((m) => m.item_id)).toEqual(["i-1"]);
   });
 
-  it("does not count a dose with a log within 30 minutes, whatever its status", () => {
-    const log = (minutes: number) => ({ item_id: "i-1", scheduled_for: new Date(dueAt.getTime() + minutes * 60_000).toISOString() });
+  it("does not count a dose with a taken or skipped log within 30 minutes", () => {
+    const log = (minutes: number, status = "taken") => ({ item_id: "i-1", scheduled_for: new Date(dueAt.getTime() + minutes * 60_000).toISOString(), status });
+    expect(findMissedDoses([item()], [log(0, "skipped")], [], now).missed).toHaveLength(0);
     expect(findMissedDoses([item()], [log(0)], [], now).missed).toHaveLength(0);
     expect(findMissedDoses([item()], [log(-30)], [], now).missed).toHaveLength(0);
     expect(findMissedDoses([item()], [log(30)], [], now).missed).toHaveLength(0);
     expect(findMissedDoses([item()], [log(31)], [], now).missed).toHaveLength(1);
+  });
+
+  it("still counts a dose the patient logged as missed, so the caregiver hears about it", () => {
+    const missedLog = { item_id: "i-1", scheduled_for: dueAt.toISOString(), status: "missed" };
+    expect(findMissedDoses([item()], [missedLog], [], now).missed).toHaveLength(1);
+    // a taken log of the same dose wins over a missed one
+    expect(findMissedDoses([item()], [missedLog, { ...missedLog, status: "taken" }], [], now).missed).toHaveLength(0);
   });
 
   it("ignores the log of another medicine", () => {
@@ -165,6 +174,17 @@ function world(extra: Record<string, Row[]> = {}) {
 
 const now = ist("2026-10-12 10:30");
 
+describe("firstName", () => {
+  it("takes the first word and handles blanks", () => {
+    expect(firstName("Aryan Sharma")).toBe("Aryan");
+    expect(firstName("  Neha   Sharma ")).toBe("Neha");
+    expect(firstName("Madonna")).toBe("Madonna");
+    expect(firstName("")).toBeNull();
+    expect(firstName("   ")).toBeNull();
+    expect(firstName(null)).toBeNull();
+  });
+});
+
 describe("runMissedDoseCheck", () => {
   it("pushes the caregiver once for a dose that was never logged, and records the alert", async () => {
     const db = world();
@@ -178,7 +198,7 @@ describe("runMissedDoseCheck", () => {
     expect(messages[0]).toMatchObject({
       to: "ExponentPushToken[care1]",
       title: "A dose was missed",
-      body: "Aryan Sharma has not logged the 09:00 dose.",
+      body: "Aryan has not logged the 09:00 dose.",
       channelId: "caregiver-alerts",
       data: { kind: "missed_dose", patient_id: "p-1", item_id: "i-1" },
     });
@@ -194,8 +214,15 @@ describe("runMissedDoseCheck", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it("stays quiet when the dose was logged, even as 'missed' by the patient", async () => {
-    for (const status of ["taken", "skipped", "missed"]) {
+  it("alerts the caregiver when the patient logged the dose as missed", async () => {
+    const db = world({ dose_logs: [{ item_id: "i-1", scheduled_for: ist("2026-10-12 09:05").toISOString(), status: "missed" }] });
+    const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    expect(await runMissedDoseCheck(db.sb, send, now)).toEqual({ checked: 1, alerts_sent: 1 });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet when the dose was logged as taken or skipped", async () => {
+    for (const status of ["taken", "skipped"]) {
       const db = world({ dose_logs: [{ item_id: "i-1", scheduled_for: ist("2026-10-12 09:05").toISOString(), status }] });
       const send = vi.fn(async () => ok(0));
       expect(await runMissedDoseCheck(db.sb, send, now)).toEqual({ checked: 1, alerts_sent: 0 });
@@ -282,10 +309,21 @@ describe("runMissedDoseCheck", () => {
   });
 
   it("names someone neutrally when the patient has no name", async () => {
-    const db = world({ profiles: [{ id: "p-1", full_name: null }] });
+    for (const full_name of [null, "", "   "]) {
+      const db = world({ profiles: [{ id: "p-1", full_name }] });
+      const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+      await runMissedDoseCheck(db.sb, send, now);
+      expect(send.mock.calls[0][0][0].body).toBe("Someone you look after has not logged the 09:00 dose.");
+    }
+  });
+
+  it("shows only the first name on the lock screen", async () => {
+    const db = world({ profiles: [{ id: "p-1", full_name: "  Aryan Kumar Sharma " }] });
     const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
     await runMissedDoseCheck(db.sb, send, now);
-    expect(send.mock.calls[0][0][0].body).toBe("Someone you look after has not logged the 09:00 dose.");
+    const m = send.mock.calls[0][0][0];
+    expect(m.body).toBe("Aryan has not logged the 09:00 dose.");
+    expect(`${m.title} ${m.body}`).not.toMatch(/Sharma|Kumar/);
   });
 
   it("handles each patient of a large family list, reading ids 100 at a time", async () => {
