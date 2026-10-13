@@ -38,11 +38,16 @@ export default function DoctorVerifyPage() {
 
   const [userEditedRegNo, setUserEditedRegNo] = useState<string | null>(null);
   const [userEditedCouncil, setUserEditedCouncil] = useState<string | null>(null);
-  const [userEditedYear, setUserEditedYear] = useState<number | null>(null);
+  const [userEditedYear, setUserEditedYear] = useState<string | null>(null);
 
   const regNo = userEditedRegNo ?? (doctorProfile?.reg_no || "");
   const stateCouncil = userEditedCouncil ?? (doctorProfile?.state_council || "Delhi Medical Council");
-  const yearOfReg = userEditedYear ?? (doctorProfile?.year_of_registration || 2018);
+  const yearOfReg =
+    userEditedYear !== null
+      ? userEditedYear
+      : doctorProfile?.year_of_registration
+        ? String(doctorProfile.year_of_registration)
+        : "";
 
   const [verifyResult, setVerifyResult] = useState<DoctorVerifyRes | null>(null);
 
@@ -59,11 +64,11 @@ export default function DoctorVerifyPage() {
     setVerifyResult(null);
 
     try {
-      const parsedYear = Number(yearOfReg);
+      const parsedYear = yearOfReg.trim() ? parseInt(yearOfReg.trim(), 10) : NaN;
       const res = await verifyMutation.mutateAsync({
         reg_no: regNo.trim(),
         state_council: stateCouncil,
-        ...(Number.isInteger(parsedYear) && parsedYear > 1900
+        ...(Number.isInteger(parsedYear) && parsedYear >= 1950
           ? { year_of_registration: parsedYear }
           : {}),
       });
@@ -240,16 +245,16 @@ export default function DoctorVerifyPage() {
                 htmlFor="doctor-year"
                 className="block text-xs font-bold text-slate-800 mb-1"
               >
-                Year of Registration *
+                Year of Registration (Optional)
               </label>
               <input
                 id="doctor-year"
                 type="number"
                 min="1950"
                 max={new Date().getFullYear()}
-                required
                 value={yearOfReg}
-                onChange={(e) => setUserEditedYear(parseInt(e.target.value) || 2018)}
+                onChange={(e) => setUserEditedYear(e.target.value)}
+                placeholder="e.g. 2018 (optional)"
                 className="w-full rounded-xl border border-slate-300 p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
@@ -323,7 +328,7 @@ export default function DoctorVerifyPage() {
                 </p>
                 <p>
                   <strong>Registration Year:</strong>{" "}
-                  {verifyResult.match?.year_of_registration || yearOfReg}
+                  {verifyResult.match?.year_of_registration || yearOfReg || "Not specified"}
                 </p>
                 <p className="text-[11px] text-slate-500 pt-1">
                   Verified timestamp: {verifyResult.checked_at}
