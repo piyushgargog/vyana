@@ -24,6 +24,7 @@ COPY --from=build /repo/apps/web/public ./apps/web/public
 RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 # Trivy flags zlib 1.3.2-r0 in the node:26-alpine base image (CVE-2026-85091, heap
 # overflow in gz_vacate()). The fix is already in Alpine main; pin it (issue #154).
+# Remove this pin once node:26-alpine ships zlib >= 1.3.2-r1 (re-check 2026-10-14).
 RUN apk add --no-cache zlib=1.3.2-r1
 USER node
 EXPOSE 3000

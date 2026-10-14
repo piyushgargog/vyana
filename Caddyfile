@@ -10,6 +10,19 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(self), microphone=(), geolocation=(self)"
 	}
+	# Access log with the TinyFish monitor secret redacted from the URL (issue #152):
+	# TinyFish sends no custom webhook headers and signs nothing, so the monitor
+	# secret travels as ?secret=... on /api/webhooks/tinyfish-monitor. The value
+	# must never land in a log.
+	log {
+		format filter {
+			fields {
+				request>uri query {
+					replace secret REDACTED
+				}
+			}
+		}
+	}
 	reverse_proxy web:3000 {
 		# Agent jobs and the assistant stream can take a while.
 		transport http {
