@@ -403,6 +403,8 @@ export default function BasketPage() {
                   size="md"
                   className="mt-4 w-full"
                   href="https://janaushadhi.gov.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Find a Jan Aushadhi store
                 </ButtonLink>

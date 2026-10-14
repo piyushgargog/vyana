@@ -194,7 +194,7 @@ function AppShellContent({
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={cn("flex min-w-16 flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[10px] transition-colors", active ? "bg-accent-soft font-semibold text-accent-strong" : "text-label-3")}
+              className={cn("flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[10px] transition-colors", active ? "bg-accent-soft font-semibold text-accent-strong" : "text-label-3")}
             >
               <Icon aria-hidden="true" className="h-[22px] w-[22px]" />
               {label}
