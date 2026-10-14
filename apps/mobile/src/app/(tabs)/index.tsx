@@ -1,9 +1,7 @@
 import React from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,18 +21,27 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  computeItemRefill,
-  MobileAiSafetyBanner,
-  MobileDisclaimerFooter,
-  MobileSkeletonCard,
-} from '@/components/ui-primitives';
+  Button,
+  Card,
+  CardHeader,
+  Glass,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { MobileSkeletonCard } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 export default function PatientHomeScreen() {
   const router = useRouter();
   const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
-  const { data: activeItems = [], isLoading: itemsLoading } = useActiveItems();
+  const { data: activeItems = [], isLoading: itemsLoading, refetch: refetchItems } = useActiveItems();
   const { data: conditions = [] } = useConditions();
   const { data: carePlans = [] } = useCarePlans();
   const activeCarePlan = parseCarePlanJson(carePlans[0]?.plan_json);
@@ -57,11 +64,17 @@ export default function PatientHomeScreen() {
     0
   ).toISOString();
 
-  const { data: todayDoseLogs = [] } = useDoseLogs(startOfDay, endOfDay);
+  const { data: todayDoseLogs = [], refetch: refetchLogs } = useDoseLogs(startOfDay, endOfDay);
   const { data: adherence } = useAdherence(30);
-  const { data: appointments = [] } = useMyAppointments();
+  const { data: appointments = [], refetch: refetchAppts } = useMyAppointments();
   const { data: drugAlerts = [] } = useDrugAlerts();
   const logDoseMutation = useLogDose();
+
+  const onRefresh = () => {
+    refetchItems();
+    refetchLogs();
+    refetchAppts();
+  };
 
   const scheduledSlots = activeItems.flatMap((item) => {
     const times =
@@ -161,667 +174,445 @@ export default function PatientHomeScreen() {
     ? `/care/${conditions[0].id}`
     : '/onboarding';
 
+  const eyebrowDate = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* First focusable & largest target: Emergency SOS Button */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Emergency SOS — Call 108 Ambulance, send location SMS to family, and show nearby hospitals"
-        onPress={() => router.push('/sos')}
-        style={styles.sosBanner}
+    <View style={styles.container}>
+      <Screen
+        eyebrow={eyebrowDate}
+        title="Today"
+        onRefresh={onRefresh}
+        trailing={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Emergency SOS — Call 108 Ambulance"
+            onPress={() => router.push('/sos')}
+            style={styles.sosHeaderBtn}
+          >
+            <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
+              SOS 108
+            </Text>
+          </Pressable>
+        }
       >
-        <View style={styles.sosBannerLeft}>
-          <Text style={styles.sosBadge}>EMERGENCY SOS · 108 / 112</Text>
-          <Text style={styles.sosTitle}>Tap for Immediate Ambulance & Alert</Text>
-          <Text style={styles.sosSub}>
-            3-sec countdown → Dials 108 · Texts GPS to family · Offline Medical ID
-          </Text>
-        </View>
-        <View style={styles.sosCircle}>
-          <Text style={styles.sosCircleText}>SOS</Text>
-        </View>
-      </Pressable>
-
-      {/* Welcome + Medical ID + Caregiver Circle */}
-      <View style={styles.welcomeCard}>
-        <View style={styles.welcomeTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>
-              Namaste{profile?.full_name ? `, ${profile.full_name}` : ''}
-            </Text>
-            <Text style={styles.subGreeting}>
-              Blood Group: {profile?.blood_group || '—'} · Allergies:{' '}
-              {(profile?.allergies ?? []).join(', ') || 'None recorded'}
-            </Text>
-          </View>
+        {/* Unseen Drug Safety Alert */}
+        {unseenAlerts.length > 0 && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open Offline Medical ID QR Code"
-            onPress={() => router.push('/medical-id')}
-            style={styles.qrQuickBtn}
+            accessibilityLabel={`CDSCO Drug Quality Alert for ${unseenAlerts[0].medicine_name}`}
+            onPress={() => router.push('/alerts')}
           >
-            <Text style={styles.qrQuickBtnText}>Medical ID QR</Text>
+            <Card style={styles.alertCard}>
+              <View style={styles.alertHeader}>
+                <Pill text={`CDSCO Alert (${unseenAlerts.length})`} tone="warn" />
+                <Text variant="footnote" tone="accent">
+                  View →
+                </Text>
+              </View>
+              <Text variant="headline" style={{ marginTop: T.space.xs }}>
+                {unseenAlerts[0].medicine_name}: {unseenAlerts[0].title}
+              </Text>
+              <Text variant="footnote" tone="secondary" numberOfLines={2}>
+                {unseenAlerts[0].snippet}
+              </Text>
+            </Card>
           </Pressable>
-        </View>
+        )}
 
-        <View style={styles.quickNavRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open Symptom Triage"
-            onPress={() => router.push('/triage')}
-            style={styles.secondaryLinkBtn}
-          >
-            <Text style={styles.secondaryLinkText}>Symptom Triage →</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open Caregiver Circle"
-            onPress={() => router.push('/caregiver')}
-            style={styles.secondaryLinkBtn}
-          >
-            <Text style={styles.secondaryLinkText}>Caregivers →</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open Health Timeline"
-            onPress={() => router.push('/timeline')}
-            style={styles.secondaryLinkBtn}
-          >
-            <Text style={styles.secondaryLinkText}>Timeline →</Text>
-          </Pressable>
-        </View>
-      </View>
+        {/* Doses Card with Progress */}
+        <Card>
+          <CardHeader
+            title="Doses"
+            trailing={`${takenCount} of ${scheduledSlots.length} taken`}
+          />
 
-      {/* Unseen CDSCO Drug Safety Alert Banner */}
-      {unseenAlerts.length > 0 && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${unseenAlerts.length} CDSCO Drug Quality Alert for your active medicines. Tap to view`}
-          onPress={() => router.push('/alerts')}
-          style={styles.alertBanner}
-        >
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.alertBadge}>
-              CDSCO DRUG QUALITY ALERT ({unseenAlerts.length})
-            </Text>
-            <Text style={styles.alertTitle}>
-              {unseenAlerts[0].medicine_name}: {unseenAlerts[0].title}
-            </Text>
-            <Text style={styles.alertSub} numberOfLines={2}>
-              {unseenAlerts[0].snippet}
-            </Text>
-          </View>
-          <Text style={styles.alertArrow}>View →</Text>
-        </Pressable>
-      )}
+          {itemsLoading ? (
+            <MobileSkeletonCard lines={2} />
+          ) : scheduledSlots.length === 0 ? (
+            <View style={styles.emptyDoses}>
+              <Text variant="subhead" tone="secondary">
+                No scheduled doses for today.
+              </Text>
+              <Button
+                title="Scan prescription"
+                variant="secondary"
+                size="sm"
+                onPress={() => router.push('/prescriptions/scan')}
+              />
+            </View>
+          ) : (
+            <View style={styles.dosesList}>
+              {scheduledSlots.map((slot) => {
+                const isTaken = slot.status === 'taken';
+                const isSkipped = slot.status === 'skipped';
+                return (
+                  <View key={slot.key} style={styles.doseRow}>
+                    <View style={styles.doseInfo}>
+                      <View style={styles.doseTitleRow}>
+                        <Text variant="headline">{slot.medicineName}</Text>
+                        {slot.strength ? (
+                          <Text variant="subhead" tone="secondary">
+                            {' '}{slot.strength}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text variant="footnote" tone="tertiary">
+                        {slot.timeStr} · {slot.dosage ?? 'As prescribed'} ·{' '}
+                        {slot.withFood ? 'With food' : 'Anytime'}
+                      </Text>
+                    </View>
 
-      {/* Today's Doses + 30-Day Adherence */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Today&apos;s Medicine Schedule</Text>
-            <Text style={styles.sectionSub}>
-              {takenCount} of {scheduledSlots.length} doses taken today
-            </Text>
-          </View>
-          <View style={styles.adherencePill}>
-            <Text style={styles.adherenceText}>
-              {adherence ? `${adherence.percent}%` : '—'} 30-day adherence
-            </Text>
-          </View>
-        </View>
+                    <View style={styles.doseActions}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Mark ${slot.medicineName} as taken`}
+                        disabled={logDoseMutation.isPending}
+                        onPress={() =>
+                          handleDoseAction(
+                            slot.itemId,
+                            slot.scheduledIso,
+                            'taken',
+                            `${slot.medicineName} ${slot.strength ?? ''}`
+                          )
+                        }
+                        style={[
+                          styles.doseBtn,
+                          isTaken ? styles.doseBtnTaken : styles.doseBtnDefault,
+                        ]}
+                      >
+                        <Text
+                          variant="footnote"
+                          tone={isTaken ? 'white' : 'accent'}
+                          style={styles.doseBtnText}
+                        >
+                          {isTaken ? '✓ Taken' : 'Take'}
+                        </Text>
+                      </Pressable>
 
-        {itemsLoading ? (
-          <MobileSkeletonCard lines={2} style={{ marginVertical: 4 }} />
-        ) : scheduledSlots.length === 0 ? (
-          <View style={{ gap: 8, paddingVertical: 4 }}>
-            <Text style={styles.sectionSub}>
-              No scheduled doses for today. Scan a prescription to add medicines.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Scan Prescription to add medicines"
-              onPress={() => router.push('/prescriptions/scan')}
-              style={styles.actionBtnOutline}
-            >
-              <Text style={styles.actionBtnOutlineText}>+ Scan Prescription</Text>
-            </Pressable>
-          </View>
-        ) : (
-          scheduledSlots.map((slot) => {
-            const isTaken = slot.status === 'taken';
-            const isSkipped = slot.status === 'skipped';
-            return (
-              <View key={slot.key} style={styles.doseRow}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={styles.doseTitleRow}>
-                    <Text style={styles.doseTime}>{slot.timeStr}</Text>
-                    <Text style={styles.doseName}>
-                      {slot.medicineName} {slot.strength}
+                      {!isTaken && (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Mark ${slot.medicineName} as skipped`}
+                          disabled={logDoseMutation.isPending}
+                          onPress={() =>
+                            handleDoseAction(
+                              slot.itemId,
+                              slot.scheduledIso,
+                              'skipped',
+                              `${slot.medicineName} ${slot.strength ?? ''}`
+                            )
+                          }
+                          style={[
+                            styles.doseBtn,
+                            isSkipped
+                              ? styles.doseBtnSkipped
+                              : styles.doseBtnSecondary,
+                          ]}
+                        >
+                          <Text
+                            variant="footnote"
+                            tone={isSkipped ? 'white' : 'tertiary'}
+                            style={styles.doseBtnText}
+                          >
+                            {isSkipped ? 'Skipped' : 'Skip'}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {adherence && (
+            <View style={styles.adherenceFooter}>
+              <Text variant="caption" tone="tertiary">
+                30-day adherence rate: {adherence.percent}%
+              </Text>
+            </View>
+          )}
+        </Card>
+
+        {/* Refill Due Card */}
+        {refillDueItems.length > 0 && (
+          <Card>
+            <CardHeader
+              title="Refill Due Soon"
+              trailing={`${refillDueItems.length} items`}
+            />
+            <View style={styles.refillList}>
+              {refillDueItems.map(({ item, refill }) => (
+                <View key={item.id} style={styles.refillRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="headline">{item.medicine_name}</Text>
+                    <Text variant="footnote" tone="tertiary">
+                      {refill.daysLeft} days remaining · Qty:{' '}
+                      {item.quantity_total ?? '—'}
                     </Text>
                   </View>
-                  <Text style={styles.doseMeta}>
-                    {slot.dosage ?? 'As prescribed'} ·{' '}
-                    {slot.withFood ? 'with food' : 'before/anytime'} · Status:{' '}
-                    <Text
-                      style={
-                        isTaken
-                          ? styles.statusTaken
-                          : isSkipped
-                            ? styles.statusSkipped
-                            : styles.statusPending
-                      }
-                    >
-                      {slot.status.toUpperCase()}
-                    </Text>
-                  </Text>
-                </View>
-
-                <View style={styles.doseActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Taken`}
-                    disabled={logDoseMutation.isPending}
+                  <Button
+                    title="Reorder"
+                    variant="secondary"
+                    size="sm"
                     onPress={() =>
-                      handleDoseAction(
-                        slot.itemId,
-                        slot.scheduledIso,
-                        'taken',
-                        `${slot.medicineName} ${slot.strength ?? ''}`
+                      handleReorderSingle(
+                        item.medicine_name,
+                        item.strength,
+                        item.quantity_total
                       )
                     }
-                    style={[styles.takenBtn, isTaken && styles.takenBtnActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.takenBtnText,
-                        isTaken && styles.takenBtnTextActive,
-                      ]}
-                    >
-                      {isTaken ? '✓ Taken' : 'Taken'}
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Mark ${slot.medicineName} at ${slot.timeStr} as Skipped`}
-                    disabled={logDoseMutation.isPending}
-                    onPress={() =>
-                      handleDoseAction(
-                        slot.itemId,
-                        slot.scheduledIso,
-                        'skipped',
-                        `${slot.medicineName} ${slot.strength ?? ''}`
-                      )
-                    }
-                    style={[styles.skipBtn, isSkipped && styles.skipBtnActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.skipBtnText,
-                        isSkipped && styles.skipBtnTextActive,
-                      ]}
-                    >
-                      {isSkipped ? 'Skipped' : 'Skip'}
-                    </Text>
-                  </Pressable>
+                  />
                 </View>
-              </View>
-            );
-          })
+              ))}
+            </View>
+          </Card>
         )}
+
+        {/* Your Health Grouped List */}
+        <ListGroup header="Your health">
+          <ListRow
+            icon={
+              <IconTile
+                ios="chart.line.uptrend.xyaxis"
+                android="monitoring"
+                color="orange"
+              />
+            }
+            title="Blood Reports & Trends"
+            subtitle="Track biomarkers over time"
+            onPress={() => router.push('/(tabs)/reports')}
+          />
+          <ListRow
+            icon={
+              <IconTile
+                ios="calendar"
+                android="calendar_today"
+                color="blue"
+              />
+            }
+            title="Hospital OPD Token"
+            subtitle={
+              nextAppt
+                ? `${nextAppt.hospitals?.name} · Token #${nextAppt.token_no}`
+                : 'Book hospital appointment'
+            }
+            trailing={
+              nextAppt ? (
+                <Pill text={`#${nextAppt.token_no}`} tone="accent" />
+              ) : undefined
+            }
+            onPress={() =>
+              router.push(nextAppt ? '/appointments' : '/appointments/book')
+            }
+          />
+          <ListRow
+            icon={
+              <IconTile
+                ios="heart.text.square.fill"
+                android="clinical_notes"
+                color="green"
+              />
+            }
+            title="Chronic Care Plan"
+            subtitle={
+              activeCarePlan
+                ? activeCarePlan.condition
+                : 'Physician care instructions'
+            }
+            onPress={() => router.push(carePlanHref as never)}
+          />
+          <ListRow
+            icon={
+              <IconTile
+                ios="qrcode"
+                android="qr_code"
+                color="red"
+              />
+            }
+            title="Offline Medical ID QR"
+            subtitle={`Blood Group: ${profile?.blood_group || '—'} · Tap to display`}
+            onPress={() => router.push('/medical-id')}
+          />
+          <ListRow
+            icon={
+              <IconTile
+                ios="person.2.fill"
+                android="group"
+                color="indigo"
+              />
+            }
+            title="Caregiver Circle"
+            subtitle="Family alerts & missed-dose check-in"
+            onPress={() => router.push('/caregiver')}
+          />
+          <ListRow
+            icon={
+              <IconTile
+                ios="stethoscope"
+                android="stethoscope"
+                color="accent"
+              />
+            }
+            title="Symptom Triage"
+            subtitle="Check urgency & medical department"
+            onPress={() => router.push('/triage')}
+          />
+        </ListGroup>
+      </Screen>
+
+      {/* Floating Glass Scan Button */}
+      <View pointerEvents="box-none" style={styles.floatingContainer}>
+        <Glass style={styles.glassWrapper}>
+          <Button
+            title="Scan a prescription"
+            variant="primary"
+            size="md"
+            icon={
+              <Symbol
+                ios="doc.viewfinder.fill"
+                android="document_scanner"
+                size={20}
+                color={T.color.white}
+              />
+            }
+            onPress={() => router.push('/prescriptions/scan')}
+          />
+        </Glass>
       </View>
-
-      {/* Refill-Due Cards */}
-      {refillDueItems.length > 0 && (
-        <View style={styles.refillSection}>
-          <Text style={styles.sectionTitle}>Refill Due Soon</Text>
-          {refillDueItems.map(({ item, refill }) => (
-            <View key={item.id} style={styles.refillCard}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.refillTitle}>
-                  {item.medicine_name} {item.strength} — {refill.daysLeft} days
-                  left
-                </Text>
-                <Text style={styles.refillSub}>
-                  {refill.refillDate ? `Refill by ${refill.refillDate} · ` : ''}
-                  Qty: {item.quantity_total ?? '—'}
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Reorder ${item.medicine_name} ${item.strength ?? ''} and compare pharmacy prices`}
-                onPress={() =>
-                  handleReorderSingle(
-                    item.medicine_name,
-                    item.strength,
-                    item.quantity_total
-                  )
-                }
-                style={styles.reorderBtn}
-              >
-                <Text style={styles.reorderBtnText}>Reorder →</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Upcoming OPD Appointment Card */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Hospital OPD Token</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Book or view OPD appointments"
-            onPress={() => router.push('/appointments')}
-          >
-            <Text style={styles.linkText}>All Hospitals & Tokens →</Text>
-          </Pressable>
-        </View>
-
-        {nextAppt ? (
-          <View style={styles.apptCard}>
-            <View style={styles.tokenBadgeRow}>
-              <Text style={styles.tokenBadge}>Token #{nextAppt.token_no}</Text>
-              <Text style={styles.apptStatusBadge}>
-                {nextAppt.status.toUpperCase()}
-              </Text>
-            </View>
-            <Text style={styles.apptTitle}>
-              {nextAppt.hospitals?.name ?? 'Hospital OPD'}
-            </Text>
-            <Text style={styles.apptDept}>
-              {nextAppt.departments?.name ?? 'OPD Department'}
-            </Text>
-            <Text style={styles.apptInstruction}>
-              Token #{nextAppt.token_no} — report to{' '}
-              {nextAppt.departments?.name ?? 'OPD'} on{' '}
-              {nextAppt.appointment_date}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ gap: 8 }}>
-            <Text style={styles.sectionSub}>No upcoming OPD tokens booked.</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Book Hospital OPD Appointment"
-              onPress={() => router.push('/appointments/book')}
-              style={styles.actionBtnOutline}
-            >
-              <Text style={styles.actionBtnOutlineText}>+ Book Hospital Appointment</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-
-      {/* Active Chronic Care Plan (Contract: do, dont, diet, follow_up_tests) */}
-      {activeCarePlan && (
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>
-                Care Plan · {activeCarePlan.condition}
-              </Text>
-              <Text style={styles.sectionSub}>{activeCarePlan.summary}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open full Care Plan"
-              onPress={() => router.push(carePlanHref as never)}
-            >
-              <Text style={styles.linkText}>Full Plan →</Text>
-            </Pressable>
-          </View>
-          <MobileAiSafetyBanner feature="care_plan" />
-          <Text style={styles.doseMeta}>
-            Do: {activeCarePlan.do.join(' · ')}
-          </Text>
-          <Text style={styles.doseMeta}>
-            Avoid: {activeCarePlan.dont.join(' · ')}
-          </Text>
-          <Text style={styles.doseMeta}>
-            Eat more: {activeCarePlan.diet.eat_more.join(', ')} | Limit:{' '}
-            {activeCarePlan.diet.limit.join(', ')}
-          </Text>
-          {activeCarePlan.follow_up_tests.length > 0 && (
-            <Text style={styles.doseMeta}>
-              Follow-up tests:{' '}
-              {activeCarePlan.follow_up_tests
-                .map((ft) => `${ft.test} (every ${ft.every_days}d)`)
-                .join(' · ')}
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Complete Healthcare Quick-Action Grid */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Complete Healthcare Services</Text>
-        <View style={styles.grid}>
-          {[
-            {
-              title: 'Scan Prescription',
-              sub: 'OCR + Review + Reminders',
-              href: '/prescriptions/scan',
-            },
-            {
-              title: 'Compare Rx Basket',
-              sub: '1mg · Apollo · Jan Aushadhi',
-              href: '/basket',
-            },
-            {
-              title: 'Book OPD Token',
-              sub: 'Govt (ORS) & Private OPDs',
-              href: '/appointments',
-            },
-            {
-              title: 'Chronic Care Plan',
-              sub: 'Doctor-Reviewed Diet & Vitals',
-              href: carePlanHref,
-            },
-            {
-              title: 'Symptom Triage',
-              sub: 'Urgency & Dept Guidance',
-              href: '/triage',
-            },
-            {
-              title: 'Upload Lab Report',
-              sub: 'Plain-English + Lab Trends',
-              href: '/reports/upload',
-            },
-            {
-              title: 'Compare Lab Prices',
-              sub: 'Healthians · Thyrocare · 1mg',
-              href: '/labs-compare',
-            },
-            {
-              title: 'PM-JAY Hospitals',
-              sub: 'Ayushman Bharat Empanelled',
-              href: '/schemes/pmjay',
-            },
-            {
-              title: 'Daily Meal Log',
-              sub: 'Nutrition & Calories Tracker',
-              href: '/care/meals',
-            },
-            {
-              title: 'Health Timeline',
-              sub: 'Chronological Chart & Share',
-              href: '/timeline',
-            },
-          ].map((action) => (
-            <Pressable
-              key={action.title}
-              accessibilityRole="button"
-              accessibilityLabel={`${action.title}: ${action.sub}`}
-              onPress={() => router.push(action.href as never)}
-              style={styles.gridCard}
-            >
-              <Text style={styles.gridTitle}>{action.title}</Text>
-              <Text style={styles.gridSub}>{action.sub}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <MobileDisclaimerFooter />
-    </ScrollView>
+    </View>
   );
 }
 
+function computeItemRefill(item: { start_date?: string | null; duration_days?: number | null }, now: Date) {
+  if (!item.start_date || !item.duration_days) {
+    return { needsRefillSoon: false, daysLeft: 0, refillDate: null };
+  }
+  const start = new Date(item.start_date).getTime();
+  const end = start + item.duration_days * 24 * 60 * 60 * 1000;
+  const daysLeft = Math.ceil((end - now.getTime()) / (24 * 60 * 60 * 1000));
+  return {
+    needsRefillSoon: daysLeft <= 5 && daysLeft >= 0,
+    daysLeft: Math.max(0, daysLeft),
+    refillDate: new Date(end).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+    }),
+  };
+}
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  sosBanner: {
-    backgroundColor: '#DC2626',
-    borderRadius: 20,
-    padding: 18,
+  container: {
+    flex: 1,
+    backgroundColor: T.color.canvas,
+  },
+  sosHeaderBtn: {
+    backgroundColor: T.color.dangerSoft,
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs,
+    borderRadius: T.radius.pill,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sosHeaderText: {
+    fontWeight: '700',
+  },
+  alertCard: {
+    borderWidth: 1,
+    borderColor: T.color.warnSoft,
+    backgroundColor: T.color.surface,
+  },
+  alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    shadowColor: '#DC2626',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
   },
-  sosBannerLeft: { flex: 1, gap: 4 },
-  sosBadge: {
-    color: '#FEE2E2',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  sosTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  sosSub: { color: '#FEE2E2', fontSize: 12, lineHeight: 17 },
-  sosCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+  emptyDoses: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: T.space.lg,
+    gap: T.space.md,
   },
-  sosCircleText: { color: '#DC2626', fontSize: 18, fontWeight: '900' },
-  welcomeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
+  dosesList: {
+    gap: T.space.md,
   },
-  welcomeTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  greeting: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  subGreeting: { fontSize: 12, color: '#475569', marginTop: 2 },
-  qrQuickBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 12,
-  },
-  qrQuickBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  quickNavRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  secondaryLinkBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  secondaryLinkText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  alertBanner: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#F59E0B',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  alertBadge: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#B45309',
-  },
-  alertTitle: { fontSize: 14, fontWeight: '700', color: '#78350F' },
-  alertSub: { fontSize: 12, color: '#92400E' },
-  alertArrow: { fontSize: 12, fontWeight: '800', color: '#B45309' },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  sectionSub: { fontSize: 12, color: '#64748B' },
-  adherencePill: {
-    backgroundColor: '#CCFBF1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  adherenceText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
   doseRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    gap: 10,
+    paddingVertical: T.space.xs,
+    gap: T.space.md,
   },
-  doseTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  doseTime: {
-    backgroundColor: '#F1F5F9',
-    color: '#0F172A',
-    fontSize: 12,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  doseInfo: {
+    flex: 1,
+    gap: 2,
   },
-  doseName: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  doseMeta: { fontSize: 12, color: '#64748B' },
-  statusTaken: { color: '#059669', fontWeight: '700' },
-  statusSkipped: { color: '#D97706', fontWeight: '700' },
-  statusPending: { color: '#475569', fontWeight: '700' },
-  doseActions: { flexDirection: 'row', gap: 6 },
-  takenBtn: {
-    borderWidth: 1,
-    borderColor: '#0D9488',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  takenBtnActive: { backgroundColor: '#0D9488' },
-  takenBtnText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  takenBtnTextActive: { color: '#FFFFFF' },
-  skipBtn: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  skipBtnActive: { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' },
-  skipBtnText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  skipBtnTextActive: { color: '#92400E', fontWeight: '700' },
-  refillSection: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    gap: 10,
-  },
-  refillCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
+  doseTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  refillTitle: { fontSize: 14, fontWeight: '700', color: '#78350F' },
-  refillSub: { fontSize: 12, color: '#92400E' },
-  reorderBtn: {
-    backgroundColor: '#0D9488',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  reorderBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  linkText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  apptCard: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 4,
-  },
-  tokenBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tokenBadge: {
-    backgroundColor: '#0F766E',
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  apptStatusBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#0F766E',
-  },
-  apptTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A', marginTop: 4 },
-  apptDept: { fontSize: 12, fontWeight: '600', color: '#334155' },
-  apptInstruction: {
-    fontSize: 12,
-    color: '#0F766E',
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  grid: {
-    flexDirection: 'row',
+    alignItems: 'baseline',
     flexWrap: 'wrap',
-    gap: 10,
   },
-  gridCard: {
-    width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 4,
+  doseActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.xs,
   },
-  gridTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  gridSub: { fontSize: 11, color: '#64748B' },
-  actionBtnOutline: {
-    borderWidth: 1.5,
-    borderColor: '#0D9488',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+  doseBtn: {
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs + 2,
+    borderRadius: T.radius.pill,
+    minHeight: 36,
+    minWidth: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0FDFA',
   },
-  actionBtnOutlineText: {
-    color: '#0F766E',
-    fontSize: 13,
-    fontWeight: '700',
+  doseBtnDefault: {
+    backgroundColor: T.color.accentSoft,
+  },
+  doseBtnTaken: {
+    backgroundColor: T.color.ok,
+  },
+  doseBtnSecondary: {
+    backgroundColor: T.color.fill,
+  },
+  doseBtnSkipped: {
+    backgroundColor: T.color.label3,
+  },
+  doseBtnText: {
+    fontWeight: '600',
+  },
+  adherenceFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.color.separator,
+    paddingTop: T.space.sm,
+    marginTop: T.space.xs,
+  },
+  refillList: {
+    gap: T.space.md,
+  },
+  refillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: T.space.md,
+  },
+  floatingContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glassWrapper: {
+    borderRadius: T.radius.pill,
+    padding: 4,
+    borderCurve: 'continuous',
+    ...T.shadow.float,
   },
 });
