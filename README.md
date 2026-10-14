@@ -19,7 +19,7 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 | | Feature | What it does |
 |---|---|---|
 | 💊 | **Prescriptions, reminders and refills** | Scan a prescription or receive one from your doctor, review it, and get dose reminders with adherence tracking. Vyana warns you before a medicine runs out |
-| 🛒 | **Medicines delivered from your prescription** | Prices your **whole prescription** live on 1mg, PharmEasy, Netmeds and Apollo, plus a Jan Aushadhi generic basket, then hands you off to the cheapest pharmacy to order |
+| 🛒 | **Medicines delivered from your prescription** | Prices your **whole prescription** live on 1mg, PharmEasy, Netmeds and Apollo, plus a Jan Aushadhi generic basket, then hands you off to the cheapest pharmacy to order|
 | 🏥 | **Hospital appointments with a token** | Pick a hospital, department and date and get a token number, like the government ORS portal; see OPD timings fetched from the web |
 | 🩺 | **Verified doctors and e-prescriptions** | Doctors are checked against the NMC Indian Medical Register and write e-prescriptions with a diagnosis |
 | 📋 | **Care plan after a diagnosis** | What to do, what to avoid, what to eat, warning signs and follow-up tests, from trusted health sources and **approved by your doctor** |
