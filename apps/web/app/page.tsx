@@ -103,7 +103,7 @@ export default function LandingPage() {
               {/* Today Header */}
               <div className="flex items-end justify-between pb-3">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-label-3">
+                  <span className="text-[11px] font-semibold text-label-3">
                     Wednesday, 14 October
                   </span>
                   <p className="text-[26px] font-bold tracking-tight text-label">
@@ -154,16 +154,16 @@ export default function LandingPage() {
 
               {/* Your Health Group */}
               <div className="rounded-card bg-surface overflow-hidden shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3 text-[13px]">
-                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-label-3">
+                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
                   Your health
                 </div>
                 <div className="divide-y divide-separator">
                   <div className="flex items-center justify-between px-3.5 py-2.5">
                     <span className="font-medium text-label">HbA1c Blood Test</span>
-                    <Pill tone="ok" className="text-[11px]">Normal · 6.8%</Pill>
+                    <Pill tone="ok" className="text-[11px]">Report added</Pill>
                   </div>
                   <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="font-medium text-label">OPD Token · AIIMS</span>
+                    <span className="font-medium text-label">OPD Token · City Hospital</span>
                     <Pill tone="accent" className="text-[11px]">Token #14</Pill>
                   </div>
                 </div>
@@ -263,8 +263,7 @@ export default function LandingPage() {
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Book government and private hospital OPD tokens before leaving
                   home. Check real operating schedules and clinic timings checked
-                  on the hospital&apos;s own pages, cutting hours of waiting in
-                  crowded corridors.
+                  on the hospital&apos;s own pages, so you wait less at the hospital.
                 </p>
               </div>
 
@@ -275,7 +274,7 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• General Medicine and specialty departments</p>
-                  <p>• Live token queues and operating days</p>
+                  <p>• Token booking and operating days</p>
                 </div>
               </div>
             </Card>
@@ -299,7 +298,7 @@ export default function LandingPage() {
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
                   <span>Offline Medical ID Summary</span>
-                  <span className="text-danger-text font-bold">108 / 112 Ready</span>
+                  <span className="text-danger-text font-bold">Works offline</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• Blood group and verified allergies</p>
@@ -332,7 +331,7 @@ export default function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
-                  Every informational note quotes clinical guidelines verbatim.
+                  Every health note shows the guideline it comes from.
                   Vyana never diagnoses and never tells you a dose.
                 </p>
               </div>
@@ -359,7 +358,7 @@ export default function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
-                  Under the Digital Personal Data Protection Act, your health data
+                  Your health data
                   is shared only with caregivers and physicians you explicitly
                   authorize.
                 </p>
@@ -377,7 +376,7 @@ export default function LandingPage() {
               </h2>
               <p className="mt-3 text-[16px] text-white/70 leading-relaxed">
                 Streamline token queues, access patient medical histories instantly,
-                and prescribe daily care plans with zero administrative overhead.
+                and prescribe daily care plans with less paperwork.
               </p>
             </div>
 
@@ -399,7 +398,7 @@ export default function LandingPage() {
                   NMC Statutory Verification
                 </h3>
                 <p className="text-[14px] text-white/70 leading-relaxed">
-                  Instant practitioner verification against the National Medical
+                  Registration checked against the National Medical
                   Commission and State Medical Council registers.
                 </p>
               </div>
@@ -411,7 +410,7 @@ export default function LandingPage() {
                 </h3>
                 <p className="text-[14px] text-white/70 leading-relaxed">
                   Review patient dose adherence, monitor blood pressure and blood
-                  sugar logs, and adapt treatment plans with confidence.
+                  sugar logs, and update treatment plans.
                 </p>
               </div>
             </div>
