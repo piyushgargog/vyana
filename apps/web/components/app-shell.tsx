@@ -11,7 +11,7 @@ import {
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
-import { BrandMark, cn, SegmentedNav } from "@/components/ui";
+import { BrandMark, cn, SegmentedNav, SiteFooter } from "@/components/ui";
 import { BadgeCheck, CalendarCheck, House, LogOut, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
 
 function AppShellContent({
@@ -174,7 +174,7 @@ function AppShellContent({
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:pt-8 md:pb-10">{children}</main>
 
-      <MedicalDisclaimerFooter />
+      <SiteFooter withTabBar />
 
       {/* Phone: a floating glass tab bar, like iOS 26. */}
       <nav aria-label="Workspace" className="glass fixed inset-x-4 bottom-4 z-30 flex items-center justify-around rounded-full px-2 py-1.5 md:hidden">
