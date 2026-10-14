@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Linking,
   Pressable,
   ScrollView,
@@ -20,6 +21,51 @@ import {
   MobileDisclaimerFooter,
   MobileQrGrid,
 } from '@/components/ui-primitives';
+
+function kindBadge(kind: TimelineKind): { label: string; bg: string; color: string } {
+  switch (kind) {
+    case 'prescription':
+      return { label: 'RX', bg: '#F0FDFA', color: '#0F766E' };
+    case 'report':
+      return { label: 'LAB', bg: '#EFF6FF', color: '#1D4ED8' };
+    case 'appointment':
+      return { label: 'OPD', bg: '#FEF3C7', color: '#B45309' };
+    case 'condition':
+      return { label: 'CARE', bg: '#FDF2F8', color: '#BE185D' };
+  }
+}
+
+const TimelineItem = memo(function TimelineItem({
+  item,
+  onPress,
+}: {
+  item: TimelineEntry;
+  onPress: (entry: TimelineEntry) => void;
+}) {
+  const badge = kindBadge(item.kind);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title} on ${item.date}`}
+      onPress={() => onPress(item)}
+      style={styles.timelineCard}
+    >
+      <View style={styles.cardHeader}>
+        <View style={[styles.kindBadge, { backgroundColor: badge.bg }]}>
+          <Text style={[styles.kindBadgeText, { color: badge.color }]}>
+            {badge.label}
+          </Text>
+        </View>
+        <Text style={styles.dateText}>{item.date}</Text>
+      </View>
+
+      <Text style={styles.entryTitle}>{item.title}</Text>
+      {item.subtitle && <Text style={styles.entrySub}>{item.subtitle}</Text>}
+
+      <Text style={styles.tapDetailsText}>View details →</Text>
+    </Pressable>
+  );
+});
 
 export default function TimelineScreen() {
   const router = useRouter();
@@ -66,33 +112,42 @@ export default function TimelineScreen() {
     });
   };
 
-  const handleEntryPress = (entry: TimelineEntry) => {
-    if (entry.kind === 'prescription') {
-      router.push(`/prescriptions/${entry.id}`);
-    } else if (entry.kind === 'report') {
-      router.push(`/reports/${entry.id}`);
-    } else if (entry.kind === 'condition') {
-      router.push(`/care/${entry.id}`);
-    } else if (entry.kind === 'appointment') {
-      router.push('/appointments');
-    }
-  };
+  const handleEntryPress = useCallback(
+    (entry: TimelineEntry) => {
+      if (entry.kind === 'prescription') {
+        router.push(`/prescriptions/${entry.id}`);
+      } else if (entry.kind === 'report') {
+        router.push(`/reports/${entry.id}`);
+      } else if (entry.kind === 'condition') {
+        router.push(`/care/${entry.id}`);
+      } else if (entry.kind === 'appointment') {
+        router.push('/appointments');
+      }
+    },
+    [router]
+  );
 
-  const getKindBadge = (kind: TimelineKind) => {
-    switch (kind) {
-      case 'prescription':
-        return { label: 'RX', bg: '#F0FDFA', color: '#0F766E' };
-      case 'report':
-        return { label: 'LAB', bg: '#EFF6FF', color: '#1D4ED8' };
-      case 'appointment':
-        return { label: 'OPD', bg: '#FEF3C7', color: '#B45309' };
-      case 'condition':
-        return { label: 'CARE', bg: '#FDF2F8', color: '#BE185D' };
-    }
-  };
+  const renderItem = useCallback(
+    ({ item }: { item: TimelineEntry }) => (
+      <TimelineItem item={item} onPress={handleEntryPress} />
+    ),
+    [handleEntryPress]
+  );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+      <FlatList
+        data={filteredEntries}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.content}
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={11}
+        initialNumToRender={10}
+        ListHeaderComponent={
+          <>
+
       {/* Top Header */}
       <View style={styles.topBar}>
         <View style={{ flex: 1 }}>
@@ -227,66 +282,27 @@ export default function TimelineScreen() {
           );
         })}
       </ScrollView>
-
-      {/* Chronological Timeline List */}
-      {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color="#0D9488" />
-          <Text style={styles.loadingText}>Building your timeline…</Text>
-        </View>
-      ) : filteredEntries.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No Timeline Events</Text>
-          <Text style={styles.emptySub}>
-            Your prescriptions, lab reports, and doctor visits will appear here
-            in chronological order.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.timelineList}>
-          {filteredEntries.map((item, idx) => {
-            const badge = getKindBadge(item.kind);
-            return (
-              <Pressable
-                key={`${item.id}-${idx}`}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.title} on ${item.date}`}
-                onPress={() => handleEntryPress(item)}
-                style={styles.timelineCard}
-              >
-                <View style={styles.cardHeader}>
-                  <View
-                    style={[
-                      styles.kindBadge,
-                      { backgroundColor: badge.bg },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.kindBadgeText,
-                        { color: badge.color },
-                      ]}
-                    >
-                      {badge.label}
-                    </Text>
-                  </View>
-                  <Text style={styles.dateText}>{item.date}</Text>
-                </View>
-
-                <Text style={styles.entryTitle}>{item.title}</Text>
-                {item.subtitle && (
-                  <Text style={styles.entrySub}>{item.subtitle}</Text>
-                )}
-
-                <Text style={styles.tapDetailsText}>View details →</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      <MobileDisclaimerFooter />
-    </ScrollView>
+          </>
+        }
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color="#0D9488" />
+              <Text style={styles.loadingText}>Building your timeline…</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No Timeline Events</Text>
+              <Text style={styles.emptySub}>
+                Your prescriptions, lab reports, and doctor visits will appear here
+                in chronological order.
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={<MobileDisclaimerFooter />}
+      />
+    </View>
   );
 }
 

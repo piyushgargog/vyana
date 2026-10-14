@@ -4,7 +4,7 @@
 // Plumbing for the DB hooks: the client, the signed-in user and query keys. Owner: Vaibhav Parmar
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId } from "react";
+import { useCallback, useEffect } from "react";
 
 import type { Sb } from "../../db/queries/helpers";
 import { liveChannelName, subscribeTable, type LiveTable } from "../../db/queries/realtime";
@@ -48,17 +48,45 @@ export function useInvalidate(): (...roots: string[]) => Promise<void> {
 }
 
 /**
+ * One shared Realtime channel per (table, user). `useLiveInvalidate` used to open a new channel on
+ * every hook call, so N hooks on the same table meant N connections and N refetch storms (notably on
+ * the dashboard). Now the first hook opens the channel and the last one to unmount closes it; every
+ * hook just registers its own invalidate callback (ref counted at module level).
+ */
+const sharedChannels = new Map<string, { stop: () => void; refs: number; callbacks: Set<() => void> }>();
+
+/**
  * Refreshes the queries under `roots` whenever `table` changes for this user (Realtime applies RLS, so
- * a patient is told about their own rows only). Each call opens its own channel: a channel name that is
- * already subscribed cannot take new listeners.
+ * a patient is told about their own rows only).
  */
 export function useLiveInvalidate(table: LiveTable, ...roots: string[]): void {
   const { sb, userId, ready } = useDb();
   const invalidate = useInvalidate();
-  const instance = useId();
   const rootKey = roots.join("|");
   useEffect(() => {
     if (!ready || !userId) return;
-    return subscribeTable(sb, `${liveChannelName(table, userId)}:${instance}`, table, () => void invalidate(...rootKey.split("|")));
-  }, [sb, ready, userId, table, instance, rootKey, invalidate]);
+    const name = liveChannelName(table, userId);
+    const onChange = () => void invalidate(...rootKey.split("|"));
+    let entry = sharedChannels.get(name);
+    if (!entry) {
+      const callbacks = new Set<() => void>();
+      const stop = subscribeTable(sb, name, table, () => {
+        for (const cb of callbacks) cb();
+      });
+      entry = { stop, refs: 0, callbacks };
+      sharedChannels.set(name, entry);
+    }
+    entry.callbacks.add(onChange);
+    entry.refs += 1;
+    return () => {
+      const live = sharedChannels.get(name);
+      if (!live) return;
+      live.callbacks.delete(onChange);
+      live.refs -= 1;
+      if (live.refs <= 0) {
+        live.stop();
+        sharedChannels.delete(name);
+      }
+    };
+  }, [sb, ready, userId, table, rootKey, invalidate]);
 }
