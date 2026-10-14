@@ -184,7 +184,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         if (retryAfterSeconds !== undefined && retryAfterSeconds > 0) {
           const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
           const wait = `Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
-          message = err.success ? `${message.replace(/.?$/, ".")} ${wait}` : `You've reached the limit for now. ${wait}`;
+          message = err.success ? `${message.replace(/\.?$/, ".")} ${wait}` : `You've reached the limit for now. ${wait}`;
         } else if (!err.success) {
           message = "You've reached the limit for now. Try again later.";
         }
