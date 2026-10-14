@@ -5,6 +5,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Fixed
+- **Safety:** the SOS screen no longer calls 108 by itself after a countdown; a call only starts when the user taps a call button.
+- **Privacy:** the caregiver screen shows the linked patient's prescriptions, never the caregiver's own.
+- The prescription scan and care plan screens no longer show an invented doctor, diagnosis or date when none was read; they say it was not found.
+- The Android / iOS app now reads the API address from `EXPO_PUBLIC_API_URL` (the name the build uses), and falls back to the live site instead of `localhost`, so release builds reach the server.
 - The assistant no longer shows dose amounts, counts or schedules ("200 mg", "3 times a day"): such a sentence is held back unless it repeats the patient's own saved medicine, and any dose question ends with "ask your doctor or pharmacist".
 - The assistant no longer answers with an empty reply when its main model hits a rate limit: the fallback model now gets the conversation without the main model's reasoning, which it refused. If an answer still fails, the patient sees "Something went wrong while answering. Please try again."
 - How often a medicine is taken is now read from the written schedule in code ("1-0-1" is twice a day). A live photo scan had read "1-0-1" as once a day; the code's reading now wins, and the item is marked for the patient to check.

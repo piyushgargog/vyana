@@ -114,23 +114,15 @@ export default function MobileSosScreen() {
     }
   }, [sosMutation, coords, showToast]);
 
-  // 3-second automatic countdown
+  // A short, informational countdown while the screen gets ready. It NEVER dials: a call only ever starts when the
+  // user presses a call button (a phone must not call 108 by itself, for example after an accidental tap).
   useEffect(() => {
-    if (countdown === null) return;
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown((prev) => {
-          if (prev === null) return null;
-          if (prev <= 1) {
-            void triggerSosCall();
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown, triggerSosCall]);
+    if (countdown === null || countdown <= 0) return;
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev === null || prev <= 1 ? null : prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const handleCancelCountdown = () => {
     setCountdown(null);
@@ -210,10 +202,10 @@ export default function MobileSosScreen() {
       {/* Countdown Card or Active SOS Card */}
       {countdown !== null && countdown > 0 ? (
         <View style={styles.countdownCard}>
-          <Text style={styles.countdownBadge}>CALLING 108 IN</Text>
+          <Text style={styles.countdownBadge}>EMERGENCY HELP</Text>
           <Text style={styles.countdownNumber}>{countdown}</Text>
           <Text style={styles.countdownSub}>
-            Auto-dialing 108 ambulance in {countdown} seconds…
+            Nothing is called until you tap a button. Tap “Call 108 now” for an ambulance.
           </Text>
           <View style={styles.countdownActions}>
             <Pressable
@@ -226,11 +218,11 @@ export default function MobileSosScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Cancel emergency countdown"
+              accessibilityLabel="Dismiss and show all emergency options"
               onPress={handleCancelCountdown}
               style={styles.cancelBtn}
             >
-              <Text style={styles.cancelBtnText}>Cancel Countdown</Text>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
             </Pressable>
           </View>
         </View>

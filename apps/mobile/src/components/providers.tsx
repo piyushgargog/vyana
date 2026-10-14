@@ -32,8 +32,9 @@ export function MobileAppProviders({
 }: {
   children: React.ReactNode;
 }) {
-  const baseUrl =
-    process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+  // One name everywhere (eas.json, .env.example, BUILD.md). Without it the app uses the live site: a phone can
+  // never reach 'localhost', so that default broke every release build.
+  const baseUrl = (process.env.EXPO_PUBLIC_API_URL || 'https://vyanahealth.app').replace(/\/+$/, '');
   const useMocks = process.env.EXPO_PUBLIC_USE_MOCKS === 'true';
   const [selectedBasketMedicines, setSelectedBasketMedicines] = useState<
     { name: string; strength?: string; quantity: number }[]

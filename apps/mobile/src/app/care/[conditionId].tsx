@@ -201,7 +201,7 @@ export default function ConditionCarePlanScreen() {
         <View style={styles.doctorBadgeCard}>
           <Text style={styles.doctorBadgeTitle}>✓ DOCTOR REVIEWED & APPROVED</Text>
           <Text style={styles.doctorBadgeSub}>
-            Approved by Dr. Ananya Kapoor · Follow this plan as advised.
+            Approved by your doctor. Follow this plan as advised.
           </Text>
         </View>
       ) : isPatientGenerated ? (

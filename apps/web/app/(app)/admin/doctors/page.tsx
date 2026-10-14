@@ -9,7 +9,19 @@ import {
   type DbHospital,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { SkeletonCard } from "@/components/ui-primitives";
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Field,
+  LargeTitle,
+  Pill,
+  Sheet,
+  SkeletonLine,
+  cn,
+} from "@/components/ui";
+import { Loader2, Search } from "lucide-react";
 
 interface DoctorWithRelations extends DbDoctor {
   profile: { full_name: string | null } | null;
@@ -27,7 +39,7 @@ export default function AdminDoctorsPage() {
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Inspecting verification JSON
+  // Inspecting verification JSON in design system Sheet
   const [selectedDoctorForJson, setSelectedDoctorForJson] =
     useState<DoctorWithRelations | null>(null);
 
@@ -122,53 +134,40 @@ export default function AdminDoctorsPage() {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-sm">
-                Adm
-              </span>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Doctors & Hospitals Registry
-                </h1>
-                <p className="text-xs text-slate-500">
-                  Administrative oversight of verified medical practitioners and verified hospital OPD timings
-                </p>
-              </div>
-            </div>
-          </div>
+      <LargeTitle
+        eyebrow="Administration"
+        title="Doctors & Hospitals Registry"
+        subtitle="Administrative oversight of verified medical practitioners and verified hospital OPD timings."
+        actions={
+          <Pill tone="neutral">
+            Admin: {myProfile?.full_name || "Administrator"}
+          </Pill>
+        }
+      />
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
-              Role: Admin ({myProfile?.full_name || "Administrator"})
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Section Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-0.5">
+      {/* Primary Section Switcher */}
+      <div className="inline-flex rounded-full bg-fill p-1">
         <button
           type="button"
           onClick={() => setActiveTab("doctors")}
-          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition border-b-2 ${
+          className={cn(
+            "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "doctors"
-              ? "border-teal-700 bg-white text-teal-800 shadow-xs"
-              : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          }`}
+              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              : "text-label-2 hover:text-label"
+          )}
         >
           Doctors Registry ({doctors.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("hospitals")}
-          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition border-b-2 ${
+          className={cn(
+            "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "hospitals"
-              ? "border-teal-700 bg-white text-teal-800 shadow-xs"
-              : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          }`}
+              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              : "text-label-2 hover:text-label"
+          )}
         >
           Hospital OPD Timings ({hospitals?.length ?? 0})
         </button>
@@ -179,17 +178,18 @@ export default function AdminDoctorsPage() {
         <div className="space-y-4">
           {/* Filter Toolbar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <div className="inline-flex items-center gap-1 overflow-x-auto rounded-full bg-fill p-1">
               {(["all", "verified", "pending", "failed"] as const).map((st) => (
                 <button
                   key={st}
                   type="button"
                   onClick={() => setStatusFilter(st)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition ${
+                  className={cn(
+                    "rounded-full px-3.5 py-1 text-[13px] font-semibold capitalize transition-colors",
                     statusFilter === st
-                      ? "bg-slate-900 text-white"
-                      : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                  }`}
+                      ? "bg-surface text-label shadow-[0_1px_3px_rgb(0_0_0/0.08)]"
+                      : "text-label-2 hover:text-label"
+                  )}
                 >
                   {st}
                 </button>
@@ -197,37 +197,44 @@ export default function AdminDoctorsPage() {
             </div>
 
             <div className="w-full sm:w-72">
-              <label htmlFor="search-doctors-input" className="sr-only">
-                Search doctors
-              </label>
-              <input
+              <Field
                 id="search-doctors-input"
+                label="Search doctors"
+                className="[&_label]:sr-only"
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, reg #, specialization…"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Doctors Table */}
           {doctorsLoading ? (
-            <SkeletonCard lines={4} />
+            <Card className="space-y-3">
+              <SkeletonLine className="h-6 w-1/3" />
+              <SkeletonLine className="h-10 w-full" />
+              <SkeletonLine className="h-10 w-full" />
+              <SkeletonLine className="h-10 w-full" />
+            </Card>
           ) : doctorsError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
-              <p className="font-bold">Failed to load doctors registry</p>
-              <p className="mt-1 text-xs">{doctorsError}</p>
-            </div>
+            <Card className="border border-danger/30 bg-danger-soft/20 text-danger-text">
+              <p className="font-semibold text-[17px]">Failed to load doctors registry</p>
+              <p className="mt-1 text-[13px] text-label-2">{doctorsError}</p>
+            </Card>
           ) : filteredDoctors.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 shadow-sm">
-              No doctors matched your filter criteria.
-            </div>
+            <Card>
+              <EmptyState
+                icon={<Search className="h-6 w-6" aria-hidden="true" />}
+                title="No doctors match your criteria"
+                body="Try adjusting your search terms or selecting a different status filter."
+              />
+            </Card>
           ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700 border-collapse">
+            <Card padded={false} className="overflow-x-auto">
+              <table className="w-full text-left text-[14px] text-label border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                  <tr className="border-b border-separator bg-fill/50 text-[12px] font-semibold uppercase tracking-wider text-label-3">
                     <th className="py-3 px-4">Doctor Name</th>
                     <th className="py-3 px-4">Registration</th>
                     <th className="py-3 px-4">Specialization</th>
@@ -244,48 +251,42 @@ export default function AdminDoctorsPage() {
                     return (
                       <tr
                         key={doc.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition"
+                        className="border-b border-separator/60 hover:bg-canvas/50 transition-colors"
                       >
-                        <td className="py-3 px-4 font-bold text-slate-900">
+                        <td className="py-3.5 px-4 font-semibold text-label">
                           {doc.profile?.full_name || "Doctor"}
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="font-semibold">{doc.reg_no}</span>
-                          <span className="block text-[11px] text-slate-500">
+                        <td className="py-3.5 px-4">
+                          <span className="font-medium text-label">{doc.reg_no}</span>
+                          <span className="block text-[12px] text-label-3">
                             {doc.state_council}
                             {doc.year_of_registration
                               ? ` (${doc.year_of_registration})`
                               : ""}
                           </span>
                         </td>
-                        <td className="py-3 px-4">{doc.specialization}</td>
-                        <td className="py-3 px-4 text-slate-600">
+                        <td className="py-3.5 px-4 text-label-2">{doc.specialization}</td>
+                        <td className="py-3.5 px-4 text-label-2">
                           {doc.hospitals?.name || "Independent Practice"}
                           {doc.departments?.name ? ` · ${doc.departments.name}` : ""}
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                              isVerified
-                                ? "bg-emerald-100 text-emerald-900"
-                                : isFailed
-                                  ? "bg-red-100 text-red-900"
-                                  : "bg-amber-100 text-amber-900"
-                            }`}
+                        <td className="py-3.5 px-4">
+                          <Pill
+                            tone={isVerified ? "ok" : isFailed ? "danger" : "warn"}
                           >
                             {doc.verification_status}
-                          </span>
+                          </Pill>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {doc.verification_json && (
-                              <button
-                                type="button"
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => setSelectedDoctorForJson(doc)}
-                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                               >
                                 View Evidence
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -294,7 +295,7 @@ export default function AdminDoctorsPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Card>
           )}
         </div>
       )}
@@ -302,30 +303,40 @@ export default function AdminDoctorsPage() {
       {/* TAB 2: HOSPITALS & VERIFIED OPD HOURS */}
       {activeTab === "hospitals" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Hospital OPD Operating Hours & Verification
-              </h2>
-              <p className="text-xs text-slate-500">
-                Verified hospital hours sourced directly via TinyFish autonomous web agents.
-              </p>
-            </div>
-          </div>
+          <Card>
+            <CardHeader
+              title="Hospital OPD Operating Hours & Verification"
+              trailing={
+                <span className="text-[13px] text-label-3">
+                  Autonomous Web Query
+                </span>
+              }
+            />
+            <p className="text-[15px] text-label-2">
+              Verified hospital hours sourced directly via TinyFish autonomous web agents.
+            </p>
+          </Card>
 
           {hospitalsLoading ? (
-            <SkeletonCard lines={4} />
+            <Card className="space-y-3">
+              <SkeletonLine className="h-6 w-1/3" />
+              <SkeletonLine className="h-10 w-full" />
+              <SkeletonLine className="h-10 w-full" />
+            </Card>
           ) : hospitalsError ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
-              <p className="font-bold">Failed to load hospitals</p>
-              <p className="mt-1 text-xs">{hospitalsError.message}</p>
-            </div>
+            <Card className="border border-danger/30 bg-danger-soft/20 text-danger-text">
+              <p className="font-semibold text-[17px]">Failed to load hospitals</p>
+              <p className="mt-1 text-[13px] text-label-2">{hospitalsError.message}</p>
+            </Card>
           ) : !hospitals || hospitals.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 shadow-sm">
-              No hospitals currently registered.
-            </div>
+            <Card>
+              <EmptyState
+                title="No hospitals registered"
+                body="There are no hospitals currently in the registry."
+              />
+            </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {hospitals.map((hosp: DbHospital) => {
                 const opdInfo = hosp.opd_info as
                   | { opd?: Array<{ department?: string; days?: string; timings?: string }> }
@@ -340,68 +351,62 @@ export default function AdminDoctorsPage() {
                 const isVerified = opdList.length > 0;
 
                 return (
-                  <div
-                    key={hosp.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+                  <Card key={hosp.id} className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-separator pb-4">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-slate-900">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-[17px] font-semibold text-label">
                             {hosp.name}
                           </h3>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                              isVerified
-                                ? "bg-emerald-100 text-emerald-900"
-                                : "bg-amber-100 text-amber-900"
-                            }`}
-                          >
+                          <Pill tone={isVerified ? "ok" : "warn"}>
                             {isVerified ? "Verified OPD Hours" : "Unverified / Pending"}
-                          </span>
+                          </Pill>
                           {hosp.ors_enabled && (
-                            <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                              ORS Enabled
-                            </span>
+                            <Pill tone="accent">ORS Enabled</Pill>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500">
+                        <p className="mt-1 text-[13px] text-label-3">
                           {hosp.address}, {hosp.city}
                           {hosp.phone ? ` · Phone: ${hosp.phone}` : ""}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           disabled={isVerifying}
                           onClick={() => handleVerifyHospitalOpd(hosp.id)}
-                          className="rounded-xl border border-teal-600 bg-teal-50 px-3.5 py-1.5 text-xs font-bold text-teal-800 hover:bg-teal-100 transition shadow-xs disabled:opacity-60"
+                          icon={
+                            isVerifying ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : undefined
+                          }
                         >
                           {isVerifying ? "Verifying with TinyFish…" : "Refresh / Verify OPD"}
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
                     {/* Verified OPD Timings Details */}
                     {opdList.length > 0 ? (
                       <div>
-                        <span className="text-xs font-bold text-slate-700 block mb-1.5">
+                        <span className="block text-[13px] font-semibold text-label mb-2">
                           Verified Department OPD Schedules:
                         </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           {opdList.map((entry: { department?: string; days?: string; timings?: string }, i: number) => (
                             <div
                               key={i}
-                              className="rounded-xl bg-slate-50 border border-slate-200 p-2.5"
+                              className="rounded-row bg-fill/60 p-3"
                             >
-                              <strong className="text-slate-900 block font-semibold">
+                              <strong className="block font-semibold text-[14px] text-label">
                                 {entry.department || "General OPD"}
                               </strong>
-                              <span className="text-slate-600 block text-[11px]">
+                              <span className="block text-[12px] text-label-2 mt-0.5">
                                 {entry.days || "Mon–Sat"}
                               </span>
-                              <span className="text-teal-800 font-bold block text-[11px]">
+                              <span className="block text-[12px] font-semibold text-accent-strong mt-0.5">
                                 {entry.timings || "8:00 AM – 1:00 PM"}
                               </span>
                             </div>
@@ -409,17 +414,17 @@ export default function AdminDoctorsPage() {
                         </div>
 
                         {hosp.opd_info_fetched_at && (
-                          <p className="mt-2 text-[10px] text-slate-400">
+                          <p className="mt-2 text-[12px] text-label-3">
                             Last verified on: {hosp.opd_info_fetched_at.slice(0, 16).replace("T", " ")}
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <div className="rounded-row bg-warn-soft p-3 text-[13px] text-warn">
                         No verified OPD hours on record for this hospital yet. Click &quot;Refresh / Verify OPD&quot; to query the official hospital directory via TinyFish.
-                      </p>
+                      </div>
                     )}
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -427,43 +432,41 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
-      {/* Verification Evidence Inspector Modal */}
-      {selectedDoctorForJson && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="evidence-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
-        >
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-            <h3 id="evidence-modal-title" className="text-base font-bold text-slate-900">
-              NMC Verification Evidence — {selectedDoctorForJson.profile?.full_name}
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Reg No: {selectedDoctorForJson.reg_no} · {selectedDoctorForJson.state_council}
+      {/* Verification Evidence Inspector Sheet */}
+      <Sheet
+        open={Boolean(selectedDoctorForJson)}
+        onClose={() => setSelectedDoctorForJson(null)}
+        title={`NMC Verification Evidence — ${selectedDoctorForJson?.profile?.full_name || "Doctor"}`}
+        footer={
+          <div className="flex justify-end">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSelectedDoctorForJson(null)}
+            >
+              Close
+            </Button>
+          </div>
+        }
+      >
+        {selectedDoctorForJson && (
+          <div className="space-y-4">
+            <p className="text-[13px] text-label-3">
+              Reg No: <span className="font-medium text-label">{selectedDoctorForJson.reg_no}</span> ·{" "}
+              {selectedDoctorForJson.state_council}
             </p>
 
-            <div className="mt-4">
-              <span className="text-xs font-bold text-slate-800 block mb-1">
+            <div>
+              <span className="block text-[13px] font-semibold text-label mb-1.5">
                 Server Registry Evidence Log (`verification_json`):
               </span>
-              <pre className="max-h-64 overflow-y-auto rounded-xl bg-slate-900 p-3 text-[11px] text-emerald-300 font-mono">
+              <pre className="max-h-72 overflow-y-auto rounded-row bg-fill p-3 text-[12px] font-mono text-label">
                 {JSON.stringify(selectedDoctorForJson.verification_json, null, 2)}
               </pre>
             </div>
-
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedDoctorForJson(null)}
-                className="rounded-xl border border-slate-300 px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import {
   useMyDoctorProfile,
   useMyProfile,
@@ -9,7 +8,25 @@ import {
   type DoctorVerifyRes,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { SkeletonCard } from "@/components/ui-primitives";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  CardHeader,
+  Field,
+  LargeTitle,
+  Pill,
+  SelectField,
+  SkeletonLine,
+  cn,
+} from "@/components/ui";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Loader2,
+} from "lucide-react";
 
 const STATE_COUNCILS = [
   "Delhi Medical Council",
@@ -41,7 +58,8 @@ export default function DoctorVerifyPage() {
   const [userEditedYear, setUserEditedYear] = useState<string | null>(null);
 
   const regNo = userEditedRegNo ?? (doctorProfile?.reg_no || "");
-  const stateCouncil = userEditedCouncil ?? (doctorProfile?.state_council || "Delhi Medical Council");
+  // Issue #131: State Council picker starts empty
+  const stateCouncil = userEditedCouncil ?? (doctorProfile?.state_council || "");
   const yearOfReg =
     userEditedYear !== null
       ? userEditedYear
@@ -61,6 +79,11 @@ export default function DoctorVerifyPage() {
       return;
     }
 
+    if (!stateCouncil.trim()) {
+      showToast("State Medical Council is required", "warning");
+      return;
+    }
+
     setVerifyResult(null);
 
     try {
@@ -72,7 +95,7 @@ export default function DoctorVerifyPage() {
 
       const res = await verifyMutation.mutateAsync({
         reg_no: regNo.trim(),
-        state_council: stateCouncil,
+        state_council: stateCouncil.trim(),
         ...(hasValidYear ? { year_of_registration: parsedYear } : {}),
       });
 
@@ -97,9 +120,19 @@ export default function DoctorVerifyPage() {
 
   if (doctorLoading) {
     return (
-      <div className="space-y-4">
-        <SkeletonCard lines={3} />
-        <SkeletonCard lines={3} />
+      <div className="space-y-6">
+        <Card className="space-y-3">
+          <SkeletonLine className="h-7 w-1/3" />
+          <SkeletonLine className="h-5 w-2/3" />
+        </Card>
+        <Card className="space-y-4">
+          <SkeletonLine className="h-6 w-1/4" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SkeletonLine className="h-12 w-full" />
+            <SkeletonLine className="h-12 w-full" />
+            <SkeletonLine className="h-12 w-full" />
+          </div>
+        </Card>
       </div>
     );
   }
@@ -110,164 +143,147 @@ export default function DoctorVerifyPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-            National Medical Commission (NMC) Verification
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-slate-600">
-            Official statutory verification of medical registration under the National Medical Commission Act.
-          </p>
-        </div>
-        <Link
-          href="/doctor"
-          className="rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          ← Back to OPD Queue
-        </Link>
-      </div>
+      <LargeTitle
+        eyebrow="Statutory Verification"
+        title="National Medical Commission (NMC)"
+        subtitle="Official statutory verification of medical registration under the National Medical Commission Act."
+        actions={
+          <ButtonLink
+            href="/doctor"
+            variant="secondary"
+            size="sm"
+            icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
+          >
+            OPD Queue
+          </ButtonLink>
+        }
+      />
 
       {/* Current Status Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-          Current Verification Status
-        </h2>
+      <Card>
+        <CardHeader title="Current Verification Status" />
 
         {isVerified ? (
-          <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-tile bg-ok-soft p-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg">
-                ✓
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ok text-white font-bold text-lg">
+                <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-emerald-900">
+                <h3 className="text-[17px] font-semibold text-label">
                   Verified Registered Medical Practitioner
                 </h3>
-                <p className="text-xs text-emerald-800">
-                  Reg No: <strong>{doctorProfile?.reg_no}</strong> ·{" "}
+                <p className="text-[13px] text-label-2">
+                  Reg No: <strong className="text-label">{doctorProfile?.reg_no}</strong> ·{" "}
                   {doctorProfile?.state_council}
                   {doctorProfile?.verified_at &&
                     ` (Verified on ${doctorProfile.verified_at.slice(0, 10)})`}
                 </p>
               </div>
             </div>
-            <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-bold text-emerald-900 self-start sm:self-auto">
-              VERIFIED
-            </span>
+            <Pill tone="ok" className="self-start sm:self-auto">
+              Verified
+            </Pill>
           </div>
         ) : isFailed ? (
-          <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h3 className="text-base font-bold text-red-900">
-                Verification Unsuccessful
-              </h3>
-              <p className="text-xs text-red-800 mt-0.5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-tile bg-danger-soft p-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-danger-text shrink-0" aria-hidden="true" />
+                <h3 className="text-[17px] font-semibold text-danger-text">
+                  Verification Unsuccessful
+                </h3>
+              </div>
+              <p className="text-[13px] text-label-2">
                 The National Medical Commission registry did not confirm credentials matching this registration number.
               </p>
               {doctorProfile?.verification_json && (
-                <pre className="mt-2 text-[11px] bg-white/70 p-2 rounded-lg border border-red-200 overflow-x-auto text-red-900">
+                <pre className="mt-3 max-h-48 overflow-x-auto rounded-row bg-fill p-3 text-[11px] font-mono text-label">
                   {JSON.stringify(doctorProfile.verification_json, null, 2)}
                 </pre>
               )}
             </div>
-            <span className="rounded-full bg-red-200 px-3 py-1 text-xs font-bold text-red-900 self-start sm:self-auto">
-              FAILED
-            </span>
+            <Pill tone="danger" className="self-start sm:self-auto">
+              Failed
+            </Pill>
           </div>
         ) : (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-tile bg-warn-soft p-4">
             <div>
-              <h3 className="text-base font-bold text-amber-900">
-                Verification Pending
-              </h3>
-              <p className="text-xs text-amber-800 mt-0.5">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-warn shrink-0" aria-hidden="true" />
+                <h3 className="text-[17px] font-semibold text-warn">
+                  Verification Pending
+                </h3>
+              </div>
+              <p className="mt-1 text-[13px] text-label-2">
                 Your medical registration has not been verified yet. Run the automated check below to verify with the national register.
               </p>
             </div>
-            <span className="rounded-full bg-amber-200 px-3 py-1 text-xs font-bold text-amber-900 self-start sm:self-auto">
-              PENDING
-            </span>
+            <Pill tone="warn" className="self-start sm:self-auto">
+              Pending
+            </Pill>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Verification Submission Form */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-        <div>
-          <h2 className="text-base font-bold text-slate-900">
-            Run Official Register Verification
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Checks the National Medical Commission and State Medical Council registers to cross-reference your credentials.
-          </p>
-        </div>
+      <Card>
+        <CardHeader
+          title="Run Official Register Verification"
+          trailing={
+            <span className="text-[13px] text-label-3">
+              National & State Registers
+            </span>
+          }
+        />
+        <p className="mb-4 text-[15px] text-label-2">
+          Checks the National Medical Commission and State Medical Council registers to cross-reference your credentials.
+        </p>
 
         <form onSubmit={handleStartVerification} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label
-                htmlFor="doctor-reg-no"
-                className="block text-xs font-bold text-slate-800 mb-1"
-              >
-                Registration Number *
-              </label>
-              <input
-                id="doctor-reg-no"
-                type="text"
-                required
-                value={regNo}
-                onChange={(e) => setUserEditedRegNo(e.target.value)}
-                placeholder="e.g. 12345 or DMC/R/67890"
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-xs sm:text-sm font-semibold text-slate-900 focus:border-teal-600 focus:outline-none"
-              />
-            </div>
+            <Field
+              id="doctor-reg-no"
+              label="Registration Number *"
+              required
+              value={regNo}
+              onChange={(e) => setUserEditedRegNo(e.target.value)}
+              placeholder="e.g. 12345 or DMC/R/67890"
+            />
 
-            <div>
-              <label
-                htmlFor="doctor-council"
-                className="block text-xs font-bold text-slate-800 mb-1"
-              >
-                State Medical Council *
-              </label>
-              <select
-                id="doctor-council"
-                value={stateCouncil}
-                onChange={(e) => setUserEditedCouncil(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
-              >
-                {STATE_COUNCILS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectField
+              id="doctor-council"
+              label="State Medical Council *"
+              required
+              value={stateCouncil}
+              onChange={(e) => setUserEditedCouncil(e.target.value)}
+            >
+              <option value="">Select Council…</option>
+              {STATE_COUNCILS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </SelectField>
 
-            <div>
-              <label
-                htmlFor="doctor-year"
-                className="block text-xs font-bold text-slate-800 mb-1"
-              >
-                Year of Registration (Optional)
-              </label>
-              <input
-                id="doctor-year"
-                type="number"
-                min="1950"
-                max={new Date().getFullYear()}
-                placeholder="e.g. 2018 (optional)"
-                value={yearOfReg}
-                onChange={(e) => setUserEditedYear(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
-              />
-            </div>
+            <Field
+              id="doctor-year"
+              label="Year of Registration (Optional)"
+              type="number"
+              min="1950"
+              max={new Date().getFullYear()}
+              placeholder="e.g. 2018 (optional)"
+              value={yearOfReg}
+              onChange={(e) => setUserEditedYear(e.target.value)}
+            />
           </div>
 
           {/* Status Line Banner */}
           {verifyMutation.isPending && (
-            <div className="rounded-xl border border-teal-300 bg-teal-50 p-4 text-xs text-teal-950 flex items-center gap-3">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-700 border-t-transparent" />
-              <p className="font-semibold text-teal-900">
+            <div className="flex items-center gap-3 rounded-tile bg-accent-soft p-4 text-[15px] text-accent-strong">
+              <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
+              <p className="font-semibold">
                 Checking the NMC register. This can take up to a minute.
               </p>
             </div>
@@ -275,104 +291,110 @@ export default function DoctorVerifyPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
             {process.env.NODE_ENV !== "production" ? (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[13px] text-label-3">
                 Mock mode: Delhi Medical Council / 12345 with the name Sneha Gupta verifies (seeded doctor2).
               </p>
             ) : (
               <span />
             )}
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={verifyMutation.isPending}
-              className="rounded-xl bg-teal-700 px-6 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-sm disabled:opacity-60"
+              icon={
+                verifyMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : undefined
+              }
             >
               {verifyMutation.isPending
                 ? "Verifying with NMC…"
                 : "Verify Credentials with NMC"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       {/* Verification Result Showcase Card */}
       {verifyResult && (
-        <div
-          className={`rounded-2xl border p-5 sm:p-6 shadow-sm space-y-3 ${
+        <Card
+          className={cn(
+            "border",
             verifyResult.status === "verified"
-              ? "border-emerald-300 bg-emerald-50/70"
+              ? "border-ok/30 bg-ok-soft/30"
               : verifyResult.status === "failed"
-                ? "border-red-300 bg-red-50/70"
-                : "border-amber-300 bg-amber-50/70"
-          }`}
+                ? "border-danger/30 bg-danger-soft/30"
+                : "border-warn/30 bg-warn-soft/30"
+          )}
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-[17px] font-semibold text-label">
               Verification Result from National Register
             </h3>
-            <span
-              className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase ${
+            <Pill
+              tone={
                 verifyResult.status === "verified"
-                  ? "bg-emerald-200 text-emerald-950"
+                  ? "ok"
                   : verifyResult.status === "failed"
-                    ? "bg-red-200 text-red-950"
-                    : "bg-amber-200 text-amber-950"
-              }`}
+                    ? "danger"
+                    : "warn"
+              }
             >
               {verifyResult.status}
-            </span>
+            </Pill>
           </div>
 
           {verifyResult.status === "verified" ? (
-            <div className="space-y-2 text-xs text-emerald-950">
-              <p className="text-sm font-bold text-emerald-900">
+            <div className="space-y-3">
+              <p className="text-[15px] font-semibold text-ok">
                 Register Record Match Confirmed:
               </p>
-              <div className="rounded-xl bg-white p-3 border border-emerald-200 space-y-1">
-                <p>
-                  <strong>Registered Name:</strong>{" "}
+              <div className="rounded-tile bg-surface p-4 border border-separator space-y-1.5 text-[15px]">
+                <p className="text-label-2">
+                  <strong className="text-label">Registered Name:</strong>{" "}
                   {verifyResult.match?.name || profile?.full_name || "Doctor"}
                 </p>
-                <p>
-                  <strong>Registration No:</strong>{" "}
+                <p className="text-label-2">
+                  <strong className="text-label">Registration No:</strong>{" "}
                   {verifyResult.match?.reg_no || regNo}
                 </p>
-                <p>
-                  <strong>Medical Council:</strong>{" "}
+                <p className="text-label-2">
+                  <strong className="text-label">Medical Council:</strong>{" "}
                   {verifyResult.match?.state_council || stateCouncil}
                 </p>
-                <p>
-                  <strong>Registration Year:</strong>{" "}
+                <p className="text-label-2">
+                  <strong className="text-label">Registration Year:</strong>{" "}
                   {verifyResult.match?.year_of_registration || yearOfReg || "Not specified"}
                 </p>
-                <p className="text-[11px] text-slate-500 pt-1">
+                <p className="pt-1 text-[13px] text-label-3">
                   Verified timestamp: {verifyResult.checked_at}
                 </p>
               </div>
             </div>
           ) : verifyResult.status === "failed" ? (
-            <div className="space-y-2 text-xs text-red-950">
-              <p className="text-sm font-bold text-red-900">
+            <div className="space-y-1 text-[15px]">
+              <p className="font-semibold text-danger-text">
                 {verifyResult.match?.name
                   ? `The register shows: ${verifyResult.match.name}`
                   : "Not found on the register"}
               </p>
-              <p className="text-slate-600">
+              <p className="text-label-2">
                 {verifyResult.match?.name
                   ? "The practitioner name on your account does not match the name recorded in the state medical council register for this number."
                   : "Please verify that the registration number matches your state council certificate exactly."}
               </p>
             </div>
           ) : (
-            <div className="space-y-2 text-xs text-amber-950">
-              <p className="text-sm font-bold text-amber-900">
+            <div className="space-y-1 text-[15px]">
+              <p className="font-semibold text-warn">
                 The register couldn&apos;t be checked right now. Try again later.
               </p>
-              <p className="text-slate-600">
+              <p className="text-label-2">
                 The national register did not respond within the timeout window. Your status remains pending.
               </p>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

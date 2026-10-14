@@ -352,19 +352,19 @@ export default function PrescriptionScanScreen() {
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Prescribing Doctor</Text>
               <Text style={styles.metaValue}>
-                {extractedData?.doctor_name || 'Dr. Ananya Kapoor'}
+                {extractedData?.doctor_name || 'Not found on the prescription'}
               </Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Diagnosis</Text>
               <Text style={styles.metaValue}>
-                {extractedData?.diagnosis || 'Type 2 Diabetes; Hypertension'}
+                {extractedData?.diagnosis || 'Not found on the prescription'}
               </Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Issued On</Text>
               <Text style={styles.metaValue}>
-                {extractedData?.issued_on || '2026-10-12'}
+                {extractedData?.issued_on || 'Not found on the prescription'}
               </Text>
             </View>
           </View>

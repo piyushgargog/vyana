@@ -63,8 +63,10 @@ export default function CaregiverScreen() {
     currentPatient?.patient_id ?? undefined
   );
 
-  // Prescriptions for active medicines
-  const { data: prescriptions = [] } = usePrescriptions();
+  // The linked patient's prescriptions, never the viewer's own: with no patient selected, nothing is shown.
+  const linkedPatientId = currentPatient?.patient_id;
+  const { data: patientPrescriptions = [] } = usePrescriptions(linkedPatientId);
+  const prescriptions = linkedPatientId ? patientPrescriptions : [];
 
   const handleRevokeCaregiver = (link: CaregiverLink) => {
     Alert.alert(
