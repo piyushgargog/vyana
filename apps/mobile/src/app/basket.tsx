@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useBasketCompare,
@@ -16,6 +8,18 @@ import {
   type PharmacyBasket,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
@@ -95,579 +99,279 @@ export default function BasketHeroScreen() {
     });
   };
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Prescription Basket</Text>
-          <Text style={styles.headerSub}>
-            Multi-pharmacy price comparison & doorstep delivery handoff
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to medicines"
-          onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>Done</Text>
-        </Pressable>
-      </View>
+  const statusPill = (basket: PharmacyBasket) => {
+    if (basket.status === 'pending') return null;
+    if (basket.status === 'ok') return <Pill text="Prices confirmed" tone="ok" />;
+    if (basket.status === 'partial') return <Pill text="Partial prices" tone="warn" />;
+    return <Pill text="Unavailable" tone="neutral" />;
+  };
 
-      {/* If basket is empty, show empty state */}
+  return (
+    <Screen
+      title="Prescription basket"
+      eyebrow="Price comparison"
+      trailing={
+        <Button title="Done" variant="secondary" onPress={() => router.back()} label="Back to medicines" />
+      }
+    >
       {activeItems.length === 0 && !jobId ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>🛒</Text>
-          <Text style={styles.emptyTitle}>Your Basket is Empty</Text>
-          <Text style={styles.emptySub}>
-            No medicines selected. Choose medicines from your active prescriptions or scan a new prescription to compare doorstep delivery prices across Tata 1mg, Apollo, PharmEasy, and Netmeds.
-          </Text>
-          <View style={styles.emptyActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="View My Prescriptions"
-              onPress={() => router.push('/(tabs)/meds')}
-              style={styles.emptyPrimaryBtn}
-            >
-              <Text style={styles.emptyPrimaryBtnText}>View My Medicines</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Scan New Prescription"
-              onPress={() => router.push('/prescriptions/scan')}
-              style={styles.emptySecondaryBtn}
-            >
-              <Text style={styles.emptySecondaryBtnText}>Scan Prescription</Text>
-            </Pressable>
+        <Card>
+          <View style={styles.emptyIconWrap}>
+            <Symbol ios="basket.fill" android="shopping_basket" size={28} color={T.color.accent} />
           </View>
-        </View>
+          <Text variant="headline" style={styles.center}>
+            Your basket is empty
+          </Text>
+          <Text variant="subhead" tone="tertiary" style={styles.center}>
+            Choose medicines from your active prescriptions or scan a new prescription
+            to compare doorstep delivery prices across Tata 1mg, Apollo, PharmEasy and Netmeds.
+          </Text>
+          <Button
+            title="View my medicines"
+            onPress={() => router.push('/(tabs)/meds')}
+            label="View my prescriptions"
+          />
+          <Button
+            title="Scan prescription"
+            variant="secondary"
+            onPress={() => router.push('/prescriptions/scan')}
+            label="Scan new prescription"
+          />
+        </Card>
       ) : (
         <>
-          {/* Hero Basket Items Being Priced */}
-          <View style={styles.itemsSummaryCard}>
-            <View style={styles.itemsHeader}>
-              <Text style={styles.itemsTitle}>
-                Medicines in Basket ({activeItems.length})
-              </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Re-check live pharmacy prices"
-            disabled={compareMutation.isPending || isRunning}
-            onPress={handleStartBasketJob}
-            style={styles.refreshBtn}
-          >
-            <Text style={styles.refreshBtnText}>
-              {isRunning ? 'Checking…' : '↻ Re-check'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.tagsRow}>
-          {activeItems.map((item, idx) => (
-            <View key={idx} style={styles.itemPill}>
-              <Text style={styles.itemPillText}>
-                {item.medicine} {item.strength || ''} (×{item.quantity})
-              </Text>
+          {/* Medicines being priced */}
+          <Card>
+            <CardHeader
+              title="Medicines in basket"
+              trailing={`${activeItems.length} item${activeItems.length === 1 ? '' : 's'}`}
+            />
+            <View style={styles.tagsRow}>
+              {activeItems.map((item, idx) => (
+                <Pill
+                  key={idx}
+                  text={`${item.medicine} ${item.strength || ''} ×${item.quantity}`.trim()}
+                  tone="accent"
+                />
+              ))}
             </View>
-          ))}
-        </View>
-      </View>
+            <Button
+              title={isRunning ? 'Checking…' : 'Re-check prices'}
+              variant="secondary"
+              onPress={handleStartBasketJob}
+              disabled={compareMutation.isPending || isRunning}
+              loading={compareMutation.isPending || isRunning}
+              label="Re-check live pharmacy prices"
+              icon={<Symbol ios="arrow.clockwise" android="refresh" size={14} color={T.color.accentStrong} />}
+            />
+          </Card>
 
-      {/* Live Agent Status Notice */}
-      {isRunning && (
-        <View style={styles.agentRunningCard}>
-          <ActivityIndicator size="small" color="#0D9488" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.agentRunningTitle}>
-              TinyFish Agents Checking Pharmacies in Parallel…
-            </Text>
-            <Text style={styles.agentRunningSub}>
-              Querying 1mg, PharmEasy, Netmeds, Apollo and Jan Aushadhi.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Savings & Cheapest Source Highlight */}
-      {currentResult && currentResult.cheapest_source && (
-        <View style={styles.savingsCard}>
-          <View style={styles.savingsLeft}>
-            <Text style={styles.savingsBadge}>BEST PRICE FOUND</Text>
-            <Text style={styles.savingsSource}>
-              {formatSource(currentResult.cheapest_source)}
-            </Text>
-            {currentResult.savings_vs_highest !== null &&
-              currentResult.savings_vs_highest > 0 && (
-                <Text style={styles.savingsAmount}>
-                  Save ₹{currentResult.savings_vs_highest.toFixed(1)} vs highest pharmacy
-                </Text>
-              )}
-          </View>
-          <View style={styles.bestPriceCircle}>
-            <Text style={styles.bestPriceCheck}>✓</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Jan Aushadhi Generic Basket Section */}
-      {currentResult?.generic && (
-        <View style={styles.genericCard}>
-          <View style={styles.genericHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.genericBadge}>JAN AUSHADHI KENDRA</Text>
-              <Text style={styles.genericTitle}>Pradhan Mantri Generic Basket</Text>
-              <Text style={styles.genericSub}>
-                Government generic equivalents with up to 80% cost savings
-              </Text>
-            </View>
-            <View style={styles.genericTotalBox}>
-              <Text style={styles.genericTotalVal}>
-                ₹{currentResult.generic.total ?? '—'}
-              </Text>
-              <Text style={styles.genericTotalLabel}>Generic Total</Text>
-            </View>
-          </View>
-
-          <View style={styles.linesList}>
-            {currentResult.generic.lines.map((line: BasketLine, idx: number) => (
-              <View key={idx} style={styles.genericLineRow}>
+          {/* Live agent status */}
+          {isRunning && (
+            <Card>
+              <View style={styles.statusRow}>
+                <ActivityIndicator size="small" color={T.color.accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.genericMedName}>
-                    {line.product_name || `${line.medicine} Generic`}
+                  <Text variant="callout" tone="accent" style={styles.strong}>
+                    Checking pharmacies…
                   </Text>
-                  <Text style={styles.genericPackSize}>
-                    {line.pack_size || 'Standard pack'}
+                  <Text variant="footnote" tone="secondary">
+                    Querying 1mg, PharmEasy, Netmeds, Apollo and Jan Aushadhi in parallel.
                   </Text>
                 </View>
-                <Text style={styles.genericLinePrice}>
-                  ₹{line.unit_price ?? '—'}
-                </Text>
               </View>
-            ))}
-          </View>
+            </Card>
+          )}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Find nearest Jan Aushadhi Kendra store"
-            onPress={() => Linking.openURL('https://janaushadhi.gov.in')}
-            style={styles.findKendraBtn}
-          >
-            <Text style={styles.findKendraBtnText}>
-              Find Nearest Jan Aushadhi Store ↗
-            </Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* Commercial Pharmacy Baskets List */}
-      <Text style={styles.sectionTitle}>Pharmacy Comparison</Text>
-
-      {currentResult ? (
-        currentResult.baskets.map((basket: PharmacyBasket, idx: number) => {
-          const isCheapest =
-            currentResult.cheapest_source === basket.source &&
-            basket.status === 'ok';
-          const isPending = basket.status === 'pending';
-
-          return (
-            <View
-              key={idx}
-              style={[
-                styles.pharmacyCard,
-                isCheapest && styles.pharmacyCardCheapest,
-              ]}
-            >
-              {/* Header */}
-              <View style={styles.pharmacyHeader}>
+          {/* Cheapest highlight */}
+          {currentResult?.cheapest_source && (
+            <Card>
+              <View style={styles.statusRow}>
+                <Symbol ios="checkmark.seal.fill" android="verified" size={28} color={T.color.ok} />
                 <View style={{ flex: 1 }}>
-                  <View style={styles.pharmacyTitleRow}>
-                    <Text style={styles.pharmacyName}>
-                      {formatSource(basket.source)}
-                    </Text>
-                    {isCheapest && (
-                      <Text style={styles.cheapestBadge}>CHEAPEST</Text>
+                  <Pill text="Cheapest confirmed price" tone="ok" />
+                  <Text variant="title3" style={styles.savingsSource}>
+                    {formatSource(currentResult.cheapest_source)}
+                  </Text>
+                  {currentResult.savings_vs_highest !== null &&
+                    currentResult.savings_vs_highest > 0 && (
+                      <Text variant="footnote" tone="secondary">
+                        Save ₹{currentResult.savings_vs_highest.toFixed(1)} vs the highest pharmacy
+                      </Text>
+                    )}
+                </View>
+              </View>
+            </Card>
+          )}
+
+          {/* Jan Aushadhi generics */}
+          {currentResult?.generic && (
+            <Card>
+              <CardHeader
+                title="Jan Aushadhi generics"
+                trailing={
+                  currentResult.generic.total != null
+                    ? `₹${currentResult.generic.total}`
+                    : undefined
+                }
+              />
+              <Text variant="footnote" tone="secondary">
+                Government generic equivalents with up to 80% cost savings.
+              </Text>
+              <ListGroup>
+                {currentResult.generic.lines.map((line: BasketLine, idx: number) => (
+                  <ListRow
+                    key={idx}
+                    title={line.product_name || `${line.medicine} generic`}
+                    subtitle={line.pack_size || 'Standard pack'}
+                    value={line.unit_price != null ? `₹${line.unit_price}` : '—'}
+                  />
+                ))}
+              </ListGroup>
+              <Button
+                title="Find nearest Jan Aushadhi store"
+                variant="secondary"
+                onPress={() => Linking.openURL('https://janaushadhi.gov.in')}
+                label="Find nearest Jan Aushadhi Kendra store"
+              />
+            </Card>
+          )}
+
+          {/* Pharmacy comparison, grouped per pharmacy */}
+          <Text variant="title3" accessibilityRole="header" style={styles.sectionTitle}>
+            Pharmacy comparison
+          </Text>
+
+          {currentResult ? (
+            currentResult.baskets.map((basket: PharmacyBasket, idx: number) => {
+              const isCheapest =
+                currentResult.cheapest_source === basket.source &&
+                basket.status === 'ok';
+              const isPending = basket.status === 'pending';
+
+              return (
+                <View key={idx} style={styles.pharmacySection}>
+                  <View style={styles.pharmacyHeader}>
+                    <View style={styles.pharmacyTitleRow}>
+                      <Text variant="headline">{formatSource(basket.source)}</Text>
+                      {isCheapest && <Pill text="Cheapest" tone="ok" />}
+                      {statusPill(basket)}
+                    </View>
+                    {isPending ? (
+                      <View style={styles.spinnerRow}>
+                        <ActivityIndicator size="small" color={T.color.accent} />
+                        <Text variant="footnote" tone="accent">
+                          Checking…
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text variant="title3">
+                        {basket.total !== null ? `₹${basket.total.toFixed(1)}` : '—'}
+                      </Text>
                     )}
                   </View>
-                  <Text style={styles.pharmacyStatus}>
-                    Status:{' '}
-                    <Text
-                      style={[
-                        styles.statusBold,
-                        basket.status === 'ok'
-                          ? styles.statusOk
-                          : basket.status === 'partial'
-                            ? styles.statusWarning
-                            : styles.statusMuted,
-                      ]}
-                    >
-                      {basket.status.toUpperCase()}
-                    </Text>
-                  </Text>
-                </View>
 
-                {isPending ? (
-                  <View style={styles.spinnerRow}>
-                    <ActivityIndicator size="small" color="#0D9488" />
-                    <Text style={styles.spinnerText}>Checking…</Text>
-                  </View>
-                ) : (
-                  <View style={styles.totalBox}>
-                    <Text style={styles.totalVal}>
-                      {basket.total !== null ? `₹${basket.total.toFixed(1)}` : '—'}
+                  {basket.missing && basket.missing.length > 0 && (
+                    <Text variant="footnote" tone="warn" style={styles.missingText}>
+                      Not available here: {basket.missing.join(', ')}
                     </Text>
-                    <Text style={styles.totalLabel}>Verified Total</Text>
-                  </View>
-                )}
+                  )}
+
+                  {basket.lines && basket.lines.length > 0 && (
+                    <ListGroup>
+                      {basket.lines.map((l: BasketLine, lIdx: number) => {
+                        const unconfirmed = !l.price_verified;
+                        return (
+                          <ListRow
+                            key={lIdx}
+                            title={l.product_name || `${l.medicine} ${l.strength || ''}`.trim()}
+                            subtitle={`${l.pack_size || 'Pack'} · Qty ${l.quantity}`}
+                            value={l.unit_price !== null ? `₹${l.unit_price}` : '—'}
+                            trailing={
+                              unconfirmed ? (
+                                <Pill text="Unconfirmed" tone="warn" />
+                              ) : l.in_stock === false ? (
+                                <Pill text="Out of stock" tone="danger" />
+                              ) : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </ListGroup>
+                  )}
+
+                  {basket.checkout_url && basket.status !== 'pending' && (
+                    <Button
+                      title={`Order on ${formatSource(basket.source)}`}
+                      variant={isCheapest ? 'primary' : 'secondary'}
+                      onPress={() =>
+                        handleOpenCheckout(basket.checkout_url, formatSource(basket.source))
+                      }
+                      label={`Order prescription on ${formatSource(basket.source)}`}
+                      icon={
+                        <Symbol
+                          ios="arrow.up.right"
+                          android="open_in_new"
+                          size={14}
+                          color={isCheapest ? T.color.white : T.color.accentStrong}
+                        />
+                      }
+                    />
+                  )}
+                </View>
+              );
+            })
+          ) : (
+            <Card>
+              <View style={styles.statusRow}>
+                <ActivityIndicator size="small" color={T.color.accent} />
+                <Text variant="subhead" tone="secondary" style={{ flex: 1 }}>
+                  Comparing medicine prices across 4 online pharmacies…
+                </Text>
               </View>
-
-              {/* Missing Items Alert */}
-              {basket.missing && basket.missing.length > 0 && (
-                <View style={styles.missingBox}>
-                  <Text style={styles.missingTitle}>
-                    Not Available on this Pharmacy:
-                  </Text>
-                  <Text style={styles.missingList}>
-                    {basket.missing.join(', ')}
-                  </Text>
-                </View>
-              )}
-
-              {/* Items in Basket */}
-              {basket.lines && basket.lines.length > 0 && (
-                <View style={styles.linesList}>
-                  {basket.lines.map((l: BasketLine, lIdx: number) => {
-                    const unconfirmed = !l.price_verified;
-                    return (
-                      <View key={lIdx} style={styles.lineRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.lineMedName}>
-                            {l.product_name || `${l.medicine} ${l.strength || ''}`}
-                          </Text>
-                          <Text style={styles.linePack}>
-                            {l.pack_size || 'Pack'} · Qty: {l.quantity}
-                          </Text>
-                          {unconfirmed && (
-                            <Text style={styles.unconfirmedBadge}>
-                              ⚠ Price not confirmed on live page (excluded from total)
-                            </Text>
-                          )}
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text
-                            style={[
-                              styles.linePrice,
-                              unconfirmed && styles.linePriceUnconfirmed,
-                            ]}
-                          >
-                            {l.unit_price !== null ? `₹${l.unit_price}` : '—'}
-                          </Text>
-                          {l.in_stock === false && (
-                            <Text style={styles.outOfStockText}>
-                              Out of stock
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* Order Handoff Button */}
-              {basket.checkout_url && basket.status !== 'pending' && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Order prescription on ${formatSource(basket.source)}`}
-                  onPress={() =>
-                    handleOpenCheckout(basket.checkout_url, formatSource(basket.source))
-                  }
-                  style={[
-                    styles.orderBtn,
-                    isCheapest ? styles.orderBtnCheapest : styles.orderBtnDefault,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.orderBtnText,
-                      isCheapest
-                        ? styles.orderBtnTextCheapest
-                        : styles.orderBtnTextDefault,
-                    ]}
-                  >
-                    Order on {formatSource(basket.source)} →
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          );
-        })
-      ) : (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="large" color="#0D9488" />
-          <Text style={styles.loadingCardText}>
-            Comparing medicine prices across 4 online pharmacies…
-          </Text>
-        </View>
-      )}
+            </Card>
+          )}
         </>
       )}
 
       <MobileAiSafetyBanner feature="prescriptions_basket" />
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  emptyActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  emptyPrimaryBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  emptyPrimaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  emptySecondaryBtn: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  emptySecondaryBtnText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  closeBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  closeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  itemsSummaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  itemsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  itemsTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  refreshBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  refreshBtnText: { fontSize: 12, fontWeight: '600', color: '#0F766E' },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  itemPill: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#CCFBF1',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  itemPillText: { fontSize: 12, fontWeight: '600', color: '#0F766E' },
-  agentRunningCard: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  agentRunningTitle: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
-  agentRunningSub: { fontSize: 12, color: '#115E59' },
-  savingsCard: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  savingsLeft: { gap: 2 },
-  savingsBadge: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#065F46',
-    letterSpacing: 1,
-  },
-  savingsSource: { fontSize: 18, fontWeight: '800', color: '#047857' },
-  savingsAmount: { fontSize: 13, fontWeight: '600', color: '#065F46' },
-  bestPriceCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#059669',
+  center: { textAlign: 'center' },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: T.radius.tile,
+    borderCurve: 'continuous',
+    backgroundColor: T.color.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
   },
-  bestPriceCheck: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  genericCard: {
-    backgroundColor: '#FEF9C3',
-    borderColor: '#FDE047',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-  },
-  genericHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  genericBadge: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#854D0E',
-    letterSpacing: 1,
-  },
-  genericTitle: { fontSize: 16, fontWeight: '800', color: '#713F12' },
-  genericSub: { fontSize: 12, color: '#854D0E' },
-  genericTotalBox: { alignItems: 'flex-end' },
-  genericTotalVal: { fontSize: 22, fontWeight: '900', color: '#713F12' },
-  genericTotalLabel: { fontSize: 10, fontWeight: '600', color: '#854D0E' },
-  genericLineRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FEF08A',
-  },
-  genericMedName: { fontSize: 13, fontWeight: '600', color: '#713F12' },
-  genericPackSize: { fontSize: 11, color: '#854D0E' },
-  genericLinePrice: { fontSize: 13, fontWeight: '700', color: '#713F12' },
-  findKendraBtn: {
-    backgroundColor: '#854D0E',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  findKendraBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  pharmacyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  pharmacyCardCheapest: {
-    borderColor: '#059669',
-    borderWidth: 2,
-    shadowColor: '#059669',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.md },
+  strong: { fontWeight: '700' },
+  savingsSource: { marginTop: T.space.xs },
+  sectionTitle: { paddingHorizontal: T.space.xs, marginTop: T.space.sm },
+  pharmacySection: { gap: T.space.sm },
   pharmacyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: T.space.sm,
+    paddingHorizontal: T.space.xs,
   },
-  pharmacyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pharmacyName: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  cheapestBadge: {
-    backgroundColor: '#D1FAE5',
-    color: '#065F46',
-    fontSize: 10,
-    fontWeight: '800',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  pharmacyStatus: { fontSize: 12, color: '#64748B' },
-  statusBold: { fontWeight: '700' },
-  statusOk: { color: '#059669' },
-  statusWarning: { color: '#D97706' },
-  statusMuted: { color: '#94A3B8' },
-  spinnerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  spinnerText: { fontSize: 12, color: '#0D9488', fontWeight: '600' },
-  totalBox: { alignItems: 'flex-end' },
-  totalVal: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
-  totalLabel: { fontSize: 10, color: '#64748B', fontWeight: '600' },
-  missingBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    padding: 10,
-    gap: 2,
-  },
-  missingTitle: { fontSize: 11, fontWeight: '700', color: '#B91C1C' },
-  missingList: { fontSize: 12, color: '#991B1B' },
-  linesList: { gap: 6 },
-  lineRow: {
+  pharmacyTitleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  lineMedName: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
-  linePack: { fontSize: 11, color: '#64748B' },
-  unconfirmedBadge: {
-    fontSize: 10,
-    color: '#D97706',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  linePrice: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  linePriceUnconfirmed: {
-    textDecorationLine: 'line-through',
-    color: '#94A3B8',
-  },
-  outOfStockText: { fontSize: 10, color: '#DC2626', fontWeight: '700' },
-  orderBtn: {
-    borderRadius: 12,
-    paddingVertical: 12,
     alignItems: 'center',
+    gap: T.space.sm,
+    flex: 1,
+    flexWrap: 'wrap',
   },
-  orderBtnCheapest: { backgroundColor: '#059669' },
-  orderBtnDefault: { backgroundColor: '#0F766E' },
-  orderBtnText: { fontSize: 14, fontWeight: '700' },
-  orderBtnTextCheapest: { color: '#FFFFFF' },
-  orderBtnTextDefault: { color: '#FFFFFF' },
-  loadingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingCardText: { fontSize: 13, color: '#64748B', textAlign: 'center' },
+  spinnerRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.xs },
+  missingText: { paddingHorizontal: T.space.xs },
 });
