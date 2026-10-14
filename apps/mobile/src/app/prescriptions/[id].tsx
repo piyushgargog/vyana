@@ -287,9 +287,9 @@ export default function PrescriptionDetailScreen() {
                   {item.medicine_name} {item.strength || ''}
                 </Text>
                 <Text style={styles.medSchedule}>
-                  {item.dose || '1 dose'} · {item.frequency} (
+                  {item.dose ? `${item.dose} · ` : ''}{item.frequency} (
                   {(item.times ?? []).join(', ') || 'as scheduled'}) ·{' '}
-                  {item.with_food ? `${item.with_food} food` : 'anytime'}
+                  {item.with_food ? `${item.with_food} food` : 'food timing not specified'}
                 </Text>
               </View>
               <Pressable
