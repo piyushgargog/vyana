@@ -381,7 +381,7 @@ export default function ConditionCarePlanScreen() {
               trailing={`${mealSummary.total} kcal`}
             />
             <Text variant="footnote" tone="tertiary">
-              Today's diet tracking ({mealDate})
+              Today’s diet tracking ({mealDate})
             </Text>
             <Button
               title="Open full meal log"
@@ -450,7 +450,7 @@ export default function ConditionCarePlanScreen() {
 
             {/* Add Meal Form */}
             <View style={styles.formBlock}>
-              <Text variant="headline">Log today's meal</Text>
+              <Text variant="headline">Log today’s meal</Text>
               <View style={styles.chipRow}>
                 {MEAL_TYPES.map((t) => {
                   const isSel = mealType === t;
