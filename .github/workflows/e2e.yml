@@ -38,7 +38,7 @@ jobs:
           E2E_PASSWORD_DOCTOR: ${{ secrets.E2E_PASSWORD_DOCTOR }}
       - name: Upload traces and screenshots on failure
         if: failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8dcc76cbd76bb2854edc4 # v5.0.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: e2e-failure-artifacts
           path: |
