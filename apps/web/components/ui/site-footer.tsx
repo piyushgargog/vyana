@@ -118,7 +118,7 @@ export function SiteFooter({ withTabBar = false }: { withTabBar?: boolean }) {
         </div>
 
         <div className="mt-4 flex flex-col gap-1.5 text-[12px] text-label-3 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} Vyana</p>
+          <p>© 2026 Vyana</p>
           <p>
             Made with care in India, for patients and the families who look
             after them.
