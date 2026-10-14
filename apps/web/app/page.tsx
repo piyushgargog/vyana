@@ -177,16 +177,13 @@ export default function LandingPage() {
             </div>
           </div>
           <p className="mt-3 text-[13px] text-label-3">
-            Live preview of the Vyana mobile patient companion
+            The Vyana app
           </p>
         </section>
 
         {/* 5. Four Large Feature Cards */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="max-w-2xl mb-10">
-            <span className="text-[13px] font-semibold uppercase tracking-wider text-accent-strong block mb-1">
-              Features
-            </span>
             <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-label leading-tight">
               Clinical tools designed for real Indian families
             </h2>
@@ -205,24 +202,22 @@ export default function LandingPage() {
                 </span>
                 <CardHeader
                   title="Whole-prescription pharmacy comparison"
-                  trailing={<Pill tone="accent">Smart Savings</Pill>}
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
-                  Scan printed or handwritten prescriptions. Vyana extracts your
-                  full medicine list with verbatim evidence and compares the entire
-                  basket cost across major pharmacies, uncovering genuine Jan
-                  Aushadhi generic equivalents that save up to 70%.
+                  Scan printed or handwritten prescriptions. Vyana checks every
+                  medicine against the photo and compares your whole prescription
+                  on 1mg, PharmEasy, Netmeds and Apollo, plus Jan Aushadhi generics.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>3-Medicine Monthly Basket</span>
-                  <span className="text-ok">Save ~₹480/month</span>
+                  <span>Whole-Prescription Basket</span>
+                  <span className="text-accent-strong font-medium">Generic options found</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Branded Pharmacy Total: ₹720</p>
-                  <p>• PMBJP Jan Aushadhi Generic: ₹240</p>
+                  <p>• Compares 1mg, PharmEasy, Netmeds and Apollo</p>
+                  <p>• Verified Jan Aushadhi generic substitutes</p>
                 </div>
               </div>
             </Card>
@@ -235,7 +230,6 @@ export default function LandingPage() {
                 </span>
                 <CardHeader
                   title="Lab trend tracking over time"
-                  trailing={<Pill tone="ok">Clear Context</Pill>}
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Upload PDF reports or scan physical test sheets. Vyana graphs
@@ -247,12 +241,12 @@ export default function LandingPage() {
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Recent Blood Test Markers</span>
-                  <span className="text-label-3">3 Reports Tracked</span>
+                  <span>Tracked Lab Markers</span>
+                  <span className="text-ok font-medium">Trends graphed</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• HbA1c: 7.4% → 6.8% (Improving)</p>
-                  <p>• Fasting Glucose: 118 mg/dL (Normal reference)</p>
+                  <p>• HbA1c and Blood Glucose over time</p>
+                  <p>• Compared against standard reference ranges</p>
                 </div>
               </div>
             </Card>
@@ -265,24 +259,23 @@ export default function LandingPage() {
                 </span>
                 <CardHeader
                   title="Hospital OPD queues & verified timings"
-                  trailing={<Pill tone="neutral">ORS Supported</Pill>}
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Book government and private hospital OPD tokens before leaving
-                  home. Check real operating schedules and clinic timings verified
-                  directly through autonomous directory queries, cutting hours of
-                  waiting in crowded corridors.
+                  home. Check real operating schedules and clinic timings checked
+                  on the hospital&apos;s own pages, cutting hours of waiting in
+                  crowded corridors.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Department OPD Availability</span>
-                  <span className="text-accent-strong font-medium">8:00 AM – 1:00 PM</span>
+                  <span>Hospital OPD Schedules</span>
+                  <span className="text-accent-strong font-medium">Clinic timings</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• General Medicine · Mon–Sat</p>
-                  <p>• Cardiology & Diabetology · Mon, Wed, Fri</p>
+                  <p>• General Medicine and specialty departments</p>
+                  <p>• Live token queues and operating days</p>
                 </div>
               </div>
             </Card>
@@ -295,24 +288,22 @@ export default function LandingPage() {
                 </span>
                 <CardHeader
                   title="One-tap 108 SOS & offline Medical ID"
-                  trailing={<Pill tone="danger">Emergency Ready</Pill>}
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
-                  In a crisis, a single tap starts a 3-second countdown to dial
-                  108 ambulance dispatch and text your live GPS coordinates to
-                  designated family contacts. An offline lock-screen QR keeps your
-                  blood group and allergies visible even without internet.
+                  One tap calls 108, shares your location with family, and shows
+                  your medical ID. An offline lock-screen QR keeps your blood
+                  group and allergies visible even without internet.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
                   <span>Offline Medical ID Summary</span>
-                  <span className="text-danger-text font-bold">108 / 112 Dial</span>
+                  <span className="text-danger-text font-bold">108 / 112 Ready</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Blood Group: B+ · Allergies: Penicillin</p>
-                  <p>• Emergency Contact: Primary Caregiver (+91 98XXX)</p>
+                  <p>• Blood group and verified allergies</p>
+                  <p>• Emergency contacts and lock-screen QR</p>
                 </div>
               </div>
             </Card>
@@ -323,9 +314,6 @@ export default function LandingPage() {
         <section id="careful" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <div className="glass rounded-feature p-8 sm:p-10 border border-white/80 shadow-glass">
             <div className="max-w-xl mb-8">
-              <span className="text-[13px] font-semibold uppercase tracking-wider text-accent-strong block mb-1">
-                Clinical Safety
-              </span>
               <h2 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-label">
                 Careful by design.
               </h2>
@@ -345,8 +333,7 @@ export default function LandingPage() {
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
                   Every informational note quotes clinical guidelines verbatim.
-                  We never generate unverified diagnoses or prescribe medication
-                  doses autonomously.
+                  Vyana never diagnoses and never tells you a dose.
                 </p>
               </div>
 
@@ -385,9 +372,6 @@ export default function LandingPage() {
         <section id="doctors" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="rounded-feature bg-label text-white p-8 sm:p-12 lg:p-14 shadow-float">
             <div className="max-w-2xl mb-10">
-              <span className="inline-block rounded-full bg-accent/20 px-3 py-1 text-[13px] font-semibold text-accent mb-3">
-                For Healthcare Providers
-              </span>
               <h2 className="text-[30px] sm:text-[38px] font-bold tracking-tight text-white leading-tight">
                 Built for busy Indian OPDs.
               </h2>
