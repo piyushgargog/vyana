@@ -1,6 +1,6 @@
 name: OpenSSF Scorecard
 
-# Weekly supply-chain health check (issue #133, ADR-067, modelled on DocuLens).
+# Weekly supply-chain health check (issue #133, ADR-067).
 # Results go to code scanning as SARIF. The README carries the badge.
 
 on:
@@ -9,8 +9,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - .github/workflows/scorecard.yml
 
 permissions: {}
 

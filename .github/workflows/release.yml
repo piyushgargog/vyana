@@ -8,14 +8,15 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write # create the release
+permissions: {}
 
 jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write # create the release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,7 +28,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           # The section from "## [VERSION]" up to (not including) the next "## ".
           NOTES=$(awk -v v="## [$VERSION]" '
-            $0 == v { found=1; next }
+            index($0, v) == 1 { found=1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md)
