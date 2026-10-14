@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { usePmjayHospitals } from '@vyana/shared';
@@ -16,6 +8,17 @@ import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 
 const PMJAY_PORTAL_URL = 'https://hospitals.pmjay.gov.in';
 
@@ -90,315 +93,240 @@ export default function PmjayHospitalsScreen() {
   const isLoading = locationState === 'loading' || pmjayMutation.isPending;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>PM-JAY Empanelled Hospitals</Text>
-          <Text style={styles.sub}>
-            Ayushman Bharat Pradhan Mantri Jan Arogya Yojana empanelled healthcare providers
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+    <Screen
+      eyebrow="Schemes"
+      title="PM-JAY Empanelled Hospitals"
+      trailing={
+        <Button
+          title="Done"
+          variant="plain"
+          size="sm"
+          label="Back"
           onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>✕ Close</Text>
-        </Pressable>
-      </View>
+          style={styles.doneBtn}
+        />
+      }
+    >
+      <Text variant="subhead" tone="secondary">
+        Ayushman Bharat Pradhan Mantri Jan Arogya Yojana empanelled
+        healthcare providers.
+      </Text>
 
       <MobileAiSafetyBanner />
 
       {/* Official Government Verification Banner */}
-      <View style={styles.officialNoticeCard}>
-        <Text style={styles.officialBadge}>GOVERNMENT SOURCES ONLY</Text>
-        <Text style={styles.officialTitle}>Official Portal Listings Only</Text>
-        <Text style={styles.officialText}>
-          Hospital empanelment records are fetched strictly from verified government pages
-          (pmjay.gov.in / National Health Authority). Third-party commercial directories are never
-          used.
+      <Card>
+        <Pill text="Government sources only" tone="ok" />
+        <Text variant="headline">Official portal listings only</Text>
+        <Text variant="footnote" tone="secondary">
+          Hospital empanelment records are fetched strictly from verified
+          government pages (pmjay.gov.in / National Health Authority).
+          Third-party commercial directories are never used.
         </Text>
-      </View>
+      </Card>
 
       {/* Location / Status Bar */}
-      <View style={styles.statusBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.statusAreaLabel}>Search Location:</Text>
-          <Text style={styles.statusAreaValue}>
-            {area ? `${area}` : coords ? `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}` : locationState === 'off' ? 'Location is off' : 'Finding your location…'}
-          </Text>
+      <Card>
+        <View style={styles.statusRow}>
+          <View style={styles.statusText}>
+            <Text variant="caption" tone="tertiary">
+              Search location
+            </Text>
+            <Text variant="subhead" style={styles.strong}>
+              {area
+                ? `${area}`
+                : coords
+                  ? `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
+                  : locationState === 'off'
+                    ? 'Location is off'
+                    : 'Finding your location…'}
+            </Text>
+          </View>
+          <Button
+            title="Refresh"
+            variant="secondary"
+            size="sm"
+            disabled={isLoading || !coords}
+            loading={isLoading}
+            icon={
+              <Symbol
+                ios="arrow.clockwise"
+                android="refresh"
+                size={16}
+                color={T.color.accentStrong}
+              />
+            }
+            label="Refresh empanelled hospitals"
+            onPress={handleRefresh}
+          />
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Refresh empanelled hospitals"
-          disabled={isLoading || !coords}
-          onPress={handleRefresh}
-          style={[styles.refreshBtn, isLoading && styles.btnDisabled]}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.refreshBtnText}>↻ Refresh</Text>
-          )}
-        </Pressable>
-      </View>
+      </Card>
 
       {/* Hospital List */}
-      <View style={styles.listSection}>
-        {isLoading && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#0D9488" />
-            <Text style={styles.loadingText}>Fetching government empanelled list…</Text>
-          </View>
-        )}
-
-        {locationState === 'off' && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📍</Text>
-            <Text style={styles.emptyTitle}>Location is off</Text>
-            <Text style={styles.emptySub}>
-              To find empanelled hospitals near you, allow Vyana to use your location. Without it we
-              do not search, so we never show hospitals that are far from you. You can also search
-              by state on the national portal.
+      {isLoading && (
+        <Card>
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color={T.color.accent} />
+            <Text variant="subhead" tone="tertiary">
+              Fetching government empanelled list…
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Allow location"
-              onPress={handleAllowLocation}
-              style={styles.portalBtn}
-            >
-              <Text style={styles.portalBtnText}>Allow location</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open National PM-JAY Hospital Search portal"
-              onPress={handleOpenPmjayPortal}
-              style={styles.portalBtn}
-            >
-              <Text style={styles.portalBtnText}>Open hospitals.pmjay.gov.in ↗</Text>
-            </Pressable>
           </View>
-        )}
+        </Card>
+      )}
 
-        {locationState === 'ready' && !isLoading && hospitals.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🏥</Text>
-            <Text style={styles.emptyTitle}>No official list found nearby</Text>
-            <Text style={styles.emptySub}>
-              Official government pages did not return empanelled hospitals for this immediate GPS
-              radius. Search state-wise on the national portal:
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open National PM-JAY Hospital Search portal"
-              onPress={handleOpenPmjayPortal}
-              style={styles.portalBtn}
-            >
-              <Text style={styles.portalBtnText}>Open hospitals.pmjay.gov.in ↗</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {hospitals.map((h, idx) => (
-          <View key={`${h.name}-${idx}`} style={styles.hospitalCard}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.hospitalName}>{h.name}</Text>
-                {h.address && <Text style={styles.hospitalAddress}>{h.address}</Text>}
-              </View>
-              <View style={styles.pmjayTag}>
-                <Text style={styles.pmjayTagText}>PM-JAY EMPANELLED</Text>
-              </View>
+      {locationState === 'off' && (
+        <EmptyState
+          ios="mappin"
+          android="pin_drop"
+          title="Location is off"
+          body="To find empanelled hospitals near you, allow Vyana to use your location. Without it we do not search, so we never show hospitals that are far from you. You can also search by state on the national portal."
+          action={
+            <View style={styles.emptyActions}>
+              <Button
+                title="Allow location"
+                label="Allow location"
+                onPress={handleAllowLocation}
+              />
+              <Button
+                title="Open hospitals.pmjay.gov.in"
+                variant="secondary"
+                label="Open National PM-JAY Hospital Search portal"
+                onPress={handleOpenPmjayPortal}
+              />
             </View>
+          }
+        />
+      )}
 
-            {h.specialities && h.specialities.length > 0 && (
-              <View style={styles.specialityRow}>
-                {h.specialities.map((spec, sIdx) => (
-                  <View key={sIdx} style={styles.specChip}>
-                    <Text style={styles.specChipText}>{spec}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
+      {locationState === 'ready' && !isLoading && hospitals.length === 0 && (
+        <EmptyState
+          ios="building.columns.fill"
+          android="local_hospital"
+          title="No official list found nearby"
+          body="Official government pages did not return empanelled hospitals for this immediate GPS radius. Search state-wise on the national portal."
+          action={
+            <Button
+              title="Open hospitals.pmjay.gov.in"
+              variant="secondary"
+              label="Open National PM-JAY Hospital Search portal"
+              onPress={handleOpenPmjayPortal}
+            />
+          }
+        />
+      )}
 
-            <View style={styles.sourceActionRow}>
-              <Text style={styles.sourceLabel}>Government source:</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Open source URL for ${h.name}`}
-                onPress={() => handleOpenSource(h.source_url, h.name)}
-                style={styles.sourceLinkBtn}
-              >
-                <Text style={styles.sourceLinkText}>
-                  {h.source_url ? 'View Government Page ↗' : 'pmjay.gov.in Portal ↗'}
+      {hospitals.map((h, idx) => (
+        <Card key={`${h.name}-${idx}`}>
+          <View style={styles.hospitalTop}>
+            <View style={styles.hospitalTitles}>
+              <Text variant="headline">{h.name}</Text>
+              {h.address && (
+                <Text variant="footnote" tone="secondary">
+                  {h.address}
                 </Text>
-              </Pressable>
+              )}
             </View>
+            <Pill text="PM-JAY empanelled" tone="accent" />
           </View>
-        ))}
-      </View>
+
+          {h.specialities && h.specialities.length > 0 && (
+            <View style={styles.specRow}>
+              {h.specialities.map((spec, sIdx) => (
+                <View key={sIdx} style={styles.specChip}>
+                  <Text variant="caption" tone="secondary">
+                    {spec}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.sourceRow}>
+            <Text variant="caption" tone="tertiary">
+              Government source
+            </Text>
+            <Button
+              title={
+                h.source_url
+                  ? 'View government page'
+                  : 'pmjay.gov.in portal'
+              }
+              variant="plain"
+              size="sm"
+              icon={
+                <Symbol
+                  ios="arrow.up.right"
+                  android="open_in_new"
+                  size={14}
+                  color={T.color.accentStrong}
+                />
+              }
+              label={`Open source URL for ${h.name}`}
+              onPress={() => handleOpenSource(h.source_url, h.name)}
+            />
+          </View>
+        </Card>
+      ))}
 
       {/* Direct National Portal Button */}
-      <View style={styles.nationalPortalBox}>
-        <Text style={styles.nationalPortalTitle}>National PM-JAY Helpdesk</Text>
-        <Text style={styles.nationalPortalSub}>
-          Toll-Free Helpline: 14555 · Check scheme eligibility, claim status, or find nationwide
-          empanelled hospitals.
+      <Card>
+        <CardHeader title="National PM-JAY helpdesk" />
+        <Text variant="footnote" tone="secondary">
+          Toll-free helpline: 14555. Check scheme eligibility, claim status, or
+          find nationwide empanelled hospitals.
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Visit National PM-JAY Portal"
+        <Button
+          title="Visit national portal (pmjay.gov.in)"
+          variant="secondary"
+          label="Visit National PM-JAY Portal"
           onPress={handleOpenPmjayPortal}
-          style={styles.nationalPortalBtn}
-        >
-          <Text style={styles.nationalPortalBtnText}>Visit National Portal (pmjay.gov.in) ↗</Text>
-        </Pressable>
-      </View>
+          style={styles.portalBtn}
+        />
+      </Card>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  sub: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  closeBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  closeBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
-  officialNoticeCard: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    gap: 4,
-  },
-  officialBadge: { fontSize: 10, fontWeight: '800', color: '#166534', letterSpacing: 0.5 },
-  officialTitle: { fontSize: 13, fontWeight: '700', color: '#14532D' },
-  officialText: { fontSize: 12, color: '#166534', lineHeight: 17 },
-  statusBar: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 12,
+  doneBtn: { minHeight: 44, justifyContent: 'center' },
+  strong: { fontWeight: '700' },
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: T.space.md,
   },
-  statusAreaLabel: { fontSize: 11, color: '#64748B', fontWeight: '600' },
-  statusAreaValue: { fontSize: 13, color: '#0F172A', fontWeight: '700' },
-  refreshBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  refreshBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  btnDisabled: { opacity: 0.6 },
-  listSection: { gap: 12 },
-  loadingBox: {
+  statusText: { flex: 1, gap: T.space.xs },
+  loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 20,
     justifyContent: 'center',
+    gap: T.space.sm,
+    paddingVertical: T.space.sm,
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyIcon: { fontSize: 36 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  portalBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 6,
-  },
-  portalBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  hospitalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 10,
-  },
-  cardHeader: {
+  emptyActions: { gap: T.space.sm, alignItems: 'stretch' },
+  hospitalTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: T.space.sm,
   },
-  hospitalName: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  hospitalAddress: { fontSize: 12, color: '#64748B' },
-  pmjayTag: {
-    backgroundColor: '#CCFBF1',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  pmjayTagText: { fontSize: 10, fontWeight: '800', color: '#0F766E' },
-  specialityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  hospitalTitles: { flex: 1, gap: T.space.xs },
+  specRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.xs },
   specChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.sm,
+    paddingVertical: T.space.xs,
   },
-  specChipText: { fontSize: 11, color: '#475569' },
-  sourceActionRow: {
+  sourceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    gap: T.space.sm,
   },
-  sourceLabel: { fontSize: 11, color: '#64748B' },
-  sourceLinkBtn: { paddingVertical: 2 },
-  sourceLinkText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  nationalPortalBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    padding: 14,
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  nationalPortalTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  nationalPortalSub: { fontSize: 12, color: '#475569', lineHeight: 17 },
-  nationalPortalBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  nationalPortalBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  portalBtn: { alignSelf: 'flex-start' },
 });
