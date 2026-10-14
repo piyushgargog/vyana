@@ -102,23 +102,22 @@ describe("meal log", () => {
 });
 
 describe("live updates", () => {
-  it("open one channel per hook, with different names, and close it on unmount", async () => {
+  it("share one channel per table and user across hooks, and close it when the last hook unmounts", async () => {
     const fake = fakeSupabase({ responses: { appointments: [ok([]), ok([])] } });
     const { wrapper } = setup(fake);
     const mine = renderHook(() => useMyAppointments(), { wrapper });
     const queue = renderHook(() => useDoctorQueue("2026-10-13"), { wrapper });
 
-    await waitFor(() => expect(fake.channels.filter((c) => c.subscribed)).toHaveLength(2));
+    await waitFor(() => expect(fake.channels.filter((c) => c.subscribed)).toHaveLength(1));
     const names = fake.channels.map((c) => c.name);
-    expect(new Set(names).size).toBe(2);
-    expect(names.every((n) => n.startsWith("appointments:doctor:user-1:"))).toBe(true);
+    expect(new Set(names).size).toBe(1);
+    expect(names.every((n) => n === "appointments:doctor:user-1")).toBe(true);
     expect(fake.channels[0].handlers[0].filter).toMatchObject({ event: "*", schema: "public", table: "appointments" });
 
     mine.unmount();
-    expect(fake.channels[0].removed).toBe(true);
-    expect(fake.channels[1].removed).toBe(false);
+    expect(fake.channels[0].removed).toBe(false);
     queue.unmount();
-    expect(fake.channels[1].removed).toBe(true);
+    expect(fake.channels[0].removed).toBe(true);
   });
 
   it("refetch the care plans when a doctor approves one", async () => {
@@ -129,7 +128,7 @@ describe("live updates", () => {
     const { result } = renderHook(() => useCarePlans(), { wrapper });
     await waitFor(() => expect(result.current.data?.[0].status).toBe("draft"));
 
-    const channel = fake.channels.find((c) => c.name.startsWith("care-plans:user-1:"));
+    const channel = fake.channels.find((c) => c.name === "care-plans:user-1");
     expect(channel).toBeDefined();
     act(() => fake.emitChange(channel!.name));
     await waitFor(() => expect(result.current.data?.[0].status).toBe("approved"));
