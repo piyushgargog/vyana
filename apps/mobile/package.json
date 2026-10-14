@@ -58,5 +58,17 @@
     "dev": "expo start",
     "typecheck": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "expo",
+        "@expo/ui",
+        "expo-constants",
+        "expo-linking",
+        "expo-notifications",
+        "expo-router"
+      ]
+    }
+  }
 }
