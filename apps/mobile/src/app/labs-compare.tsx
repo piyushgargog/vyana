@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -22,6 +21,20 @@ import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 
 const POPULAR_TESTS = [
   'HbA1c',
@@ -136,58 +149,57 @@ export default function LabsCompareScreen() {
   const sources = currentResult?.sources ?? [];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Compare Diagnostic Labs</Text>
-          <Text style={styles.sub}>
-            Live home-sample collection prices across Healthians, Redcliffe, Thyrocare & 1mg Labs
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+    <Screen
+      eyebrow="Labs"
+      title="Compare Diagnostic Labs"
+      trailing={
+        <Button
+          title="Done"
+          variant="plain"
+          size="sm"
+          label="Back"
           onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>✕ Close</Text>
-        </Pressable>
-      </View>
+          style={styles.doneBtn}
+        />
+      }
+    >
+      <Text variant="subhead" tone="secondary">
+        Live home-sample collection prices across Healthians, Redcliffe,
+        Thyrocare and 1mg Labs.
+      </Text>
 
       <MobileAiSafetyBanner />
 
       {/* Search & City Filter Card */}
-      <View style={styles.searchCard}>
-        <Text style={styles.cardSectionLabel}>Select or Enter Lab Test</Text>
+      <Card>
+        <CardHeader title="Find a lab test" />
         <View style={styles.searchRow}>
           <TextInput
             accessibilityLabel="Lab test name"
             placeholder="e.g. HbA1c, Vitamin D, Lipid Profile"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={T.color.label3}
             value={testName}
             onChangeText={setTestName}
-            style={styles.input}
+            style={[styles.input, styles.searchInput]}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Search lab prices"
-            disabled={isRunning}
+          <Button
+            title="Search"
+            loading={isRunning}
+            label="Search lab prices"
             onPress={handleSearch}
-            style={[styles.searchBtn, isRunning && styles.btnDisabled]}
-          >
-            {isRunning ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.searchBtnText}>Search</Text>
-            )}
-          </Pressable>
+          />
         </View>
 
         {/* City Filter */}
         <View style={styles.filterBlock}>
-          <Text style={styles.filterLabel}>City / Location:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+          <Text variant="footnote" tone="secondary">
+            City
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipScroll}
+          >
             {CITIES.map((c) => {
               const isSelected = city === c;
               return (
@@ -196,9 +208,13 @@ export default function LabsCompareScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Filter city ${c}`}
                   onPress={() => setCityChoice(c)}
-                  style={[styles.cityChip, isSelected && styles.cityChipActive]}
+                  style={[styles.chip, isSelected && styles.chipActive]}
                 >
-                  <Text style={[styles.cityChipText, isSelected && styles.cityChipTextActive]}>
+                  <Text
+                    variant="footnote"
+                    tone={isSelected ? 'white' : 'secondary'}
+                    style={isSelected && styles.chipTextActive}
+                  >
                     {c}
                   </Text>
                 </Pressable>
@@ -208,20 +224,31 @@ export default function LabsCompareScreen() {
         </View>
 
         {/* Popular Presets */}
-        <View style={styles.presetsBlock}>
-          <Text style={styles.filterLabel}>Common Prescriptions & Annual Tests:</Text>
+        <View style={styles.filterBlock}>
+          <Text variant="footnote" tone="secondary">
+            Common tests
+          </Text>
           <View style={styles.presetWrap}>
             {POPULAR_TESTS.map((preset) => {
-              const isSelected = testName.toLowerCase() === preset.toLowerCase();
+              const isSelected =
+                testName.toLowerCase() === preset.toLowerCase();
               return (
                 <Pressable
                   key={preset}
                   accessibilityRole="button"
                   accessibilityLabel={`Select test ${preset}`}
                   onPress={() => handleSelectPreset(preset)}
-                  style={[styles.presetChip, isSelected && styles.presetChipActive]}
+                  style={[
+                    styles.chip,
+                    styles.presetChip,
+                    isSelected && styles.chipSelected,
+                  ]}
                 >
-                  <Text style={[styles.presetChipText, isSelected && styles.presetChipTextActive]}>
+                  <Text
+                    variant="footnote"
+                    tone={isSelected ? 'accent' : 'secondary'}
+                    style={isSelected && styles.chipTextActive}
+                  >
                     {preset}
                   </Text>
                 </Pressable>
@@ -229,402 +256,267 @@ export default function LabsCompareScreen() {
             })}
           </View>
         </View>
-      </View>
+      </Card>
 
       {/* Progress & Diagnostics Source Agent Status */}
       {sources.length > 0 && (
-        <View style={styles.sourcesCard}>
-          <View style={styles.sourcesHeader}>
-            <Text style={styles.sourcesTitle}>Where we are checking</Text>
-            {isRunning && (
-              <View style={styles.agentRunningBadge}>
-                <ActivityIndicator size="small" color="#0D9488" />
-                <Text style={styles.agentRunningText}>Agents checking live prices…</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.sourceGrid}>
+        <Card>
+          <CardHeader
+            title="Where we are checking"
+            trailing={isRunning ? 'Checking…' : undefined}
+          />
+          <ListGroup>
             {sources.map((s: SourceStatus) => {
               const label = LAB_LABELS[s.source] ?? s.source;
               const isPending = s.status === 'pending';
               const isOk = s.status === 'ok';
-
               return (
-                <View key={s.source} style={styles.sourceRow}>
-                  <View style={styles.sourceInfo}>
-                    <Text style={styles.sourceName}>{label}</Text>
-                    <Text style={styles.sourceStatusDetail}>
-                      {isPending
-                        ? 'Fetching latest rate…'
-                        : isOk
-                          ? 'Quote received'
-                          : s.status === 'timeout'
-                            ? 'Provider timeout'
-                            : 'Test not listed'}
-                    </Text>
-                  </View>
-                  {isPending ? (
-                    <ActivityIndicator size="small" color="#0D9488" />
-                  ) : isOk ? (
-                    <View style={styles.badgeOk}>
-                      <Text style={styles.badgeOkText}>✓ Checked</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.badgeMuted}>
-                      <Text style={styles.badgeMutedText}>{s.status}</Text>
-                    </View>
-                  )}
-                </View>
+                <ListRow
+                  key={s.source}
+                  icon={
+                    <IconTile
+                      ios="flask.fill"
+                      android="science"
+                      color="blue"
+                    />
+                  }
+                  title={label}
+                  subtitle={
+                    isPending
+                      ? 'Fetching latest rate…'
+                      : isOk
+                        ? 'Quote received'
+                        : s.status === 'timeout'
+                          ? 'Provider timeout'
+                          : 'Test not listed'
+                  }
+                  trailing={
+                    isPending ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={T.color.accent}
+                      />
+                    ) : isOk ? (
+                      <Pill text="Checked" tone="ok" />
+                    ) : (
+                      <Pill text={s.status} tone="neutral" />
+                    )
+                  }
+                />
               );
             })}
-          </View>
-        </View>
+          </ListGroup>
+        </Card>
       )}
 
       {/* Comparison Results */}
-      <View style={styles.resultsSection}>
-        <View style={styles.resultsHeader}>
-          <Text style={styles.resultsTitle}>
-            Quotes for &quot;{currentResult?.query ?? testName}&quot;{city ? ` (${city})` : ''}
-          </Text>
-          <Text style={styles.resultsCount}>
-            {quotes.length} {quotes.length === 1 ? 'quote' : 'quotes'} available
-          </Text>
-        </View>
-
-        {currentResult && quotes.length === 0 && !isRunning && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No quotes available</Text>
-            <Text style={styles.emptySub}>
-              We couldn&apos;t find verified quotes for this test name in {city}. Try selecting one
-              of the popular tests above or check your spelling.
-            </Text>
-          </View>
-        )}
-
-        {quotes.map((quote: PriceQuote, idx: number) => {
-          const isCheapest =
-            cheapestQuote &&
-            quote.source === cheapestQuote.source &&
-            quote.price === cheapestQuote.price &&
-            quote.price_verified;
-          const isVerified = quote.price_verified === true;
-          const labName = LAB_LABELS[quote.source] ?? quote.source;
-          const hasDiscount =
-            typeof quote.mrp === 'number' &&
-            typeof quote.price === 'number' &&
-            quote.mrp > quote.price;
-          const discountPct =
-            hasDiscount && quote.mrp && quote.price
-              ? Math.round(((quote.mrp - quote.price) / quote.mrp) * 100)
-              : null;
-
-          return (
-            <View
-              key={`${quote.source}-${idx}`}
-              style={[styles.quoteCard, isCheapest && styles.quoteCardCheapest]}
-            >
-              {isCheapest && (
-                <View style={styles.cheapestBanner}>
-                  <Text style={styles.cheapestBannerText}>★ LOWEST VERIFIED PRICE</Text>
-                </View>
-              )}
-
-              <View style={styles.quoteBody}>
-                <View style={styles.quoteHeaderRow}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.labTitle}>{labName}</Text>
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {quote.product_name}
-                    </Text>
-                  </View>
-
-                  <View style={styles.priceColumn}>
-                    {quote.price !== null ? (
-                      <Text style={[styles.priceText, isCheapest && styles.priceCheapest]}>
-                        ₹{quote.price}
-                      </Text>
-                    ) : (
-                      <Text style={styles.priceUnavailable}>N/A</Text>
-                    )}
-                    {hasDiscount && (
-                      <View style={styles.mrpRow}>
-                        <Text style={styles.mrpText}>₹{quote.mrp}</Text>
-                        {discountPct && (
-                          <Text style={styles.discountText}>{discountPct}% OFF</Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Price Verification Status Badge */}
-                <View style={styles.metaRow}>
-                  {isVerified ? (
-                    <View style={styles.verifiedBadge}>
-                      <Text style={styles.verifiedBadgeText}>
-                        ✓ Price verified on live portal
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.unverifiedBadge}>
-                      <Text style={styles.unverifiedBadgeText}>
-                        ⚠️ price not confirmed
-                      </Text>
-                    </View>
-                  )}
-
-                  <Text style={styles.fetchedText}>
-                    Fetched {new Date(quote.fetched_at).toLocaleDateString()}
-                  </Text>
-                </View>
-
-                {/* Booking Action */}
-                <View style={styles.quoteActionRow}>
-                  <Text style={styles.sampleNote}>🏠 Free home sample collection</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Book test on ${labName}`}
-                    onPress={() => handleOpenLab(quote.product_url, labName)}
-                    style={[styles.bookBtn, isCheapest && styles.bookBtnCheapest]}
-                  >
-                    <Text
-                      style={[
-                        styles.bookBtnText,
-                        isCheapest && styles.bookBtnTextCheapest,
-                      ]}
-                    >
-                      Book on {labName} ↗
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          );
-        })}
+      <View style={styles.resultsHeader}>
+        <Text variant="headline" style={styles.resultsTitle}>
+          Quotes for &quot;{currentResult?.query ?? testName}&quot;
+          {city ? ` (${city})` : ''}
+        </Text>
+        <Text variant="footnote" tone="tertiary">
+          {quotes.length} {quotes.length === 1 ? 'quote' : 'quotes'}
+        </Text>
       </View>
 
+      {currentResult && quotes.length === 0 && !isRunning && (
+        <EmptyState
+          ios="flask.fill"
+          android="science"
+          title="No quotes available"
+          body={`We could not find verified quotes for this test name in ${city}. Try one of the popular tests above or check your spelling.`}
+        />
+      )}
+
+      {quotes.map((quote: PriceQuote, idx: number) => {
+        const isCheapest =
+          cheapestQuote &&
+          quote.source === cheapestQuote.source &&
+          quote.price === cheapestQuote.price &&
+          quote.price_verified;
+        const isVerified = quote.price_verified === true;
+        const labName = LAB_LABELS[quote.source] ?? quote.source;
+        const hasDiscount =
+          typeof quote.mrp === 'number' &&
+          typeof quote.price === 'number' &&
+          quote.mrp > quote.price;
+        const discountPct =
+          hasDiscount && quote.mrp && quote.price
+            ? Math.round(((quote.mrp - quote.price) / quote.mrp) * 100)
+            : null;
+
+        return (
+          <Card
+            key={`${quote.source}-${idx}`}
+            style={isCheapest ? styles.cheapestCard : undefined}
+          >
+            {isCheapest && (
+              <Pill text="Lowest verified price" tone="accent" />
+            )}
+            <View style={styles.quoteTop}>
+              <View style={styles.quoteTitles}>
+                <Text
+                  variant="caption"
+                  tone="accent"
+                  style={styles.labEyebrow}
+                >
+                  {labName}
+                </Text>
+                <Text variant="headline" numberOfLines={2}>
+                  {quote.product_name}
+                </Text>
+              </View>
+              <View style={styles.priceColumn}>
+                {quote.price !== null ? (
+                  <Text variant="title2" tone={isCheapest ? 'accent' : 'label'}>
+                    ₹{quote.price}
+                  </Text>
+                ) : (
+                  <Text variant="headline" tone="tertiary">
+                    N/A
+                  </Text>
+                )}
+                {hasDiscount && (
+                  <View style={styles.mrpRow}>
+                    <Text variant="footnote" tone="tertiary" style={styles.mrp}>
+                      ₹{quote.mrp}
+                    </Text>
+                    {discountPct ? (
+                      <Text variant="footnote" tone="danger">
+                        {discountPct}% off
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Pill
+                text={
+                  isVerified
+                    ? 'Price verified on live portal'
+                    : 'Price not confirmed'
+                }
+                tone={isVerified ? 'ok' : 'warn'}
+              />
+              <Text variant="caption" tone="tertiary">
+                Fetched {new Date(quote.fetched_at).toLocaleDateString()}
+              </Text>
+            </View>
+
+            <View style={styles.actionRow}>
+              <View style={styles.noteRow}>
+                <Symbol
+                  ios="house.fill"
+                  android="home"
+                  size={16}
+                  color={T.color.label2}
+                />
+                <Text variant="footnote" tone="secondary">
+                  Free home sample collection
+                </Text>
+              </View>
+              <Button
+                title={`Book on ${labName}`}
+                variant="secondary"
+                size="sm"
+                icon={
+                  <Symbol
+                    ios="arrow.up.right"
+                    android="open_in_new"
+                    size={14}
+                    color={T.color.accentStrong}
+                  />
+                }
+                label={`Book test on ${labName}`}
+                onPress={() => handleOpenLab(quote.product_url, labName)}
+              />
+            </View>
+          </Card>
+        );
+      })}
+
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  sub: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  backBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  backBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
-  searchCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 12,
-  },
-  cardSectionLabel: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  searchRow: { flexDirection: 'row', gap: 8 },
-  input: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  searchBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  btnDisabled: { opacity: 0.6 },
-  filterBlock: { gap: 6 },
-  filterLabel: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  chipsScroll: { flexDirection: 'row' },
-  cityChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  cityChipActive: { backgroundColor: '#0F766E' },
-  cityChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  cityChipTextActive: { color: '#FFFFFF' },
-  presetsBlock: { gap: 6 },
-  presetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  presetChip: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#CBD5E1',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-  },
-  presetChipActive: {
-    backgroundColor: '#CCFBF1',
-    borderColor: '#0D9488',
-  },
-  presetChipText: { fontSize: 12, color: '#334155' },
-  presetChipTextActive: { color: '#0F766E', fontWeight: '700' },
-  sourcesCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 10,
-  },
-  sourcesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sourcesTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  agentRunningBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  agentRunningText: { fontSize: 12, color: '#0D9488', fontWeight: '600' },
-  sourceGrid: { gap: 8 },
-  sourceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  sourceInfo: { gap: 2 },
-  sourceName: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  sourceStatusDetail: { fontSize: 11, color: '#64748B' },
-  badgeOk: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeOkText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
-  badgeMuted: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeMutedText: { fontSize: 11, color: '#64748B' },
-  resultsSection: { gap: 12 },
+  doneBtn: { minHeight: 44, justifyContent: 'center' },
   resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
+    paddingHorizontal: T.space.xs,
   },
-  resultsTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  resultsCount: { fontSize: 12, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 18,
+  resultsTitle: { flex: 1, marginRight: T.space.sm },
+  input: {
+    backgroundColor: T.color.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    gap: 6,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.md,
+    fontSize: 16,
+    color: T.color.label,
   },
-  emptyTitle: { fontSize: 14, fontWeight: '700', color: '#334155' },
-  emptySub: { fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  quoteCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  searchRow: { flexDirection: 'row', gap: T.space.sm, alignItems: 'center' },
+  searchInput: { flex: 1 },
+  filterBlock: { gap: T.space.sm },
+  chipScroll: { gap: T.space.sm, paddingVertical: T.space.xs },
+  chip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: T.space.lg,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    backgroundColor: T.color.fill,
+  },
+  chipActive: { backgroundColor: T.color.accent },
+  chipSelected: {
+    backgroundColor: T.color.accentSoft,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
+    borderColor: T.color.accent,
   },
-  quoteCardCheapest: {
-    borderColor: '#0D9488',
+  chipTextActive: { fontWeight: '700' },
+  presetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  presetChip: { minHeight: 40 },
+  cheapestCard: {
     borderWidth: 2,
-    backgroundColor: '#F0FDFA',
+    borderColor: T.color.accent,
+    backgroundColor: T.color.accentSoft,
   },
-  cheapestBanner: {
-    backgroundColor: '#0D9488',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  cheapestBannerText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  quoteBody: { padding: 14, gap: 10 },
-  quoteHeaderRow: {
+  quoteTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: T.space.sm,
   },
-  labTitle: { fontSize: 12, fontWeight: '800', color: '#0F766E', textTransform: 'uppercase' },
-  productName: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  priceColumn: { alignItems: 'flex-end', gap: 2 },
-  priceText: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  priceCheapest: { color: '#0F766E' },
-  priceUnavailable: { fontSize: 14, color: '#94A3B8' },
-  mrpRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  mrpText: { fontSize: 11, color: '#94A3B8', textDecorationLine: 'line-through' },
-  discountText: { fontSize: 11, color: '#B91C1C', fontWeight: '700' },
+  quoteTitles: { flex: 1, gap: T.space.xs },
+  labEyebrow: { textTransform: 'uppercase', fontWeight: '700' },
+  priceColumn: { alignItems: 'flex-end', gap: T.space.xs },
+  mrpRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.xs },
+  mrp: { textDecorationLine: 'line-through' },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: T.space.sm,
   },
-  verifiedBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  verifiedBadgeText: { fontSize: 11, color: '#065F46', fontWeight: '600' },
-  unverifiedBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  unverifiedBadgeText: { fontSize: 11, color: '#92400E', fontWeight: '600' },
-  fetchedText: { fontSize: 11, color: '#94A3B8' },
-  quoteActionRow: {
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    gap: T.space.sm,
+    flexWrap: 'wrap',
   },
-  sampleNote: { fontSize: 11, color: '#475569' },
-  bookBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.xs,
   },
-  bookBtnCheapest: { backgroundColor: '#0F766E' },
-  bookBtnText: { fontSize: 12, fontWeight: '700', color: '#1E293B' },
-  bookBtnTextCheapest: { color: '#FFFFFF' },
 });

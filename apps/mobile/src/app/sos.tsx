@@ -3,9 +3,7 @@ import {
   ActivityIndicator,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,7 +19,20 @@ import {
   type EmergencySosRes,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 export default function MobileSosScreen() {
   const router = useRouter();
@@ -162,50 +173,74 @@ export default function MobileSosScreen() {
     sosMutation.data?.hospitals ?? nearbyMutation.data?.hospitals ?? [];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header & Dismiss */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Emergency SOS</Text>
-          <Text style={styles.headerSub}>Immediate Ambulance & Safety Alert</Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close SOS Screen"
+    <Screen
+      eyebrow="Emergency help"
+      title="Emergency SOS"
+      trailing={
+        <Button
+          title="Close"
+          variant="secondary"
+          size="sm"
+          label="Close SOS Screen"
           onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>✕ Close</Text>
-        </Pressable>
-      </View>
-
+        />
+      }
+    >
       {/* Real-time GPS Location Status */}
       {locationError ? (
-        <View style={styles.locationNoticeBox}>
-          <Text style={styles.locationNoticeText}>
-            ⚠️ {locationError} Emergency call dials 108 without GPS coordinates.
-          </Text>
-        </View>
+        <Card style={styles.noticeWarn}>
+          <View style={styles.noticeRow}>
+            <Symbol
+              ios="exclamationmark.triangle.fill"
+              android="warning"
+              size={18}
+              color={T.color.warn}
+            />
+            <Text variant="subhead" tone="warn" style={styles.noticeText}>
+              {locationError} Emergency call dials 108 without GPS
+              coordinates.
+            </Text>
+          </View>
+        </Card>
       ) : coords ? (
-        <View style={styles.locationSuccessBox}>
-          <Text style={styles.locationSuccessText}>
-            📍 Live GPS: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-          </Text>
-        </View>
+        <Card style={styles.noticeOk}>
+          <View style={styles.noticeRow}>
+            <Symbol
+              ios="location.fill"
+              android="location_on"
+              size={18}
+              color={T.color.ok}
+            />
+            <Text variant="subhead" tone="ok" style={styles.noticeText}>
+              Live GPS: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+            </Text>
+          </View>
+        </Card>
       ) : locationLoading ? (
-        <View style={styles.locationLoadingBox}>
-          <ActivityIndicator size="small" color="#0D9488" />
-          <Text style={styles.locationLoadingText}>Acquiring real-time GPS location…</Text>
-        </View>
+        <Card>
+          <View style={styles.noticeRow}>
+            <ActivityIndicator size="small" color={T.color.accent} />
+            <Text variant="subhead" tone="secondary">
+              Acquiring real-time GPS location…
+            </Text>
+          </View>
+        </Card>
       ) : null}
 
       {/* Countdown Card or Active SOS Card */}
       {countdown !== null && countdown > 0 ? (
-        <View style={styles.countdownCard}>
-          <Text style={styles.countdownBadge}>EMERGENCY HELP</Text>
-          <Text style={styles.countdownNumber}>{countdown}</Text>
-          <Text style={styles.countdownSub}>
-            Nothing is called until you tap a button. Tap “Call 108 now” for an ambulance.
+        <Card style={styles.countdownCard}>
+          <View style={styles.countdownPill}>
+            <Text variant="footnote" tone="white" style={styles.bold}>
+              EMERGENCY HELP
+            </Text>
+          </View>
+          <Text variant="largeTitle" tone="white" style={styles.countdownNumber}>
+            {countdown}
+          </Text>
+          <Text variant="subhead" tone="white" style={styles.center}>
+            Nothing is called until you tap a button. Tap “Call 108 now” for
+            an ambulance.
           </Text>
           <View style={styles.countdownActions}>
             <Pressable
@@ -214,7 +249,9 @@ export default function MobileSosScreen() {
               onPress={triggerSosCall}
               style={styles.callNowBtn}
             >
-              <Text style={styles.callNowBtnText}>Call 108 Now</Text>
+              <Text variant="headline" tone="danger">
+                Call 108 Now
+              </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -222,465 +259,374 @@ export default function MobileSosScreen() {
               onPress={handleCancelCountdown}
               style={styles.cancelBtn}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text variant="headline" tone="white">
+                Cancel
+              </Text>
             </Pressable>
           </View>
-        </View>
+        </Card>
       ) : (
-        <View style={styles.sosCard}>
+        <View style={styles.stack}>
           <View style={styles.sosButtonsRow}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Dial 108 Ambulance"
               onPress={() => Linking.openURL(`tel:${EMERGENCY.ambulance}`)}
-              style={styles.dialBtn108}
+              style={[styles.dialBtn, styles.dialBtn108]}
             >
-              <Text style={styles.dialBtnNumber}>108</Text>
-              <Text style={styles.dialBtnLabel}>Call Ambulance</Text>
+              <Text variant="largeTitle" tone="white" style={styles.dialNumber}>
+                108
+              </Text>
+              <Text variant="subhead" tone="white">
+                Call Ambulance
+              </Text>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Dial 112 National Emergency"
               onPress={() => Linking.openURL(`tel:${EMERGENCY.all}`)}
-              style={styles.dialBtn112}
+              style={[styles.dialBtn, styles.dialBtn112]}
             >
-              <Text style={styles.dialBtnNumber}>112</Text>
-              <Text style={styles.dialBtnLabel}>All Emergency</Text>
+              <Text variant="largeTitle" tone="white" style={styles.dialNumber}>
+                112
+              </Text>
+              <Text variant="subhead" tone="white">
+                All Emergency
+              </Text>
             </Pressable>
           </View>
 
           {/* Simulated Ambulance Dispatch Status */}
           {sosActive && (
-            <View style={styles.liveDispatchBox}>
+            <Card style={styles.dispatchCard}>
               <View style={styles.dispatchHeader}>
                 <View style={styles.livePulse} />
-                <Text style={styles.dispatchTitle}>Ambulance Dispatch Status</Text>
-                <Text style={styles.simulatedTag}>SIMULATED</Text>
+                <Text variant="headline" style={styles.dispatchTitle}>
+                  Ambulance Dispatch Status
+                </Text>
+                <Pill text="SIMULATED" tone="neutral" />
               </View>
-              <Text style={styles.dispatchStatusText}>
-                Status: <Text style={styles.statusHighlight}>{activeStatus.toUpperCase()}</Text>
+              <Text variant="subhead" tone="secondary">
+                Status:{' '}
+                <Text variant="subhead" tone="danger" style={styles.bold}>
+                  {activeStatus.toUpperCase()}
+                </Text>
               </Text>
-              <Text style={styles.dispatchEtaText}>
-                Estimated Arrival: ~{etaMinutes} minutes
+              <Text variant="headline">Estimated Arrival: ~{etaMinutes} minutes</Text>
+              <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                * Labelled simulated ambulance tracking for demonstration
+                purposes.
               </Text>
-              <Text style={styles.dispatchNote}>
-                * Labelled simulated ambulance tracking for demonstration purposes.
-              </Text>
-            </View>
+            </Card>
           )}
         </View>
       )}
 
       {/* Blinkit Ambulance Button */}
-      <View style={styles.blinkitCard}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={styles.blinkitBadge}>RAPID DISPATCH PARTNER</Text>
-          <Text style={styles.blinkitTitle}>Blinkit Ambulance</Text>
-          <Text style={styles.blinkitNote}>{BLINKIT.note}</Text>
+      <Card>
+        <View style={styles.blinkitRow}>
+          <IconTile ios="bolt.fill" android="bolt" color="orange" />
+          <View style={styles.blinkitText}>
+            <Pill text="RAPID DISPATCH PARTNER" tone="neutral" />
+            <Text variant="headline">Blinkit Ambulance</Text>
+            <Text variant="footnote" tone="secondary">
+              {BLINKIT.note}
+            </Text>
+          </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Blinkit app for ambulance"
+        <Button
+          title="Open Blinkit"
+          variant="secondary"
+          size="sm"
+          style={styles.smallBtn}
+          label="Open Blinkit app for ambulance"
+          icon={
+            <Symbol
+              ios="arrow.up.right"
+              android="open_in_new"
+              size={16}
+              color={T.color.accentStrong}
+            />
+          }
           onPress={handleOpenBlinkit}
-          style={styles.blinkitBtn}
-        >
-          <Text style={styles.blinkitBtnText}>Open Blinkit ↗</Text>
-        </Pressable>
-      </View>
+        />
+      </Card>
 
       {/* Emergency Medical ID Quick Access */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Show Emergency Medical ID QR Code"
         onPress={() => router.push('/medical-id')}
-        style={styles.medicalIdBanner}
+        style={styles.medicalIdCard}
       >
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.medicalIdTitle}>Show Emergency Medical ID</Text>
-          <Text style={styles.medicalIdSub}>
-            Offline QR code with blood group, allergies, conditions & contact for first responders
+        <IconTile ios="qrcode" android="qr_code" color="accent" />
+        <View style={styles.medicalIdText}>
+          <Text variant="headline" tone="white">
+            Show Emergency Medical ID
+          </Text>
+          <Text variant="footnote" tone="white" style={styles.mutedWhite}>
+            Offline QR code with blood group, allergies, conditions & contact
+            for first responders
           </Text>
         </View>
-        <Text style={styles.bannerArrow}>Show QR →</Text>
+        <Symbol
+          ios="chevron.right"
+          android="chevron_right"
+          size={18}
+          color={T.color.white}
+        />
       </Pressable>
 
       {/* Send GPS SMS to Emergency Contacts */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Emergency Contacts & GPS SMS</Text>
-        <Text style={styles.sectionSub}>
-          Send your live GPS coordinates with Google Maps link directly via SMS
-        </Text>
-
+      <ListGroup
+        header="Emergency Contacts & GPS SMS"
+        footer="Send your live GPS coordinates with Google Maps link directly via SMS"
+      >
         {contacts.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No emergency contacts saved. Add family contacts in your Profile tab.
-          </Text>
+          <ListRow
+            icon={<IconTile ios="person.fill" android="person" color="gray" />}
+            title="No emergency contacts saved"
+            subtitle="Add family contacts in your Profile tab"
+          />
         ) : (
           contacts.map((c) => (
-            <View key={c.id} style={styles.contactRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.contactName}>
-                  {c.name} ({c.relation})
-                </Text>
-                <Text style={styles.contactPhone}>{c.phone}</Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Send emergency SMS to ${c.name}`}
-                onPress={() => handleSendLocationSms(c.phone, c.name)}
-                style={styles.smsBtn}
-              >
-                <Text style={styles.smsBtnText}>Send GPS SMS</Text>
-              </Pressable>
-            </View>
+            <ListRow
+              key={c.id}
+              icon={<IconTile ios="person.fill" android="person" color="blue" />}
+              title={`${c.name} (${c.relation})`}
+              subtitle={c.phone}
+              trailing={
+                <Button
+                  title="Send GPS SMS"
+                  variant="secondary"
+                  size="sm"
+                  style={styles.smsBtn}
+                  label={`Send emergency SMS to ${c.name}`}
+                  onPress={() => handleSendLocationSms(c.phone, c.name)}
+                />
+              }
+            />
           ))
         )}
-      </View>
+      </ListGroup>
 
       {/* Nearby Emergency Hospitals */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Nearby Emergency Hospitals</Text>
-          {nearbyMutation.isPending && <ActivityIndicator size="small" color="#0D9488" />}
-        </View>
-        <Text style={styles.sectionSub}>
+      <Card>
+        <CardHeader title="Nearby Emergency Hospitals" />
+        <Text variant="footnote" tone="tertiary">
           Hospitals with 24/7 Emergency & Trauma Care near your coordinates
         </Text>
+        {nearbyMutation.isPending && (
+          <ActivityIndicator size="small" color={T.color.accent} />
+        )}
 
         {hospitals.length === 0 ? (
-          <Text style={styles.emptyText}>Finding nearby emergency hospitals…</Text>
+          <Text variant="subhead" tone="tertiary" style={styles.italic}>
+            Finding nearby emergency hospitals…
+          </Text>
         ) : (
           hospitals.map((h, idx) => (
-            <View key={`${h.name}-${idx}`} style={styles.hospitalCard}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.hospitalName}>{h.name}</Text>
-                <Text style={styles.hospitalAddress}>
+            <View key={`${h.name}-${idx}`} style={styles.hospitalRow}>
+              <View style={styles.hospitalText}>
+                <Text variant="headline">{h.name}</Text>
+                <Text variant="footnote" tone="tertiary">
                   {h.address || 'Emergency 24/7'}
                 </Text>
                 {h.has_emergency && (
-                  <Text style={styles.hospitalDistance}>
+                  <Text variant="footnote" tone="accent" style={styles.bold}>
                     Emergency Department Open
                   </Text>
                 )}
               </View>
               <View style={styles.hospitalActions}>
                 {h.phone && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Call ${h.name} emergency desk`}
+                  <Button
+                    title="Call"
+                    variant="secondary"
+                    size="sm"
+                    style={styles.actionBtn}
+                    label={`Call ${h.name} emergency desk`}
                     onPress={() => handleCallHospital(h.phone as string)}
-                    style={styles.callHospBtn}
-                  >
-                    <Text style={styles.callHospBtnText}>Call</Text>
-                  </Pressable>
+                  />
                 )}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Get directions to ${h.name}`}
+                <Button
+                  title="Directions"
+                  variant="secondary"
+                  size="sm"
+                  style={styles.actionBtn}
+                  label={`Get directions to ${h.name}`}
                   onPress={() => Linking.openURL(h.maps_url)}
-                  style={styles.dirBtn}
-                >
-                  <Text style={styles.dirBtnText}>Directions</Text>
-                </Pressable>
+                />
               </View>
             </View>
           ))
         )}
-      </View>
+      </Card>
 
       {/* Ayushman Bharat (PM-JAY) Empanelled Hospitals */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>PM-JAY Empanelled Hospitals</Text>
-          {pmjayMutation.isPending && <ActivityIndicator size="small" color="#0D9488" />}
-        </View>
-        <Text style={styles.sectionSub}>
-          Cashless treatment under Ayushman Bharat (fetched strictly from verified government pages)
+      <Card>
+        <CardHeader title="PM-JAY Empanelled Hospitals" />
+        <Text variant="footnote" tone="tertiary">
+          Cashless treatment under Ayushman Bharat (fetched strictly from
+          verified government pages)
         </Text>
+        {pmjayMutation.isPending && (
+          <ActivityIndicator size="small" color={T.color.accent} />
+        )}
 
-        {pmjayMutation.data?.hospitals && pmjayMutation.data.hospitals.length > 0 ? (
+        {pmjayMutation.data?.hospitals &&
+        pmjayMutation.data.hospitals.length > 0 ? (
           pmjayMutation.data.hospitals.map((ph, pIdx) => (
-            <View key={`${ph.name}-${pIdx}`} style={styles.hospitalCard}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.hospitalName}>{ph.name}</Text>
-                {ph.address ? <Text style={styles.hospitalAddress}>{ph.address}</Text> : null}
+            <View key={`${ph.name}-${pIdx}`} style={styles.hospitalRow}>
+              <View style={styles.hospitalText}>
+                <Text variant="headline">{ph.name}</Text>
+                {ph.address ? (
+                  <Text variant="footnote" tone="tertiary">{ph.address}</Text>
+                ) : null}
                 {ph.specialities && ph.specialities.length > 0 && (
-                  <Text style={styles.hospitalDistance}>
+                  <Text variant="footnote" tone="accent">
                     {ph.specialities.join(' · ')}
                   </Text>
                 )}
               </View>
-              <View style={styles.hospitalActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`View government page for ${ph.name}`}
-                  onPress={() => {
-                    const u = ph.source_url || 'https://hospitals.pmjay.gov.in';
-                    Linking.openURL(u).catch(() => {
-                      showToast('Could not open government page', 'error');
-                    });
-                  }}
-                  style={styles.sourceBtn}
-                >
-                  <Text style={styles.sourceBtnText}>Gov Source ↗</Text>
-                </Pressable>
-              </View>
+              <Button
+                title="Gov Source"
+                variant="secondary"
+                size="sm"
+                style={styles.actionBtn}
+                label={`View government page for ${ph.name}`}
+                icon={
+                  <Symbol
+                    ios="arrow.up.right"
+                    android="open_in_new"
+                    size={14}
+                    color={T.color.accentStrong}
+                  />
+                }
+                onPress={() => {
+                  const u = ph.source_url || 'https://hospitals.pmjay.gov.in';
+                  Linking.openURL(u).catch(() => {
+                    showToast('Could not open government page', 'error');
+                  });
+                }}
+              />
             </View>
           ))
         ) : (
-          <View style={styles.emptyPmjayBox}>
-            <Text style={styles.emptyText}>
+          <View style={styles.pmjayEmpty}>
+            <Text variant="subhead" tone="tertiary" style={styles.italic}>
               {coords
                 ? 'No official list found nearby'
                 : locationLoading
                   ? 'Finding your location…'
                   : 'Location is off, so hospitals near you cannot be searched. Search by state on the national portal.'}
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open National PM-JAY Hospital Search portal"
+            <Button
+              title="Open hospitals.pmjay.gov.in"
+              variant="secondary"
+              size="sm"
+              style={styles.smallBtn}
+              label="Open National PM-JAY Hospital Search portal"
               onPress={() => Linking.openURL('https://hospitals.pmjay.gov.in')}
-              style={styles.pmjayPortalBtn}
-            >
-              <Text style={styles.pmjayPortalBtnText}>Open hospitals.pmjay.gov.in ↗</Text>
-            </Pressable>
+            />
           </View>
         )}
-      </View>
+      </Card>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFF5F5' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#991B1B' },
-  headerSub: { fontSize: 13, color: '#7F1D1D' },
-  closeBtn: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  closeBtnText: { color: '#991B1B', fontWeight: '700', fontSize: 13 },
-  locationNoticeBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  locationNoticeText: { color: '#991B1B', fontSize: 13, fontWeight: '600' },
-  locationSuccessBox: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  locationSuccessText: { color: '#166534', fontSize: 13, fontWeight: '700' },
-  locationLoadingBox: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  locationLoadingText: { color: '#64748B', fontSize: 13, fontWeight: '600' },
+  stack: { gap: T.space.md },
+  bold: { fontWeight: '700' },
+  italic: { fontStyle: 'italic' },
+  center: { textAlign: 'center' },
+  mutedWhite: { opacity: 0.85 },
+  noticeWarn: { backgroundColor: T.color.warnSoft },
+  noticeOk: { backgroundColor: T.color.okSoft },
+  noticeRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  noticeText: { flex: 1, fontWeight: '600' },
   countdownCard: {
-    backgroundColor: '#DC2626',
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: T.color.danger,
     alignItems: 'center',
-    gap: 8,
-    shadowColor: '#DC2626',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+    ...T.shadow.float,
   },
-  countdownBadge: { color: '#FEE2E2', fontSize: 13, fontWeight: '800', letterSpacing: 1.5 },
-  countdownNumber: { fontSize: 72, fontWeight: '900', color: '#FFFFFF', lineHeight: 80 },
-  countdownSub: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  countdownActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  countdownPill: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs,
+  },
+  countdownNumber: { fontSize: 72, lineHeight: 80, textAlign: 'center' },
+  countdownActions: { flexDirection: 'row', gap: T.space.md, marginTop: T.space.sm },
   callNowBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: T.color.white,
+    minHeight: 48,
+    paddingHorizontal: T.space.xl,
+    justifyContent: 'center',
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
   },
-  callNowBtnText: { color: '#DC2626', fontSize: 15, fontWeight: '800' },
   cancelBtn: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    minHeight: 48,
+    paddingHorizontal: T.space.lg,
+    justifyContent: 'center',
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
   },
-  cancelBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  sosCard: { gap: 12 },
-  sosButtonsRow: { flexDirection: 'row', gap: 12 },
-  dialBtn108: {
+  sosButtonsRow: { flexDirection: 'row', gap: T.space.md },
+  dialBtn: {
     flex: 1,
-    backgroundColor: '#DC2626',
-    borderRadius: 16,
-    paddingVertical: 18,
+    minHeight: 96,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: T.space.xs,
+    ...T.shadow.float,
   },
-  dialBtn112: {
-    flex: 1,
-    backgroundColor: '#B91C1C',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    gap: 4,
-  },
-  dialBtnNumber: { color: '#FFFFFF', fontSize: 32, fontWeight: '900' },
-  dialBtnLabel: { color: '#FEE2E2', fontSize: 13, fontWeight: '700' },
-  liveDispatchBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  dispatchHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dialBtn108: { backgroundColor: T.color.danger },
+  dialBtn112: { backgroundColor: T.color.dangerText },
+  dialNumber: { fontSize: 34, lineHeight: 40 },
+  dispatchCard: { borderWidth: 1, borderColor: T.color.dangerSoft },
+  dispatchHeader: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
   livePulse: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#DC2626',
+    backgroundColor: T.color.danger,
   },
-  dispatchTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A', flex: 1 },
-  simulatedTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  dispatchStatusText: { fontSize: 13, color: '#334155' },
-  statusHighlight: { fontWeight: '800', color: '#DC2626' },
-  dispatchEtaText: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  dispatchNote: { fontSize: 11, color: '#64748B', fontStyle: 'italic' },
-  blinkitCard: {
-    backgroundColor: '#FEF08A',
-    borderColor: '#FACC15',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
+  dispatchTitle: { flex: 1 },
+  blinkitRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.md },
+  blinkitText: { flex: 1, gap: T.space.xs, alignItems: 'flex-start' },
+  medicalIdCard: {
+    backgroundColor: T.color.accent,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
+    padding: T.space.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: T.space.md,
+    ...T.shadow.accent,
   },
-  blinkitBadge: { fontSize: 10, fontWeight: '800', color: '#854D0E', letterSpacing: 1 },
-  blinkitTitle: { fontSize: 15, fontWeight: '800', color: '#713F12' },
-  blinkitNote: { fontSize: 12, color: '#854D0E', lineHeight: 16 },
-  blinkitBtn: {
-    backgroundColor: '#713F12',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  blinkitBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  medicalIdBanner: {
-    backgroundColor: '#0F766E',
-    borderRadius: 16,
-    padding: 16,
+  medicalIdText: { flex: 1, gap: 2 },
+  smsBtn: { minHeight: 44 },
+  actionBtn: { minHeight: 44 },
+  smallBtn: { minHeight: 44 },
+  hospitalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: T.space.sm,
+    paddingVertical: T.space.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.color.separator,
   },
-  medicalIdTitle: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  medicalIdSub: { fontSize: 12, color: '#CCFBF1', lineHeight: 16 },
-  bannerArrow: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  sectionSub: { fontSize: 12, color: '#64748B', lineHeight: 16 },
-  emptyText: { fontSize: 13, color: '#94A3B8', fontStyle: 'italic' },
-  contactRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  contactName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  contactPhone: { fontSize: 12, color: '#64748B' },
-  smsBtn: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  smsBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  hospitalCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    gap: 8,
-  },
-  hospitalName: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  hospitalAddress: { fontSize: 12, color: '#64748B' },
-  hospitalDistance: { fontSize: 11, fontWeight: '600', color: '#0D9488' },
-  hospitalActions: { flexDirection: 'row', gap: 6 },
-  callHospBtn: {
-    backgroundColor: '#DC2626',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  callHospBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  dirBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  dirBtnText: { color: '#0F172A', fontSize: 12, fontWeight: '600' },
-  sourceBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  sourceBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  emptyPmjayBox: {
-    paddingVertical: 8,
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  pmjayPortalBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  pmjayPortalBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  hospitalText: { flex: 1, gap: 2 },
+  hospitalActions: { flexDirection: 'row', gap: T.space.sm },
+  pmjayEmpty: { gap: T.space.sm, alignItems: 'flex-start' },
 });
