@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BRAND_MARK_PATH } from "@/components/ui/brand-mark";
 
 export const alt = "Vyana: your health, in one calm place";
 export const size = {
@@ -18,57 +19,79 @@ export default function Image() {
           flexDirection: "column",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          backgroundColor: "#042F2E",
-          padding: "70px 80px",
-          fontFamily: "sans-serif",
+          backgroundColor: "#F2F2F7",
+          padding: "80px",
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: 24,
-              backgroundColor: "#0D9488",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#FFFFFF",
-              fontSize: 48,
-              fontWeight: 800,
-            }}
-          ><svg width="64" height="64" viewBox="0 0 24 24"><path d="M4.5 12.5h3l2-4.5 2.5 9 2.5-9 2 4.5h3" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          {/* Official Vyana Brand Mark */}
+          <svg
+            width="140"
+            height="140"
+            viewBox="0 0 24 24"
+            style={{ borderRadius: 32 }}
+          >
+            <rect width="24" height="24" rx="5.4" fill="#0D9488" />
+            <path
+              d={BRAND_MARK_PATH}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 44, fontWeight: 800, color: "#FFFFFF" }}>
+            <span
+              style={{
+                fontSize: 64,
+                fontWeight: 800,
+                color: "#1C1C1E",
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+              }}
+            >
               Vyana
             </span>
-            <span style={{ fontSize: 22, color: "#5EEAD4", fontWeight: 600 }}>
-              https://vyanahealth.app
+            <span
+              style={{
+                fontSize: 22,
+                color: "#0D9488",
+                fontWeight: 600,
+                marginTop: 6,
+              }}
+            >
+              vyanahealth.app
             </span>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
             style={{
-              fontSize: 50,
-              fontWeight: 800,
-              color: "#FFFFFF",
+              fontSize: 44,
+              fontWeight: 700,
+              color: "#1C1C1E",
+              letterSpacing: "-0.02em",
               lineHeight: 1.2,
-              maxWidth: 1020,
-            }}
-          >
-            Your One-Stop Solution for Complete Healthcare in India
-          </div>
-          <div
-            style={{
-              fontSize: 24,
-              color: "#CCFBF1",
-              lineHeight: 1.4,
               maxWidth: 960,
             }}
           >
-            Real-time medication reminders · Offline Medical ID · Lab trend analysis · OPD tokens · Jan Aushadhi generic savings
+            Your health, in one calm place.
+          </div>
+          <div
+            style={{
+              fontSize: 22,
+              color: "rgba(60,60,67,0.72)",
+              fontWeight: 400,
+              lineHeight: 1.4,
+              maxWidth: 920,
+            }}
+          >
+            Medicine reminders, emergency SOS, whole-prescription pharmacy comparison, and doctor-approved care plans.
           </div>
         </div>
 
@@ -78,26 +101,16 @@ export default function Image() {
             alignItems: "center",
             justifyContent: "space-between",
             width: "100%",
-            borderTop: "2px solid #115E59",
-            paddingTop: 28,
+            borderTop: "1px solid rgba(60,60,67,0.12)",
+            paddingTop: 24,
+            fontSize: 18,
+            color: "rgba(60,60,67,0.6)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              gap: 28,
-              color: "#99F6E4",
-              fontSize: 20,
-              fontWeight: 600,
-            }}
-          >
-            <span>🏥 OPD Discovery</span>
-            <span>💊 Medicine Tracker</span>
-            <span>🚨 108 Emergency SOS</span>
-          </div>
-          <div style={{ color: "#5EEAD4", fontSize: 20, fontWeight: 700 }}>
-            DPDP Act 2023 Compliant
-          </div>
+          <span>The calm healthcare companion for India</span>
+          <span style={{ fontWeight: 600, color: "#0D9488" }}>
+            Web & Mobile
+          </span>
         </div>
       </div>
     ),

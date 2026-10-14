@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ORS_URL,
@@ -18,19 +10,42 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
+  Button,
+  Card,
+  EmptyState,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
   MobileSkeletonList,
 } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
+
+type Tab = 'tokens' | 'hospitals';
+type KindFilter = 'all' | 'government' | 'private';
+
+const KIND_OPTIONS: { key: KindFilter; label: string }[] = [
+  { key: 'all', label: 'All Hospitals' },
+  { key: 'government', label: 'Government (ORS)' },
+  { key: 'private', label: 'Private Hospitals' },
+];
+
+function statusTone(status: string): 'ok' | 'neutral' | 'warn' {
+  if (status === 'confirmed') return 'ok';
+  if (status === 'completed') return 'neutral';
+  return 'warn';
+}
 
 export default function AppointmentsIndexScreen() {
   const router = useRouter();
   const { showToast } = useVyanaMobile();
 
-  const [activeTab, setActiveTab] = useState<'tokens' | 'hospitals'>('tokens');
-  const [kindFilter, setKindFilter] = useState<
-    'all' | 'government' | 'private'
-  >('all');
+  const [activeTab, setActiveTab] = useState<Tab>('tokens');
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: myAppointments = [], isLoading: apptsLoading } =
@@ -62,64 +77,52 @@ export default function AppointmentsIndexScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>OPD Appointments</Text>
-          <Text style={styles.headerSub}>
-            Government ORS & Private Hospital OPD tokens
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Book new OPD appointment token"
-          onPress={() => router.push('/appointments/book')}
+    <Screen
+      eyebrow="Hospital visits"
+      title="OPD Appointments"
+      trailing={
+        <Button
+          title="Book Token"
+          size="sm"
           style={styles.bookTokenBtn}
-        >
-          <Text style={styles.bookTokenBtnText}>+ Book Token</Text>
-        </Pressable>
-      </View>
-
+          label="Book new OPD appointment token"
+          onPress={() => router.push('/appointments/book')}
+        />
+      }
+    >
       {/* Tabs Switcher */}
-      <View style={styles.tabSwitchRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="View my booked OPD tokens"
-          onPress={() => setActiveTab('tokens')}
-          style={[
-            styles.tabSwitchBtn,
-            activeTab === 'tokens' && styles.tabSwitchBtnActive,
-          ]}
-        >
-          <Text
+      <View style={styles.segment} accessibilityRole="tablist">
+        {(
+          [
+            { key: 'tokens', label: `My OPD Tokens (${myAppointments.length})` },
+            { key: 'hospitals', label: 'Browse Hospitals' },
+          ] as const
+        ).map((tab) => (
+          <Pressable
+            key={tab.key}
+            accessibilityRole="tab"
+            accessibilityLabel={
+              tab.key === 'tokens'
+                ? 'View my booked OPD tokens'
+                : 'Browse hospitals and OPD timings'
+            }
+            accessibilityState={{ selected: activeTab === tab.key }}
+            onPress={() => setActiveTab(tab.key)}
             style={[
-              styles.tabSwitchText,
-              activeTab === 'tokens' && styles.tabSwitchTextActive,
+              styles.segmentBtn,
+              activeTab === tab.key && styles.segmentBtnActive,
             ]}
           >
-            My OPD Tokens ({myAppointments.length})
-          </Text>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Browse hospitals and OPD timings"
-          onPress={() => setActiveTab('hospitals')}
-          style={[
-            styles.tabSwitchBtn,
-            activeTab === 'hospitals' && styles.tabSwitchBtnActive,
-          ]}
-        >
-          <Text
-            style={[
-              styles.tabSwitchText,
-              activeTab === 'hospitals' && styles.tabSwitchTextActive,
-            ]}
-          >
-            Browse Hospitals
-          </Text>
-        </Pressable>
+            <Text
+              variant="subhead"
+              tone={activeTab === tab.key ? 'label' : 'tertiary'}
+              style={activeTab === tab.key && styles.segmentTextActive}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {activeTab === 'tokens' ? (
@@ -128,67 +131,63 @@ export default function AppointmentsIndexScreen() {
           {apptsLoading ? (
             <MobileSkeletonCard lines={3} />
           ) : myAppointments.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No OPD Tokens Booked</Text>
-              <Text style={styles.emptySub}>
-                Book a token at AIIMS, Safdarjung, or other hospitals to skip the physical line.
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Book an OPD token now"
-                onPress={() => router.push('/appointments/book')}
-                style={styles.emptyActionBtn}
-              >
-                <Text style={styles.emptyActionBtnText}>Book an OPD Token</Text>
-              </Pressable>
-            </View>
+            <Card>
+              <EmptyState
+                ios="ticket.fill"
+                android="confirmation_number"
+                title="No OPD Tokens Booked"
+                body="Book a token at AIIMS, Safdarjung, or other hospitals to skip the physical line."
+                action={
+                  <Button
+                    title="Book an OPD Token"
+                    variant="secondary"
+                    label="Book an OPD token now"
+                    onPress={() => router.push('/appointments/book')}
+                  />
+                }
+              />
+            </Card>
           ) : (
             myAppointments.map((appt: MyAppointment) => (
-              <View key={appt.id} style={styles.tokenCard}>
+              <Card key={appt.id}>
                 <View style={styles.tokenHeader}>
-                  <View style={styles.tokenBadgeBox}>
-                    <Text style={styles.tokenBadgeText}>
-                      TOKEN #{appt.token_no}
+                  <Pill text={`Token #${appt.token_no}`} tone="accent" />
+                  <Pill
+                    text={appt.status.toUpperCase()}
+                    tone={statusTone(appt.status)}
+                  />
+                </View>
+                <View style={styles.tokenBody}>
+                  <Text variant="headline">
+                    {appt.hospitals?.name ?? 'Hospital OPD'}
+                  </Text>
+                  <Text variant="subhead" tone="accent">
+                    Department: {appt.departments?.name ?? 'General Medicine'}
+                  </Text>
+                  <View style={styles.detailRow}>
+                    <Symbol
+                      ios="calendar"
+                      android="calendar_today"
+                      size={15}
+                      color={T.color.label3}
+                    />
+                    <Text variant="subhead" tone="secondary">
+                      Date: {appt.appointment_date}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.statusBadge,
-                      appt.status === 'confirmed'
-                        ? styles.statusConfirmed
-                        : appt.status === 'completed'
-                          ? styles.statusCompleted
-                          : styles.statusRequested,
-                    ]}
-                  >
-                    {appt.status.toUpperCase()}
-                  </Text>
-                </View>
-
-                <Text style={styles.hospitalName}>
-                  {appt.hospitals?.name ?? 'Hospital OPD'}
-                </Text>
-                <Text style={styles.deptName}>
-                  Department: {appt.departments?.name ?? 'General Medicine'}
-                </Text>
-
-                <View style={styles.tokenDetails}>
-                  <Text style={styles.detailText}>
-                    📅 Date: {appt.appointment_date}
-                  </Text>
                   {appt.reason && (
-                    <Text style={styles.detailText}>
+                    <Text variant="subhead" tone="secondary">
                       Reason: {appt.reason}
                     </Text>
                   )}
                 </View>
-
-                <View style={styles.reportInstructionsBox}>
-                  <Text style={styles.reportInstructionsText}>
-                    Report to OPD registration desk by 8:30 AM with Token #{appt.token_no}.
+                <View style={styles.instructionsBox}>
+                  <Text variant="footnote" tone="accent" style={styles.instructionsText}>
+                    Report to the OPD registration desk by 8:30 AM with Token #
+                    {appt.token_no}.
                   </Text>
                 </View>
-              </View>
+              </Card>
             ))
           )}
         </View>
@@ -197,31 +196,30 @@ export default function AppointmentsIndexScreen() {
         <View style={styles.tabContent}>
           {/* Filter Pills */}
           <View style={styles.filterRow}>
-            {(['all', 'government', 'private'] as const).map((k) => (
-              <Pressable
-                key={k}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter ${k} hospitals`}
-                onPress={() => setKindFilter(k)}
-                style={[
-                  styles.filterPill,
-                  kindFilter === k && styles.filterPillActive,
-                ]}
-              >
-                <Text
+            {KIND_OPTIONS.map((opt) => {
+              const selected = kindFilter === opt.key;
+              return (
+                <Pressable
+                  key={opt.key}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter ${opt.key} hospitals`}
+                  accessibilityState={{ selected }}
+                  onPress={() => setKindFilter(opt.key)}
                   style={[
-                    styles.filterPillText,
-                    kindFilter === k && styles.filterPillTextActive,
+                    styles.filterPill,
+                    selected && styles.filterPillActive,
                   ]}
                 >
-                  {k === 'all'
-                    ? 'All Hospitals'
-                    : k === 'government'
-                      ? 'Government (ORS)'
-                      : 'Private Hospitals'}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    variant="footnote"
+                    tone={selected ? 'white' : 'secondary'}
+                    style={selected && styles.filterPillTextActive}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           {/* Search bar */}
@@ -230,273 +228,179 @@ export default function AppointmentsIndexScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search AIIMS, Safdarjung, Delhi, Gurgaon…"
+            placeholderTextColor={T.color.label3}
             style={styles.searchInput}
           />
 
           {hospitalsLoading ? (
             <MobileSkeletonList count={3} />
           ) : filteredHospitals.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No Hospitals Found</Text>
-              <Text style={styles.emptySub}>
-                Try clearing your search query or selecting &quot;All Hospitals&quot;.
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Clear Search and Filters"
-                onPress={() => {
-                  setSearchQuery('');
-                  setKindFilter('all');
-                }}
-                style={styles.emptyActionBtn}
-              >
-                <Text style={styles.emptyActionBtnText}>Clear Search & Filters</Text>
-              </Pressable>
-            </View>
+            <Card>
+              <EmptyState
+                ios="building.2.fill"
+                android="apartment"
+                title="No Hospitals Found"
+                body='Try clearing your search query or selecting "All Hospitals".'
+                action={
+                  <Button
+                    title="Clear Search & Filters"
+                    variant="secondary"
+                    label="Clear Search and Filters"
+                    onPress={() => {
+                      setSearchQuery('');
+                      setKindFilter('all');
+                    }}
+                  />
+                }
+              />
+            </Card>
           ) : (
             filteredHospitals.map((h: DbHospital) => (
-              <View key={h.id} style={styles.hospitalCard}>
+              <Card key={h.id}>
                 <View style={styles.hospTopRow}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.hospName}>{h.name}</Text>
-                    <Text style={styles.hospAddress}>
+                  <View style={styles.hospTitles}>
+                    <Text variant="headline">{h.name}</Text>
+                    <Text variant="footnote" tone="tertiary">
                       {h.address || h.city}
                     </Text>
                   </View>
-                  <View
-                    style={[
-                      styles.kindTag,
-                      h.kind === 'govt' ? styles.kindGovt : styles.kindPrivate,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.kindTagText,
-                        h.kind === 'govt'
-                          ? styles.kindGovtText
-                          : styles.kindPrivateText,
-                      ]}
-                    >
-                      {h.kind === 'govt' ? 'GOVT' : 'PRIVATE'}
-                    </Text>
-                  </View>
+                  <Pill
+                    text={h.kind === 'govt' ? 'GOVT' : 'PRIVATE'}
+                    tone={h.kind === 'govt' ? 'accent' : 'neutral'}
+                  />
                 </View>
 
                 {/* Government ORS portal notice */}
                 {h.ors_enabled && (
                   <View style={styles.orsNoticeBox}>
-                    <Text style={styles.orsNoticeText}>
-                      ✓ Empanelled with National Online Registration System (ORS)
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Open National ORS portal"
-                      onPress={handleOpenOrs}
-                      style={styles.orsLinkBtn}
+                    <Symbol
+                      ios="checkmark.seal.fill"
+                      android="verified"
+                      size={18}
+                      color={T.color.ok}
+                    />
+                    <Text
+                      variant="footnote"
+                      tone="ok"
+                      style={styles.orsNoticeText}
                     >
-                      <Text style={styles.orsLinkBtnText}>Book on ORS ↗</Text>
-                    </Pressable>
+                      Empanelled with National Online Registration System (ORS)
+                    </Text>
+                    <Button
+                      title="Book on ORS"
+                      variant="secondary"
+                      size="sm"
+                      style={styles.smallBtn}
+                      label="Open National ORS portal"
+                      onPress={handleOpenOrs}
+                    />
                   </View>
                 )}
 
                 {/* Book token button */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${h.name} to view OPD departments and book token`}
+                <Button
+                  title="Select Hospital & Book Token"
+                  variant="secondary"
+                  label={`Select ${h.name} to view OPD departments and book token`}
                   onPress={() => handleBookHospital(h.id)}
-                  style={styles.selectHospBtn}
-                >
-                  <Text style={styles.selectHospBtnText}>
-                    Select Hospital & Book Token →
-                  </Text>
-                </Pressable>
-              </View>
+                />
+              </Card>
             ))
           )}
         </View>
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
+  bookTokenBtn: { minHeight: 44 },
+  segment: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    padding: T.space.xs,
+    gap: T.space.xs,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  bookTokenBtn: {
-    backgroundColor: '#0D9488',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  bookTokenBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  tabSwitchRow: {
-    flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  tabSwitchBtn: {
+  segmentBtn: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: 44,
     alignItems: 'center',
-    borderRadius: 8,
+    justifyContent: 'center',
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.sm,
   },
-  tabSwitchBtnActive: { backgroundColor: '#FFFFFF' },
-  tabSwitchText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  tabSwitchTextActive: { color: '#0F766E', fontWeight: '700' },
-  tabContent: { gap: 12 },
-  loadingBox: {
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
+  segmentBtnActive: {
+    backgroundColor: T.color.surface,
+    ...T.shadow.float,
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  emptyActionBtn: {
-    backgroundColor: '#0D9488',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 8,
-  },
-  emptyActionBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  tokenCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
+  segmentTextActive: { fontWeight: '700' },
+  tabContent: { gap: T.space.md },
   tokenHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  tokenBadgeBox: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+  tokenBody: { gap: T.space.xs },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.sm,
   },
-  tokenBadgeText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  instructionsBox: {
+    backgroundColor: T.color.accentSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
   },
-  statusConfirmed: { backgroundColor: '#D1FAE5', color: '#065F46' },
-  statusCompleted: { backgroundColor: '#E2E8F0', color: '#475569' },
-  statusRequested: { backgroundColor: '#FEF3C7', color: '#92400E' },
-  hospitalName: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  deptName: { fontSize: 13, fontWeight: '600', color: '#0D9488' },
-  tokenDetails: { gap: 4 },
-  detailText: { fontSize: 13, color: '#334155' },
-  reportInstructionsBox: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#CCFBF1',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-  },
-  reportInstructionsText: { fontSize: 12, color: '#0F766E', fontWeight: '600' },
-  filterRow: { flexDirection: 'row', gap: 6 },
+  instructionsText: { fontWeight: '600' },
+  filterRow: { flexDirection: 'row', gap: T.space.sm, flexWrap: 'wrap' },
   filterPill: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
   },
   filterPillActive: {
-    backgroundColor: '#0F766E',
-    borderColor: '#0F766E',
+    backgroundColor: T.color.accent,
+    borderColor: T.color.accent,
   },
-  filterPillText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  filterPillTextActive: { color: '#FFFFFF' },
+  filterPillTextActive: { fontWeight: '700' },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-  },
-  hospitalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    minHeight: 44,
+    ...T.text.subhead,
+    color: T.color.label,
   },
   hospTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: T.space.sm,
   },
-  hospName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  hospAddress: { fontSize: 12, color: '#64748B' },
-  kindTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  kindGovt: { backgroundColor: '#E0F2FE' },
-  kindPrivate: { backgroundColor: '#F1F5F9' },
-  kindTagText: { fontSize: 10, fontWeight: '800' },
-  kindGovtText: { color: '#0369A1' },
-  kindPrivateText: { color: '#475569' },
+  hospTitles: { flex: 1, gap: 2 },
   orsNoticeBox: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
+    backgroundColor: T.color.okSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
+    gap: T.space.sm,
   },
-  orsNoticeText: { fontSize: 11, color: '#15803D', fontWeight: '600', flex: 1 },
-  orsLinkBtn: {
-    backgroundColor: '#15803D',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  orsLinkBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  selectHospBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  selectHospBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  orsNoticeText: { flex: 1, fontWeight: '600' },
+  smallBtn: { minHeight: 44 },
 });
