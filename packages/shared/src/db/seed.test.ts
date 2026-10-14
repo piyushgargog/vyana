@@ -83,6 +83,9 @@ describe("seed-users.ts and seed.sql agree on the hospital doctors", () => {
     const emails = [...seedUsers.matchAll(/email: '([^']+)'/g)].map((m) => m[1]);
     expect(emails.length).toBe(23);
     for (const e of emails) expect(e, e).toMatch(/@vyana\.test$/);
-    expect(seedUsers).toContain("process.env.SEED_PASSWORD");
+    expect(seedUsers).toContain("process.env.SEED_PASSWORD_PATIENT");
+    expect(seedUsers).toContain("process.env.SEED_PASSWORD_DOCTOR");
+    expect(seedUsers).toContain("process.env.SEED_PASSWORD_CAREGIVER");
+    expect(seedUsers).toContain("process.env.SEED_PASSWORD_ADMIN");
   });
 });

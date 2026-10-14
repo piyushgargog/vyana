@@ -1,20 +1,66 @@
 // supabase/seed/seed-users.ts
 // Creates demo auth users via Supabase Admin API
 // Owner: Vaibhav Parmar
+//
+// One password per role (issue #153). The script refuses to run unless every
+// role password is set and at least 16 characters long. It only ever creates
+// or updates @vyana.test accounts, and it refuses to touch a non-local
+// Supabase project unless ALLOW_LIVE_SEED=yes is set on purpose.
 
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const seedPassword = process.env.SEED_PASSWORD;
 
-if (!seedPassword) {
-  console.error('Error: SEED_PASSWORD environment variable is required.');
-  process.exit(1);
+// --- Per-role passwords (each must be set and at least 16 characters) ------
+type PasswordRole = 'patient' | 'doctor' | 'caregiver' | 'admin';
+
+function requiredPassword(envName: string, value: string | undefined): string {
+  if (!value || value.length < 16) {
+    console.error(`Error: ${envName} must be set and at least 16 characters long.`);
+    process.exit(1);
+  }
+  return value;
 }
+
+const PASSWORDS: Record<PasswordRole, string> = {
+  patient: requiredPassword('SEED_PASSWORD_PATIENT', process.env.SEED_PASSWORD_PATIENT),
+  doctor: requiredPassword('SEED_PASSWORD_DOCTOR', process.env.SEED_PASSWORD_DOCTOR),
+  caregiver: requiredPassword('SEED_PASSWORD_CAREGIVER', process.env.SEED_PASSWORD_CAREGIVER),
+  admin: requiredPassword('SEED_PASSWORD_ADMIN', process.env.SEED_PASSWORD_ADMIN),
+};
 
 if (!serviceRoleKey) {
   console.error('Error: SUPABASE_SERVICE_ROLE_KEY environment variable is required.');
+  process.exit(1);
+}
+
+// --- Live guard: the demo accounts live on the live database on purpose, ---
+// --- so the seed may run there, but only on purpose. -----------------------
+function isLocalUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
+}
+
+/** The Supabase project ref (subdomain), never a key. */
+function projectRef(url: string): string {
+  try {
+    return new URL(url).hostname.split('.')[0] || '(unknown)';
+  } catch {
+    return '(unparseable url)';
+  }
+}
+
+if (!isLocalUrl(supabaseUrl) && process.env.ALLOW_LIVE_SEED !== 'yes') {
+  console.error(
+    `Refusing: ${supabaseUrl} is not a local Supabase URL. ` +
+      `This would seed the live project "${projectRef(supabaseUrl)}". ` +
+      `Set ALLOW_LIVE_SEED=yes to do it on purpose.`,
+  );
   process.exit(1);
 }
 
@@ -29,6 +75,8 @@ interface SeedUser {
   id: string;
   email: string;
   role: 'patient' | 'doctor' | 'admin';
+  /** Which per-role password this account gets. Defaults to `role`. */
+  passwordRole?: PasswordRole;
   fullName: string;
 }
 
@@ -61,6 +109,7 @@ const DEMO_USERS: SeedUser[] = [
     id: '00000000-0000-0000-0000-000000000005',
     email: 'caregiver@vyana.test',
     role: 'patient',
+    passwordRole: 'caregiver',
     fullName: 'Neha Sharma',
   },
   // Two fictional doctors for each hospital in seed.sql (verified there).
@@ -84,11 +133,21 @@ const DEMO_USERS: SeedUser[] = [
   { id: '00000000-0000-0000-0000-000000000118', email: 'doc18@vyana.test', role: 'doctor', fullName: 'Dr. Divya Krishnan' },
 ];
 
+// The script only ever touches @vyana.test accounts. Anything else fails fast.
+for (const user of DEMO_USERS) {
+  if (!user.email.endsWith('@vyana.test')) {
+    console.error(`Refusing: ${user.email} is not a @vyana.test account. The seed only manages demo accounts.`);
+    process.exit(1);
+  }
+}
+
 async function seed() {
   let failed = 0;
-  console.log(`🌱 Seeding demo auth users to ${supabaseUrl}...`);
+  const target = isLocalUrl(supabaseUrl) ? supabaseUrl : `live project "${projectRef(supabaseUrl)}"`;
+  console.log(`🌱 Seeding demo auth users to ${target}...`);
 
   for (const user of DEMO_USERS) {
+    const password = PASSWORDS[user.passwordRole ?? user.role];
     try {
       const { data: existing, error: getError } = await supabaseAdmin.auth.admin.getUserById(user.id);
 
@@ -96,7 +155,7 @@ async function seed() {
         console.log(`ℹ️ User ${user.email} (${user.id}) already exists. Updating password & metadata...`);
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
           email: user.email,
-          password: seedPassword,
+          password,
           email_confirm: true,
           user_metadata: {
             full_name: user.fullName,
@@ -113,7 +172,7 @@ async function seed() {
         const { error: createError } = await supabaseAdmin.auth.admin.createUser({
           id: user.id,
           email: user.email,
-          password: seedPassword,
+          password,
           email_confirm: true,
           user_metadata: {
             full_name: user.fullName,

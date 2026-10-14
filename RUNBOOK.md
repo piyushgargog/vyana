@@ -125,3 +125,26 @@ python3 -m unittest scripts/backup/test_backup_db.py -v
 ```
 
 They use a fake `pg_dump` (no database, no network) and check the file modes, the retention, that the password is never on a command line or in an error message, and that a cut or tiny dump is refused. They do not replace the restore test above.
+
+## Demo seed on the live database (rare, on purpose)
+
+The demo accounts (`@vyana.test`) live on the live database on purpose, for the demo and the video. The seed script (`supabase/seed/seed-users.ts`) refuses a non-local Supabase URL unless `ALLOW_LIVE_SEED=yes` is set, and it only ever creates or updates `@vyana.test` accounts.
+
+One password per role, each at least 16 characters. The names only — the values are set privately, never committed:
+
+- `SEED_PASSWORD_PATIENT`
+- `SEED_PASSWORD_DOCTOR`
+- `SEED_PASSWORD_CAREGIVER`
+- `SEED_PASSWORD_ADMIN`
+
+To re-seed live (Piyush runs this):
+
+```bash
+ALLOW_LIVE_SEED=yes \
+SEED_PASSWORD_PATIENT=<from-private-store> SEED_PASSWORD_DOCTOR=<from-private-store> \
+SEED_PASSWORD_CAREGIVER=<from-private-store> SEED_PASSWORD_ADMIN=<from-private-store> \
+SUPABASE_URL=<live-url> SUPABASE_SERVICE_ROLE_KEY=<live-service-key> \
+  pnpm --filter @vyana/web exec tsx ../../supabase/seed/seed-users.ts
+```
+
+The script prints only the project ref, never a key. After a live re-seed, share the new passwords privately with the team, Kareena, and the E2E secret.

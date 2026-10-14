@@ -29,9 +29,11 @@ How the data moves through the app, and who can reach it at each step: [`DATA-FL
    ```bash
    supabase db reset
    ```
-2. Create the demo users (patient, doctor, doctor2, admin, caregiver, and `doc01` to `doc18`, two fictional doctors for each hospital; all `@vyana.test`). The password comes only from `SEED_PASSWORD`, the script exits without it:
+2. Create the demo users (patient, doctor, doctor2, admin, caregiver, and `doc01` to `doc18`, two fictional doctors for each hospital; all `@vyana.test`). One password per role (`SEED_PASSWORD_PATIENT`, `SEED_PASSWORD_DOCTOR`, `SEED_PASSWORD_CAREGIVER`, `SEED_PASSWORD_ADMIN`), each at least 16 characters — the script exits without them. It only manages `@vyana.test` accounts, and it refuses a non-local Supabase URL unless `ALLOW_LIVE_SEED=yes` is set:
    ```bash
-   SEED_PASSWORD=<choose-one> SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
+   SEED_PASSWORD_PATIENT=<16+ chars> SEED_PASSWORD_DOCTOR=<16+ chars> \
+   SEED_PASSWORD_CAREGIVER=<16+ chars> SEED_PASSWORD_ADMIN=<16+ chars> \
+   SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
      pnpm --filter @vyana/web exec tsx ../../supabase/seed/seed-users.ts
    ```
    `@supabase/supabase-js` is installed in the web workspace, so run the script from there (pnpm does not hoist it to the repo root).
