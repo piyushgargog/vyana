@@ -27,3 +27,12 @@ minimumReleaseAgeExclude:
   - "@expo/ui@57.0.23"
   - expo-router@57.0.26
   - expo-splash-screen@57.0.10
+
+# Dev-toolchain audit exceptions (issue #154). pnpm v11+ reads auditConfig only
+# from this file, not from package.json. See SECURITY.md "Accepted risks".
+auditConfig:
+  ignoreGhsas:
+    - GHSA-86w9-cpqp-85rv # node-forge, via @expo/cli
+    - GHSA-vfj7-8cjw-p6xm # braces, via metro/eslint
+    - GHSA-w5hq-g745-h8pq # uuid, via @expo/config-plugins
+    - GHSA-vcc3-ghjq-m6fr # decode-uri-component, via expo-router
