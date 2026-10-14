@@ -1,0 +1,4 @@
+# Findings of the ZAP baseline scan (.github/workflows/dynamic-security.yml) that we have looked at and accept.
+# One per line, three columns separated by a TAB: <rule id> <IGNORE|WARN|FAIL> <reason in parentheses>.
+# Every line needs a reason that says WHY it is not a problem here. A finding that is a real problem is fixed, not listed.
+# The rule ids are in the scan report (the artifact "zap-baseline-report").

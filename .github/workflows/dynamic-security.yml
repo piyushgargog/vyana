@@ -1,0 +1,37 @@
+name: Dynamic security (ZAP baseline)
+
+# A PASSIVE OWASP ZAP baseline scan of the live site: it fetches pages and looks at the answers (headers, cookies,
+# leaks). It never attacks and never submits anything. It reads only public pages; no sign-in is used.
+# Accepted findings are in .zap/rules.tsv, each with its reason. (ADR-067, after DocuLens.)
+on:
+  schedule:
+    - cron: "53 4 * * 3" # Wednesdays
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/dynamic-security.yml
+      - .zap/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dynamic-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap:
+    name: ZAP baseline of vyanahealth.app
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: https://vyanahealth.app
+          fail_action: true
+          allow_issue_writing: false
+          rules_file_name: .zap/rules.tsv # accepted findings, each with its reason
+          artifact_name: zap-baseline-report

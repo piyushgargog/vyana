@@ -1,27 +1,75 @@
-# Security updates for npm are raised automatically (enabled in repo settings).
-# Routine npm version bumps are OFF while the v1 build is in progress (no upgrades mid-build).
+# Dependabot (ADR-067), modelled on the DocuLens repository.
+#
+# - `cooldown`: a release is not proposed until it is 5 days old, so a freshly published (possibly malicious)
+#   version does not reach us on its first day. Cooldown does not apply to security updates, which come at once.
+# - Minor and patch updates of one ecosystem come together in one pull request; a major update gets its own.
+# - npm routine version updates are OFF until 19 October 2026 (the v1 freeze: no upgrades while the app is being
+#   finished). Security updates are not affected by `open-pull-requests-limit: 0` and keep coming.
+#   ON 19 OCTOBER: set the npm limit below to 5.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 0
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 0 # switch to 5 on 19 Oct 2026
     groups:
       security:
         applies-to: security-updates
         patterns: ["*"]
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
-    labels: ["dependencies"]
+    labels: ["dependencies", "npm"]
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 5
     groups:
-      actions:
-        patterns: ["*"]
+      actions-minor-patch:
+        update-types: ["minor", "patch"]
     commit-message:
       prefix: "ci(deps)"
-    labels: ["dependencies"]
+    labels: ["dependencies", "github-actions"]
+
+  # The Dockerfile (the base images of the web build and run stages).
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 5
+    groups:
+      docker-minor-patch:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "docker"]
+
+  # docker-compose.yml (the Caddy image).
+  - package-ecosystem: docker-compose
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 5
+    groups:
+      compose-minor-patch:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "docker"]

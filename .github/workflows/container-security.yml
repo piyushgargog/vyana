@@ -1,0 +1,126 @@
+name: Container security
+
+# Lints the Dockerfile, builds the image (nothing is pushed), scans it with Trivy, writes an SBOM and checks that the
+# image starts as a non-root user with no capabilities and answers on port 3000. (ADR-067, after DocuLens.)
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - docker-compose.yml
+      - Caddyfile
+      - .dockerignore
+      - apps/web/**
+      - packages/shared/**
+      - pnpm-lock.yaml
+      - .github/workflows/container-security.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - docker-compose.yml
+      - Caddyfile
+      - .dockerignore
+      - apps/web/**
+      - packages/shared/**
+      - pnpm-lock.yaml
+      - .github/workflows/container-security.yml
+  schedule:
+    - cron: "41 3 * * 1" # Mondays: a new vulnerability can appear in an image that did not change
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dockerfile:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  image:
+    name: Image scan and boot check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF report to code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build (not pushed)
+        # The two NEXT_PUBLIC_* values are inlined into the page code while Next builds; these are placeholders.
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key \
+            -t vyana-web:ci .
+      - name: Trivy image report (for code scanning)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: vyana-web:ci
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+      - name: Upload the report to code scanning
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+      - name: Trivy image scan (fails on CRITICAL or HIGH that has a fix)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: vyana-web:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: vyana-web:ci
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: sbom.spdx.json
+      - name: Boot the image with no capabilities and check it
+        run: |
+          docker run -d --name app --cap-drop ALL --security-opt no-new-privileges \
+            --memory 1g --pids-limit 256 -p 127.0.0.1:3000:3000 \
+            -e NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key \
+            vyana-web:ci
+          code=000
+          for _ in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)
+            [ "$code" != "000" ] && break
+            sleep 2
+          done
+          echo "The home page answered with HTTP $code"
+          if [ "${code:0:1}" != "2" ] && [ "${code:0:1}" != "3" ]; then
+            docker logs app | tail -n 40
+            exit 1
+          fi
+          # The container must not run as root.
+          test "$(docker exec app id -u)" != "0"
+      - name: Container log (when something failed)
+        if: failure()
+        run: docker logs app 2>&1 | tail -n 60 || true

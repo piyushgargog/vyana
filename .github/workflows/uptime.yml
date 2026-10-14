@@ -1,0 +1,96 @@
+name: Uptime
+
+# Checks the live site every 15 minutes. One failed check fails the run (GitHub emails the repository owner). After
+# TWO failed checks in a row it opens one issue labelled `incident` (or adds a comment to the one that is open),
+# and it closes that issue when the site answers again. (ADR-067, after DocuLens.)
+#
+# There is no health route yet, so the API check asks for a share link that cannot exist: the server must answer
+# 404 NOT_FOUND, which it only does after it has asked the database (a broken database gives 500).
+# Scheduled workflows can run a few minutes late, and GitHub pauses them after 60 days without activity in the
+# repository (re-enable them under the Actions tab).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/uptime.yml
+
+permissions: {}
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Live site answers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read # the result of the previous run
+      issues: write # the incident issue and its label
+    env:
+      SITE: https://vyanahealth.app
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check the front page and the API
+        id: check
+        run: |
+          ok=true
+          page=$(mktemp)
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$page" --write-out '%{http_code}' "$SITE/" || echo 000)
+          if [ "$code" = "200" ] && grep -q "Vyana" "$page"; then
+            echo "front page: ok"
+          else
+            echo "::error::The front page answered HTTP $code (or does not say Vyana)"
+            ok=false
+          fi
+
+          api=$(mktemp)
+          token=$(printf '0%.0s' $(seq 1 48))
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$api" --write-out '%{http_code}' "$SITE/api/share/$token" || echo 000)
+          if [ "$code" = "404" ] && grep -q "NOT_FOUND" "$api"; then
+            echo "API: ok (404 NOT_FOUND, so the server reached its database)"
+          else
+            echo "::error::The API answered HTTP $code instead of 404 NOT_FOUND"
+            ok=false
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Incident issue
+        # A pull request only tests the checks; it never opens or closes an issue.
+        if: github.event_name != 'pull_request'
+        env:
+          OK: ${{ steps.check.outputs.ok }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create incident --color B60205 --description "The live site is not answering" --force > /dev/null
+          open=$(gh issue list --label incident --state open --json number --jq '.[0].number // empty')
+
+          if [ "$OK" = "true" ]; then
+            if [ -n "$open" ]; then
+              gh issue comment "$open" --body "The site answers again ($RUN_URL). Closing this incident."
+              gh issue close "$open"
+            fi
+            exit 0
+          fi
+
+          # The previous finished run of this workflow: two failures in a row make an incident.
+          previous=$(gh run list --workflow uptime.yml --status completed --limit 1 --json conclusion --jq '.[0].conclusion // empty')
+          if [ "$previous" != "failure" ]; then
+            echo "First failed check: no incident yet."
+            exit 0
+          fi
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "Still not answering: $RUN_URL"
+          else
+            gh issue create --label incident --title "Incident: vyanahealth.app is not answering" \
+              --body "Two checks in a row failed (the front page or the API). The latest run: $RUN_URL. This issue closes itself when the site answers again."
+          fi
+
+      - name: Fail the run when a check failed
+        if: steps.check.outputs.ok != 'true'
+        run: exit 1

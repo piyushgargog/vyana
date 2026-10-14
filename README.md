@@ -1,5 +1,7 @@
 # Vyana
 
+[![CI](https://github.com/piyushgargog/vyana/actions/workflows/ci.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/ci.yml) [![CodeQL](https://github.com/piyushgargog/vyana/actions/workflows/codeql.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/codeql.yml) [![Security](https://github.com/piyushgargog/vyana/actions/workflows/security.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/security.yml) [![Container security](https://github.com/piyushgargog/vyana/actions/workflows/container-security.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/container-security.yml) [![Dynamic security](https://github.com/piyushgargog/vyana/actions/workflows/dynamic-security.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/dynamic-security.yml) [![Uptime](https://github.com/piyushgargog/vyana/actions/workflows/uptime.yml/badge.svg)](https://github.com/piyushgargog/vyana/actions/workflows/uptime.yml)
+
 > *Your health, in one calm place.*
 
 **Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, get your medicines delivered at the best price straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
