@@ -26,7 +26,7 @@ export interface PublicHeaderProps {
 }
 
 /**
- * Shared public header (Issue #140): DocuLens-style glass header.
+ * Shared public header (Issue #140): glass header.
  * - BrandMark and "Vyana" on the left
  * - Optional middle section navigation links on desktop (e.g. for homepage)
  * - Right side: "Sign in" (secondary pill), "Get started" (primary pill), and accessible GitHub IconButton

@@ -70,7 +70,7 @@ export function SignupForm() {
               Create your account
             </h1>
             <p className="mt-1.5 text-[15px] text-label-2 leading-relaxed">
-              Register as a patient (or caregiver) or as a verified doctor.
+              Register as a patient (or family caregiver) or as a doctor.
             </p>
           </div>
 
@@ -111,7 +111,6 @@ export function SignupForm() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98111 22334"
-              hint="Used for emergency SMS and clinic reminders."
             />
 
             <Field

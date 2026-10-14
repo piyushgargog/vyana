@@ -1,0 +1,48 @@
+name: Release
+
+# A v* tag creates the GitHub Release from that version's CHANGELOG.md section (issue #133).
+# Tag like: git tag v1.2.0 && git push origin v1.2.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Extract the CHANGELOG section for this version
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # The section from "## [VERSION]" up to (not including) the next "## ".
+          NOTES=$(awk -v v="## [$VERSION]" '
+            index($0, v) == 1 { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            echo "::error::No '## [$VERSION]' section in CHANGELOG.md"
+            exit 1
+          fi
+          {
+            echo "body<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Create the release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          name: "Vyana ${{ steps.notes.outputs.version }}"
+          body: ${{ steps.notes.outputs.body }}

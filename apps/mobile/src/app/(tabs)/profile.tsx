@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
@@ -23,6 +15,19 @@ import {
   useUpdateProfile,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Screen,
+  Sheet,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 
 export default function MobileProfileTab() {
@@ -54,14 +59,17 @@ export default function MobileProfileTab() {
   const preferredLang =
     preferredLangOverride ?? profile?.preferred_language ?? 'en';
 
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const [newEcName, setNewEcName] = useState('');
   const [newEcPhone, setNewEcPhone] = useState('');
   const [newEcRel, setNewEcRel] = useState('Family');
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+
   const [exportedJsonPreview, setExportedJsonPreview] = useState<string | null>(
     null
   );
-  const [confirmDeleteStep, setConfirmDeleteStep] = useState(false);
 
   const handleSaveProfile = async () => {
     const parsedAllergies = allergiesText
@@ -96,6 +104,7 @@ export default function MobileProfileTab() {
       });
       setNewEcName('');
       setNewEcPhone('');
+      setAddContactOpen(false);
       showToast('Emergency contact added', 'success');
     } catch (err) {
       showToast(
@@ -130,8 +139,6 @@ export default function MobileProfileTab() {
     }
   };
 
-  const [deletePassword, setDeletePassword] = useState('');
-
   const handleConfirmDeleteAccount = async () => {
     if (!deletePassword) {
       showToast('Please enter your password to confirm deletion', 'warning');
@@ -152,7 +159,7 @@ export default function MobileProfileTab() {
       }
       await deleteAccountMutation.mutateAsync();
       await supabase.auth.signOut();
-      setConfirmDeleteStep(false);
+      setDeleteOpen(false);
       setDeletePassword('');
       showToast('Account & personal health records deleted', 'warning');
       router.replace('/(auth)/login');
@@ -176,495 +183,359 @@ export default function MobileProfileTab() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Quick Links to Medical ID & Caregiver Circle */}
-      <View style={styles.quickRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Offline Medical ID QR"
+    <Screen title="Profile" eyebrow={profile?.full_name || 'Your account'}>
+      {/* Quick links */}
+      <ListGroup header="Quick links">
+        <ListRow
+          icon={<IconTile ios="qrcode" android="qr_code" color="blue" />}
+          title="Medical ID QR"
+          subtitle="Offline emergency card"
           onPress={() => router.push('/medical-id')}
-          style={styles.quickBtn}
-        >
-          <Text style={styles.quickBtnText}>Medical ID QR</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Caregiver Circle"
-          onPress={() => router.push('/caregiver')}
-          style={styles.quickBtn}
-        >
-          <Text style={styles.quickBtnText}>Caregiver Circle</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Symptom Triage"
-          onPress={() => router.push('/triage')}
-          style={styles.quickBtn}
-        >
-          <Text style={styles.quickBtnText}>Symptom Triage</Text>
-        </Pressable>
-      </View>
-
-      {/* Personal Profile & Allergies */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Personal Profile & Allergies</Text>
-
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          accessibilityLabel="Full Name"
-          value={fullName}
-          onChangeText={setFullName}
-          style={styles.input}
         />
+        <ListRow
+          icon={<IconTile ios="person.2.fill" android="group" color="green" />}
+          title="Caregiver circle"
+          subtitle="People who can help with your care"
+          onPress={() => router.push('/caregiver')}
+        />
+        <ListRow
+          icon={<IconTile ios="stethoscope" android="stethoscope" color="orange" />}
+          title="Symptom triage"
+          subtitle="Check symptoms before you visit a doctor"
+          onPress={() => router.push('/triage')}
+        />
+      </ListGroup>
 
+      {/* Health profile */}
+      <Card>
+        <CardHeader title="Health profile" />
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Full name
+          </Text>
+          <TextInput
+            accessibilityLabel="Full name"
+            value={fullName}
+            onChangeText={setFullName}
+            style={styles.input}
+          />
+        </View>
         <View style={styles.row}>
-          <View style={{ flex: 2 }}>
-            <Text style={styles.label}>Phone Number</Text>
+          <View style={[styles.field, { flex: 2 }]}>
+            <Text variant="footnote" tone="secondary" style={styles.label}>
+              Phone
+            </Text>
             <TextInput
-              accessibilityLabel="Phone Number"
+              accessibilityLabel="Phone number"
               value={phone}
               onChangeText={setPhone}
               style={styles.input}
+              keyboardType="phone-pad"
             />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Blood Group</Text>
+          <View style={[styles.field, { flex: 1 }]}>
+            <Text variant="footnote" tone="secondary" style={styles.label}>
+              Blood group
+            </Text>
             <TextInput
-              accessibilityLabel="Blood Group"
+              accessibilityLabel="Blood group"
               value={bloodGroup}
               onChangeText={setBloodGroup}
               style={styles.input}
             />
           </View>
         </View>
-
-        <Text style={styles.label}>Allergies (comma-separated)</Text>
-        <TextInput
-          accessibilityLabel="Allergies"
-          value={allergiesText}
-          onChangeText={setAllergiesText}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Preferred Language</Text>
-        <View style={styles.row}>
-          {(['en', 'hi', 'hinglish'] as const).map((l) => (
-            <Pressable
-              key={l}
-              accessibilityRole="button"
-              accessibilityState={{ selected: preferredLang === l }}
-              accessibilityLabel={`Set preferred language to ${l}`}
-              onPress={() => setPreferredLang(l)}
-              style={[
-                styles.langChip,
-                preferredLang === l && styles.langChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.langChipText,
-                  preferredLang === l && styles.langChipTextActive,
-                ]}
-              >
-                {l === 'en' ? 'English' : l === 'hi' ? 'Hindi' : 'Hinglish'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save Profile"
-          disabled={updateProfileMutation.isPending}
-          onPress={handleSaveProfile}
-          style={styles.primaryBtn}
-        >
-          <Text style={styles.primaryBtnText}>
-            {updateProfileMutation.isPending
-              ? 'Saving…'
-              : 'Save Profile Changes'}
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Allergies (comma-separated)
           </Text>
-        </Pressable>
-      </View>
-
-      {/* Emergency Contacts CRUD */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          Emergency Contacts (Alerted on SOS 108)
-        </Text>
-        {contacts.map((c, idx) => (
-          <View key={c.id} style={styles.contactRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contactName}>
-                {c.name} {idx === 0 ? '· Primary' : ''}
-              </Text>
-              <Text style={styles.contactSub}>
-                {c.phone} · {c.relation || 'Family'}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove emergency contact ${c.name}`}
-              disabled={deleteContactMutation.isPending}
-              onPress={() => handleDeleteContact(c.id)}
-              style={styles.removeBtn}
-            >
-              <Text style={styles.removeBtnText}>Remove</Text>
-            </Pressable>
-          </View>
-        ))}
-
-        <View style={styles.addContactBox}>
-          <Text style={styles.label}>Add New Emergency Contact</Text>
           <TextInput
-            accessibilityLabel="New Contact Name"
-            value={newEcName}
-            onChangeText={setNewEcName}
-            placeholder="Contact Name"
+            accessibilityLabel="Allergies"
+            value={allergiesText}
+            onChangeText={setAllergiesText}
             style={styles.input}
           />
-          <View style={styles.row}>
-            <TextInput
-              accessibilityLabel="New Contact Phone"
-              value={newEcPhone}
-              onChangeText={setNewEcPhone}
-              placeholder="+91 98111 00000"
-              style={[styles.input, { flex: 1 }]}
-            />
-            <TextInput
-              accessibilityLabel="New Contact Relationship"
-              value={newEcRel}
-              onChangeText={setNewEcRel}
-              placeholder="Relationship"
-              style={[styles.input, { flex: 1 }]}
-            />
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add Emergency Contact"
-            disabled={addContactMutation.isPending}
-            onPress={handleAddContact}
-            style={styles.outlineBtn}
-          >
-            <Text style={styles.outlineBtnText}>+ Add Emergency Contact</Text>
-          </Pressable>
         </View>
-      </View>
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Preferred language
+          </Text>
+          <View style={styles.chipsRow}>
+            {(['en', 'hi', 'hinglish'] as const).map((l) => {
+              const active = preferredLang === l;
+              return (
+                <Pressable
+                  key={l}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Set preferred language to ${l}`}
+                  onPress={() => setPreferredLang(l)}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <Text variant="footnote" tone={active ? 'white' : 'secondary'} style={styles.chipText}>
+                    {l === 'en' ? 'English' : l === 'hi' ? 'Hindi' : 'Hinglish'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <Button
+          title={updateProfileMutation.isPending ? 'Saving…' : 'Save profile changes'}
+          onPress={handleSaveProfile}
+          loading={updateProfileMutation.isPending}
+          label="Save profile changes"
+        />
+      </Card>
 
-      {/* Active Share Links */}
-      {shareLinks.length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Active Record Share Links</Text>
-          {shareLinks.map((link) => (
-            <View key={link.token} style={styles.contactRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.contactName}>
-                  Kind: {link.kind} · Token {link.token.slice(0, 8)}…
-                </Text>
-                <Text style={styles.contactSub}>
-                  Expires: {new Date(link.expires_at).toLocaleString()}
-                </Text>
-              </View>
+      {/* Emergency contacts */}
+      <ListGroup header="Emergency contacts" footer="These people are alerted on SOS 108.">
+        {contacts.map((c, idx) => (
+          <ListRow
+            key={c.id}
+            icon={
+              <IconTile
+                ios={idx === 0 ? 'star.fill' : 'person.fill'}
+                android={idx === 0 ? 'star' : 'person'}
+                color={idx === 0 ? 'orange' : 'gray'}
+              />
+            }
+            title={c.name}
+            subtitle={`${c.phone} · ${c.relation || 'Family'}${idx === 0 ? ' · Primary' : ''}`}
+            trailing={
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Revoke share link"
-                onPress={() => revokeShareMutation.mutate(link.token)}
+                accessibilityLabel={`Remove emergency contact ${c.name}`}
+                disabled={deleteContactMutation.isPending}
+                onPress={() => handleDeleteContact(c.id)}
                 style={styles.removeBtn}
               >
-                <Text style={styles.removeBtnText}>Revoke</Text>
+                <Text variant="footnote" tone="danger" style={styles.removeText}>
+                  Remove
+                </Text>
               </Pressable>
-            </View>
+            }
+          />
+        ))}
+        <ListRow
+          icon={<IconTile ios="plus" android="add" color="accent" />}
+          title="Add emergency contact"
+          onPress={() => setAddContactOpen(true)}
+        />
+      </ListGroup>
+
+      {/* Share links */}
+      {shareLinks.length > 0 && (
+        <ListGroup header="Active share links">
+          {shareLinks.map((link) => (
+            <ListRow
+              key={link.token}
+              icon={<IconTile ios="link" android="link" color="indigo" />}
+              title={`${link.kind} · ${link.token.slice(0, 8)}…`}
+              subtitle={`Expires ${new Date(link.expires_at).toLocaleString()}`}
+              trailing={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Revoke share link"
+                  onPress={() => revokeShareMutation.mutate(link.token)}
+                  style={styles.removeBtn}
+                >
+                  <Text variant="footnote" tone="danger" style={styles.removeText}>
+                    Revoke
+                  </Text>
+                </Pressable>
+              }
+            />
           ))}
-        </View>
+        </ListGroup>
       )}
 
-      {/* DPDP Act 2023 Data Rights: Export JSON & Two-Step Account Deletion */}
-      <View style={styles.dpdpCard}>
-        <Text style={styles.dpdpBadge}>
-          DPDP Act 2023 · Consent {consentRecord?.version ?? CONSENT_VERSION}
-        </Text>
-        <Text style={styles.cardTitle}>Your Data Privacy & Rights</Text>
-        <Text style={styles.cardSub}>
-          Download your complete personal health data as a portable JSON bundle,
-          or permanently erase your account and storage files.
-        </Text>
+      {/* Privacy */}
+      <ListGroup
+        header="Privacy"
+        footer={`DPDP Act 2023 · Consent ${consentRecord?.version ?? CONSENT_VERSION}`}
+      >
+        <ListRow
+          icon={<IconTile ios="square.and.arrow.down" android="download" color="blue" />}
+          title="Download my data"
+          subtitle="Your health data as a portable JSON bundle"
+          onPress={handleExportMyData}
+        />
+        <ListRow
+          icon={<IconTile ios="doc.text.fill" android="description" color="gray" />}
+          title="Review consent"
+          onPress={() => router.push('/consent')}
+        />
+        <ListRow
+          icon={<IconTile ios="envelope.fill" android="mail" color="gray" />}
+          title="Help and contact"
+          subtitle="piyushgarg@vyanahealth.app"
+          onPress={() => Linking.openURL('mailto:piyushgarg@vyanahealth.app')}
+        />
+        <ListRow
+          icon={<IconTile ios="lock.fill" android="lock" color="gray" />}
+          title="Privacy policy"
+          subtitle="vyanahealth.app/privacy"
+          onPress={() => Linking.openURL('https://vyanahealth.app/privacy')}
+        />
+      </ListGroup>
 
-        <View style={styles.row}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Download my health data as JSON"
-            disabled={exportDataMutation.isPending}
-            onPress={handleExportMyData}
-            style={[styles.outlineBtn, { flex: 1 }]}
-          >
-            <Text style={styles.outlineBtnText}>
-              {exportDataMutation.isPending
-                ? 'Exporting…'
-                : 'Download My Data (JSON)'}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Review DPDP Consent"
-            onPress={() => router.push('/consent')}
-            style={[styles.outlineBtn, { flex: 1 }]}
-          >
-            <Text style={styles.outlineBtnText}>Review Consent</Text>
-          </Pressable>
-        </View>
-
-        {exportedJsonPreview && (
-          <View style={styles.jsonPreviewBox}>
-            <Text style={styles.jsonPreviewLabel}>
-              Exported JSON Bundle ({exportedJsonPreview.length} bytes):
-            </Text>
-            <Text style={styles.jsonCode} numberOfLines={8}>
+      {exportedJsonPreview && (
+        <Card>
+          <CardHeader title="Exported data bundle" trailing={`${exportedJsonPreview.length} bytes`} />
+          <View style={styles.jsonBox}>
+            <Text variant="caption" tone="white" numberOfLines={8} style={styles.jsonText}>
               {exportedJsonPreview}
             </Text>
           </View>
-        )}
+        </Card>
+      )}
 
-        {!confirmDeleteStep ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Delete my account and health data"
-            onPress={() => setConfirmDeleteStep(true)}
-            style={styles.deleteBtn}
-          >
-            <Text style={styles.deleteBtnText}>Delete My Account & Data</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.confirmDeleteBox}>
-            <Text style={styles.confirmDeleteTitle}>
-              Step 2 of 2: Permanent Erasure Confirmation
-            </Text>
-            <Text style={styles.confirmDeleteSub}>
-              This action permanently deletes your profile, prescriptions, lab
-              reports, vitals, and storage files. This cannot be undone. Enter
-              your password to verify:
-            </Text>
-            <TextInput
-              accessibilityLabel="Confirm Password to Delete Account"
-              secureTextEntry
-              value={deletePassword}
-              onChangeText={setDeletePassword}
-              placeholder="Enter your current password"
-              style={styles.input}
-            />
-            <View style={styles.row}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Cancel account deletion"
-                onPress={() => setConfirmDeleteStep(false)}
-                style={[styles.outlineBtn, { flex: 1 }]}
-              >
-                <Text style={styles.outlineBtnText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Confirm permanent account deletion"
-                disabled={deleteAccountMutation.isPending}
-                onPress={handleConfirmDeleteAccount}
-                style={[styles.deleteConfirmBtn, { flex: 1 }]}
-              >
-                <Text style={styles.deleteConfirmBtnText}>
-                  {deleteAccountMutation.isPending
-                    ? 'Deleting…'
-                    : 'Confirm Permanent Delete'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
+      <Button
+        title="Delete my account and data"
+        variant="destructive"
+        onPress={() => setDeleteOpen(true)}
+        label="Delete my account and health data"
+        icon={<Symbol ios="trash.fill" android="delete" size={16} color={T.color.dangerText} />}
+      />
+      <Button
+        title="Sign out"
+        variant="secondary"
+        onPress={handleSignOut}
+        label="Sign out"
+      />
 
-        <View style={{ gap: 8, marginTop: 4 }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Help and contact"
-            onPress={() => Linking.openURL('mailto:piyushgarg@vyanahealth.app')}
-            style={styles.outlineBtn}
-          >
-            <Text style={styles.outlineBtnText}>
-              Help & Contact · piyushgarg@vyanahealth.app
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Privacy policy"
-            onPress={() => Linking.openURL('https://vyanahealth.app/privacy')}
-            style={styles.outlineBtn}
-          >
-            <Text style={styles.outlineBtnText}>
-              Privacy Policy · vyanahealth.app/privacy
-            </Text>
-          </Pressable>
+      {/* Add contact sheet */}
+      <Sheet visible={addContactOpen} onClose={() => setAddContactOpen(false)} title="Add emergency contact">
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Name
+          </Text>
+          <TextInput
+            accessibilityLabel="New contact name"
+            value={newEcName}
+            onChangeText={setNewEcName}
+            placeholder="Contact name"
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
         </View>
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Phone
+          </Text>
+          <TextInput
+            accessibilityLabel="New contact phone"
+            value={newEcPhone}
+            onChangeText={setNewEcPhone}
+            placeholder="+91 98111 00000"
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+            keyboardType="phone-pad"
+          />
+        </View>
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Relationship
+          </Text>
+          <TextInput
+            accessibilityLabel="New contact relationship"
+            value={newEcRel}
+            onChangeText={setNewEcRel}
+            placeholder="Family"
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
+        </View>
+        <Button
+          title="Add contact"
+          onPress={handleAddContact}
+          loading={addContactMutation.isPending}
+          label="Add emergency contact"
+        />
+      </Sheet>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign Out"
-          onPress={handleSignOut}
-          style={styles.outlineBtn}
-        >
-          <Text style={styles.outlineBtnText}>Sign Out</Text>
-        </Pressable>
-      </View>
+      {/* Delete confirmation sheet */}
+      <Sheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account?">
+        <Text variant="body" tone="danger">
+          This permanently deletes your profile, prescriptions, lab reports, vitals and
+          stored files. This cannot be undone.
+        </Text>
+        <View style={styles.field}>
+          <Text variant="footnote" tone="secondary" style={styles.label}>
+            Enter your password to confirm
+          </Text>
+          <TextInput
+            accessibilityLabel="Confirm password to delete account"
+            secureTextEntry
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            placeholder="Your current password"
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
+        </View>
+        <Button
+          title={deleteAccountMutation.isPending ? 'Deleting…' : 'Delete permanently'}
+          variant="destructive"
+          onPress={handleConfirmDeleteAccount}
+          loading={deleteAccountMutation.isPending}
+          label="Confirm permanent account deletion"
+        />
+        <Button
+          title="Keep my account"
+          variant="secondary"
+          onPress={() => {
+            setDeleteOpen(false);
+            setDeletePassword('');
+          }}
+          label="Cancel account deletion"
+        />
+      </Sheet>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  quickRow: { flexDirection: 'row', gap: 10 },
-  quickBtn: {
-    flex: 1,
-    backgroundColor: '#0F766E',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  quickBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 10,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  cardSub: { fontSize: 12, color: '#64748B', lineHeight: 18 },
-  modeChip: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  modeChipText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  field: { gap: T.space.xs },
+  label: { fontWeight: '600' },
   input: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    ...T.text.body,
+    color: T.color.label,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.sm,
+    minHeight: 44,
   },
-  row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  langChip: {
+  row: { flexDirection: 'row', gap: T.space.md },
+  chipsRow: { flexDirection: 'row', gap: T.space.sm },
+  chip: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingVertical: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingVertical: T.space.sm,
+    minHeight: 44,
   },
-  langChipActive: { borderColor: '#0D9488', backgroundColor: '#F0FDFA' },
-  langChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  langChipTextActive: { color: '#0F766E', fontWeight: '700' },
-  primaryBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  contactRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  contactName: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  contactSub: { fontSize: 12, color: '#64748B' },
+  chipActive: { backgroundColor: T.color.accent },
+  chipText: { fontWeight: '600' },
   removeBtn: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: T.space.sm,
   },
-  removeBtnText: { color: '#DC2626', fontSize: 11, fontWeight: '700' },
-  addContactBox: {
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
-    marginTop: 4,
+  removeText: { fontWeight: '700' },
+  jsonBox: {
+    backgroundColor: T.color.label,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
   },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: '#0D9488',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  outlineBtnText: { color: '#0F766E', fontSize: 12, fontWeight: '700' },
-  dpdpCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    gap: 10,
-  },
-  dpdpBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#CCFBF1',
-    color: '#0F766E',
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  jsonPreviewBox: {
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  jsonPreviewLabel: { color: '#5EEAD4', fontSize: 11, fontWeight: '700' },
-  jsonCode: { color: '#E2E8F0', fontSize: 10, fontFamily: 'monospace' },
-  deleteBtn: {
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  deleteBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '700' },
-  confirmDeleteBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#DC2626',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  confirmDeleteTitle: { fontSize: 13, fontWeight: '800', color: '#991B1B' },
-  confirmDeleteSub: { fontSize: 12, color: '#7F1D1D', lineHeight: 17 },
-  deleteConfirmBtn: {
-    backgroundColor: '#DC2626',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  deleteConfirmBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  jsonText: { fontFamily: 'monospace' },
 });

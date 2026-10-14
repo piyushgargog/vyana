@@ -1,7 +1,8 @@
 import React from "react";
+import Link from "next/link";
 import type { Metadata } from "next";
-import { PublicHeader } from "@/components/public-header";
 import {
+  BrandMark,
   ButtonLink,
   Card,
   CardHeader,
@@ -27,17 +28,44 @@ export const metadata: Metadata = {
     "Complete healthcare that connects patients, doctors, and families. Medicine reminders, emergency SOS, whole-prescription price comparison, and doctor-approved care plans.",
 };
 
-const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Careful by design", href: "#careful" },
-  { label: "For doctors", href: "#doctors" },
-];
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-label">
-      {/* 1. Shared Public Header (DocuLens-style Liquid Glass) */}
-      <PublicHeader navLinks={NAV_LINKS} />
+      {/* 1. Glass Navigation Bar */}
+      <header className="glass-bar sticky top-0 z-30 border-b border-separator">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2.5 rounded-full outline-none">
+            <BrandMark size={32} />
+            <span className="text-[19px] font-semibold tracking-tight text-label">
+              Vyana
+            </span>
+          </Link>
+
+          <nav
+            aria-label="Main navigation"
+            className="hidden md:flex items-center gap-6 text-[15px] font-medium text-label-2"
+          >
+            <a href="#features" className="hover:text-label transition-colors">
+              Features
+            </a>
+            <a href="#careful" className="hover:text-label transition-colors">
+              Careful by design
+            </a>
+            <a href="#doctors" className="hover:text-label transition-colors">
+              For doctors
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ButtonLink href="/login" variant="plain" size="sm">
+              Sign in
+            </ButtonLink>
+            <ButtonLink href="/signup" variant="primary" size="sm">
+              Get started
+            </ButtonLink>
+          </div>
+        </div>
+      </header>
 
       <main className="flex-1">
         {/* 2 & 3. Hero Section with One Headline and One Primary Call to Action */}
@@ -70,132 +98,155 @@ export default function LandingPage() {
           <div className="mt-14 sm:mt-18 flex justify-center">
             <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
               {/* Phone Dynamic Island */}
-              <div className="mx-auto h-4 w-28 rounded-full bg-label/90 mb-4" />
+              <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
 
-              {/* Status Header */}
-              <div className="flex items-center justify-between text-[11px] font-medium text-label-3 px-1 mb-3">
-                <span>09:41</span>
-                <span>5G · 100%</span>
+              {/* Today Header */}
+              <div className="flex items-end justify-between pb-3">
+                <div>
+                  <span className="text-[11px] font-semibold text-label-3">
+                    Wednesday, 14 October
+                  </span>
+                  <p className="text-[26px] font-bold tracking-tight text-label">
+                    Today
+                  </p>
+                </div>
+                <span className="rounded-full bg-danger-soft px-2.5 py-1 text-[11px] font-bold text-danger-text">
+                  SOS 108
+                </span>
               </div>
 
-              {/* Patient App Header inside Phone */}
-              <div className="space-y-1 mb-4">
-                <p className="text-[11px] font-semibold tracking-wide uppercase text-accent-strong">
-                  Tuesday, October 14
-                </p>
-                <p className="text-[20px] font-bold tracking-tight text-label">
-                  Today
-                </p>
-              </div>
-
-              {/* Simulated Doses Today Card */}
-              <div className="rounded-card bg-surface p-3.5 border border-separator shadow-xs space-y-2 mb-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-semibold text-label">
+              {/* Doses Card */}
+              <div className="rounded-card bg-surface p-4 shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[15px] font-semibold text-label">
                     Doses today
                   </span>
-                  <Pill tone="accent">2 of 3 taken</Pill>
+                  <span className="text-[12px] text-label-3">2 of 3 taken</span>
                 </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between rounded-row bg-fill/50 px-2.5 py-1.5 text-[12px]">
-                    <span className="font-medium text-label">
-                      Metformin 500mg
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Metformin 500mg</span>
+                      <span className="text-[11px] text-label-3">8:00 AM · After breakfast</span>
+                    </div>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                      ✓
                     </span>
-                    <span className="text-ok font-semibold">Taken · 09:00</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-row bg-fill/50 px-2.5 py-1.5 text-[12px]">
-                    <span className="font-medium text-label">
-                      Amlodipine 5mg
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Telmisartan 40mg</span>
+                      <span className="text-[11px] text-label-3">9:00 AM · Morning</span>
+                    </div>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                      ✓
                     </span>
-                    <span className="text-label-3">Due at 21:00</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-fill/50 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Atorvastatin 10mg</span>
+                      <span className="text-[11px] text-label-3">9:00 PM · At bedtime</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-label-3">Due</span>
                   </div>
                 </div>
               </div>
 
-              {/* Simulated Lab Metric Card */}
-              <div className="rounded-card bg-surface p-3.5 border border-separator shadow-xs space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-semibold text-label">
-                    HbA1c Trend
-                  </span>
-                  <span className="text-[11px] font-medium text-label-2">
-                    Normal (4.0% – 5.6%)
-                  </span>
+              {/* Your Health Group */}
+              <div className="rounded-card bg-surface overflow-hidden shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3 text-[13px]">
+                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
+                  Your health
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[22px] font-bold text-label">5.4%</span>
-                  <span className="text-[11px] text-ok font-medium">In target range</span>
+                <div className="divide-y divide-separator">
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="font-medium text-label">HbA1c Blood Test</span>
+                    <Pill tone="ok" className="text-[11px]">Report added</Pill>
+                  </div>
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="font-medium text-label">OPD Token · City Hospital</span>
+                    <Pill tone="accent" className="text-[11px]">Token #14</Pill>
+                  </div>
                 </div>
+              </div>
+
+              {/* Floating Glass Scan Button */}
+              <div className="glass rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-[13px] font-semibold text-accent-strong shadow-glass">
+                <Receipt className="h-4 w-4" aria-hidden="true" />
+                <span>Scan a prescription</span>
               </div>
             </div>
           </div>
+          <p className="mt-3 text-[13px] text-label-3">
+            The Vyana app
+          </p>
         </section>
 
-        {/* 5. Four Feature Cards */}
+        {/* 5. Four Large Feature Cards */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-            <h2 className="text-[28px] sm:text-[36px] font-bold tracking-tight text-label">
-              Everything in calm order.
+          <div className="max-w-2xl mb-10">
+            <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-label leading-tight">
+              Clinical tools designed for real Indian families
             </h2>
-            <p className="mt-3 text-[16px] text-label-2 leading-relaxed">
-              Thoughtfully engineered for patients, trusted caregivers, and Indian healthcare workflows.
+            <p className="mt-2 text-[16px] text-label-2 leading-relaxed">
+              Every feature is built around the everyday steps patients, doctors,
+              and caregivers actually navigate.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Feature 1: Prescription Comparison */}
+            {/* Feature 1: Prescriptions & Basket Compare */}
             <Card className="flex flex-col justify-between">
               <div>
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
                   <Receipt className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <CardHeader
-                  title="Jan Aushadhi generic comparison"
+                  title="Whole-prescription pharmacy comparison"
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
-                  Compare whole-prescription prices across verified online pharmacies
-                  and discover cost-effective Pradhan Mantri Jan Aushadhi generic
-                  alternatives with verified salts and exact strengths.
+                  Scan printed or handwritten prescriptions. Vyana checks every
+                  medicine against the photo and compares your whole prescription
+                  on 1mg, PharmEasy, Netmeds and Apollo, plus Jan Aushadhi generics.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Prescription Basket Check</span>
-                  <span className="text-ok font-bold">Generic savings</span>
+                  <span>Whole-Prescription Basket</span>
+                  <span className="text-accent-strong font-medium">Generic options found</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Verified therapeutic salt equivalence</p>
-                  <p>• Full-basket comparison across licensed pharmacies</p>
+                  <p>• Compares 1mg, PharmEasy, Netmeds and Apollo</p>
+                  <p>• Verified Jan Aushadhi generic substitutes</p>
                 </div>
               </div>
             </Card>
 
-            {/* Feature 2: Lab Value History & Trends */}
+            {/* Feature 2: Diagnostic Lab Reports */}
             <Card className="flex flex-col justify-between">
               <div>
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
                   <TrendingUp className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <CardHeader
-                  title="Laboratory trend charts with normal ranges"
+                  title="Lab trend tracking over time"
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
-                  Track fasting blood sugar, HbA1c, lipid profiles, and kidney function
-                  over time. Interactive trendlines plot each test result against
-                  clinical reference ranges and highlight flagged values.
+                  Upload PDF reports or scan physical test sheets. Vyana graphs
+                  your key biomarkers over time against standard Indian reference
+                  ranges, turning isolated lab values into meaningful health
+                  progress you can discuss with your physician.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Diagnostic Lab History</span>
-                  <span className="text-accent-strong font-medium">Standardized metrics</span>
+                  <span>Tracked Lab Markers</span>
+                  <span className="text-ok font-medium">Trends graphed</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Visual reference bands with abnormal flags</p>
-                  <p>• Long-term tracking across test reports</p>
+                  <p>• HbA1c and Blood Glucose over time</p>
+                  <p>• Compared against standard reference ranges</p>
                 </div>
               </div>
             </Card>
@@ -207,12 +258,12 @@ export default function LandingPage() {
                   <Building2 className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <CardHeader
-                  title="Live OPD queue status and hospital schedules"
+                  title="Hospital OPD queues & verified timings"
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
-                  Book and track digital OPD tokens for public and empanelled
-                  hospitals. Know your expected turn and department timings
-                  without spending hours waiting in crowded corridors.
+                  Book government and private hospital OPD tokens before leaving
+                  home. Check real operating schedules and clinic timings checked
+                  on the hospital&apos;s own pages, so you wait less at the hospital.
                 </p>
               </div>
 
@@ -223,7 +274,7 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• General Medicine and specialty departments</p>
-                  <p>• Live token queues and operating days</p>
+                  <p>• Token booking and operating days</p>
                 </div>
               </div>
             </Card>
@@ -247,7 +298,7 @@ export default function LandingPage() {
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
                   <span>Offline Medical ID Summary</span>
-                  <span className="text-danger-text font-bold">108 / 112 Ready</span>
+                  <span className="text-danger-text font-bold">Works offline</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• Blood group and verified allergies</p>
@@ -280,7 +331,7 @@ export default function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
-                  Every informational note quotes clinical guidelines verbatim.
+                  Every health note shows the guideline it comes from.
                   Vyana never diagnoses and never tells you a dose.
                 </p>
               </div>
@@ -307,7 +358,7 @@ export default function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
-                  Under the Digital Personal Data Protection Act, your health data
+                  Your health data
                   is shared only with caregivers and physicians you explicitly
                   authorize.
                 </p>
@@ -325,7 +376,7 @@ export default function LandingPage() {
               </h2>
               <p className="mt-3 text-[16px] text-white/70 leading-relaxed">
                 Streamline token queues, access patient medical histories instantly,
-                and prescribe daily care plans with zero administrative overhead.
+                and prescribe daily care plans with less paperwork.
               </p>
             </div>
 
@@ -347,7 +398,7 @@ export default function LandingPage() {
                   NMC Statutory Verification
                 </h3>
                 <p className="text-[14px] text-white/70 leading-relaxed">
-                  Instant practitioner verification against the National Medical
+                  Registration checked against the National Medical
                   Commission and State Medical Council registers.
                 </p>
               </div>
@@ -359,7 +410,7 @@ export default function LandingPage() {
                 </h3>
                 <p className="text-[14px] text-white/70 leading-relaxed">
                   Review patient dose adherence, monitor blood pressure and blood
-                  sugar logs, and adapt treatment plans with confidence.
+                  sugar logs, and update treatment plans.
                 </p>
               </div>
             </div>
