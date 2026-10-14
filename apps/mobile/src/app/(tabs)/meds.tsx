@@ -22,12 +22,13 @@ import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
 } from '@/components/ui-primitives';
+import { ErrorState } from '@/components/ui';
 
 export default function MobileMedsTab() {
   const router = useRouter();
   const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
-  const { data: rxList = [], isLoading: rxLoading } = usePrescriptions();
+  const { data: rxList = [], isLoading: rxLoading, isError: rxError, refetch: refetchRx } = usePrescriptions();
   const toggleMutation = useSetItemActive();
   const compareSingleMutation = useCompareMedicine();
   const interactionsMutation = useCheckInteractions();
@@ -223,6 +224,10 @@ export default function MobileMedsTab() {
       {/* Prescriptions List */}
       {rxLoading ? (
         <MobileSkeletonCard lines={3} />
+      ) : rxError ? (
+        <View style={styles.card}>
+          <ErrorState onRetry={() => refetchRx()} />
+        </View>
       ) : rxList.length === 0 ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>No Prescriptions Yet</Text>

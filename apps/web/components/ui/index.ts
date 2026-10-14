@@ -5,7 +5,7 @@ export { Button, ButtonLink, IconButton } from "./button";
 export { Card, CardHeader, GlassCard } from "./card";
 export { Field, SelectField, TextAreaField } from "./field";
 export { IconTile, ListGroup, ListRow, type TileColor } from "./list";
-export { EmptyState, LargeTitle, Reveal, SegmentedNav, SkeletonLine } from "./layout";
+export { EmptyState, ErrorState, LargeTitle, Reveal, SegmentedNav, SkeletonLine } from "./layout";
 export { Pill } from "./pill";
 export { Sheet } from "./sheet";
 export { SiteFooter } from "./site-footer";

@@ -55,6 +55,45 @@ export function EmptyState({ icon, title, body, action, className }: { icon?: Re
   );
 }
 
+/** A calm error state: soft neutral icon, calm title/body, and a "Try again" action (Issue #139). */
+export function ErrorState({
+  title = "Couldn't load this",
+  body = "Check your connection or try again.",
+  onRetry,
+  retryLabel = "Try again",
+  className,
+}: {
+  title?: ReactNode;
+  body?: ReactNode;
+  onRetry?: () => void;
+  retryLabel?: string;
+  className?: string;
+}) {
+  return (
+    <EmptyState
+      icon={
+        <svg aria-hidden="true" className="h-7 w-7 text-label-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+      }
+      title={title}
+      body={body}
+      action={
+        onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-1 inline-flex items-center justify-center rounded-full border border-separator bg-surface px-4 py-1.5 text-[14px] font-medium text-label hover:bg-canvas transition-colors"
+          >
+            {retryLabel}
+          </button>
+        ) : undefined
+      }
+      className={className}
+    />
+  );
+}
+
 /** Fades and lifts its children in once (lists, cards). Off when the user asks for reduced motion. */
 export function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
   const reduce = useReducedMotion();

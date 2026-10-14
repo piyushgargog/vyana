@@ -68,7 +68,12 @@ export function WebAppProviders({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AppProviders supabase={supabase} apiBaseUrl="" useMocks={useMocks}>
+    <AppProviders
+      supabase={supabase}
+      apiBaseUrl=""
+      useMocks={useMocks}
+      onRateLimit={(event) => showToast(event.message, "info")}
+    >
       <VyanaWebContext.Provider value={value}>
         {children}
         <div

@@ -20,12 +20,13 @@ import {
   MobileDisclaimerFooter,
   MobileQrGrid,
 } from '@/components/ui-primitives';
+import { ErrorState } from '@/components/ui';
 
 export default function TimelineScreen() {
   const router = useRouter();
   const { baseUrl, showToast } = useVyanaMobile();
 
-  const { data: timeline = [], isLoading } = useTimeline();
+  const { data: timeline = [], isLoading, isError: timelineError, refetch: refetchTimeline } = useTimeline();
   const createShareMutation = useCreateShareLink();
 
   const [filter, setFilter] = useState<'all' | TimelineKind>('all');
@@ -233,6 +234,10 @@ export default function TimelineScreen() {
         <View style={styles.loadingBox}>
           <ActivityIndicator size="small" color="#0D9488" />
           <Text style={styles.loadingText}>Building your timeline…</Text>
+        </View>
+      ) : timelineError ? (
+        <View style={styles.emptyCard}>
+          <ErrorState onRetry={() => refetchTimeline()} />
         </View>
       ) : filteredEntries.length === 0 ? (
         <View style={styles.emptyCard}>
