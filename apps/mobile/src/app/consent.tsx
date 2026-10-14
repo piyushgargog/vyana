@@ -109,7 +109,7 @@ export default function MobileConsentScreen() {
       )}
 
       <Text variant="footnote" tone="secondary" style={styles.pointsHeader}>
-        What you're agreeing to
+        What you&apos;re agreeing to
       </Text>
       {/* Full text in cards: a list row would cut the consent text to two lines. */}
       {CONSENT_POINTS.map((point) => (
