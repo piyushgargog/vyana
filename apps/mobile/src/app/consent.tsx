@@ -18,8 +18,6 @@ import {
   Button,
   Card,
   IconTile,
-  ListGroup,
-  ListRow,
   Pill,
   Screen,
   Symbol,
@@ -110,22 +108,27 @@ export default function MobileConsentScreen() {
         </Card>
       )}
 
-      <ListGroup header="What you're agreeing to">
-        {CONSENT_POINTS.map((point) => (
-          <ListRow
-            key={point.title}
-            icon={
-              <IconTile
-                ios={point.icon.ios}
-                android={point.icon.android}
-                color={point.color}
-              />
-            }
-            title={point.title}
-            subtitle={point.body}
-          />
-        ))}
-      </ListGroup>
+      <Text variant="footnote" tone="secondary" style={styles.pointsHeader}>
+        What you're agreeing to
+      </Text>
+      {/* Full text in cards: a list row would cut the consent text to two lines. */}
+      {CONSENT_POINTS.map((point) => (
+        <Card key={point.title}>
+          <View style={styles.pointTitle}>
+            <IconTile
+              ios={point.icon.ios}
+              android={point.icon.android}
+              color={point.color}
+            />
+            <Text variant="headline" accessibilityRole="header" style={styles.pointTitleText}>
+              {point.title}
+            </Text>
+          </View>
+          <Text variant="footnote" tone="secondary">
+            {point.body}
+          </Text>
+        </Card>
+      ))}
 
       <Card>
         <Pressable
@@ -214,6 +217,9 @@ export default function MobileConsentScreen() {
 }
 
 const styles = StyleSheet.create({
+  pointsHeader: { marginLeft: T.space.lg },
+  pointTitle: { flexDirection: 'row', alignItems: 'center', gap: T.space.md, marginBottom: T.space.sm },
+  pointTitleText: { flex: 1 },
   errorBox: {
     backgroundColor: T.color.dangerSoft,
     borderRadius: T.radius.row,
