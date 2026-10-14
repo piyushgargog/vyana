@@ -1,4 +1,4 @@
-import { DoctorVerifyReq, DoctorVerifyRes } from "@vyana/shared";
+import { DoctorVerifyReq, DoctorVerifyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { verifyDoctor } from "@/lib/server/doctor-verify";
 import { parseBody, withRoute } from "@/lib/server/errors";
@@ -12,4 +12,4 @@ export const POST = withRoute("doctors/verify", async (req, ctx) => {
   const body = await parseBody(req, DoctorVerifyReq);
   const res = await verifyDoctor(authed, body, ctx);
   return Response.json(process.env.NODE_ENV === "production" ? res : DoctorVerifyRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("agent") });

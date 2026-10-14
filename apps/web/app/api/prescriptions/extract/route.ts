@@ -1,4 +1,4 @@
-import { PrescriptionExtractReq, PrescriptionExtractRes } from "@vyana/shared";
+import { PrescriptionExtractReq, PrescriptionExtractRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { extractPrescription } from "@/lib/server/prescriptions";
@@ -14,4 +14,4 @@ export const POST = withRoute("prescriptions/extract", async (req, ctx) => {
   const allergies = Array.isArray(profile.allergies) ? profile.allergies.filter((a): a is string => typeof a === "string") : [];
   const res = await extractPrescription({ id: user.id, fullName: profile.full_name, allergies }, sb, body.file_path);
   return Response.json(process.env.NODE_ENV === "production" ? res : PrescriptionExtractRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("ai_document") });

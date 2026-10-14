@@ -1,4 +1,4 @@
-import { BasketCompareReq, BasketCompareRes } from "@vyana/shared";
+import { BasketCompareReq, BasketCompareRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { itemsFromPrescription, normalizeItems, startBasketJob } from "@/lib/server/tinyfish/basket";
@@ -14,4 +14,4 @@ export const POST = withRoute("prescriptions/basket", async (req, ctx) => {
   const res = await startBasketJob(user.id, items, ctx);
   ctx.cache = res.cached ? "hit" : "miss";
   return Response.json(process.env.NODE_ENV === "production" ? res : BasketCompareRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("agent") });

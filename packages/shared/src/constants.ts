@@ -59,3 +59,39 @@ export type MealType = (typeof MEAL_TYPES)[number];
 export const MEAL_DESCRIPTION_MAX = 200;
 /** The most calories one entry may have: a typo like 3000000 is refused instead of ruining a day's total. */
 export const MEAL_CALORIES_MAX = 5000;
+
+// Per-user limits on the AI and web-agent routes (issue #138). The counters are in the database (migration 0012,
+// `hit_rate_limit`); the API checks them after the sign-in check and before any model or web-agent call.
+export const RATE_LIMITS = {
+  /** The assistant chat. */
+  ai_chat: { windowSeconds: 10 * 60, max: 20 },
+  /** Reading a prescription or a lab report (a vision model). */
+  ai_document: { windowSeconds: 60 * 60, max: 10 },
+  /** Care plan, symptom check and interaction check. */
+  ai_other: { windowSeconds: 60 * 60, max: 20 },
+  /** Anything that starts a web agent or a live-web search for the user. */
+  agent: { windowSeconds: 60 * 60, max: 10 },
+  /** Nearby emergency hospitals. SOS itself is never limited. */
+  public: { windowSeconds: 10 * 60, max: 30 },
+} as const;
+export type RateLimitBucket = keyof typeof RATE_LIMITS;
+
+/** A bucket with its name, for `withRoute`'s `rateLimit` option. */
+export const rateLimitOf = (bucket: RateLimitBucket) => ({ bucket, ...RATE_LIMITS[bucket] });
+
+/** Which routes (without `/api/`) are limited, and in which bucket. The routes that start a job (basket, labs) are limited; polling a job is not. */
+export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
+  "assistant/chat": "ai_chat",
+  "prescriptions/extract": "ai_document",
+  "reports/analyze": "ai_document",
+  "care-plan": "ai_other",
+  triage: "ai_other",
+  "medicines/interactions": "ai_other",
+  "prescriptions/basket": "agent",
+  "labs/compare": "agent",
+  "doctors/verify": "agent",
+  "hospitals/info": "agent",
+  "schemes/pmjay-hospitals": "agent",
+  "alerts/check": "agent",
+  "emergency/nearby": "public",
+};

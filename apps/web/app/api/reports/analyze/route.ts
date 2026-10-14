@@ -1,4 +1,4 @@
-import { Language, ReportAnalyzeReq, ReportAnalyzeRes } from "@vyana/shared";
+import { Language, ReportAnalyzeReq, ReportAnalyzeRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { analyzeReport } from "@/lib/server/reports";
@@ -14,4 +14,4 @@ export const POST = withRoute("reports/analyze", async (req, ctx) => {
   const language = Language.safeParse(profile.preferred_language).data ?? "en";
   const res = await analyzeReport({ id: user.id, fullName: profile.full_name, language }, body.file_path, body.report_date);
   return Response.json(process.env.NODE_ENV === "production" ? res : ReportAnalyzeRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("ai_document") });

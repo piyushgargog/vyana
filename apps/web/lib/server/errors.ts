@@ -2,6 +2,7 @@ import "server-only";
 import { ZodError } from "zod";
 import type { ApiErrorBody, ErrorCode } from "@vyana/shared";
 import { log, newRequestId } from "./log";
+import type { RateLimit } from "./rate-limit";
 
 /** An error whose code, status and message are safe to send to the client. */
 export class AppError extends Error {
@@ -9,6 +10,8 @@ export class AppError extends Error {
     public readonly code: ErrorCode,
     message: string,
     public readonly status: number,
+    /** Extra response headers, for example `retry-after` on a 429. */
+    public readonly headers: Record<string, string> = {},
   ) {
     super(message);
     this.name = "AppError";
@@ -19,6 +22,16 @@ export const badRequest = (message = "Invalid request") => new AppError("BAD_REQ
 export const unauthorized = (message = "Sign in to continue") => new AppError("UNAUTHORIZED", message, 401);
 export const forbidden = (message = "You don't have access to this") => new AppError("FORBIDDEN", message, 403);
 export const notFound = (message = "Not found") => new AppError("NOT_FOUND", message, 404);
+/** Over a per-user limit (issue 138): 429 with a plain message and a `Retry-After` header in seconds. */
+export const rateLimited = (retryAfterSeconds: number) => {
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return new AppError(
+    "RATE_LIMITED",
+    `You've reached the limit for now. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
+    429,
+    { "retry-after": String(Math.max(1, Math.ceil(retryAfterSeconds))) },
+  );
+};
 export const upstream = (message = "A source we depend on failed. Try again.") => new AppError("UPSTREAM_ERROR", message, 502);
 export const upstreamTimeout = (message = "A source we depend on took too long. Try again.") =>
   new AppError("UPSTREAM_TIMEOUT", message, 504);
@@ -33,9 +46,9 @@ export interface RouteContext {
 
 type Handler<P> = (req: Request, ctx: RouteContext, params: P) => Promise<Response>;
 
-function errorResponse(code: ErrorCode, message: string, status: number, requestId: string): Response {
+function errorResponse(code: ErrorCode, message: string, status: number, requestId: string, headers: Record<string, string> = {}): Response {
   const body: ApiErrorBody = { error: { code, message } };
-  return Response.json(body, { status, headers: { "x-request-id": requestId } });
+  return Response.json(body, { status, headers: { ...headers, "x-request-id": requestId } });
 }
 
 function isTimeout(err: unknown): boolean {
@@ -44,7 +57,7 @@ function isTimeout(err: unknown): boolean {
 
 /** Maps any thrown error to the documented error shape (SPEC §0). */
 export function toErrorResponse(err: unknown, requestId: string): Response {
-  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId);
+  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, err.headers);
   if (err instanceof ZodError) {
     const message = err.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");
     return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId);
@@ -59,14 +72,28 @@ export function toErrorResponse(err: unknown, requestId: string): Response {
  * ```ts
  * export const POST = withRoute("prescriptions/basket", async (req, ctx) => { ... });
  * ```
+ *
+ * With `rateLimit` the route counts as a call of the signed-in user before the handler runs: the sign-in check comes
+ * first (an unknown caller never uses up a counter), then the counter, then the handler, so an over-limit request
+ * never reaches a model or a web agent. Over the limit: 429 `RATE_LIMITED` with `Retry-After`. If the counter cannot
+ * be reached the request goes through (fail open, logged). See `lib/server/rate-limit.ts`.
+ *
+ * ```ts
+ * export const POST = withRoute("triage", handler, { rateLimit: rateLimitOf("ai_other") });
+ * ```
  */
-export function withRoute<P = unknown>(route: string, handler: Handler<P>) {
+export interface RouteOptions {
+  rateLimit?: RateLimit;
+}
+
+export function withRoute<P = unknown>(route: string, handler: Handler<P>, options: RouteOptions = {}) {
   return async (req: Request, params: P): Promise<Response> => {
     const ctx: RouteContext = { requestId: newRequestId(), tinyfishCalls: 0 };
     const started = Date.now();
     let res: Response;
     let error: unknown;
     try {
+      if (options.rateLimit) await enforceRateLimit(req, ctx, options.rateLimit);
       res = await handler(req, ctx, params);
     } catch (err) {
       error = err;
@@ -85,6 +112,17 @@ export function withRoute<P = unknown>(route: string, handler: Handler<P>) {
     });
     return res;
   };
+}
+
+/** Signs the caller in, counts the call, and throws 429 when it is over the limit. */
+async function enforceRateLimit(req: Request, ctx: RouteContext, limit: RateLimit): Promise<void> {
+  // Imported here, not at the top: auth.ts imports this file for its errors.
+  const { requireUser } = await import("./auth");
+  const { checkRateLimit } = await import("./rate-limit");
+  const { user } = await requireUser(req); // remembered per request: the handler's own call does not ask Supabase again
+  ctx.userId = user.id;
+  const verdict = await checkRateLimit(user.id, limit);
+  if (verdict && !verdict.allowed) throw rateLimited(verdict.retryAfterSeconds);
 }
 
 /** Reads and validates a JSON body. Invalid JSON or schema → 400 `BAD_REQUEST`. */

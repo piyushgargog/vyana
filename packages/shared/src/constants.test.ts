@@ -13,6 +13,9 @@ import {
   MEAL_TYPES,
   MISSED_DOSE_GRACE_MINUTES,
   ORS_URL,
+  RATE_LIMITED_ROUTES,
+  RATE_LIMITS,
+  rateLimitOf,
   SHARE_LINK_MAX_TTL_HOURS,
   REALTIME,
   VITAL_UNITS,
@@ -88,6 +91,26 @@ describe("Scope v2 constants", () => {
     expect(MEAL_TYPES).toEqual(["breakfast", "lunch", "dinner", "snack"]);
     expect(MEAL_DESCRIPTION_MAX).toBe(200);
     expect(MEAL_CALORIES_MAX).toBe(5000);
+  });
+
+  it("keeps the per-user API limits of issue 138", () => {
+    expect(RATE_LIMITS).toEqual({
+      ai_chat: { windowSeconds: 600, max: 20 },
+      ai_document: { windowSeconds: 3600, max: 10 },
+      ai_other: { windowSeconds: 3600, max: 20 },
+      agent: { windowSeconds: 3600, max: 10 },
+      public: { windowSeconds: 600, max: 30 },
+    });
+    expect(rateLimitOf("agent")).toEqual({ bucket: "agent", windowSeconds: 3600, max: 10 });
+  });
+
+  it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
+    expect(Object.keys(RATE_LIMITED_ROUTES).sort()).toEqual([
+      "alerts/check", "assistant/chat", "care-plan", "doctors/verify", "emergency/nearby", "hospitals/info", "labs/compare",
+      "medicines/interactions", "prescriptions/basket", "prescriptions/extract", "reports/analyze", "schemes/pmjay-hospitals", "triage",
+    ]);
+    expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();
+    for (const bucket of Object.values(RATE_LIMITED_ROUTES)) expect(RATE_LIMITS[bucket]).toBeDefined();
   });
 
   it("lets a share link live 30 days at most", () => {

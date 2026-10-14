@@ -1,4 +1,4 @@
-import { LabsCompareReq, LabsCompareRes } from "@vyana/shared";
+import { LabsCompareReq, LabsCompareRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { startLabJob } from "@/lib/server/tinyfish/labs";
@@ -13,4 +13,4 @@ export const POST = withRoute("labs/compare", async (req, ctx) => {
   const res = await startLabJob(user.id, body.test_name, body.city, ctx);
   ctx.cache = res.cached ? "hit" : "miss";
   return Response.json(process.env.NODE_ENV === "production" ? res : LabsCompareRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("agent") });

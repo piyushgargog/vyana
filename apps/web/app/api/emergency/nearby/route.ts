@@ -1,4 +1,4 @@
-import { EmergencyNearbyReq, EmergencyNearbyRes } from "@vyana/shared";
+import { EmergencyNearbyReq, EmergencyNearbyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { log } from "@/lib/server/log";
@@ -21,4 +21,4 @@ export const POST = withRoute("emergency/nearby", async (req, ctx) => {
   }
   ctx.cache = res.cached ? "hit" : "miss";
   return Response.json(process.env.NODE_ENV === "production" ? res : EmergencyNearbyRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("public") });

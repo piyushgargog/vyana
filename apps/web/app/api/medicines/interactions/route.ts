@@ -1,4 +1,4 @@
-import { InteractionsReq, InteractionsRes } from "@vyana/shared";
+import { InteractionsReq, InteractionsRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { checkInteractions } from "@/lib/server/interactions";
@@ -12,4 +12,4 @@ export const POST = withRoute("medicines/interactions", async (req, ctx) => {
   const body = await parseBody(req, InteractionsReq);
   const res = await checkInteractions(authed, body, ctx);
   return Response.json(process.env.NODE_ENV === "production" ? res : InteractionsRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("ai_other") });

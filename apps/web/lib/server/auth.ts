@@ -31,7 +31,19 @@ function bearerToken(req: Request): string | null {
  * Verifies `Authorization: Bearer <supabase access_token>` and loads the caller's profile (SPEC §0).
  * Missing, invalid or expired token → 401 `UNAUTHORIZED`.
  */
-export async function requireUser(req: Request): Promise<AuthedUser> {
+export function requireUser(req: Request): Promise<AuthedUser> {
+  let pending = checked.get(req);
+  if (!pending) {
+    pending = authenticate(req);
+    checked.set(req, pending);
+  }
+  return pending;
+}
+
+/** The answer of the sign-in check for each request, so a route that is rate limited asks Supabase once, not twice. */
+const checked = new WeakMap<Request, Promise<AuthedUser>>();
+
+async function authenticate(req: Request): Promise<AuthedUser> {
   const token = bearerToken(req);
   if (!token) throw unauthorized();
 

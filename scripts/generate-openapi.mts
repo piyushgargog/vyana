@@ -7,6 +7,7 @@ import { stringify } from "yaml";
 import { toJSONSchema, type ZodType } from "zod";
 
 import * as c from "../packages/shared/src/contracts/index.ts";
+import { RATE_LIMITED_ROUTES, RATE_LIMITS } from "../packages/shared/src/constants.ts";
 
 type Route = {
   path: string;
@@ -60,6 +61,15 @@ const errorResponse = (description: string) => ({
 });
 ref("ApiErrorBody", c.ApiErrorBody);
 
+/** The 429 of a route with a per-user limit (issue 138); the numbers come from the same table the server uses. */
+const rateLimitedResponse = (route: string) => {
+  const bucket = RATE_LIMITED_ROUTES[route];
+  if (!bucket) return null;
+  const { windowSeconds, max } = RATE_LIMITS[bucket];
+  const window = windowSeconds % 3600 === 0 ? `${windowSeconds / 3600} hour${windowSeconds === 3600 ? "" : "s"}` : `${windowSeconds / 60} minutes`;
+  return errorResponse(`Over the limit of ${max} calls per user in ${window}, shared with the other routes of the \`${bucket}\` group (\`RATE_LIMITED\`). Wait for the number of seconds in the \`Retry-After\` header`);
+};
+
 const paths: Record<string, unknown> = {};
 for (const r of routes) {
   const method = r.method ?? "post";
@@ -73,6 +83,8 @@ for (const r of routes) {
   } else {
     responses["404"] = errorResponse("Unknown, expired or revoked link (`NOT_FOUND`)");
   }
+  const limited = method === "post" ? rateLimitedResponse(r.path.replace("/api/", "")) : null;
+  if (limited) responses["429"] = limited;
   if (r.tinyfish) {
     responses["502"] = errorResponse("An upstream service failed (`UPSTREAM_ERROR`)");
     responses["504"] = errorResponse("An upstream service timed out (`UPSTREAM_TIMEOUT`)");
@@ -104,6 +116,7 @@ paths["/api/assistant/chat"] = {
       "400": errorResponse("Invalid body, or the last message isn't from the user (`BAD_REQUEST`)"),
       "401": errorResponse("Missing or invalid token (`UNAUTHORIZED`)"),
       "404": errorResponse("`session_id` is not one of the caller's conversations (`NOT_FOUND`)"),
+      "429": rateLimitedResponse("assistant/chat"),
     },
   },
 };

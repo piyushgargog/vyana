@@ -1,4 +1,4 @@
-import { AlertsCheckReq, AlertsCheckRes } from "@vyana/shared";
+import { AlertsCheckReq, AlertsCheckRes, rateLimitOf } from "@vyana/shared";
 import { checkAlerts } from "@/lib/server/alerts";
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
@@ -12,4 +12,4 @@ export const POST = withRoute("alerts/check", async (req, ctx) => {
   await parseBody(req, AlertsCheckReq);
   const res = await checkAlerts(authed, ctx);
   return Response.json(process.env.NODE_ENV === "production" ? res : AlertsCheckRes.parse(res));
-});
+}, { rateLimit: rateLimitOf("agent") });

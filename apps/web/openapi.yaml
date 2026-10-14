@@ -80,6 +80,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -183,6 +189,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `ai_document` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
   /api/reports/analyze:
     post:
       tags:
@@ -220,6 +232,12 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `ai_document` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -304,6 +322,12 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 30 calls per user in 10 minutes, shared with the other routes of the `public` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -404,6 +428,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -459,6 +489,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -510,6 +546,12 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -619,6 +661,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -670,6 +718,12 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 20 calls per user in 1 hour, shared with the other routes of the `ai_other` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -729,6 +783,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 20 calls per user in 1 hour, shared with the other routes of the `ai_other` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -782,6 +842,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 20 calls per user in 1 hour, shared with the other routes of the `ai_other` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
   /api/schemes/pmjay-hospitals:
     post:
       tags:
@@ -821,6 +887,12 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -966,6 +1038,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the limit of 20 calls per user in 10 minutes, shared with the other routes of the `ai_chat` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
 components:
   securitySchemes:
     bearerAuth:
@@ -1030,6 +1108,7 @@ components:
                 - FORBIDDEN
                 - BAD_REQUEST
                 - NOT_FOUND
+                - RATE_LIMITED
                 - UPSTREAM_TIMEOUT
                 - UPSTREAM_ERROR
                 - INTERNAL
