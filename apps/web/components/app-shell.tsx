@@ -12,7 +12,7 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
 import { BrandMark, cn, SegmentedNav, SiteFooter } from "@/components/ui";
-import { BadgeCheck, CalendarCheck, House, LogOut, ShieldCheck, Stethoscope, UserRound, Users } from "lucide-react";
+import { BadgeCheck, CalendarCheck, FlaskConical, House, LogOut, Pill, ShieldCheck, ShoppingBasket, Stethoscope, UserRound, Users } from "lucide-react";
 
 function AppShellContent({
   children,
@@ -126,11 +126,20 @@ function AppShellContent({
           ]
         : [
             { href: "/dashboard", label: "Today", icon: House },
+            { href: "/prescriptions/scan", label: "Prescriptions", icon: Pill },
+            { href: "/reports/upload", label: "Lab reports", icon: FlaskConical },
+            { href: "/basket", label: "Medicine prices", icon: ShoppingBasket },
             { href: "/onboarding", label: "Health profile", icon: CalendarCheck },
             { href: "/consent", label: "Privacy", icon: ShieldCheck },
           ];
 
-  const isActive = (href: string) => pathname === href || (href !== "/dashboard" && href !== "/doctor" && Boolean(pathname?.startsWith(`${href}/`)));
+  const isActive = (href: string) => {
+    if (pathname === href) return true;
+    if (href === "/dashboard" || href === "/doctor") return false;
+    // Section match: /prescriptions/scan highlights for /prescriptions/[id] too.
+    const section = `/${href.split("/")[1]}/`;
+    return Boolean(pathname?.startsWith(section));
+  };
   const initials = (profile?.full_name ?? "")
     .split(/\s+/)
     .filter(Boolean)
