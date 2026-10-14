@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Vyana · व्यान — Complete Healthcare Companion";
+export const alt = "Vyana: your health, in one calm place";
 export const size = {
   width: 1200,
   height: 630,
@@ -37,12 +37,10 @@ export default function Image() {
               fontSize: 48,
               fontWeight: 800,
             }}
-          >
-            व्य
-          </div>
+          ><svg width="64" height="64" viewBox="0 0 24 24"><path d="M4.5 12.5h3l2-4.5 2.5 9 2.5-9 2 4.5h3" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 44, fontWeight: 800, color: "#FFFFFF" }}>
-              Vyana · व्यान
+              Vyana
             </span>
             <span style={{ fontSize: 22, color: "#5EEAD4", fontWeight: 600 }}>
               https://vyanahealth.app

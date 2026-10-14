@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+import { BrandMark } from "@/components/ui";
 
 export default function LandingPage() {
   return (
@@ -36,15 +37,13 @@ export default function LandingPage() {
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-30">
         <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold text-lg shadow-sm">
-              व्य
-            </div>
+            <BrandMark size={40} />
             <div>
               <span className="text-xl font-bold tracking-tight text-slate-900">
-                Vyana · व्यान
+                Vyana
               </span>
               <p className="text-xs text-slate-500">
-                The breath that reaches every corner
+                Your health, in one calm place.
               </p>
             </div>
           </div>

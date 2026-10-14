@@ -66,7 +66,7 @@ export default function MobileLoginScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={styles.brandBadge}>Vyana · व्यान</Text>
+        <Text style={styles.brandBadge}>Vyana</Text>
         <Text style={styles.title}>Sign in to your companion</Text>
         <Text style={styles.subtitle}>
           Manage prescriptions, OPD tokens, lab trends, and emergency Medical ID.

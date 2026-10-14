@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+import { BrandMark } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Privacy Policy · Vyana Health",
@@ -16,11 +17,9 @@ export default function PrivacyPolicyPage() {
       <header className="border-b border-slate-200 bg-white py-4 px-4 sticky top-0 z-20">
         <div className="mx-auto max-w-4xl flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
-              व्य
-            </span>
+            <BrandMark size={36} />
             <span className="text-base font-bold text-slate-900">
-              Vyana · व्यान
+              Vyana
             </span>
           </Link>
           <div className="flex items-center gap-3 text-xs sm:text-sm">

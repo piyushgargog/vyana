@@ -4,6 +4,7 @@ import React, { Suspense, use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSharedRecord } from "@vyana/shared";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
+import { BrandMark } from "@/components/ui";
 
 function useIsExpired(expiresAt: string | undefined): boolean {
   const [isExpired, setIsExpired] = useState(false);
@@ -52,7 +53,7 @@ function PublicShareRecordContent({
         <header className="border-b border-slate-200 bg-white py-3 px-4">
           <div className="mx-auto max-w-4xl flex items-center justify-between">
             <span className="text-base font-bold text-slate-900">
-              Vyana · व्यान — Temporary Health Record
+              Vyana: temporary health record
             </span>
           </div>
         </header>
@@ -93,9 +94,7 @@ function PublicShareRecordContent({
       <header className="border-b border-slate-200 bg-white sticky top-0 z-20 shadow-xs">
         <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
-              व्य
-            </span>
+            <BrandMark size={36} />
             <div>
               <span className="text-sm font-bold text-slate-900">
                 Vyana · Emergency Medical Record

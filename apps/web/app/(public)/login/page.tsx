@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getMyProfile } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
+import { BrandMark } from "@/components/ui";
 
 const SEEDED_TEST_ACCOUNTS = [
   { label: "Patient", email: "patient@vyana.test" },
@@ -62,10 +63,8 @@ export default function LoginPage() {
       <header className="border-b border-slate-200 bg-white px-4 py-4">
         <div className="mx-auto max-w-5xl flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-700 text-white font-bold">
-              व्य
-            </span>
-            <span className="text-lg font-bold text-slate-900">Vyana · व्यान</span>
+            <BrandMark size={36} />
+            <span className="text-lg font-bold text-slate-900">Vyana</span>
           </Link>
           <Link
             href="/signup"

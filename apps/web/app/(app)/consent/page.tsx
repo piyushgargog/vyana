@@ -83,7 +83,7 @@ export default function ConsentPage() {
         <div className="space-y-4 text-sm text-slate-700 leading-relaxed">
           <p>
             Before storing any personal health information in{" "}
-            <strong>Vyana (व्यान)</strong>, please review in plain language what
+            <strong>Vyana</strong>, please review in plain language what
             data we collect, why we process it, and how you stay in full control:
           </p>
 

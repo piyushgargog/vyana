@@ -443,7 +443,7 @@ export default function OnboardingPage() {
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
               >
                 <option value="en">English</option>
-                <option value="hi">हिंदी (Hindi)</option>
+                <option value="hi">Hindi</option>
                 <option value="hinglish">Hinglish</option>
               </select>
             </div>

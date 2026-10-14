@@ -15,6 +15,7 @@ import {
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 import { AiSafetyBanner, SkeletonCard } from "@/components/ui-primitives";
+import { BrandMark } from "@/components/ui";
 
 export default function PatientDashboardPage() {
   const router = useRouter();
@@ -134,15 +135,13 @@ export default function PatientDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold text-base">
-                व्य
-              </span>
+              <BrandMark size={40} />
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Welcome back, {profile?.full_name || "Patient"}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500">
-                  Patient Health Dashboard · DPDP Act 2023 Compliant Health Summary
+                  Your health summary
                 </p>
               </div>
             </div>

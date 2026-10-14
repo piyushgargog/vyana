@@ -314,7 +314,7 @@ export default function MobileOnboardingScreen() {
         <View style={styles.row}>
           {[
             { id: 'en', label: 'English' },
-            { id: 'hi', label: 'हिंदी' },
+            { id: 'hi', label: 'Hindi' },
             { id: 'hinglish', label: 'Hinglish' },
           ].map((l) => (
             <Pressable

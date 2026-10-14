@@ -266,7 +266,7 @@ export default function MobileProfileTab() {
                   preferredLang === l && styles.langChipTextActive,
                 ]}
               >
-                {l === 'en' ? 'English' : l === 'hi' ? 'हिंदी' : 'Hinglish'}
+                {l === 'en' ? 'English' : l === 'hi' ? 'Hindi' : 'Hinglish'}
               </Text>
             </Pressable>
           ))}

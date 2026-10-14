@@ -180,7 +180,7 @@ export default function MobileAssistantTab() {
         {(
           [
             { id: 'en', title: 'English' },
-            { id: 'hi', title: 'हिंदी' },
+            { id: 'hi', title: 'Hindi' },
             { id: 'hinglish', title: 'Hinglish' },
           ] as const
         ).map((item) => (
@@ -272,7 +272,7 @@ export default function MobileAssistantTab() {
             <Text style={styles.emptyTitle}>Ask Vyana Health Assistant</Text>
             <Text style={styles.emptySub}>
               Ask about your prescriptions, lab results, care plans, or medicine
-              prices in English, हिंदी, or Hinglish. Vyana never diagnoses
+              prices in English, Hindi or Hinglish. Vyana never diagnoses
               conditions or changes your doctor&apos;s dosages.
             </Text>
           </View>
@@ -436,7 +436,7 @@ export default function MobileAssistantTab() {
             accessibilityLabel="Ask a health question"
             value={input}
             onChangeText={setInput}
-            placeholder="Ask in English, हिंदी, or Hinglish…"
+            placeholder="Ask in English, Hindi or Hinglish…"
             style={styles.input}
           />
           <Pressable

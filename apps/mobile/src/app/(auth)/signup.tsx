@@ -63,7 +63,7 @@ export default function MobileSignupScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={styles.brandBadge}>Vyana · व्यान</Text>
+        <Text style={styles.brandBadge}>Vyana</Text>
         <Text style={styles.title}>Create your Vyana account</Text>
         <Text style={styles.subtitle}>
           Join as a patient, family caregiver, or doctor. Your data is protected
