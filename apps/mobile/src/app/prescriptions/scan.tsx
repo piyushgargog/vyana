@@ -332,15 +332,15 @@ export default function PrescriptionScanScreen() {
           <ListGroup header="Prescription details">
             <ListRow
               title="Prescribing doctor"
-              value={extractedData?.doctor_name || 'Not found'}
+              value={extractedData?.doctor_name || 'Not found on the prescription'}
             />
             <ListRow
               title="Diagnosis"
-              value={extractedData?.diagnosis || 'Not found'}
+              value={extractedData?.diagnosis || 'Not found on the prescription'}
             />
             <ListRow
               title="Issued on"
-              value={extractedData?.issued_on || 'Not found'}
+              value={extractedData?.issued_on || 'Not found on the prescription'}
             />
           </ListGroup>
 
