@@ -19,8 +19,11 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build /repo/apps/web/.next/standalone ./
 COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /repo/apps/web/public ./apps/web/public
+# The server is started with node alone. npm, npx, corepack and yarn are not used here, and they bring dependencies of
+# their own that vulnerability scanners report (they are not part of the app). Removing them leaves less to patch.
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
 CMD ["node", "apps/web/server.js"]
