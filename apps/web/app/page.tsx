@@ -1,281 +1,456 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import { MedicalDisclaimerFooter } from "@/components/ui-primitives";
-import { BrandMark } from "@/components/ui";
+import type { Metadata } from "next";
+import {
+  BrandMark,
+  ButtonLink,
+  Card,
+  CardHeader,
+  Pill,
+  SiteFooter,
+} from "@/components/ui";
+import {
+  Activity,
+  Building2,
+  CheckCircle2,
+  HeartPulse,
+  Receipt,
+  ShieldCheck,
+  Sparkles,
+  Stethoscope,
+  TrendingUp,
+  UserCheck,
+} from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Vyana — Your health, in one calm place",
+  description:
+    "Complete healthcare that connects patients, doctors, and families. Medicine reminders, emergency SOS, whole-prescription price comparison, and doctor-approved care plans.",
+};
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Emergency Top Strip */}
-      <div className="bg-red-700 text-white px-4 py-2 text-xs sm:text-sm">
-        <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2">
-          <span className="font-semibold">
-            Medical Emergency? Call India National Ambulance Service immediately.
-          </span>
-          <div className="flex items-center gap-2">
-            <a
-              href="tel:108"
-              aria-label="Call 108 Free Emergency Ambulance"
-              className="rounded-lg bg-white px-3 py-1 font-bold text-red-700 hover:bg-red-50"
-            >
-              Call 108 (Ambulance)
-            </a>
-            <a
-              href="tel:112"
-              aria-label="Call 112 National Emergency Number"
-              className="rounded-lg border border-red-200 px-3 py-1 font-semibold text-white hover:bg-red-800"
-            >
-              Call 112
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Navigation Header */}
-      <header className="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-30">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <BrandMark size={40} />
-            <div>
-              <span className="text-xl font-bold tracking-tight text-slate-900">
-                Vyana
-              </span>
-              <p className="text-xs text-slate-500">
-                Your health, in one calm place.
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col bg-canvas text-label">
+      {/* 1. Glass Navigation Bar */}
+      <header className="glass-bar sticky top-0 z-30 border-b border-separator">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2.5 rounded-full outline-none">
+            <BrandMark size={32} />
+            <span className="text-[19px] font-semibold tracking-tight text-label">
+              Vyana
+            </span>
+          </Link>
 
           <nav
-            aria-label="Primary navigation"
-            className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm"
+            aria-label="Main navigation"
+            className="hidden md:flex items-center gap-6 text-[15px] font-medium text-label-2"
           >
-            <Link
-              href="/dashboard"
-              className="rounded-lg px-3 py-2 font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Patient Dashboard
-            </Link>
-            <Link
-              href="/doctor"
-              className="rounded-lg px-3 py-2 font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Doctor Portal
-            </Link>
-            <Link
-              href="/admin/doctors"
-              className="rounded-lg px-3 py-2 font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Admin Registry
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-teal-700 px-4 py-2 font-semibold text-white hover:bg-teal-800 shadow-sm"
-            >
-              Get Started
-            </Link>
+            <a href="#features" className="hover:text-label transition-colors">
+              Features
+            </a>
+            <a href="#careful" className="hover:text-label transition-colors">
+              Careful by design
+            </a>
+            <a href="#doctors" className="hover:text-label transition-colors">
+              For doctors
+            </a>
           </nav>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ButtonLink href="/login" variant="plain" size="sm">
+              Sign in
+            </ButtonLink>
+            <ButtonLink href="/signup" variant="primary" size="sm">
+              Get started
+            </ButtonLink>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
       <main className="flex-1">
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3.5 py-1.5 text-xs font-semibold text-teal-800">
-                <span>One-Stop Healthcare Platform for India</span>
-                <span>·</span>
-                <span>DPDP Act 2023 Compliant</span>
-              </div>
+        {/* 2 & 3. Hero Section with One Headline and One Primary Call to Action */}
+        <section className="mx-auto max-w-6xl px-4 pt-14 pb-12 sm:px-6 sm:pt-20 sm:pb-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1 text-[13px] font-semibold text-accent-strong mb-6">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            <span>The calm healthcare companion for India</span>
+          </div>
 
-              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
-                Complete healthcare that connects{" "}
-                <span className="text-teal-700">
-                  patients, doctors, and families
-                </span>{" "}
-                in one calm companion.
-              </h1>
+          <h1 className="text-[40px] sm:text-[56px] lg:text-[64px] font-bold tracking-[-0.03em] text-label leading-[1.08] max-w-4xl mx-auto">
+            Your health, in one calm place.
+          </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-                From 108 emergency response and offline Medical ID QR to
-                prescription scanning, live full-basket pharmacy comparison with
-                Jan Aushadhi generic savings, government OPD token booking, lab
-                trend tracking, and doctor-approved chronic care plans.
-              </p>
+          <p className="mt-5 text-[17px] sm:text-[20px] text-label-2 max-w-2xl mx-auto leading-relaxed">
+            From daily dose schedules and 108 emergency SOS to whole-prescription
+            pharmacy comparison and doctor-approved care plans.
+          </p>
 
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link
-                  href="/dashboard"
-                  className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800 shadow-sm"
-                >
-                  Open Patient Web Dashboard →
-                </Link>
-                <Link
-                  href="/doctor"
-                  className="rounded-xl border border-teal-700 bg-white px-5 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50"
-                >
-                  Open Doctor OPD Portal →
-                </Link>
-                <Link
-                  href="/login"
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  Sign In to Your Account
-                </Link>
-              </div>
-            </div>
+          {/* Primary CTA (Rule: one primary action per screen) */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <ButtonLink href="/signup" variant="primary" size="lg">
+              Get started with Vyana
+            </ButtonLink>
+            <ButtonLink href="/dashboard" variant="secondary" size="lg">
+              Open patient dashboard
+            </ButtonLink>
+          </div>
 
-            {/* Interactive Role & Flow Quick-Launch Card */}
-            <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          {/* 4. The App Displayed Inside a Phone Frame */}
+          <div className="mt-14 sm:mt-18 flex justify-center">
+            <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
+              {/* Phone Dynamic Island */}
+              <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
+
+              {/* Today Header */}
+              <div className="flex items-end justify-between pb-3">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    Explore Vyana Workflows
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Sign in to access your role-specific clinical workspace
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-label-3">
+                    Wednesday, 14 October
+                  </span>
+                  <p className="text-[26px] font-bold tracking-tight text-label">
+                    Today
                   </p>
                 </div>
-                <span className="rounded-full bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-800">
-                  DPDP Protected
+                <span className="rounded-full bg-danger-soft px-2.5 py-1 text-[11px] font-bold text-danger-text">
+                  SOS 108
                 </span>
               </div>
 
-              <div className="space-y-2.5 text-sm">
-                <Link
-                  href="/dashboard"
-                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      Patient Companion
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Doses, full-basket Rx price compare, OPD tokens, lab trends, care plan
-                    </div>
-                  </div>
-                  <span className="text-teal-700 font-bold">→</span>
-                </Link>
-
-                <Link
-                  href="/doctor"
-                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      Doctor Portal
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Live token queue, patient chart, e-Prescription, care plan approval
-                    </div>
-                  </div>
-                  <span className="text-teal-700 font-bold">→</span>
-                </Link>
-
-                <Link
-                  href="/doctor/verify"
-                  className="w-full text-left rounded-xl border border-slate-200 p-3.5 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      NMC Indian Medical Register Verification
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Live TinyFish web agent lookup against NMC IMR registry
-                    </div>
-                  </div>
-                  <span className="text-teal-700 font-bold">→</span>
-                </Link>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Link
-                    href="/consent"
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 text-center"
-                  >
-                    DPDP Consent Screen
-                  </Link>
-                  <Link
-                    href="/onboarding"
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 text-center"
-                  >
-                    Role Onboarding
-                  </Link>
+              {/* Doses Card */}
+              <div className="rounded-card bg-surface p-4 shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[15px] font-semibold text-label">
+                    Doses today
+                  </span>
+                  <span className="text-[12px] text-label-3">2 of 3 taken</span>
                 </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Metformin 500mg</span>
+                      <span className="text-[11px] text-label-3">8:00 AM · After breakfast</span>
+                    </div>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                      ✓
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Telmisartan 40mg</span>
+                      <span className="text-[11px] text-label-3">9:00 AM · Morning</span>
+                    </div>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                      ✓
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[13px] rounded-row bg-fill/50 p-2">
+                    <div>
+                      <span className="font-semibold text-label block">Atorvastatin 10mg</span>
+                      <span className="text-[11px] text-label-3">9:00 PM · At bedtime</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-label-3">Due</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Your Health Group */}
+              <div className="rounded-card bg-surface overflow-hidden shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3 text-[13px]">
+                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-label-3">
+                  Your health
+                </div>
+                <div className="divide-y divide-separator">
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="font-medium text-label">HbA1c Blood Test</span>
+                    <Pill tone="ok" className="text-[11px]">Normal · 6.8%</Pill>
+                  </div>
+                  <div className="flex items-center justify-between px-3.5 py-2.5">
+                    <span className="font-medium text-label">OPD Token · AIIMS</span>
+                    <Pill tone="accent" className="text-[11px]">Token #14</Pill>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Glass Scan Button */}
+              <div className="glass rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-[13px] font-semibold text-accent-strong shadow-glass">
+                <Receipt className="h-4 w-4" aria-hidden="true" />
+                <span>Scan a prescription</span>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-[13px] text-label-3">
+            Live preview of the Vyana mobile patient companion
+          </p>
+        </section>
+
+        {/* 5. Four Large Feature Cards */}
+        <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="max-w-2xl mb-10">
+            <span className="text-[13px] font-semibold uppercase tracking-wider text-accent-strong block mb-1">
+              Features
+            </span>
+            <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-label leading-tight">
+              Clinical tools designed for real Indian families
+            </h2>
+            <p className="mt-2 text-[16px] text-label-2 leading-relaxed">
+              Every feature is built around the everyday steps patients, doctors,
+              and caregivers actually navigate.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Feature 1: Prescriptions & Basket Compare */}
+            <Card className="flex flex-col justify-between">
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                  <Receipt className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <CardHeader
+                  title="Whole-prescription pharmacy comparison"
+                  trailing={<Pill tone="accent">Smart Savings</Pill>}
+                />
+                <p className="text-[15px] leading-relaxed text-label-2">
+                  Scan printed or handwritten prescriptions. Vyana extracts your
+                  full medicine list with verbatim evidence and compares the entire
+                  basket cost across major pharmacies, uncovering genuine Jan
+                  Aushadhi generic equivalents that save up to 70%.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
+                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
+                  <span>3-Medicine Monthly Basket</span>
+                  <span className="text-ok">Save ~₹480/month</span>
+                </div>
+                <div className="space-y-1 text-[12px] text-label-3">
+                  <p>• Branded Pharmacy Total: ₹720</p>
+                  <p>• PMBJP Jan Aushadhi Generic: ₹240</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Feature 2: Diagnostic Lab Reports */}
+            <Card className="flex flex-col justify-between">
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                  <TrendingUp className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <CardHeader
+                  title="Lab trend tracking over time"
+                  trailing={<Pill tone="ok">Clear Context</Pill>}
+                />
+                <p className="text-[15px] leading-relaxed text-label-2">
+                  Upload PDF reports or scan physical test sheets. Vyana graphs
+                  your key biomarkers over time against standard Indian reference
+                  ranges, turning isolated lab values into meaningful health
+                  progress you can discuss with your physician.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
+                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
+                  <span>Recent Blood Test Markers</span>
+                  <span className="text-label-3">3 Reports Tracked</span>
+                </div>
+                <div className="space-y-1 text-[12px] text-label-3">
+                  <p>• HbA1c: 7.4% → 6.8% (Improving)</p>
+                  <p>• Fasting Glucose: 118 mg/dL (Normal reference)</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Feature 3: OPD Tokens & Hospital Directory */}
+            <Card className="flex flex-col justify-between">
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                  <Building2 className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <CardHeader
+                  title="Hospital OPD queues & verified timings"
+                  trailing={<Pill tone="neutral">ORS Supported</Pill>}
+                />
+                <p className="text-[15px] leading-relaxed text-label-2">
+                  Book government and private hospital OPD tokens before leaving
+                  home. Check real operating schedules and clinic timings verified
+                  directly through autonomous directory queries, cutting hours of
+                  waiting in crowded corridors.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
+                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
+                  <span>Department OPD Availability</span>
+                  <span className="text-accent-strong font-medium">8:00 AM – 1:00 PM</span>
+                </div>
+                <div className="space-y-1 text-[12px] text-label-3">
+                  <p>• General Medicine · Mon–Sat</p>
+                  <p>• Cardiology & Diabetology · Mon, Wed, Fri</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Feature 4: Emergency SOS & Medical ID */}
+            <Card className="flex flex-col justify-between">
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger-text mb-5">
+                  <HeartPulse className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <CardHeader
+                  title="One-tap 108 SOS & offline Medical ID"
+                  trailing={<Pill tone="danger">Emergency Ready</Pill>}
+                />
+                <p className="text-[15px] leading-relaxed text-label-2">
+                  In a crisis, a single tap starts a 3-second countdown to dial
+                  108 ambulance dispatch and text your live GPS coordinates to
+                  designated family contacts. An offline lock-screen QR keeps your
+                  blood group and allergies visible even without internet.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
+                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
+                  <span>Offline Medical ID Summary</span>
+                  <span className="text-danger-text font-bold">108 / 112 Dial</span>
+                </div>
+                <div className="space-y-1 text-[12px] text-label-3">
+                  <p>• Blood Group: B+ · Allergies: Penicillin</p>
+                  <p>• Emergency Contact: Primary Caregiver (+91 98XXX)</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* 6. “Careful by Design” Glass Strip */}
+        <section id="careful" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <div className="glass rounded-feature p-8 sm:p-10 border border-white/80 shadow-glass">
+            <div className="max-w-xl mb-8">
+              <span className="text-[13px] font-semibold uppercase tracking-wider text-accent-strong block mb-1">
+                Clinical Safety
+              </span>
+              <h2 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-label">
+                Careful by design.
+              </h2>
+              <p className="mt-2 text-[15px] text-label-2 leading-relaxed">
+                Healthcare requires a higher bar than ordinary consumer apps.
+                Every assistive feature is constrained by clinical safety guardrails.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-accent-strong shrink-0" aria-hidden="true" />
+                  <h3 className="text-[16px] font-semibold text-label">
+                    Source-cited health notes
+                  </h3>
+                </div>
+                <p className="text-[14px] leading-relaxed text-label-2">
+                  Every informational note quotes clinical guidelines verbatim.
+                  We never generate unverified diagnoses or prescribe medication
+                  doses autonomously.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-accent-strong shrink-0" aria-hidden="true" />
+                  <h3 className="text-[16px] font-semibold text-label">
+                    Doctor in the loop
+                  </h3>
+                </div>
+                <p className="text-[14px] leading-relaxed text-label-2">
+                  Chronic care plans and prescription adjustments require
+                  confirmation by licensed medical practitioners before being
+                  activated.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-accent-strong shrink-0" aria-hidden="true" />
+                  <h3 className="text-[16px] font-semibold text-label">
+                    Explicit consent
+                  </h3>
+                </div>
+                <p className="text-[14px] leading-relaxed text-label-2">
+                  Under the Digital Personal Data Protection Act, your health data
+                  is shared only with caregivers and physicians you explicitly
+                  authorize.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Core Pillars Grid */}
-        <section className="bg-white border-t border-slate-200 py-12 px-4">
-          <div className="mx-auto max-w-6xl space-y-8">
-            <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold text-slate-900">
-                Built for Real Indian Healthcare Workflows
+        {/* 7. Dark “For Doctors” Section */}
+        <section id="doctors" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="rounded-feature bg-label text-white p-8 sm:p-12 lg:p-14 shadow-float">
+            <div className="max-w-2xl mb-10">
+              <span className="inline-block rounded-full bg-accent/20 px-3 py-1 text-[13px] font-semibold text-accent mb-3">
+                For Healthcare Providers
+              </span>
+              <h2 className="text-[30px] sm:text-[38px] font-bold tracking-tight text-white leading-tight">
+                Built for busy Indian OPDs.
               </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                Every AI output is source-cited, safety-checked, and paired with
-                mandatory human verification.
+              <p className="mt-3 text-[16px] text-white/70 leading-relaxed">
+                Streamline token queues, access patient medical histories instantly,
+                and prescribe daily care plans with zero administrative overhead.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="rounded-2xl border border-slate-200 p-5 space-y-2">
-                <span className="inline-block rounded-lg bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">
-                  Emergency & Offline Medical ID
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  1-Tap 108/112 SOS & Lock-Screen QR
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <div className="rounded-card bg-white/5 border border-white/10 p-6 space-y-2">
+                <Stethoscope className="h-6 w-6 text-accent mb-2" aria-hidden="true" />
+                <h3 className="text-[17px] font-semibold text-white">
+                  Live OPD Consultation Queue
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  3-second countdown dials 108 ambulance, texts GPS location to
-                  family contacts, shows nearby emergency hospitals, and encodes
-                  blood group, allergies, and active meds in an offline QR code.
+                <p className="text-[14px] text-white/70 leading-relaxed">
+                  Call next tokens, inspect active medicines and allergies, and
+                  record concise consultation notes seamlessly.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5 space-y-2">
-                <span className="inline-block rounded-lg bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-800">
-                  Prescriptions & Basket Compare
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  Whole-Prescription Pharmacy + Jan Aushadhi Compare
+              <div className="rounded-card bg-white/5 border border-white/10 p-6 space-y-2">
+                <ShieldCheck className="h-6 w-6 text-accent mb-2" aria-hidden="true" />
+                <h3 className="text-[17px] font-semibold text-white">
+                  NMC Statutory Verification
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Scan handwritten or printed prescriptions, verify extracted
-                  items with verbatim evidence, and compare the entire basket
-                  across 1mg, PharmEasy, Apollo, Netmeds, and PMBJP Jan Aushadhi.
+                <p className="text-[14px] text-white/70 leading-relaxed">
+                  Instant practitioner verification against the National Medical
+                  Commission and State Medical Council registers.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5 space-y-2">
-                <span className="inline-block rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
-                  OPD Tokens & Doctor Loop
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  ORS-Style OPD Queue & Doctor-Approved Care Plans
+              <div className="rounded-card bg-white/5 border border-white/10 p-6 space-y-2">
+                <Activity className="h-6 w-6 text-accent mb-2" aria-hidden="true" />
+                <h3 className="text-[17px] font-semibold text-white">
+                  Chronic Care Tracking
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Book government or private department OPD tokens, receive
-                  e-Prescriptions from NMC-verified doctors, and follow daily
-                  Indian diet & vitals care plans approved by your physician.
+                <p className="text-[14px] text-white/70 leading-relaxed">
+                  Review patient dose adherence, monitor blood pressure and blood
+                  sugar logs, and adapt treatment plans with confidence.
                 </p>
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/10">
+              <ButtonLink href="/doctor" variant="primary" size="md">
+                Enter doctor portal
+              </ButtonLink>
+              <ButtonLink
+                href="/doctor/verify"
+                variant="secondary"
+                size="md"
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+              >
+                Verify NMC credentials
+              </ButtonLink>
             </div>
           </div>
         </section>
       </main>
 
-      <MedicalDisclaimerFooter />
+      {/* 8. Shared SiteFooter */}
+      <SiteFooter />
     </div>
   );
 }
