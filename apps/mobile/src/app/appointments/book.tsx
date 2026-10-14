@@ -2,9 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -17,7 +15,17 @@ import {
   type DbAppointment,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 export default function AppointmentBookScreen() {
   const router = useRouter();
@@ -109,91 +117,93 @@ export default function AppointmentBookScreen() {
   const opdInfo = infoMutation.data;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Book OPD Token</Text>
-          <Text style={styles.headerSub}>
-            Direct queue registration & token issuance
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to appointments list"
+    <Screen
+      eyebrow="New booking"
+      title="Book OPD Token"
+      trailing={
+        <Button
+          title="Cancel"
+          variant="plain"
+          size="sm"
+          label="Back to appointments list"
           onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>Cancel</Text>
-        </Pressable>
-      </View>
-
+        />
+      }
+    >
       {confirmedAppt ? (
         /* Booking Confirmation Card */
-        <View style={styles.confirmedContainer}>
-          <View style={styles.tokenSuccessCard}>
-            <Text style={styles.successBadge}>APPOINTMENT CONFIRMED</Text>
-            <Text style={styles.tokenNumber}>
+        <View style={styles.stack}>
+          <Card style={styles.successCard}>
+            <View style={styles.successPill}>
+              <Text variant="footnote" tone="white" style={styles.bold}>
+                APPOINTMENT CONFIRMED
+              </Text>
+            </View>
+            <Text variant="largeTitle" tone="white" style={styles.tokenNumber}>
               Token #{confirmedAppt.token_no}
             </Text>
-            <Text style={styles.tokenHospitalName}>
+            <Text variant="title3" tone="white" style={styles.center}>
               {hospital?.name || 'Hospital OPD'}
             </Text>
-            <Text style={styles.tokenDeptName}>
+            <Text variant="subhead" tone="white" style={styles.centerMuted}>
               Department: {selectedDeptObj?.name || 'General OPD'}
             </Text>
 
-            <View style={styles.tokenMetaBox}>
-              <Text style={styles.tokenMetaText}>
-                📅 Date: {confirmedAppt.appointment_date}
-              </Text>
-              <Text style={styles.tokenMetaText}>
+            <View style={styles.metaBox}>
+              <View style={styles.metaRow}>
+                <Symbol
+                  ios="calendar"
+                  android="calendar_today"
+                  size={15}
+                  color={T.color.white}
+                />
+                <Text variant="subhead" tone="white">
+                  Date: {confirmedAppt.appointment_date}
+                </Text>
+              </View>
+              <Text variant="subhead" tone="white">
                 Status: {confirmedAppt.status.toUpperCase()}
               </Text>
               {confirmedAppt.reason && (
-                <Text style={styles.tokenMetaText}>
+                <Text variant="subhead" tone="white">
                   Reason: {confirmedAppt.reason}
                 </Text>
               )}
             </View>
 
-            <View style={styles.arrivalInstructions}>
-              <Text style={styles.arrivalTitle}>OPD Reporting Notice</Text>
-              <Text style={styles.arrivalText}>
+            <View style={styles.arrivalBox}>
+              <Text variant="footnote" tone="white" style={styles.arrivalTitle}>
+                OPD Reporting Notice
+              </Text>
+              <Text variant="footnote" tone="white">
                 Please arrive at the hospital registration counter by 8:30 AM
                 on {confirmedAppt.appointment_date} with your Token #
                 {confirmedAppt.token_no}.
               </Text>
             </View>
-          </View>
+          </Card>
 
-          <View style={styles.confirmedActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="View all booked OPD appointments"
+          <View style={styles.stack}>
+            <Button
+              title="View My OPD Tokens"
+              label="View all booked OPD appointments"
               onPress={() => router.replace('/appointments')}
-              style={styles.viewMineBtn}
-            >
-              <Text style={styles.viewMineBtnText}>View My OPD Tokens</Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Return to home dashboard"
+            />
+            <Button
+              title="Back to Home"
+              variant="secondary"
+              label="Return to home dashboard"
               onPress={() => router.replace('/(tabs)')}
-              style={styles.homeBtn}
-            >
-              <Text style={styles.homeBtnText}>Back to Home</Text>
-            </Pressable>
+            />
           </View>
         </View>
       ) : (
         /* Booking Form */
-        <View style={styles.formContainer}>
+        <View style={styles.stack}>
           {/* 1. Select Hospital */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>1. Select Hospital</Text>
-            <View style={styles.hospitalPickerList}>
+          <Card>
+            <CardHeader title="1. Select Hospital" />
+            <View style={styles.stackSm}>
               {hospitals.map((h) => {
                 const isSelected = h.id === selectedHospitalId;
                 return (
@@ -201,69 +211,80 @@ export default function AppointmentBookScreen() {
                     key={h.id}
                     accessibilityRole="button"
                     accessibilityLabel={`Select ${h.name}`}
+                    accessibilityState={{ selected: isSelected }}
                     onPress={() => setUserHospitalId(h.id)}
                     style={[
-                      styles.hospOptionCard,
+                      styles.hospOption,
                       isSelected && styles.hospOptionSelected,
                     ]}
                   >
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.hospOptionText}>
                       <Text
-                        style={[
-                          styles.hospOptionName,
-                          isSelected && styles.hospOptionNameSelected,
-                        ]}
+                        variant="subhead"
+                        tone={isSelected ? 'accent' : 'label'}
+                        style={isSelected && styles.bold}
                       >
                         {h.name}
                       </Text>
-                      <Text style={styles.hospOptionSub}>
-                        {h.city} · {h.kind === 'government' ? 'Government' : 'Private'}
+                      <Text variant="footnote" tone="tertiary">
+                        {h.city} ·{' '}
+                        {h.kind === 'government' ? 'Government' : 'Private'}
                       </Text>
                     </View>
                     {isSelected && (
-                      <Text style={styles.checkIcon}>✓</Text>
+                      <Symbol
+                        ios="checkmark.circle.fill"
+                        android="check_circle"
+                        size={22}
+                        color={T.color.accent}
+                        label="Selected"
+                      />
                     )}
                   </Pressable>
                 );
               })}
             </View>
-          </View>
+          </Card>
 
-          {/* OPD Timings (Fetched via TinyFish) */}
+          {/* OPD Timings (live lookup) */}
           {opdInfo && (
-            <View style={styles.opdCard}>
+            <Card style={styles.opdCard}>
               <View style={styles.opdHeader}>
-                <Text style={styles.opdBadge}>TINYFISH LIVE OPD INFO</Text>
-                {opdInfo.cached && (
-                  <Text style={styles.cachedTag}>CACHED</Text>
-                )}
+                <Pill text="LIVE OPD INFO" tone="accent" />
+                {opdInfo.cached && <Pill text="CACHED" tone="neutral" />}
               </View>
-              <Text style={styles.opdTitle}>Verified OPD Registration Timings</Text>
+              <Text variant="headline" tone="accent">
+                Verified OPD Registration Timings
+              </Text>
               {opdInfo.opd.map((slot, idx) => (
                 <View key={idx} style={styles.opdSlotRow}>
-                  <Text style={styles.opdDept}>{slot.department}:</Text>
-                  <Text style={styles.opdTiming}>
+                  <Text variant="footnote" tone="accent" style={styles.bold}>
+                    {slot.department}:
+                  </Text>
+                  <Text variant="footnote" tone="accent">
                     {slot.days} ({slot.timings})
                   </Text>
                 </View>
               ))}
               {opdInfo.notes && (
-                <Text style={styles.opdNotes}>Note: {opdInfo.notes}</Text>
+                <Text variant="footnote" tone="accent" style={styles.italic}>
+                  Note: {opdInfo.notes}
+                </Text>
               )}
-            </View>
+            </Card>
           )}
 
           {/* 2. Select Department */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>2. Select OPD Department</Text>
+          <Card>
+            <CardHeader title="2. Select OPD Department" />
             {hospLoading ? (
-              <ActivityIndicator size="small" color="#0D9488" />
+              <ActivityIndicator size="small" color={T.color.accent} />
             ) : departments.length === 0 ? (
-              <Text style={styles.emptyText}>
+              <Text variant="footnote" tone="tertiary" style={styles.italic}>
                 No departments listed for this hospital.
               </Text>
             ) : (
-              <View style={styles.deptWrap}>
+              <View style={styles.chipWrap}>
                 {departments.map((dept) => {
                   const isSelected = dept.id === selectedDeptId;
                   return (
@@ -271,17 +292,17 @@ export default function AppointmentBookScreen() {
                       key={dept.id}
                       accessibilityRole="button"
                       accessibilityLabel={`Select department ${dept.name}`}
+                      accessibilityState={{ selected: isSelected }}
                       onPress={() => setUserDeptId(dept.id)}
                       style={[
-                        styles.deptPill,
-                        isSelected && styles.deptPillSelected,
+                        styles.chip,
+                        isSelected && styles.chipSelected,
                       ]}
                     >
                       <Text
-                        style={[
-                          styles.deptPillText,
-                          isSelected && styles.deptPillTextSelected,
-                        ]}
+                        variant="subhead"
+                        tone={isSelected ? 'white' : 'secondary'}
+                        style={isSelected && styles.bold}
                       >
                         {dept.name}
                       </Text>
@@ -291,61 +312,52 @@ export default function AppointmentBookScreen() {
               </View>
             )}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Unsure which department? Use Symptom Triage"
+            <Button
+              title="Not sure which department? Try Symptom Triage"
+              variant="secondary"
+              label="Unsure which department? Use Symptom Triage"
+              icon={
+                <Symbol
+                  ios="lightbulb.fill"
+                  android="lightbulb"
+                  size={18}
+                  color={T.color.accentStrong}
+                />
+              }
               onPress={() => router.push('/triage')}
-              style={styles.triageHelpBtn}
-            >
-              <Text style={styles.triageHelpText}>
-                💡 Not sure which department? Try Symptom Triage →
-              </Text>
-            </Pressable>
-          </View>
+            />
+          </Card>
 
           {/* 3. Appointment Date */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>3. Appointment Date</Text>
+          <Card>
+            <CardHeader title="3. Appointment Date" />
             <View style={styles.dateRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Select today"
-                onPress={() => setAppointmentDate(dateDefaults.today)}
-                style={[
-                  styles.dateBtn,
-                  appointmentDate === dateDefaults.today && styles.dateBtnSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dateBtnText,
-                    appointmentDate === dateDefaults.today &&
-                      styles.dateBtnTextSelected,
-                  ]}
-                >
-                  Today ({dateDefaults.today})
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Select tomorrow"
-                onPress={() => setAppointmentDate(dateDefaults.tomorrow)}
-                style={[
-                  styles.dateBtn,
-                  appointmentDate === dateDefaults.tomorrow && styles.dateBtnSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dateBtnText,
-                    appointmentDate === dateDefaults.tomorrow &&
-                      styles.dateBtnTextSelected,
-                  ]}
-                >
-                  Tomorrow ({dateDefaults.tomorrow})
-                </Text>
-              </Pressable>
+              {(
+                [
+                  { key: dateDefaults.today, label: `Today (${dateDefaults.today})`, a11y: 'Select today' },
+                  { key: dateDefaults.tomorrow, label: `Tomorrow (${dateDefaults.tomorrow})`, a11y: 'Select tomorrow' },
+                ] as const
+              ).map((d) => {
+                const selected = appointmentDate === d.key;
+                return (
+                  <Pressable
+                    key={d.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={d.a11y}
+                    accessibilityState={{ selected }}
+                    onPress={() => setAppointmentDate(d.key)}
+                    style={[styles.dateBtn, selected && styles.dateBtnSelected]}
+                  >
+                    <Text
+                      variant="footnote"
+                      tone={selected ? 'white' : 'secondary'}
+                      style={selected && styles.bold}
+                    >
+                      {d.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <TextInput
@@ -353,255 +365,142 @@ export default function AppointmentBookScreen() {
               value={appointmentDate}
               onChangeText={setAppointmentDate}
               placeholder="YYYY-MM-DD"
-              style={styles.dateInput}
+              placeholderTextColor={T.color.label3}
+              style={styles.input}
             />
-          </View>
+          </Card>
 
           {/* 4. Reason */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>4. Reason for Visit (Optional)</Text>
+          <Card>
+            <CardHeader title="4. Reason for Visit (Optional)" />
             <TextInput
               accessibilityLabel="Reason for visit"
               value={reason}
               onChangeText={setReason}
               placeholder="e.g., Blood sugar checkup, cough, routine follow-up"
-              style={styles.reasonInput}
+              placeholderTextColor={T.color.label3}
+              style={styles.input}
             />
-          </View>
+          </Card>
 
           {/* Book Button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Confirm OPD token booking"
-            disabled={bookMutation.isPending || !selectedDeptId}
+          <Button
+            title="Confirm & Issue OPD Token"
+            label="Confirm OPD token booking"
+            loading={bookMutation.isPending}
+            disabled={!selectedDeptId}
             onPress={handleBookToken}
-            style={[
-              styles.bookBtn,
-              (bookMutation.isPending || !selectedDeptId) &&
-                styles.bookBtnDisabled,
-            ]}
-          >
-            {bookMutation.isPending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.bookBtnText}>
-                Confirm & Issue OPD Token →
-              </Text>
-            )}
-          </Pressable>
+          />
         </View>
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  stack: { gap: T.space.md },
+  stackSm: { gap: T.space.sm },
+  bold: { fontWeight: '700' },
+  italic: { fontStyle: 'italic' },
+  center: { textAlign: 'center' },
+  centerMuted: { textAlign: 'center', opacity: 0.85 },
+  successCard: {
+    backgroundColor: T.color.accent,
     alignItems: 'center',
-    paddingBottom: 4,
+    ...T.shadow.accent,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  closeBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+  successPill: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs,
   },
-  closeBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
-  formContainer: { gap: 14 },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  tokenNumber: { fontSize: 44, lineHeight: 52, textAlign: 'center' },
+  metaBox: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    width: '100%',
+    gap: T.space.xs,
+    marginTop: T.space.sm,
   },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  hospitalPickerList: { gap: 8 },
-  hospOptionCard: {
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  arrivalBox: {
+    backgroundColor: 'rgba(0,0,0,0.16)',
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    width: '100%',
+    gap: T.space.xs,
+    marginTop: T.space.xs,
+  },
+  arrivalTitle: { fontWeight: '800' },
+  hospOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    minHeight: 56,
+    padding: T.space.md,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    backgroundColor: T.color.surface,
+    gap: T.space.sm,
   },
   hospOptionSelected: {
-    borderColor: '#0F766E',
-    backgroundColor: '#F0FDFA',
+    borderColor: T.color.accent,
+    borderWidth: 1.5,
+    backgroundColor: T.color.accentSoft,
   },
-  hospOptionName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  hospOptionNameSelected: { color: '#0F766E', fontWeight: '700' },
-  hospOptionSub: { fontSize: 12, color: '#64748B' },
-  checkIcon: { color: '#0F766E', fontSize: 16, fontWeight: '800' },
-  opdCard: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
-  },
+  hospOptionText: { flex: 1, gap: 2 },
+  opdCard: { borderWidth: 1, borderColor: T.color.accentSoft },
   opdHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  opdBadge: { fontSize: 10, fontWeight: '800', color: '#0F766E', letterSpacing: 1 },
-  cachedTag: { fontSize: 9, fontWeight: '800', color: '#64748B', backgroundColor: '#E2E8F0', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 },
-  opdTitle: { fontSize: 13, fontWeight: '700', color: '#115E59' },
-  opdSlotRow: { flexDirection: 'row', gap: 6 },
-  opdDept: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  opdTiming: { fontSize: 12, color: '#134E4A' },
-  opdNotes: { fontSize: 11, color: '#047857', fontStyle: 'italic', marginTop: 4 },
-  emptyText: { fontSize: 12, color: '#94A3B8', fontStyle: 'italic' },
-  deptWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  deptPill: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  opdSlotRow: { flexDirection: 'row', gap: T.space.xs, flexWrap: 'wrap' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  chip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
   },
-  deptPillSelected: {
-    backgroundColor: '#0F766E',
-    borderColor: '#0F766E',
+  chipSelected: {
+    backgroundColor: T.color.accent,
+    borderColor: T.color.accent,
   },
-  deptPillText: { fontSize: 13, fontWeight: '600', color: '#334155' },
-  deptPillTextSelected: { color: '#FFFFFF' },
-  dateRow: { flexDirection: 'row', gap: 10 },
+  dateRow: { flexDirection: 'row', gap: T.space.sm },
   dateBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingVertical: 10,
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: T.color.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.sm,
   },
   dateBtnSelected: {
-    backgroundColor: '#0F766E',
-    borderColor: '#0F766E',
+    backgroundColor: T.color.accent,
+    borderColor: T.color.accent,
   },
-  dateBtnText: { fontSize: 12, fontWeight: '600', color: '#334155' },
-  dateBtnTextSelected: { color: '#FFFFFF' },
-  dateInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13,
-    marginTop: 4,
+  input: {
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    minHeight: 44,
+    ...T.text.subhead,
+    color: T.color.label,
   },
-  reasonInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13,
-  },
-  bookBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    shadowColor: '#0D9488',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  bookBtnDisabled: { opacity: 0.5 },
-  bookBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  confirmedContainer: { gap: 14 },
-  tokenSuccessCard: {
-    backgroundColor: '#0F766E',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#0F766E',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  successBadge: {
-    color: '#99F6E4',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  tokenNumber: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    lineHeight: 56,
-  },
-  tokenHospitalName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  tokenDeptName: {
-    fontSize: 14,
-    color: '#CCFBF1',
-    fontWeight: '600',
-  },
-  tokenMetaBox: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 12,
-    padding: 12,
-    width: '100%',
-    gap: 4,
-    marginTop: 8,
-  },
-  tokenMetaText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  arrivalInstructions: {
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    borderRadius: 12,
-    padding: 12,
-    width: '100%',
-    gap: 4,
-    marginTop: 4,
-  },
-  arrivalTitle: { color: '#99F6E4', fontSize: 12, fontWeight: '800' },
-  arrivalText: { color: '#FFFFFF', fontSize: 12, lineHeight: 17 },
-  confirmedActions: { gap: 10 },
-  viewMineBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  viewMineBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  homeBtn: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CBD5E1',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  homeBtnText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
-  triageHelpBtn: {
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#99F6E4',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  triageHelpText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
 });
