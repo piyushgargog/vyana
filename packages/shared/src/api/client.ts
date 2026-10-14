@@ -44,24 +44,6 @@ export type RateLimitEvent = {
   retryAfterSeconds?: number;
 };
 
-type RateLimitListener = (event: RateLimitEvent) => void;
-const rateLimitListeners = new Set<RateLimitListener>();
-
-export function onRateLimit(listener: RateLimitListener): () => void {
-  rateLimitListeners.add(listener);
-  return () => {
-    rateLimitListeners.delete(listener);
-  };
-}
-
-export function notifyRateLimit(event: RateLimitEvent): void {
-  for (const listener of rateLimitListeners) {
-    try {
-      listener(event);
-    } catch {}
-  }
-}
-
 /**
  * `code` is a server ErrorCode, or one of the client-side codes:
  * NETWORK_ERROR (server unreachable) and INVALID_RESPONSE (response did not match its schema).
@@ -201,13 +183,13 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         code = "RATE_LIMITED";
         if (retryAfterSeconds !== undefined && retryAfterSeconds > 0) {
           const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
-          message = `You've reached the limit for now. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+          const wait = `Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+          message = err.success ? `${message.replace(/.?$/, ".")} ${wait}` : `You've reached the limit for now. ${wait}`;
         } else if (!err.success) {
           message = "You've reached the limit for now. Try again later.";
         }
         const event: RateLimitEvent = { message, retryAfterSeconds };
         opts.onRateLimit?.(event);
-        notifyRateLimit(event);
       }
 
       throw new ApiError(code, message, res.status, retryAfterSeconds);

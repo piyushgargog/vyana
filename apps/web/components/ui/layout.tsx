@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 
 /** The page's large title (iOS style), with an optional line above and actions on the right. */
@@ -80,13 +81,9 @@ export function ErrorState({
       body={body}
       action={
         onRetry ? (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-1 inline-flex items-center justify-center rounded-full border border-separator bg-surface px-4 py-1.5 text-[14px] font-medium text-label hover:bg-canvas transition-colors"
-          >
+          <Button variant="secondary" size="sm" onClick={onRetry} className="mt-1">
             {retryLabel}
-          </button>
+          </Button>
         ) : undefined
       }
       className={className}

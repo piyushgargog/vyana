@@ -106,7 +106,9 @@ export function AppProviders({
     resetAt: null,
   });
 
+  const rateLimitedRef = useRef(false);
   const clearRateLimit = useCallback(() => {
+    rateLimitedRef.current = false;
     setRateLimitState({
       isRateLimited: false,
       message: null,
@@ -124,7 +126,10 @@ export function AppProviders({
         retryAfterSeconds: event.retryAfterSeconds ?? null,
         resetAt,
       });
-      onRateLimitProp?.(event);
+      if (!rateLimitedRef.current) {
+        rateLimitedRef.current = true;
+        onRateLimitProp?.(event);
+      }
     },
     [onRateLimitProp]
   );

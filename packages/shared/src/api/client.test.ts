@@ -170,10 +170,10 @@ describe("createApiClient", () => {
       code: "RATE_LIMITED",
       status: 429,
       retryAfterSeconds: 180,
-      message: "You've reached the limit for now. Try again in 3 minutes.",
+      message: "Too many requests. Try again in 3 minutes.",
     });
     expect(onRateLimitMock).toHaveBeenCalledWith({
-      message: "You've reached the limit for now. Try again in 3 minutes.",
+      message: "Too many requests. Try again in 3 minutes.",
       retryAfterSeconds: 180,
     });
   });

@@ -56,7 +56,7 @@ subject = "Reset your Vyana password"
 content_path = "./templates/recovery.html"
 
 [auth.email.template.email_change]
-subject = "Confirm your new email address"
+subject = "Confirm your new email"
 content_path = "./templates/email-change.html"
 
 [realtime]
