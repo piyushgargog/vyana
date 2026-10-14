@@ -19,9 +19,13 @@
     "live:check": "pnpm --filter @vyana/web live:check",
     "monitor:create": "pnpm --filter @vyana/web monitor:create",
     "review:sheet": "pnpm --filter @vyana/web review:sheet",
-    "eval:safety": "pnpm --filter @vyana/web eval:safety"
+    "eval:safety": "pnpm --filter @vyana/web eval:safety",
+    "e2e": "playwright test",
+    "seed:demo:refresh": "pnpm --filter @vyana/web exec tsx ../../supabase/seed/refresh-demo.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.0",
     "turbo": "^2",
     "yaml": "^2.9.1",
     "zod": "^4.6.5"

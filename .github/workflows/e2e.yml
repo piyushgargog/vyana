@@ -1,0 +1,47 @@
+name: E2E (Playwright)
+
+# Nightly + manual, against the live site (issue #141).
+# Credentials come from repository secrets; traces and screenshots upload only on failure.
+# The tests never create data that stays.
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 7:30 AM IST, nightly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa4b80ad80e976f673 # v4.2.0
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@395ad3262231945c25a224b8a5835f0defdf5d9a # v6.2.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Run E2E against the live site
+        run: pnpm e2e
+        env:
+          E2E_BASE_URL: https://vyanahealth.app
+          E2E_PASSWORD_PATIENT: ${{ secrets.E2E_PASSWORD_PATIENT }}
+          E2E_PASSWORD_DOCTOR: ${{ secrets.E2E_PASSWORD_DOCTOR }}
+      - name: Upload traces and screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8dcc76cbd76bb2854edc4 # v5.0.0
+        with:
+          name: e2e-failure-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

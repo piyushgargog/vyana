@@ -97,6 +97,8 @@ Environment variables: copy `apps/web/.env.example` and `apps/mobile/.env.exampl
 
 Useful checks: `pnpm live:check` (the API against a running Supabase), `pnpm eval:safety` (AI safety cases per provider), `pnpm prewarm` (fill the cache before a demo).
 
+**End-to-end tests** (`tests/e2e`, Playwright): `pnpm e2e` runs the patient, doctor and public-page flows against `E2E_BASE_URL` (default `http://localhost:3000`). They need the demo passwords from the environment (`E2E_PASSWORD_PATIENT`, `E2E_PASSWORD_DOCTOR`); against the live site the CI workflow `.github/workflows/e2e.yml` runs them nightly with repository secrets. The tests never create data that stays.
+
 **Deploy:** `docker compose --env-file apps/web/.env.production up -d --build` runs the app behind Caddy on any server with Docker; see [Deployment](ARCHITECTURE.md#deployment).
 
 ## Documentation
