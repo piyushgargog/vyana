@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { SiteFooter } from "./ui/site-footer";
 import {
   buildQrMatrix,
   computeItemRefill,
@@ -254,27 +255,22 @@ export function AiSafetyBanner({
   };
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-3.5 py-2.5 text-xs text-amber-950">
+    <div className="rounded-row bg-fill px-3.5 py-2.5 text-[13px] text-label-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 font-medium">
-          <span
-            aria-hidden="true"
-            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-amber-900 font-bold"
-          >
-            !
-          </span>
+          <Sparkles aria-hidden="true" className="h-4 w-4 text-accent" />
           <span>AI-generated, verify with your doctor</span>
         </div>
         {resolvedRunId ? (
           submitted ? (
-            <span className="text-teal-800 font-semibold">
+            <span className="font-semibold text-ok">
               Mistake report recorded
             </span>
           ) : (
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="underline font-semibold text-amber-900 hover:text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded px-1"
+              className="rounded-full px-2 py-0.5 font-semibold text-accent-strong hover:bg-accent-soft"
             >
               Report a mistake
             </button>
@@ -293,12 +289,12 @@ export function AiSafetyBanner({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="What did the AI misread or get wrong?"
-            className="flex-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs text-slate-900"
+            className="h-10 flex-1 rounded-row border border-separator bg-surface px-3 text-[15px] text-label outline-none focus:border-accent"
           />
           <button
             type="submit"
             disabled={reportMutation.isPending}
-            className="rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-900"
+            className="h-10 rounded-full bg-accent px-4 text-[15px] font-semibold text-white hover:bg-accent-strong disabled:opacity-40"
           >
             {reportMutation.isPending ? "Sending…" : "Submit report"}
           </button>
@@ -308,54 +304,9 @@ export function AiSafetyBanner({
   );
 }
 
+/** The site footer on every page; kept under this name so existing pages need no change (ADR-066). */
 export function MedicalDisclaimerFooter() {
-  return (
-    <footer className="mt-auto border-t border-slate-200 bg-white py-5 px-4 text-xs text-slate-600">
-      <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <p className="font-medium text-slate-700">
-            Vyana · व्यान — Not a substitute for professional medical advice. Always verify AI-assisted summaries and drug information with a registered medical practitioner.
-          </p>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <Link
-              href="/privacy"
-              className="font-medium text-teal-700 hover:text-teal-900 hover:underline"
-            >
-              Privacy Policy
-            </Link>
-            <span className="text-slate-300">·</span>
-            <Link
-              href="/terms"
-              className="font-medium text-teal-700 hover:text-teal-900 hover:underline"
-            >
-              Terms of Service
-            </Link>
-            <span className="text-slate-300">·</span>
-            <a
-              href="mailto:piyushgarg@vyanahealth.app"
-              className="text-slate-600 hover:text-teal-800 hover:underline"
-            >
-              Contact: piyushgarg@vyanahealth.app
-            </a>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <a
-            href="tel:108"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 shadow-xs"
-          >
-            Emergency: 108
-          </a>
-          <a
-            href="tel:112"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 font-semibold text-red-800 hover:bg-red-100"
-          >
-            National: 112
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
+  return <SiteFooter />;
 }
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
@@ -363,11 +314,11 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
     <div
       role="status"
       aria-label="Loading content"
-      className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 space-y-3"
+      className="animate-pulse rounded-card bg-surface p-5 space-y-3"
     >
-      <div className="h-4 w-2/5 rounded bg-slate-200" />
+      <div className="h-4 w-2/5 rounded-full bg-fill-strong" />
       {Array.from({ length: lines }).map((_, idx) => (
-        <div key={idx} className="h-3 w-full rounded bg-slate-100" />
+        <div key={idx} className="h-3 w-full rounded-full bg-fill" />
       ))}
     </div>
   );
@@ -394,11 +345,11 @@ export function SkeletonRow() {
     <div
       role="status"
       aria-label="Loading row"
-      className="animate-pulse flex items-center justify-between gap-4 p-4 border-b border-slate-100"
+      className="animate-pulse flex items-center justify-between gap-4 p-4 border-b border-separator"
     >
-      <div className="h-4 w-1/3 rounded bg-slate-200" />
-      <div className="h-4 w-1/5 rounded bg-slate-100" />
-      <div className="h-7 w-20 rounded-lg bg-slate-200" />
+      <div className="h-4 w-1/3 rounded-full bg-fill-strong" />
+      <div className="h-4 w-1/5 rounded-full bg-fill" />
+      <div className="h-7 w-20 rounded-full bg-fill-strong" />
     </div>
   );
 }

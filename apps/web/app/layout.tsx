@@ -1,34 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { WebAppProviders } from "@/components/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://vyanahealth.app"),
-  title: "Vyana · व्यान — Complete Healthcare Companion",
+  title: "Vyana: your health, in one calm place",
   description:
-    "Vyana (व्यान) — Complete healthcare platform for patients, doctors, and caregivers in India. Real-time medication reminders, prescription scanning, lab reports, and emergency Medical ID.",
+    "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Vyana · व्यान — Complete Healthcare Companion",
+    title: "Vyana: your health, in one calm place",
     description:
-      "One-stop healthcare platform in India: dose reminders, scannable Medical ID, lab trend analysis, hospital OPD tokens, and Jan Aushadhi generic savings.",
+      "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
     url: "https://vyanahealth.app",
-    siteName: "Vyana Health",
+    siteName: "Vyana",
     locale: "en_IN",
     type: "website",
     images: [
@@ -36,15 +26,15 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Vyana · व्यान — Complete Healthcare Companion",
+        alt: "Vyana: your health, in one calm place",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vyana · व्यान — Complete Healthcare Companion",
+    title: "Vyana: your health, in one calm place",
     description:
-      "One-stop healthcare platform in India: dose reminders, scannable Medical ID, lab trend analysis, hospital OPD tokens, and Jan Aushadhi generic savings.",
+      "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
     images: ["/og-image.png"],
   },
 };
@@ -57,9 +47,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full"
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <body className="min-h-full flex flex-col bg-canvas text-label">
         <WebAppProviders>{children}</WebAppProviders>
       </body>
     </html>

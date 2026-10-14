@@ -74,21 +74,19 @@ export function WebAppProviders({ children }: { children: React.ReactNode }) {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"
+          className="pointer-events-none fixed inset-x-4 top-4 z-50 mx-auto flex max-w-sm flex-col items-center gap-2 sm:inset-x-auto sm:right-5 sm:top-auto sm:bottom-5"
         >
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`pointer-events-auto rounded-xl px-4 py-3 text-sm font-medium shadow-lg border transition-all ${
-                t.tone === "success"
-                  ? "bg-teal-900 text-white border-teal-700"
-                  : t.tone === "error"
-                    ? "bg-red-900 text-white border-red-700"
-                    : t.tone === "warning"
-                      ? "bg-amber-900 text-white border-amber-700"
-                      : "bg-slate-900 text-white border-slate-700"
-              }`}
+              className="glass pointer-events-auto flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-[15px] font-medium text-label"
             >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 shrink-0 rounded-full ${
+                  t.tone === "success" ? "bg-ok" : t.tone === "error" ? "bg-danger" : t.tone === "warning" ? "bg-warn" : "bg-label-3"
+                }`}
+              />
               {t.message}
             </div>
           ))}
