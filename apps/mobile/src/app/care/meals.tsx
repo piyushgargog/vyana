@@ -1,13 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   DbMealLog,
@@ -25,6 +17,19 @@ import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 
 function getTodayString() {
   const d = new Date();
@@ -137,96 +142,118 @@ export default function MealsScreen() {
   const isToday = selectedDate === getTodayString();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Daily Meal Log</Text>
-          <Text style={styles.sub}>
-            Log your breakfast, lunch, dinner & snacks in alignment with your care plan
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+    <Screen
+      eyebrow="Care"
+      title="Daily Meal Log"
+      trailing={
+        <Button
+          title="Done"
+          variant="plain"
+          size="sm"
+          label="Back"
           onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>✕ Close</Text>
-        </Pressable>
-      </View>
+          style={styles.doneBtn}
+        />
+      }
+    >
+      <Text variant="subhead" tone="secondary">
+        Log your breakfast, lunch, dinner and snacks in alignment with your
+        care plan.
+      </Text>
 
       <MobileAiSafetyBanner />
 
       {/* Date Navigation Strip */}
-      <View style={styles.dateStrip}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous day"
-          onPress={handlePrevDay}
-          style={styles.dateNavBtn}
-        >
-          <Text style={styles.dateNavBtnText}>← Previous</Text>
-        </Pressable>
-
-        <View style={styles.dateDisplay}>
-          <Text style={styles.dateDisplayText}>{selectedDate}</Text>
-          {isToday && <Text style={styles.todayBadge}>TODAY</Text>}
+      <Card>
+        <View style={styles.dateStrip}>
+          <Button
+            title="Previous"
+            variant="plain"
+            size="sm"
+            icon={
+              <Symbol
+                ios="chevron.left"
+                android="chevron_left"
+                size={16}
+                color={T.color.accentStrong}
+              />
+            }
+            label="Previous day"
+            onPress={handlePrevDay}
+          />
+          <View style={styles.dateDisplay}>
+            <Text variant="headline">{selectedDate}</Text>
+            {isToday && (
+              <View style={styles.todayPill}>
+                <Text variant="caption" tone="accent" style={styles.todayText}>
+                  Today
+                </Text>
+              </View>
+            )}
+          </View>
+          <Button
+            title="Next"
+            variant="plain"
+            size="sm"
+            icon={
+              <Symbol
+                ios="chevron.right"
+                android="chevron_right"
+                size={16}
+                color={T.color.accentStrong}
+              />
+            }
+            label="Next day"
+            onPress={handleNextDay}
+          />
         </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Next day"
-          onPress={handleNextDay}
-          style={styles.dateNavBtn}
-        >
-          <Text style={styles.dateNavBtnText}>Next →</Text>
-        </Pressable>
-      </View>
-
-      {!isToday && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Return to today"
-          onPress={handleSetToday}
-          style={styles.jumpTodayBtn}
-        >
-          <Text style={styles.jumpTodayBtnText}>Return to Today</Text>
-        </Pressable>
-      )}
+        {!isToday && (
+          <Button
+            title="Return to today"
+            variant="plain"
+            size="sm"
+            label="Return to today"
+            onPress={handleSetToday}
+            style={styles.jumpToday}
+          />
+        )}
+      </Card>
 
       {/* Calorie Summary Card */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.summaryLabel}>Total Calories Logged</Text>
-            <Text style={styles.summaryValue}>
-              {calorieSummary.total} <Text style={styles.summaryUnit}>kcal</Text>
-            </Text>
-          </View>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>
-              {meals.length} {meals.length === 1 ? 'meal' : 'meals'} recorded
-            </Text>
-          </View>
-        </View>
-
+      <Card>
+        <CardHeader
+          title="Calories logged"
+          trailing={`${meals.length} ${meals.length === 1 ? 'meal' : 'meals'}`}
+        />
+        <Text variant="title1" tone="accent">
+          {calorieSummary.total}{' '}
+          <Text variant="callout" tone="tertiary">
+            kcal
+          </Text>
+        </Text>
         {calorieSummary.unknown > 0 && (
-          <View style={styles.unknownNotice}>
-            <Text style={styles.unknownNoticeText}>
-              ℹ️ {calorieSummary.unknown}{' '}
-              {calorieSummary.unknown === 1 ? 'meal' : 'meals'} without calories recorded
+          <View style={styles.noteRow}>
+            <Symbol
+              ios="info.circle.fill"
+              android="info"
+              size={16}
+              color={T.color.warn}
+            />
+            <Text variant="footnote" tone="warn">
+              {calorieSummary.unknown}{' '}
+              {calorieSummary.unknown === 1 ? 'meal' : 'meals'} without
+              calories recorded
             </Text>
           </View>
         )}
-      </View>
+      </Card>
 
       {/* Add Meal Form Card */}
-      <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Log a Meal</Text>
+      <Card>
+        <CardHeader title="Log a meal" />
 
         {/* Meal Type Buttons */}
-        <View style={styles.typeRow}>
+        <View style={styles.chipRow}>
           {MEAL_TYPES.map((type) => {
             const isSelected = mealType === type;
             return (
@@ -235,9 +262,13 @@ export default function MealsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Select meal type ${type}`}
                 onPress={() => setMealType(type)}
-                style={[styles.typeBtn, isSelected && styles.typeBtnActive]}
+                style={[styles.chip, isSelected && styles.chipActive]}
               >
-                <Text style={[styles.typeBtnText, isSelected && styles.typeBtnTextActive]}>
+                <Text
+                  variant="footnote"
+                  tone={isSelected ? 'white' : 'secondary'}
+                  style={isSelected && styles.chipTextActive}
+                >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </Text>
               </Pressable>
@@ -247,311 +278,177 @@ export default function MealsScreen() {
 
         {/* Description Input */}
         <View style={styles.fieldBlock}>
-          <Text style={styles.fieldLabel}>What did you eat?</Text>
+          <Text variant="subhead">What did you eat?</Text>
           <TextInput
             accessibilityLabel="Meal description"
             placeholder="e.g. 2 Roti, Moong Dal, Cucumber Salad"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={T.color.label3}
             value={description}
             onChangeText={(txt) => {
               setDescription(txt);
               if (formError) setFormError(null);
             }}
             maxLength={MEAL_DESCRIPTION_MAX}
-            style={styles.textInput}
+            style={styles.input}
           />
-          <Text style={styles.charCounter}>
+          <Text variant="caption" tone="tertiary" style={styles.charCounter}>
             {description.length}/{MEAL_DESCRIPTION_MAX}
           </Text>
         </View>
 
         {/* Calories Input */}
         <View style={styles.fieldBlock}>
-          <Text style={styles.fieldLabel}>Calories (kcal, optional):</Text>
+          <Text variant="subhead">Calories (kcal, optional)</Text>
           <TextInput
             accessibilityLabel="Meal calories"
             placeholder="e.g. 350 (0 to 5,000)"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={T.color.label3}
             keyboardType="number-pad"
             value={caloriesInput}
             onChangeText={(txt) => {
               setCaloriesInput(txt);
               if (formError) setFormError(null);
             }}
-            style={styles.textInput}
+            style={styles.input}
           />
         </View>
 
         {/* Error message */}
         {formError && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {formError}</Text>
-          </View>
-        )}
-
-        {/* Submit Button */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save meal log"
-          disabled={addMealMutation.isPending}
-          onPress={handleAddMeal}
-          style={[styles.submitBtn, addMealMutation.isPending && styles.btnDisabled]}
-        >
-          {addMealMutation.isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitBtnText}>+ Save to Daily Log</Text>
-          )}
-        </Pressable>
-      </View>
-
-      {/* Logged Meals List */}
-      <View style={styles.listSection}>
-        <Text style={styles.sectionHeader}>Meals on {selectedDate}</Text>
-
-        {isLoading && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#0D9488" />
-            <Text style={styles.loadingText}>Loading meals…</Text>
-          </View>
-        )}
-
-        {!isLoading && meals.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No meals logged for this date</Text>
-            <Text style={styles.emptySub}>
-              Use the form above to log what you ate for breakfast, lunch, dinner, or snack.
+          <View style={styles.noteRow}>
+            <Symbol
+              ios="exclamationmark.triangle.fill"
+              android="warning"
+              size={16}
+              color={T.color.danger}
+            />
+            <Text variant="footnote" tone="danger">
+              {formError}
             </Text>
           </View>
         )}
 
-        {meals.map((m: DbMealLog) => (
-          <View key={m.id} style={styles.mealCard}>
-            <View style={styles.mealCardTop}>
-              <View style={styles.mealTypeBadge}>
-                <Text style={styles.mealTypeBadgeText}>
-                  {m.meal.toUpperCase()}
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${m.meal} log: ${m.description}`}
-                disabled={deleteMealMutation.isPending}
-                onPress={() => handleDeleteMeal(m.id)}
-                style={styles.deleteBtn}
-              >
-                <Text style={styles.deleteBtnText}>✕ Remove</Text>
-              </Pressable>
-            </View>
+        {/* Submit Button */}
+        <Button
+          title="Save to daily log"
+          loading={addMealMutation.isPending}
+          label="Save meal log"
+          onPress={handleAddMeal}
+        />
+      </Card>
 
-            <Text style={styles.mealDesc}>{m.description}</Text>
-
-            <View style={styles.mealFooter}>
-              <Text style={styles.calorieText}>
-                {typeof m.calories === 'number' ? (
-                  <Text style={styles.calorieHighlight}>{m.calories} kcal</Text>
-                ) : (
-                  <Text style={styles.calorieUnknown}>Calories not specified</Text>
-                )}
-              </Text>
-              <Text style={styles.timeText}>
-                {new Date(m.logged_at).toLocaleTimeString('en-IN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </View>
+      {/* Logged Meals List */}
+      {isLoading ? (
+        <Card>
+          <Text variant="subhead" tone="tertiary" style={styles.center}>
+            Loading meals…
+          </Text>
+        </Card>
+      ) : meals.length === 0 ? (
+        <EmptyState
+          ios="fork.knife"
+          android="restaurant"
+          title="No meals logged"
+          body={`Use the form above to log what you ate on ${selectedDate}.`}
+        />
+      ) : (
+        <ListGroup header={`Meals on ${selectedDate}`}>
+          {meals.map((m: DbMealLog) => (
+            <ListRow
+              key={m.id}
+              icon={
+                <IconTile ios="fork.knife" android="restaurant" color="accent" />
+              }
+              title={m.description}
+              subtitle={`${m.meal.toUpperCase()} · ${new Date(
+                m.logged_at
+              ).toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}`}
+              value={
+                typeof m.calories === 'number'
+                  ? `${m.calories} kcal`
+                  : 'No calories'
+              }
+              trailing={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${m.meal} log: ${m.description}`}
+                  disabled={deleteMealMutation.isPending}
+                  onPress={() => handleDeleteMeal(m.id)}
+                  style={styles.iconBtn}
+                >
+                  <Symbol
+                    ios="trash"
+                    android="delete"
+                    size={18}
+                    color={T.color.danger}
+                    label={`Delete ${m.meal} log`}
+                  />
+                </Pressable>
+              }
+            />
+          ))}
+        </ListGroup>
+      )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  sub: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  closeBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  closeBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
+  doneBtn: { minHeight: 44, justifyContent: 'center' },
   dateStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
-  dateNavBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+  dateDisplay: { alignItems: 'center', gap: T.space.xs },
+  todayPill: {
+    backgroundColor: T.color.accentSoft,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.sm,
+    paddingVertical: 2,
   },
-  dateNavBtnText: { fontSize: 12, fontWeight: '700', color: '#334155' },
-  dateDisplay: { alignItems: 'center', gap: 2 },
-  dateDisplayText: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  todayBadge: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#0F766E',
-    backgroundColor: '#CCFBF1',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  jumpTodayBtn: { alignSelf: 'center', paddingVertical: 4 },
-  jumpTodayBtnText: { fontSize: 12, color: '#0F766E', fontWeight: '700' },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 10,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryLabel: { fontSize: 12, color: '#64748B', fontWeight: '600' },
-  summaryValue: { fontSize: 26, fontWeight: '900', color: '#0F766E' },
-  summaryUnit: { fontSize: 14, fontWeight: '600', color: '#64748B' },
-  countBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  countBadgeText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  unknownNotice: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  unknownNoticeText: { fontSize: 12, color: '#92400E', fontWeight: '600' },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 12,
-  },
-  formTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  typeRow: { flexDirection: 'row', gap: 6 },
-  typeBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  typeBtnActive: { backgroundColor: '#0F766E' },
-  typeBtnText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  typeBtnTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  fieldBlock: { gap: 4 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#334155' },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  charCounter: { alignSelf: 'flex-end', fontSize: 10, color: '#94A3B8' },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-  },
-  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '600' },
-  submitBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  submitBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  btnDisabled: { opacity: 0.6 },
-  listSection: { gap: 10 },
-  sectionHeader: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  loadingBox: {
+  todayText: { fontWeight: '700', textTransform: 'uppercase' },
+  jumpToday: { alignSelf: 'center' },
+  noteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 16,
+    gap: T.space.sm,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  chip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: T.space.lg,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    backgroundColor: T.color.fill,
+  },
+  chipActive: { backgroundColor: T.color.accent },
+  chipTextActive: { fontWeight: '700' },
+  fieldBlock: { gap: T.space.xs },
+  input: {
+    backgroundColor: T.color.surface,
+    borderWidth: 1,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.md,
+    fontSize: 16,
+    color: T.color.label,
+  },
+  charCounter: { alignSelf: 'flex-end' },
+  iconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  emptyTitle: { fontSize: 14, fontWeight: '700', color: '#334155' },
-  emptySub: { fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 17 },
-  mealCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 8,
-  },
-  mealCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mealTypeBadge: {
-    backgroundColor: '#CCFBF1',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  mealTypeBadgeText: { fontSize: 10, fontWeight: '800', color: '#0F766E' },
-  deleteBtn: { padding: 4 },
-  deleteBtnText: { fontSize: 11, color: '#B91C1C', fontWeight: '700' },
-  mealDesc: { fontSize: 14, color: '#0F172A', fontWeight: '600' },
-  mealFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  calorieText: { fontSize: 12, color: '#475569' },
-  calorieHighlight: { fontWeight: '700', color: '#0F766E' },
-  calorieUnknown: { color: '#94A3B8', fontStyle: 'italic' },
-  timeText: { fontSize: 11, color: '#94A3B8' },
+  center: { textAlign: 'center' },
 });

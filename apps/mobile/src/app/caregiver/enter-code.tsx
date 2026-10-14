@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAcceptCareInvite } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  Screen,
+  Text,
+} from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 export default function CaregiverEnterCodeScreen() {
   const router = useRouter();
@@ -60,34 +60,20 @@ export default function CaregiverEnterCodeScreen() {
     }
   };
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Enter Caregiver Code</Text>
-          <Text style={styles.headerSub}>
-            Link to a family member using the 6-digit code they shared
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to caregiver circle"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back</Text>
-        </Pressable>
-      </View>
+  const codeReady = code.trim().length === 6;
 
-      {/* Main Intake Form */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Link Patient to Monitor</Text>
-        <Text style={styles.cardSub}>
-          Enter the 6-digit invite code generated on the patient&apos;s phone. Invite codes expire after 24 hours.
+  return (
+    <Screen title="Enter caregiver code" eyebrow="Link a patient to monitor">
+      <Card>
+        <CardHeader title="Link patient to monitor" />
+        <Text variant="footnote" tone="tertiary">
+          Enter the 6-digit invite code generated on the patient&apos;s phone.
+          Invite codes expire after 24 hours.
         </Text>
 
-        <Text style={styles.label}>6-Digit Invite Code *</Text>
+        <Text variant="footnote" style={styles.label}>
+          6-digit invite code *
+        </Text>
         <TextInput
           accessibilityLabel="6-digit caregiver invite code"
           keyboardType="numeric"
@@ -98,141 +84,90 @@ export default function CaregiverEnterCodeScreen() {
             if (errorMessage) setErrorMessage(null);
           }}
           placeholder="e.g. 482195"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.color.label3}
           style={styles.codeInput}
         />
 
-        <Text style={styles.label}>Your Relationship to Patient (Optional)</Text>
+        <Text variant="footnote" style={styles.label}>
+          Your relationship to patient (optional)
+        </Text>
         <TextInput
           accessibilityLabel="Relationship to patient"
           value={relation}
           onChangeText={setRelation}
           placeholder="e.g. Son, Daughter, Spouse, Guardian"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.color.label3}
           style={styles.input}
         />
 
-        {/* Error Message Box */}
-        {errorMessage && (
+        {errorMessage ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Text variant="footnote" tone="danger" style={styles.errorText}>
+              {errorMessage}
+            </Text>
           </View>
-        )}
+        ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Link Patient"
-          disabled={acceptMutation.isPending || code.trim().length !== 6}
+        <Button
+          title="Link patient"
+          label="Link Patient"
+          loading={acceptMutation.isPending}
+          disabled={!codeReady}
           onPress={handleLinkPatient}
-          style={[
-            styles.submitBtn,
-            (acceptMutation.isPending || code.trim().length !== 6) &&
-              styles.submitBtnDisabled,
-          ]}
-        >
-          {acceptMutation.isPending ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color="#FFFFFF" />
-              <Text style={styles.submitBtnText}>Linking Patient…</Text>
-            </View>
-          ) : (
-            <Text style={styles.submitBtnText}>Link Patient</Text>
-          )}
-        </Pressable>
-      </View>
+        />
+      </Card>
 
-      {/* Privacy Guidance */}
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>What happens after linking?</Text>
-        <Text style={styles.infoText}>
-          You will have read-only access to view the patient&apos;s daily medicine schedule, dose adherence records, and approved care plans. You will also receive immediate push notifications if they miss a scheduled medicine dose by more than 60 minutes.
+      <Card style={styles.infoCard}>
+        <CardHeader title="What happens after linking?" />
+        <Text variant="footnote" tone="secondary">
+          You will have read-only access to view the patient&apos;s daily
+          medicine schedule, dose adherence records, and approved care plans.
+          You will also receive immediate push notifications if they miss a
+          scheduled medicine dose by more than 60 minutes.
         </Text>
-      </View>
+      </Card>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  backBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  backBtnText: { color: '#334155', fontSize: 12, fontWeight: '700' },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  cardSub: { fontSize: 12, color: '#64748B', lineHeight: 17 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginTop: 4 },
+  label: { fontWeight: '700', marginTop: T.space.xs, textTransform: 'capitalize' },
   codeInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.color.fill,
     borderWidth: 2,
-    borderColor: '#0D9488',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: T.color.accent,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.lg,
+    paddingVertical: T.space.md,
+    minHeight: 64,
     fontSize: 24,
     fontWeight: '800',
-    color: '#0F766E',
+    color: T.color.accentStrong,
     letterSpacing: 4,
     textAlign: 'center',
     fontFamily: 'monospace',
   },
   input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#0F172A',
+    backgroundColor: T.color.fill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.md,
+    minHeight: 48,
+    fontSize: 15,
+    color: T.color.label,
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#F87171',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: T.color.dangerSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
   },
-  errorText: { color: '#B91C1C', fontSize: 13, fontWeight: '700' },
-  submitBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  loadingRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  infoCard: {
-    backgroundColor: '#F0FDFA',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#99F6E4',
-    gap: 6,
-  },
-  infoTitle: { fontSize: 13, fontWeight: '800', color: '#0F766E' },
-  infoText: { fontSize: 12, color: '#115E59', lineHeight: 17 },
+  errorText: { fontWeight: '700' },
+  infoCard: { backgroundColor: T.color.accentSoft },
 });
