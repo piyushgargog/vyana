@@ -21,11 +21,11 @@ const nextConfig: NextConfig = {
   async headers() {
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://hrntnhyjylonvlxlguvd.supabase.co wss://hrntnhyjylonvlxlguvd.supabase.co",
+      "connect-src 'self' https://hrntnhyjylonvlxlguvd.supabase.co wss://hrntnhyjylonvlxlguvd.supabase.co https://cloudflareinsights.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -38,8 +38,7 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           {
-            // Report-Only first (issue #151): open every page, check the console for violations, then drop "-Report-Only".
-            key: "Content-Security-Policy-Report-Only",
+            key: "Content-Security-Policy",
             value: cspDirectives.join("; "),
           },
         ],
