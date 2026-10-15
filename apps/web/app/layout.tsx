@@ -35,6 +35,13 @@ export default function RootLayout({
       lang="en"
       className="h-full"
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "globalThis.__zod_globalConfig={jitless:true};",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-canvas text-label">
         <WebAppProviders>{children}</WebAppProviders>
       </body>

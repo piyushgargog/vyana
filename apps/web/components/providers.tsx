@@ -1,5 +1,12 @@
 "use client";
 
+if (typeof globalThis !== "undefined") {
+  const g = globalThis as typeof globalThis & {
+    __zod_globalConfig?: { jitless?: boolean };
+  };
+  g.__zod_globalConfig = { ...g.__zod_globalConfig, jitless: true };
+}
+
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AppProviders, type Database } from "@vyana/shared";
