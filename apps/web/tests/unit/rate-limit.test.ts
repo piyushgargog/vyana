@@ -26,6 +26,7 @@ beforeEach(() => {
   adminError = null;
   vi.stubEnv("LLM_MOCK", "");
   vi.stubEnv("TINYFISH_MOCK", "");
+  vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", "");
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -104,5 +105,42 @@ describe("mock runs", () => {
     vi.stubEnv(name, "1");
     expect(await checkRateLimit(USER, LIMIT, NOW)).toBeNull();
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("exempt users (RATE_LIMIT_EXEMPT_USER_IDS)", () => {
+  const OTHER = "22222222-2222-4222-8222-222222222222";
+
+  it("are not counted, and the database is not asked", async () => {
+    vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", USER);
+    expect(await checkRateLimit(USER, LIMIT, NOW)).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("do not exempt anyone else on the list's account", async () => {
+    vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", OTHER);
+    rpc.mockResolvedValue(row());
+    expect(await checkRateLimit(USER, LIMIT, NOW)).toMatchObject({ allowed: true });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("an empty or blank value exempts nobody", async () => {
+    for (const value of ["", "   ", ",,", " , "]) {
+      vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", value);
+      rpc.mockResolvedValue(row());
+      expect(await checkRateLimit(USER, LIMIT, NOW), JSON.stringify(value)).not.toBeNull();
+    }
+  });
+
+  it("trims the entries and accepts a list", async () => {
+    vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", `${OTHER},  ${USER}  ,`);
+    expect(await checkRateLimit(USER, LIMIT, NOW)).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("matches the whole id, not a part of it", async () => {
+    vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", USER.slice(0, 20));
+    rpc.mockResolvedValue(row());
+    expect(await checkRateLimit(USER, LIMIT, NOW)).not.toBeNull();
   });
 });

@@ -3,12 +3,9 @@ import {
   ActivityIndicator,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import {
   DbDrugAlert,
   useCheckAlerts,
@@ -17,15 +14,25 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 const REQUIRED_ALERT_NOTICE =
   "A government quality alert mentions this medicine. Alerts usually concern specific batches: check the batch number on your pack with your pharmacist. Don't stop the medicine without asking your doctor.";
 
 export default function DrugQualityAlertsScreen() {
-  const router = useRouter();
   const { showToast } = useVyanaMobile();
 
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false);
@@ -72,354 +79,226 @@ export default function DrugQualityAlertsScreen() {
   const unreadCount = alerts.filter((a) => !a.seen).length;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>CDSCO Drug Quality Alerts</Text>
-          <Text style={styles.sub}>
-            Official Central Drugs Standard Control Organisation (CDSCO) notices
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>✕ Close</Text>
-        </Pressable>
-      </View>
-
+    <Screen
+      title="Drug Quality Alerts"
+      eyebrow="CDSCO · Government notices"
+      refreshing={isLoading}
+      onRefresh={() => {
+        void refetch();
+      }}
+    >
       <MobileAiSafetyBanner />
 
-      {/* Check & Filter Controls */}
-      <View style={styles.controlCard}>
-        <View style={styles.controlHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.controlTitle}>Live Active Medicine Watch</Text>
-            <Text style={styles.controlSub}>
-              Monitors government gazettes & CDSCO batch recalls for your active prescriptions
-            </Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Check for new government quality alerts"
-            disabled={checkAlertsMutation.isPending}
-            onPress={handleRunCheck}
-            style={[
-              styles.checkBtn,
-              checkAlertsMutation.isPending && styles.btnDisabled,
-            ]}
-          >
-            {checkAlertsMutation.isPending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.checkBtnText}>Check Now ↻</Text>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Filter Pills */}
+      <Card>
+        <CardHeader
+          title="Active medicine watch"
+          trailing={unreadCount > 0 ? `${unreadCount} new` : undefined}
+        />
+        <Text variant="footnote" tone="tertiary">
+          Monitors government gazettes and CDSCO batch recalls for your active
+          prescriptions.
+        </Text>
+        <Button
+          title="Check now"
+          label="Check for new government quality alerts"
+          icon={
+            <Symbol
+              ios="arrow.clockwise"
+              android="refresh"
+              size={18}
+              color={T.color.white}
+            />
+          }
+          loading={checkAlertsMutation.isPending}
+          onPress={handleRunCheck}
+        />
         <View style={styles.filterRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Show all alerts"
+          <FilterChip
+            label={`All alerts (${alerts.length})`}
+            a11y="Show all alerts"
+            active={!filterUnreadOnly}
             onPress={() => setFilterUnreadOnly(false)}
-            style={[styles.filterChip, !filterUnreadOnly && styles.filterChipActive]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                !filterUnreadOnly && styles.filterChipTextActive,
-              ]}
-            >
-              All Alerts ({alerts.length})
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Show unread alerts only"
+          />
+          <FilterChip
+            label={`Unread (${unreadCount})`}
+            a11y="Show unread alerts only"
+            active={filterUnreadOnly}
             onPress={() => setFilterUnreadOnly(true)}
-            style={[styles.filterChip, filterUnreadOnly && styles.filterChipActive]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                filterUnreadOnly && styles.filterChipTextActive,
-              ]}
-            >
-              Unread Notices ({unreadCount})
-            </Text>
-          </Pressable>
+          />
         </View>
-      </View>
+      </Card>
 
-      {/* List of Alerts */}
-      <View style={styles.alertListSection}>
-        {isLoading && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#0D9488" />
-            <Text style={styles.loadingText}>Loading drug quality alerts…</Text>
-          </View>
-        )}
+      {isLoading && displayedAlerts.length === 0 ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color={T.color.accent} />
+          <Text variant="footnote" tone="tertiary">
+            Loading drug quality alerts…
+          </Text>
+        </View>
+      ) : null}
 
-        {!isLoading && displayedAlerts.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🛡️</Text>
-            <Text style={styles.emptyTitle}>No Quality Alerts Found</Text>
-            <Text style={styles.emptySub}>
-              {filterUnreadOnly
-                ? 'All quality alerts have been marked as reviewed. Switch to "All Alerts" to view previous notices.'
-                : 'None of your active prescription medicines have recent government quality or batch recall notices from CDSCO.'}
-            </Text>
-          </View>
-        )}
+      {!isLoading && displayedAlerts.length === 0 ? (
+        <EmptyState
+          ios="shield.fill"
+          android="shield"
+          title="No quality alerts"
+          body={
+            filterUnreadOnly
+              ? 'All quality alerts have been marked as reviewed. Switch to "All alerts" to view previous notices.'
+              : 'None of your active prescription medicines have recent government quality or batch recall notices from CDSCO.'
+          }
+        />
+      ) : null}
 
-        {displayedAlerts.map((alert: DbDrugAlert) => {
-          const isUnread = !alert.seen;
-
-          return (
-            <View
-              key={alert.id}
-              style={[styles.alertCard, isUnread && styles.alertCardUnread]}
-            >
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.medicineBadge}>
-                  <Text style={styles.medicineBadgeText}>
-                    {alert.medicine_name.toUpperCase()}
-                  </Text>
-                </View>
-                {isUnread ? (
-                  <View style={styles.unreadTag}>
-                    <Text style={styles.unreadTagText}>NEW / UNREVIEWED</Text>
-                  </View>
-                ) : (
-                  <View style={styles.reviewedTag}>
-                    <Text style={styles.reviewedTagText}>✓ REVIEWED</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Title & Date */}
-              <Text style={styles.alertTitle}>{alert.title}</Text>
-              <Text style={styles.alertDate}>
-                Published on{' '}
-                {new Date(alert.created_at).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </Text>
-
-              {/* Snippet */}
-              {alert.snippet ? (
-                <View style={styles.snippetBox}>
-                  <Text style={styles.snippetLabel}>Official Notice Extract:</Text>
-                  <Text style={styles.snippetText}>{alert.snippet}</Text>
-                </View>
-              ) : null}
-
-              {/* MANDATORY FIXED GUIDANCE TEXT */}
-              <View style={styles.requiredNoticeBox}>
-                <Text style={styles.requiredNoticeTitle}>Important Clinical Guidance</Text>
-                <Text style={styles.requiredNoticeText}>{REQUIRED_ALERT_NOTICE}</Text>
-              </View>
-
-              {/* Actions */}
-              <View style={styles.actionRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Read official government source notice for ${alert.medicine_name}`}
-                  onPress={() => handleOpenSource(alert.url, alert.title)}
-                  style={styles.sourceBtn}
-                >
-                  <Text style={styles.sourceBtnText}>Official Government Source ↗</Text>
-                </Pressable>
-
-                {isUnread && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Mark alert as reviewed"
-                    disabled={markSeenMutation.isPending}
-                    onPress={() => handleMarkAsRead(alert.id, alert.title)}
-                    style={styles.markReadBtn}
-                  >
-                    <Text style={styles.markReadBtnText}>Mark as Reviewed</Text>
-                  </Pressable>
-                )}
-              </View>
+      {displayedAlerts.map((alert: DbDrugAlert) => {
+        const isUnread = !alert.seen;
+        return (
+          <Card key={alert.id} style={isUnread ? styles.unreadCard : undefined}>
+            <View style={styles.cardTopRow}>
+              <Pill text={alert.medicine_name.toUpperCase()} tone="danger" />
+              <Pill text={isUnread ? 'New' : 'Reviewed'} tone={isUnread ? 'warn' : 'ok'} />
             </View>
-          );
-        })}
-      </View>
+
+            <Text variant="headline">{alert.title}</Text>
+            <Text variant="footnote" tone="tertiary">
+              Published{' '}
+              {new Date(alert.created_at).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </Text>
+
+            {alert.snippet ? (
+              <View style={styles.snippetBox}>
+                <Text variant="caption" tone="secondary" style={styles.snippetLabel}>
+                  Official notice extract
+                </Text>
+                <Text variant="subhead" tone="secondary" style={styles.snippetText}>
+                  {alert.snippet}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.noticeBox}>
+              <Text variant="footnote" tone="danger" style={styles.noticeTitle}>
+                Important clinical guidance
+              </Text>
+              <Text variant="footnote" tone="danger">
+                {REQUIRED_ALERT_NOTICE}
+              </Text>
+            </View>
+
+            <View style={styles.actionRow}>
+              <Button
+                variant="secondary"
+                title="Official source"
+                label={`Read official government source notice for ${alert.medicine_name}`}
+                icon={
+                  <Symbol
+                    ios="arrow.up.right"
+                    android="open_in_new"
+                    size={16}
+                    color={T.color.accentStrong}
+                  />
+                }
+                onPress={() => handleOpenSource(alert.url, alert.title)}
+              />
+              {isUnread ? (
+                <Button
+                  variant="plain"
+                  title="Mark as reviewed"
+                  loading={markSeenMutation.isPending}
+                  onPress={() => handleMarkAsRead(alert.id, alert.title)}
+                />
+              ) : null}
+            </View>
+          </Card>
+        );
+      })}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
+  );
+}
+
+function FilterChip({
+  label,
+  a11y,
+  active,
+  onPress,
+}: {
+  label: string;
+  a11y: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={[styles.chip, active && styles.chipActive]}
+    >
+      <Text
+        variant="footnote"
+        style={[styles.chipText, active && styles.chipTextActive]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
+  filterRow: { flexDirection: 'row', gap: T.space.sm, flexWrap: 'wrap' },
+  chip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: T.space.lg,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
+    backgroundColor: T.color.fill,
   },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  sub: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  closeBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  closeBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
-  controlCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 12,
-  },
-  controlHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  controlTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  controlSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  checkBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  checkBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  btnDisabled: { opacity: 0.6 },
-  filterRow: { flexDirection: 'row', gap: 8 },
-  filterChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-  filterChipActive: { backgroundColor: '#0F766E' },
-  filterChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  filterChipTextActive: { color: '#FFFFFF' },
-  alertListSection: { gap: 14 },
+  chipActive: { backgroundColor: T.color.accent },
+  chipText: { fontWeight: '600', color: T.color.label2 },
+  chipTextActive: { color: T.color.white },
   loadingBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 16,
     justifyContent: 'center',
+    gap: T.space.sm,
+    paddingVertical: T.space.lg,
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyIcon: { fontSize: 32 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  emptySub: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  alertCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 12,
-  },
-  alertCardUnread: {
-    borderColor: '#F59E0B',
-    borderWidth: 2,
-    backgroundColor: '#FFFBEB',
-  },
-  cardHeader: {
+  unreadCard: { borderWidth: 2, borderColor: T.color.warn, borderCurve: 'continuous' },
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: T.space.sm,
   },
-  medicineBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  medicineBadgeText: { fontSize: 11, fontWeight: '800', color: '#991B1B' },
-  unreadTag: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  unreadTagText: { fontSize: 10, fontWeight: '800', color: '#B45309' },
-  reviewedTag: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  reviewedTagText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
-  alertTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  alertDate: { fontSize: 12, color: '#64748B' },
   snippetBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 10,
-    gap: 4,
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    gap: T.space.xs,
   },
-  snippetLabel: { fontSize: 11, fontWeight: '700', color: '#475569' },
-  snippetText: { fontSize: 12, color: '#334155', fontStyle: 'italic', lineHeight: 18 },
-  requiredNoticeBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    gap: 4,
+  snippetLabel: { fontWeight: '700' },
+  snippetText: { fontStyle: 'italic' },
+  noticeBox: {
+    backgroundColor: T.color.dangerSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    gap: T.space.xs,
   },
-  requiredNoticeTitle: { fontSize: 12, fontWeight: '800', color: '#991B1B' },
-  requiredNoticeText: { fontSize: 12, color: '#7F1D1D', lineHeight: 18, fontWeight: '500' },
+  noticeTitle: { fontWeight: '800' },
   actionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
-    paddingTop: 6,
+    gap: T.space.sm,
+    alignItems: 'center',
   },
-  sourceBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  sourceBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
-  markReadBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  markReadBtnText: { color: '#334155', fontWeight: '700', fontSize: 12 },
 });

@@ -1112,6 +1112,7 @@ components:
                 - UPSTREAM_TIMEOUT
                 - UPSTREAM_ERROR
                 - INTERNAL
+                - RATE_LIMITED
             message:
               type: string
           required:

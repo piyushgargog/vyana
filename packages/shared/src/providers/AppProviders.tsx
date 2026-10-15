@@ -3,13 +3,13 @@
 // packages/shared/src/providers/AppProviders.tsx
 // Owner: Vaibhav Parmar
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { SupabaseClient, Session, User } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { Database } from "../db/database.types";
 import { ApiProvider, useApi } from "../api/context";
-import { createApiClient, type ApiClient } from "../api/client";
+import { ApiError, createApiClient, type ApiClient, type RateLimitEvent } from "../api/client";
 
 // Contexts
 const SupabaseContext = createContext<SupabaseClient<Database> | null>(null);
@@ -20,12 +20,28 @@ export type SessionContextValue = {
   loading: boolean;
 };
 
+export type RateLimitContextValue = {
+  isRateLimited: boolean;
+  message: string | null;
+  retryAfterSeconds: number | null;
+  resetAt: number | null;
+  clearRateLimit: () => void;
+};
+
 const ApiBaseUrlContext = createContext<string | null>(null);
 
 const SessionContext = createContext<SessionContextValue>({
   session: null,
   user: null,
   loading: true,
+});
+
+const RateLimitContext = createContext<RateLimitContextValue>({
+  isRateLimited: false,
+  message: null,
+  retryAfterSeconds: null,
+  resetAt: null,
+  clearRateLimit: () => {},
 });
 
 // Hook exports
@@ -39,6 +55,11 @@ export function useSupabase(): SupabaseClient<Database> {
 
 export function useSession(): SessionContextValue {
   return useContext(SessionContext);
+}
+
+/** Rate limit status from 429 RATE_LIMITED API responses (Issue #139). */
+export function useRateLimit(): RateLimitContextValue {
+  return useContext(RateLimitContext);
 }
 
 /** The base URL of the web app / API (used to build share links). */
@@ -58,6 +79,7 @@ export interface AppProvidersProps {
   apiBaseUrl: string;
   useMocks?: boolean;
   queryClient?: QueryClient;
+  onRateLimit?: (event: RateLimitEvent) => void;
   children: ReactNode;
 }
 
@@ -66,10 +88,58 @@ export function AppProviders({
   apiBaseUrl,
   useMocks = false,
   queryClient: customQueryClient,
+  onRateLimit: onRateLimitProp,
   children,
 }: AppProvidersProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [rateLimitState, setRateLimitState] = useState<{
+    isRateLimited: boolean;
+    message: string | null;
+    retryAfterSeconds: number | null;
+    resetAt: number | null;
+  }>({
+    isRateLimited: false,
+    message: null,
+    retryAfterSeconds: null,
+    resetAt: null,
+  });
+
+  const rateLimitedRef = useRef(false);
+  const clearRateLimit = useCallback(() => {
+    rateLimitedRef.current = false;
+    setRateLimitState({
+      isRateLimited: false,
+      message: null,
+      retryAfterSeconds: null,
+      resetAt: null,
+    });
+  }, []);
+
+  const handleRateLimit = useCallback(
+    (event: RateLimitEvent) => {
+      const resetAt = event.retryAfterSeconds ? Date.now() + event.retryAfterSeconds * 1000 : null;
+      setRateLimitState({
+        isRateLimited: true,
+        message: event.message,
+        retryAfterSeconds: event.retryAfterSeconds ?? null,
+        resetAt,
+      });
+      if (!rateLimitedRef.current) {
+        rateLimitedRef.current = true;
+        onRateLimitProp?.(event);
+      }
+    },
+    [onRateLimitProp]
+  );
+
+  useEffect(() => {
+    if (!rateLimitState.isRateLimited || !rateLimitState.resetAt) return;
+    const remainingMs = Math.max(0, rateLimitState.resetAt - Date.now());
+    const timer = setTimeout(clearRateLimit, remainingMs);
+    return () => clearTimeout(timer);
+  }, [rateLimitState.isRateLimited, rateLimitState.resetAt, clearRateLimit]);
 
   // Initialize QueryClient once if not provided
   const [defaultQueryClient] = useState(
@@ -78,7 +148,13 @@ export function AppProviders({
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60 * 5, // 5 minutes
-            retry: 1,
+            retry: (failureCount, error) => {
+              // No retry loop on 429 / RATE_LIMITED (#139)
+              if (error instanceof ApiError && (error.status === 429 || error.code === "RATE_LIMITED")) {
+                return false;
+              }
+              return failureCount < 1;
+            },
             refetchOnWindowFocus: false,
           },
         },
@@ -135,8 +211,9 @@ export function AppProviders({
         }
       },
       useMocks,
+      onRateLimit: handleRateLimit,
     });
-  }, [supabase, apiBaseUrl, useMocks]);
+  }, [supabase, apiBaseUrl, useMocks, handleRateLimit]);
 
   const sessionValue = useMemo<SessionContextValue>(
     () => ({
@@ -147,15 +224,25 @@ export function AppProviders({
     [session, loading]
   );
 
+  const rateLimitValue = useMemo<RateLimitContextValue>(
+    () => ({
+      ...rateLimitState,
+      clearRateLimit,
+    }),
+    [rateLimitState, clearRateLimit]
+  );
+
   return (
     <SupabaseContext.Provider value={supabase}>
       <ApiBaseUrlContext.Provider value={apiBaseUrl}>
         <SessionContext.Provider value={sessionValue}>
-          <QueryClientProvider client={activeQueryClient}>
-            <ApiProvider client={apiClient}>
-              {children}
-            </ApiProvider>
-          </QueryClientProvider>
+          <RateLimitContext.Provider value={rateLimitValue}>
+            <QueryClientProvider client={activeQueryClient}>
+              <ApiProvider client={apiClient}>
+                {children}
+              </ApiProvider>
+            </QueryClientProvider>
+          </RateLimitContext.Provider>
         </SessionContext.Provider>
       </ApiBaseUrlContext.Provider>
     </SupabaseContext.Provider>

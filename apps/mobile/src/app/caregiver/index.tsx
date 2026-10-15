@@ -3,9 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,7 +16,20 @@ import {
   type CaregiverLink,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  EmptyState,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 export default function CaregiverScreen() {
   const router = useRouter();
@@ -96,50 +107,32 @@ export default function CaregiverScreen() {
     );
   };
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Caregiver Circle</Text>
-          <Text style={styles.headerSub}>
-            Family medication monitoring, missed-dose escalation & emergency guardrails
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to profile"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back</Text>
-        </Pressable>
-      </View>
+  const activeCaregiverCount = caregivers.filter((c) => c.status === 'active').length;
 
-      {/* Segmented Control */}
+  return (
+    <Screen title="Caregiver Circle" eyebrow="Family care">
       <View style={styles.tabBar}>
         <Pressable
           accessibilityRole="tab"
           accessibilityLabel="Patients I Monitor"
+          accessibilityState={{ selected: activeTab === 'patients' }}
           onPress={() => setActiveTab('patients')}
-          style={[
-            styles.tabItem,
-            activeTab === 'patients' && styles.tabItemActive,
-          ]}
+          style={[styles.tabItem, activeTab === 'patients' && styles.tabItemActive]}
         >
           <Text
+            variant="footnote"
             style={[
               styles.tabText,
               activeTab === 'patients' && styles.tabTextActive,
             ]}
           >
-            Patients I Monitor ({patients.length})
+            Patients I monitor ({patients.length})
           </Text>
         </Pressable>
-
         <Pressable
           accessibilityRole="tab"
           accessibilityLabel="My Caregivers"
+          accessibilityState={{ selected: activeTab === 'my_caregivers' }}
           onPress={() => setActiveTab('my_caregivers')}
           style={[
             styles.tabItem,
@@ -147,47 +140,51 @@ export default function CaregiverScreen() {
           ]}
         >
           <Text
+            variant="footnote"
             style={[
               styles.tabText,
               activeTab === 'my_caregivers' && styles.tabTextActive,
             ]}
           >
-            My Caregivers ({caregivers.filter((c) => c.status === 'active').length})
+            My caregivers ({activeCaregiverCount})
           </Text>
         </Pressable>
       </View>
 
-      {/* Tab 1: Patients I Look After */}
-      {activeTab === 'patients' && (
+      {activeTab === 'patients' ? (
         <View style={styles.tabContent}>
           {patientsLoading ? (
-            <View style={styles.card}>
-              <ActivityIndicator size="small" color="#0D9488" />
-              <Text style={styles.loadingText}>Loading linked patients…</Text>
-            </View>
-          ) : patients.length === 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.emptyTitle}>No Patients Linked Yet</Text>
-              <Text style={styles.emptySub}>
-                You are not currently monitoring any family members or patients.
-                Ask the patient to generate a 6-digit invite code from their Vyana app.
+            <Card style={styles.centerRow}>
+              <ActivityIndicator size="small" color={T.color.accent} />
+              <Text variant="footnote" tone="tertiary">
+                Loading linked patients…
               </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Enter caregiver invite code"
-                onPress={() => router.push('/caregiver/enter-code')}
-                style={styles.primaryBtn}
-              >
-                <Text style={styles.primaryBtnText}>
-                  + Enter Caregiver Code to Link Patient
-                </Text>
-              </Pressable>
-            </View>
+            </Card>
+          ) : patients.length === 0 ? (
+            <EmptyState
+              ios="person.2.fill"
+              android="group"
+              title="No patients linked yet"
+              body="You are not currently monitoring any family members or patients. Ask the patient to generate a 6-digit invite code from their Vyana app."
+              action={
+                <Button
+                  title="Enter caregiver code"
+                  label="Enter caregiver invite code"
+                  icon={
+                    <Symbol
+                      ios="plus"
+                      android="add"
+                      size={18}
+                      color={T.color.white}
+                    />
+                  }
+                  onPress={() => router.push('/caregiver/enter-code')}
+                />
+              }
+            />
           ) : (
-            <>
-              {/* Patient Selector Pills if more than 1 patient */}
-              {patients.length > 1 && (
+            <View style={styles.tabContent}>
+              {patients.length > 1 ? (
                 <View style={styles.patientSelectorRow}>
                   {patients.map((p) => {
                     const isSelected =
@@ -199,6 +196,7 @@ export default function CaregiverScreen() {
                         accessibilityLabel={`Select patient ${
                           p.patient?.full_name || 'Patient'
                         }`}
+                        accessibilityState={{ selected: isSelected }}
                         onPress={() => setActivePatientId(p.patient_id)}
                         style={[
                           styles.patientPill,
@@ -206,424 +204,296 @@ export default function CaregiverScreen() {
                         ]}
                       >
                         <Text
+                          variant="footnote"
                           style={[
                             styles.patientPillText,
                             isSelected && styles.patientPillTextActive,
                           ]}
                         >
-                          {p.patient?.full_name || 'Patient'}{' '}
-                          {p.relation ? `(${p.relation})` : ''}
+                          {p.patient?.full_name || 'Patient'}
+                          {p.relation ? ` (${p.relation})` : ''}
                         </Text>
                       </Pressable>
                     );
                   })}
                 </View>
-              )}
+              ) : null}
 
-              {/* Current Patient Monitoring Card */}
-              {currentPatient && (
-                <View style={styles.card}>
+              {currentPatient ? (
+                <Card>
                   <View style={styles.patientHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.patientName}>
-                        {currentPatient.patient?.full_name || 'Linked Patient'}
+                    <View style={styles.flex}>
+                      <Text variant="title3">
+                        {currentPatient.patient?.full_name || 'Linked patient'}
                       </Text>
-                      <Text style={styles.patientMeta}>
-                        Relation: {currentPatient.relation || 'Caregiver'} ·
-                        Active monitoring
+                      <Text variant="footnote" tone="tertiary">
+                        Relation: {currentPatient.relation || 'Caregiver'}
                       </Text>
                     </View>
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                    <Pill text="Active" tone="ok" />
+                  </View>
+
+                  <View style={styles.noticeBox}>
+                    <Symbol
+                      ios="shield.fill"
+                      android="shield"
+                      size={22}
+                      color={T.color.warn}
+                    />
+                    <View style={styles.flex}>
+                      <Text variant="footnote" style={styles.noticeTitle}>
+                        60-minute missed-dose watch active
+                      </Text>
+                      <Text variant="footnote" tone="secondary">
+                        If a scheduled medication dose is not logged within 60
+                        minutes of its time, our automated system sends a push
+                        alert to your device.
+                      </Text>
                     </View>
                   </View>
+                </Card>
+              ) : null}
 
-                  {/* Missed-Dose Notification Banner */}
-                  <View style={styles.alertNoticeBox}>
-                    <Text style={styles.alertNoticeTitle}>
-                      🛡 60-Minute Missed-Dose Watch Active
-                    </Text>
-                    <Text style={styles.alertNoticeText}>
-                      If a scheduled medication dose is not logged within 60 minutes of its time,
-                      our automated cron sends a push alert to your device.
-                    </Text>
-                  </View>
+              <ListGroup header="Active medicines">
+                {prescriptions.length === 0 ? (
+                  <ListRow
+                    icon={
+                      <IconTile ios="pills.fill" android="medication" color="accent" />
+                    }
+                    title="No active prescription items recorded."
+                  />
+                ) : (
+                  prescriptions.flatMap((rx) =>
+                    rx.prescription_items
+                      .filter((i) => i.active)
+                      .map((item) => (
+                        <ListRow
+                          key={item.id}
+                          icon={
+                            <IconTile
+                              ios="pills.fill"
+                              android="medication"
+                              color="accent"
+                            />
+                          }
+                          title={`${item.medicine_name} ${item.strength || ''}`.trim()}
+                          subtitle={`${item.frequency} · ${(item.times || []).join(', ')} · ${item.with_food || 'after'} food`}
+                          value={item.dose || '1 dose'}
+                        />
+                      ))
+                  )
+                )}
+              </ListGroup>
 
-                  {/* Patient Medications Summary */}
-                  <View style={styles.sectionBox}>
-                    <Text style={styles.sectionBoxTitle}>Active Medications</Text>
-                    {prescriptions.length === 0 ? (
-                      <Text style={styles.sectionBoxSub}>
-                        No active prescription items recorded.
-                      </Text>
-                    ) : (
-                      prescriptions.flatMap((rx) =>
-                        rx.prescription_items
-                          .filter((i) => i.active)
-                          .map((item) => (
-                            <View key={item.id} style={styles.medItemRow}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.medItemName}>
-                                  {item.medicine_name} {item.strength || ''}
-                                </Text>
-                                <Text style={styles.medItemSchedule}>
-                                  {item.frequency} · Times:{' '}
-                                  {(item.times || []).join(', ')} ·{' '}
-                                  {item.with_food || 'after'} food
-                                </Text>
-                              </View>
-                              <Text style={styles.medItemDose}>
-                                {item.dose || '1 dose'}
-                              </Text>
-                            </View>
-                          ))
-                      )
-                    )}
-                  </View>
+              {patientCarePlans.length > 0 ? (
+                <ListGroup header={`Care plans (${patientCarePlans.length})`}>
+                  {patientCarePlans.map((cp) => (
+                    <ListRow
+                      key={cp.id}
+                      icon={
+                        <IconTile
+                          ios="heart.text.square.fill"
+                          android="clinical_notes"
+                          color="blue"
+                        />
+                      }
+                      title={cp.condition_id}
+                      subtitle={`Status: ${cp.status}`}
+                    />
+                  ))}
+                </ListGroup>
+              ) : null}
 
-                  {/* Patient Care Plans */}
-                  {patientCarePlans.length > 0 && (
-                    <View style={styles.sectionBox}>
-                      <Text style={styles.sectionBoxTitle}>
-                        Clinical Care Plans ({patientCarePlans.length})
-                      </Text>
-                      {patientCarePlans.map((cp) => (
-                        <View key={cp.id} style={styles.carePlanRow}>
-                          <Text style={styles.carePlanTitle}>
-                            Condition: {cp.condition_id}
-                          </Text>
-                          <Text style={styles.carePlanStatus}>
-                            Status: {cp.status.toUpperCase()}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+              <Button
+                variant="destructive"
+                title="Emergency SOS · Call 108 for patient"
+                label="Trigger Emergency SOS for patient"
+                icon={
+                  <Symbol
+                    ios="phone.fill"
+                    android="call"
+                    size={18}
+                    color={T.color.dangerText}
+                  />
+                }
+                onPress={() => router.push('/sos')}
+              />
 
-                  {/* Quick Emergency Escalation */}
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Trigger Emergency SOS for patient"
-                    onPress={() => router.push('/sos')}
-                    style={styles.emergencyBtn}
-                  >
-                    <Text style={styles.emergencyBtnText}>
-                      🚨 Emergency SOS · Call 108 for Patient
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Action to Link More Patients */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Link another patient"
+              <Button
+                variant="secondary"
+                title="Enter another caregiver code"
+                label="Link another patient"
                 onPress={() => router.push('/caregiver/enter-code')}
-                style={styles.outlineBtn}
-              >
-                <Text style={styles.outlineBtnText}>
-                  + Enter Another Caregiver Code
-                </Text>
-              </Pressable>
-            </>
+              />
+            </View>
           )}
         </View>
-      )}
-
-      {/* Tab 2: People Looking After Me */}
-      {activeTab === 'my_caregivers' && (
+      ) : (
         <View style={styles.tabContent}>
           {caregiversLoading ? (
-            <View style={styles.card}>
-              <ActivityIndicator size="small" color="#0D9488" />
-              <Text style={styles.loadingText}>Loading caregivers…</Text>
-            </View>
+            <Card style={styles.centerRow}>
+              <ActivityIndicator size="small" color={T.color.accent} />
+              <Text variant="footnote" tone="tertiary">
+                Loading caregivers…
+              </Text>
+            </Card>
           ) : (
-            <View style={styles.card}>
-              <View style={styles.cardHeaderRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>My Authorized Caregivers</Text>
-                  <Text style={styles.cardSub}>
-                    These individuals receive alerts if you miss a dose by 60 minutes and can view your medical schedule.
-                  </Text>
+            <View style={styles.tabContent}>
+              <Card>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.flex}>
+                    <Text variant="headline">My caregivers</Text>
+                    <Text variant="footnote" tone="tertiary">
+                      These people get an alert if you miss a dose by 60 minutes
+                      and can view your medicine schedule.
+                    </Text>
+                  </View>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    title="Invite"
+                    label="Invite caregiver"
+                    style={styles.inviteBtn}
+                    onPress={() => router.push('/caregiver/invite')}
+                  />
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Invite caregiver"
-                  onPress={() => router.push('/caregiver/invite')}
-                  style={styles.inviteMiniBtn}
-                >
-                  <Text style={styles.inviteMiniBtnText}>+ Invite</Text>
-                </Pressable>
-              </View>
+              </Card>
 
               {caregivers.length === 0 ? (
-                <View style={styles.emptyBox}>
-                  <Text style={styles.emptyText}>
-                    No caregivers linked to your account yet.
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Generate caregiver invite code"
-                    onPress={() => router.push('/caregiver/invite')}
-                    style={styles.primaryBtn}
-                  >
-                    <Text style={styles.primaryBtnText}>
-                      Generate 6-Digit Invite Code
-                    </Text>
-                  </Pressable>
-                </View>
+                <EmptyState
+                  ios="person.fill"
+                  android="person"
+                  title="No caregivers linked yet"
+                  body="Invite a family member to watch over your medicines and get alerted if you miss a dose."
+                  action={
+                    <Button
+                      title="Generate invite code"
+                      label="Generate caregiver invite code"
+                      onPress={() => router.push('/caregiver/invite')}
+                    />
+                  }
+                />
               ) : (
-                <View style={styles.caregiverList}>
+                <ListGroup header="Linked caregivers">
                   {caregivers.map((c) => (
-                    <View key={c.link_id} style={styles.caregiverCard}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.caregiverName}>
-                          {c.full_name || 'Family Caregiver'}
-                        </Text>
-                        <Text style={styles.caregiverRelation}>
-                          Relation: {c.relation || 'Caregiver'} · Status:{' '}
-                          <Text
-                            style={{
-                              color:
-                                c.status === 'active' ? '#0D9488' : '#94A3B8',
-                              fontWeight: '700',
-                            }}
-                          >
-                            {c.status.toUpperCase()}
-                          </Text>
-                        </Text>
-                      </View>
-
-                      {c.status === 'active' && (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`Revoke access for ${
-                            c.full_name || 'caregiver'
-                          }`}
-                          disabled={revokeMutation.isPending}
-                          onPress={() => handleRevokeCaregiver(c)}
-                          style={styles.revokeBtn}
-                        >
-                          <Text style={styles.revokeBtnText}>Revoke</Text>
-                        </Pressable>
-                      )}
-                    </View>
+                    <ListRow
+                      key={c.link_id}
+                      icon={
+                        <IconTile ios="person.fill" android="person" color="blue" />
+                      }
+                      title={c.full_name || 'Family caregiver'}
+                      subtitle={`Relation: ${c.relation || 'Caregiver'}`}
+                      trailing={
+                        <View style={styles.caregiverTrailing}>
+                          <Pill
+                            text={c.status === 'active' ? 'Active' : c.status}
+                            tone={c.status === 'active' ? 'ok' : 'neutral'}
+                          />
+                          {c.status === 'active' ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              title="Revoke"
+                              label={`Revoke access for ${c.full_name || 'caregiver'}`}
+                              style={styles.revokeBtn}
+                              onPress={() => handleRevokeCaregiver(c)}
+                            />
+                          ) : null}
+                        </View>
+                      }
+                    />
                   ))}
-                </View>
+                </ListGroup>
               )}
+
+              <Button
+                variant="plain"
+                title="Looking after someone else? Enter their code"
+                label="I am also a caregiver - enter code"
+                onPress={() => router.push('/caregiver/enter-code')}
+              />
             </View>
           )}
-
-          {/* Quick Code Entry Action */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="I am also a caregiver - enter code"
-            onPress={() => router.push('/caregiver/enter-code')}
-            style={styles.outlineBtn}
-          >
-            <Text style={styles.outlineBtnText}>
-              Looking after someone else? Enter their code →
-            </Text>
-          </Pressable>
         </View>
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  backBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  backBtnText: { color: '#334155', fontSize: 12, fontWeight: '700' },
+  flex: { flex: 1, minWidth: 0 },
+  tabContent: { gap: T.space.lg },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.xs,
+    gap: T.space.xs,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: 44,
     alignItems: 'center',
-    borderRadius: 10,
+    justifyContent: 'center',
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.sm,
   },
   tabItemActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
-  tabTextActive: { color: '#0F766E' },
-  tabContent: { gap: 12 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
+    backgroundColor: T.color.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.color.separator,
   },
-  loadingText: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-    marginTop: 6,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  emptySub: { fontSize: 12, color: '#64748B', lineHeight: 17 },
-  primaryBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  outlineBtn: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#0D9488',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  outlineBtnText: { color: '#0F766E', fontSize: 13, fontWeight: '700' },
-  patientSelectorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tabText: { fontWeight: '600', color: T.color.label2, textAlign: 'center' },
+  tabTextActive: { color: T.color.accentStrong, fontWeight: '700' },
+  centerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: T.space.sm },
+  patientSelectorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
   patientPill: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: T.color.fill,
+    paddingHorizontal: T.space.lg,
+    borderRadius: T.radius.pill,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: T.color.separator,
   },
   patientPillActive: {
-    backgroundColor: '#CCFBF1',
-    borderColor: '#0D9488',
+    backgroundColor: T.color.accentSoft,
+    borderColor: T.color.accent,
   },
-  patientPillText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
-  patientPillTextActive: { color: '#0F766E', fontWeight: '800' },
+  patientPillText: { fontWeight: '600', color: T.color.label2 },
+  patientPillTextActive: { color: T.color.accentStrong, fontWeight: '700' },
   patientHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 10,
+    alignItems: 'flex-start',
+    gap: T.space.sm,
   },
-  patientName: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  patientMeta: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  activeBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  activeBadgeText: { fontSize: 10, fontWeight: '800', color: '#15803D' },
-  alertNoticeBox: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  alertNoticeTitle: { fontSize: 12, fontWeight: '800', color: '#92400E' },
-  alertNoticeText: { fontSize: 11, color: '#78350F', lineHeight: 16 },
-  sectionBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  sectionBoxTitle: { fontSize: 13, fontWeight: '700', color: '#334155' },
-  sectionBoxSub: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic' },
-  medItemRow: {
+  noticeBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    gap: T.space.md,
+    backgroundColor: T.color.warnSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    alignItems: 'flex-start',
   },
-  medItemName: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  medItemSchedule: { fontSize: 11, color: '#64748B', marginTop: 1 },
-  medItemDose: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  carePlanRow: {
-    backgroundColor: '#FFFFFF',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  carePlanTitle: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
-  carePlanStatus: { fontSize: 11, color: '#64748B', marginTop: 2 },
-  emergencyBtn: {
-    backgroundColor: '#DC2626',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  emergencyBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  noticeTitle: { fontWeight: '700', color: T.color.warn },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: T.space.sm,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  cardSub: { fontSize: 12, color: '#64748B', lineHeight: 17 },
-  inviteMiniBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  inviteMiniBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  emptyBox: { alignItems: 'center', gap: 10, paddingVertical: 10 },
-  emptyText: { fontSize: 12, color: '#64748B', textAlign: 'center' },
-  caregiverList: { gap: 8, marginTop: 4 },
-  caregiverCard: {
+  inviteBtn: { minHeight: 44 },
+  caregiverTrailing: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    gap: T.space.sm,
   },
-  caregiverName: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  caregiverRelation: { fontSize: 11, color: '#64748B', marginTop: 2 },
-  revokeBtn: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  revokeBtnText: { color: '#DC2626', fontSize: 11, fontWeight: '700' },
+  revokeBtn: { minHeight: 44 },
 });
