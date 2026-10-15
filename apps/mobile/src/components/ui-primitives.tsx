@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   Animated,
   DimensionValue,
-  Pressable,
   StyleProp,
   StyleSheet,
-  Text,
   TextInput,
   View,
   ViewStyle,
@@ -17,6 +15,8 @@ import {
   parseCarePlanJson,
   useReportAiMistake,
 } from '@vyana/shared';
+import { T } from '@/constants/theme';
+import { Button, Pill, Symbol, Text } from '@/components/ui';
 import { useVyanaMobile } from './providers';
 
 export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
@@ -46,7 +46,6 @@ export function MobileQrGrid({
           width: cellSize * grid + pad * 2,
           height: cellSize * grid + pad * 2,
           padding: pad,
-          backgroundColor: '#FFFFFF',
         },
       ]}
     >
@@ -58,7 +57,7 @@ export function MobileQrGrid({
               style={{
                 width: cellSize,
                 height: cellSize,
-                backgroundColor: cell ? '#0F172A' : '#FFFFFF',
+                backgroundColor: cell ? T.color.label : T.color.white,
               }}
             />
           ))}
@@ -90,7 +89,7 @@ export function MobileTrendChart({
   if (points.length === 0) {
     return (
       <View style={styles.chartCard}>
-        <Text style={styles.chartEmpty}>
+        <Text variant="subhead" tone="secondary" style={styles.chartEmptyText}>
           No historical points recorded for {title} yet.
         </Text>
       </View>
@@ -110,11 +109,11 @@ export function MobileTrendChart({
       style={styles.chartCard}
     >
       <View style={styles.chartHeader}>
-        <Text style={styles.chartTitle}>
+        <Text variant="headline">
           {title} Trend ({unit})
         </Text>
         {typeof refLow === 'number' && typeof refHigh === 'number' && (
-          <Text style={styles.chartSub}>
+          <Text variant="footnote" tone="tertiary">
             Normal reference range: {refLow} – {refHigh} {unit}
           </Text>
         )}
@@ -131,10 +130,9 @@ export function MobileTrendChart({
           return (
             <View key={`${pt.date}-${idx}`} style={styles.barColumn}>
               <Text
-                style={[
-                  styles.barValText,
-                  isAbnormal ? styles.barValAbnormal : styles.barValNormal,
-                ]}
+                variant="caption"
+                tone={isAbnormal ? 'danger' : 'accent'}
+                style={styles.barValText}
               >
                 {pt.value} ({flagText})
               </Text>
@@ -143,11 +141,15 @@ export function MobileTrendChart({
                   styles.barFill,
                   {
                     height: barHeight,
-                    backgroundColor: isAbnormal ? '#DC2626' : '#0D9488',
+                    backgroundColor: isAbnormal
+                      ? T.color.danger
+                      : T.color.accent,
                   },
                 ]}
               />
-              <Text style={styles.barDateText}>{pt.date}</Text>
+              <Text variant="caption" tone="tertiary">
+                {pt.date}
+              </Text>
             </View>
           );
         })}
@@ -194,45 +196,50 @@ export function MobileAiSafetyBanner({
   return (
     <View style={styles.aiBanner}>
       <View style={styles.aiBannerRow}>
-        <Text style={styles.aiBannerLabel}>
-          AI-generated, verify with your doctor
-        </Text>
+        <View style={styles.aiBannerLabelRow}>
+          <Symbol
+            ios="sparkles"
+            android="auto_awesome"
+            size={16}
+            color={T.color.warn}
+          />
+          <Text variant="footnote" tone="warn" style={styles.aiBannerLabel}>
+            AI-generated, verify with your doctor
+          </Text>
+        </View>
         {resolvedRunId ? (
           submitted ? (
-            <Text style={styles.aiReportedBadge}>Report recorded</Text>
+            <Pill text="Report recorded" tone="ok" />
           ) : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Report an AI mistake"
+            <Button
+              title={open ? 'Close' : 'Report a mistake'}
+              variant="plain"
               onPress={() => setOpen((v) => !v)}
-            >
-              <Text style={styles.aiReportBtnText}>Report a mistake</Text>
-            </Pressable>
+            />
           )
         ) : null}
       </View>
 
       {open && resolvedRunId && (
         <View style={styles.aiReportForm}>
-          <Text style={styles.inputLabel}>Describe what the AI got wrong</Text>
+          <Text variant="footnote" tone="warn">
+            Describe what the AI got wrong
+          </Text>
           <TextInput
             accessibilityLabel="Describe what the AI got wrong"
             value={note}
             onChangeText={setNote}
             placeholder="e.g., Wrong dosage or misread medicine name"
+            placeholderTextColor={T.color.label3}
             style={styles.aiInput}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Submit AI mistake report"
-            disabled={reportMutation.isPending}
+          <Button
+            title="Submit Report"
+            variant="secondary"
+            loading={reportMutation.isPending}
             onPress={handleSubmit}
             style={styles.aiSubmitBtn}
-          >
-            <Text style={styles.aiSubmitBtnText}>
-              {reportMutation.isPending ? 'Sending…' : 'Submit Report'}
-            </Text>
-          </Pressable>
+          />
         </View>
       )}
     </View>
@@ -280,7 +287,7 @@ export function MobileSkeleton({
           width: width as DimensionValue,
           height,
           borderRadius,
-          backgroundColor: '#E2E8F0',
+          backgroundColor: T.color.fill,
           opacity,
         },
         style,
@@ -305,7 +312,7 @@ export function MobileSkeletonCard({
           width={idx === lines - 1 ? '70%' : '100%'}
           height={14}
           borderRadius={6}
-          style={{ marginTop: 8 }}
+          style={{ marginTop: T.space.sm }}
         />
       ))}
     </View>
@@ -325,7 +332,7 @@ export function MobileSkeletonList({ count = 3 }: { count?: number }) {
 export function MobileDisclaimerFooter() {
   return (
     <View style={styles.footer}>
-      <Text style={styles.footerText}>
+      <Text variant="footnote" tone="tertiary" style={styles.footerText}>
         Not a substitute for professional medical advice. In a medical emergency, call 108 or 112 immediately.
       </Text>
     </View>
@@ -334,11 +341,12 @@ export function MobileDisclaimerFooter() {
 
 const styles = StyleSheet.create({
   qrBox: {
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 16,
+    backgroundColor: T.color.white,
+    padding: T.space.lg,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: T.color.separator,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -347,147 +355,107 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   chartCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: T.color.surface,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 12,
+    borderColor: T.color.separator,
+    padding: T.space.lg,
+    gap: T.space.md,
   },
-  chartEmpty: {
-    fontSize: 13,
-    color: '#64748B',
+  chartEmptyText: {
+    textAlign: 'center',
   },
   chartHeader: {
-    gap: 2,
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  chartSub: {
-    fontSize: 12,
-    color: '#64748B',
+    gap: T.space.xs,
   },
   barsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-around',
-    paddingTop: 12,
+    paddingTop: T.space.md,
     minHeight: 155,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 8,
+    borderBottomColor: T.color.separator,
+    paddingBottom: T.space.sm,
   },
   barColumn: {
     alignItems: 'center',
-    gap: 4,
+    gap: T.space.xs,
     flex: 1,
   },
   barValText: {
-    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
-  },
-  barValNormal: {
-    color: '#0F766E',
-  },
-  barValAbnormal: {
-    color: '#B91C1C',
   },
   barFill: {
     width: 26,
     borderRadius: 6,
   },
-  barDateText: {
-    fontSize: 10,
-    color: '#475569',
-  },
   aiBanner: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
+    backgroundColor: T.color.warnSoft,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
+    padding: T.space.md,
+    gap: T.space.sm,
   },
   aiBannerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: T.space.sm,
+  },
+  aiBannerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.xs,
+    flex: 1,
   },
   aiBannerLabel: {
-    fontSize: 12,
     fontWeight: '600',
-    color: '#78350F',
-  },
-  aiReportBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#92400E',
-    textDecorationLine: 'underline',
-  },
-  aiReportedBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F766E',
+    flex: 1,
   },
   aiReportForm: {
-    gap: 6,
-    paddingTop: 4,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#78350F',
+    gap: T.space.xs,
+    paddingTop: T.space.xs,
   },
   aiInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderWidth: 1,
-    borderColor: '#FCD34D',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 12,
-    color: '#0F172A',
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.sm,
+    minHeight: 44,
+    ...T.text.body,
+    color: T.color.label,
   },
   aiSubmitBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#92400E',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  aiSubmitBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    marginTop: T.space.xs,
   },
   footer: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    marginTop: T.space.lg,
+    paddingVertical: T.space.md,
+    paddingHorizontal: T.space.sm,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: T.color.separator,
   },
   footerText: {
-    fontSize: 11,
-    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 16,
   },
   skeletonCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: T.color.surface,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    marginBottom: 12,
+    borderColor: T.color.separator,
+    padding: T.space.lg,
+    marginBottom: T.space.md,
   },
   skeletonList: {
-    paddingVertical: 4,
+    paddingVertical: T.space.xs,
   },
 });
