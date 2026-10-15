@@ -10,7 +10,6 @@ import {
   HeartPulse,
   Pill as PillIcon,
   ShieldAlert,
-  Sparkles,
   Ticket,
   Trash2,
   TrendingUp,
@@ -32,7 +31,7 @@ import {
   type FrequencyType,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { AiSafetyBanner } from "@/components/ui-primitives";
+import { AiSafetyBanner, TrendChartSvg } from "@/components/ui-primitives";
 import {
   Button,
   ButtonLink,
@@ -40,17 +39,13 @@ import {
   CardHeader,
   EmptyState,
   ErrorState,
+  Field,
   LargeTitle,
   Pill,
   Reveal,
   SkeletonLine,
+  Sheet,
 } from "@/components/ui";
-
-const QUICK_PROMPTS = [
-  "Can I take Metformin with food?",
-  "What does my HbA1c result mean?",
-  "Check medication interactions",
-] as const;
 
 export default function PatientDashboardPage() {
   const router = useRouter();
@@ -117,14 +112,6 @@ export default function PatientDashboardPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const deleteMutation = useDeleteAccount();
-
-  // Ask Vyana card state
-  const [askQuery, setAskQuery] = useState("");
-  const [askLoading, setAskLoading] = useState(false);
-  const [askAnswer, setAskAnswer] = useState<{
-    text: string;
-    sources?: { title: string; url: string }[];
-  } | null>(null);
 
   // Greeting and header calculations
   const hour = now.getHours();
@@ -225,8 +212,8 @@ export default function PatientDashboardPage() {
           : "Recent",
         value: Number(v.value),
         unit: v.unit || "%",
-        refLow: typeof v.ref_low === "number" ? v.ref_low : 4.0,
-        refHigh: typeof v.ref_high === "number" ? v.ref_high : 5.6,
+        refLow: typeof v.ref_low === "number" ? v.ref_low : null,
+        refHigh: typeof v.ref_high === "number" ? v.ref_high : null,
         flag: v.flag as "low" | "normal" | "high" | null,
       }));
   }, [hba1cHistory]);
@@ -290,41 +277,6 @@ export default function PatientDashboardPage() {
       } else {
         showToast(err instanceof Error ? err.message : "Could not delete account", "error");
       }
-    }
-  };
-
-  const handleAskSubmit = async (e?: React.FormEvent, customPrompt?: string) => {
-    if (e) e.preventDefault();
-    const query = (customPrompt ?? askQuery).trim();
-    if (!query || askLoading) return;
-
-    setAskLoading(true);
-    setAskAnswer(null);
-
-    try {
-      const res = await fetch("/api/assistant/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Unable to get an answer right now. Please try again.");
-      }
-
-      const text = await res.text();
-      const linkMatches = [...text.matchAll(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g)];
-      const sources = linkMatches.map((m) => ({ title: m[1], url: m[2] }));
-      const cleanText = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1");
-
-      setAskAnswer({
-        text: cleanText,
-        sources: sources.length > 0 ? sources : undefined,
-      });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not complete request", "error");
-    } finally {
-      setAskLoading(false);
     }
   };
 
@@ -395,7 +347,7 @@ export default function PatientDashboardPage() {
               title="Doses today"
               trailing={
                 scheduledSlots.length > 0 ? (
-                  <span className="text-[14px] font-semibold text-label-2">
+                  <span className="text-[15px] font-semibold text-label-2">
                     {takenCount} of {scheduledSlots.length} taken
                   </span>
                 ) : undefined
@@ -432,15 +384,15 @@ export default function PatientDashboardPage() {
                             {slot.medicineName}
                           </span>
                           {slot.strength ? (
-                            <span className="text-[13px] text-label-3">{slot.strength}</span>
+                            <span className="text-[15px] text-label-3">{slot.strength}</span>
                           ) : null}
                           {slot.refill.needsRefillSoon ? (
-                            <Pill tone="warn" className="text-[11px]">
+                            <Pill tone="warn" className="text-[15px]">
                               Refill: {slot.refill.daysLeft}d left
                             </Pill>
                           ) : null}
                         </div>
-                        <p className="mt-0.5 text-[13px] text-label-2">
+                        <p className="mt-0.5 text-[15px] text-label-2">
                           {slot.timeStr} · {slot.dose || "As prescribed"} ·{" "}
                           {slot.withFood ? "With food" : "Anytime"}
                         </p>
@@ -460,7 +412,7 @@ export default function PatientDashboardPage() {
                               onClick={() => handleTakeDose(slot.itemId, slot.scheduledIso, slot.medicineName)}
                               disabled={logDoseMutation.isPending}
                               aria-label={`Mark ${slot.medicineName} as taken`}
-                              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-4 text-[14px] font-semibold text-white transition-transform active:scale-[0.97] hover:bg-accent-strong disabled:opacity-50"
+                              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-4 text-[15px] font-semibold text-white transition-transform active:scale-[0.97] hover:bg-accent-strong disabled:opacity-50"
                             >
                               Take
                             </button>
@@ -469,7 +421,7 @@ export default function PatientDashboardPage() {
                               onClick={() => handleSkipDose(slot.itemId, slot.scheduledIso, slot.medicineName)}
                               disabled={logDoseMutation.isPending}
                               aria-label={`Mark ${slot.medicineName} as skipped`}
-                              className="inline-flex min-h-[44px] items-center justify-center rounded-full px-3 text-[13px] font-medium text-label-3 transition-colors hover:bg-fill"
+                              className="inline-flex min-h-[44px] items-center justify-center rounded-full px-3 text-[15px] font-medium text-label-3 transition-colors hover:bg-fill"
                             >
                               Skip
                             </button>
@@ -518,7 +470,7 @@ export default function PatientDashboardPage() {
                       <h3 className="text-[17px] font-semibold text-label">
                         {nextAppt.hospitals?.name || "Hospital OPD"}
                       </h3>
-                      <p className="text-[14px] text-label-2">
+                      <p className="text-[15px] text-label-2">
                         {nextAppt.departments?.name || "General OPD"}
                       </p>
                     </div>
@@ -527,7 +479,7 @@ export default function PatientDashboardPage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-separator pt-3 text-[13px] text-label-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-separator pt-3 text-[15px] text-label-2">
                     <span className="inline-flex items-center gap-1.5 font-medium">
                       <CalendarDays className="h-4 w-4 text-label-3" aria-hidden="true" />
                       {nextAppt.appointment_date}
@@ -543,13 +495,13 @@ export default function PatientDashboardPage() {
 
                 {upcomingAppointments.length > 1 ? (
                   <div className="space-y-2">
-                    <p className="text-[13px] font-semibold text-label-3 uppercase tracking-wider">
+                    <p className="text-[15px] font-semibold text-label-3 uppercase tracking-wider">
                       Other upcoming visits ({upcomingAppointments.length - 1})
                     </p>
                     {upcomingAppointments.slice(1).map((appt) => (
                       <div
                         key={appt.id}
-                        className="flex items-center justify-between rounded-row border border-separator bg-canvas/40 px-3.5 py-2.5 text-[13px]"
+                        className="flex items-center justify-between rounded-row border border-separator bg-canvas/40 px-3.5 py-2.5 text-[15px]"
                       >
                         <span className="font-medium text-label">
                           {appt.hospitals?.name} · {appt.departments?.name}
@@ -604,217 +556,39 @@ export default function PatientDashboardPage() {
               />
             ) : (
               <div className="space-y-4">
-                {/* SVG Line / Band Chart using design tokens */}
-                <div className="rounded-card border border-separator bg-canvas/40 p-4">
-                  <div className="mb-2 flex items-center justify-between text-[13px]">
-                    <span className="text-label-2 font-medium">Biomarker reading over time</span>
-                    <div className="flex items-center gap-3 text-[12px] text-label-3">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-accent" /> Normal range
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-warn" /> Out of range
-                      </span>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const width = 480;
-                    const height = 180;
-                    const padX = 40;
-                    const padY = 24;
-                    const plotW = width - padX * 2;
-                    const plotH = height - padY * 2;
-
-                    const allValues = trendPoints.map((p) => p.value);
-                    const minVal = Math.min(...allValues, 3.8) * 0.95;
-                    const maxVal = Math.max(...allValues, 6.8) * 1.08;
-                    const range = Math.max(maxVal - minVal, 1);
-
-                    const getX = (idx: number) =>
-                      trendPoints.length === 1
-                        ? padX + plotW / 2
-                        : padX + (idx / (trendPoints.length - 1)) * plotW;
-                    const getY = (val: number) => padY + plotH - ((val - minVal) / range) * plotH;
-
-                    const polylineCoords = trendPoints
-                      .map((p, i) => `${getX(i)},${getY(p.value)}`)
-                      .join(" ");
-
-                    const bandTop = getY(5.6);
-                    const bandBottom = getY(4.0);
-
-                    return (
-                      <svg
-                        viewBox={`0 0 ${width} ${height}`}
-                        role="img"
-                        aria-label={`HbA1c biomarker trend graph across ${trendPoints.length} test measurements`}
-                        className="w-full h-44 overflow-visible"
-                      >
-                        {/* Shaded normal reference band */}
-                        <rect
-                          x={padX}
-                          y={Math.min(bandTop, bandBottom)}
-                          width={plotW}
-                          height={Math.max(6, Math.abs(bandBottom - bandTop))}
-                          fill="currentColor"
-                          className="text-accent-soft"
-                          rx="6"
-                        />
-
-                        {/* Baseline */}
-                        <line
-                          x1={padX}
-                          y1={height - padY}
-                          x2={width - padX}
-                          y2={height - padY}
-                          stroke="currentColor"
-                          strokeWidth="1"
-                          className="text-separator"
-                        />
-
-                        {/* Polyline line */}
-                        <polyline
-                          points={polylineCoords}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-accent"
-                        />
-
-                        {/* Points */}
-                        {trendPoints.map((pt, i) => {
-                          const cx = getX(i);
-                          const cy = getY(pt.value);
-                          const isAbnormal = pt.flag === "high" || pt.flag === "low";
-
-                          return (
-                            <g key={i}>
-                              <circle
-                                cx={cx}
-                                cy={cy}
-                                r="5"
-                                fill="currentColor"
-                                stroke="#ffffff"
-                                strokeWidth="2"
-                                className={isAbnormal ? "text-warn" : "text-accent"}
-                              />
-                              <text
-                                x={cx}
-                                y={cy - 10}
-                                textAnchor="middle"
-                                className="fill-current text-[11px] font-semibold text-label"
-                              >
-                                {pt.value}%
-                              </text>
-                              <text
-                                x={cx}
-                                y={height - padY + 16}
-                                textAnchor="middle"
-                                className="fill-current text-[10px] text-label-3"
-                              >
-                                {pt.date}
-                              </text>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    );
-                  })()}
-                </div>
-
-                <p className="text-[13px] text-label-3">
-                  Reference range: 4.0% – 5.6% (shaded band). Values above 5.6% are flagged for clinical review.
-                </p>
+                {trendPoints.length >= 2 ? (
+                  <TrendChartSvg
+                    title="HbA1c"
+                    unit={latestHba1c?.unit ?? "%"}
+                    points={trendPoints.map((p) => ({ date: p.date, value: p.value, flag: p.flag }))}
+                    refLow={latestHba1c?.refLow}
+                    refHigh={latestHba1c?.refHigh}
+                  />
+                ) : (
+                  <p className="text-[15px] text-label-2">
+                    One reading so far. A trend appears after your next HbA1c report.
+                  </p>
+                )}
               </div>
             )}
           </div>
         </Card>
 
-        {/* 5. Ask Card */}
+        {/* 5. Quick actions */}
         <Card className="flex flex-col justify-between">
           <div>
-            <CardHeader
-              title="Ask Vyana"
-              trailing={<Sparkles className="h-5 w-5 text-accent" aria-hidden="true" />}
-            />
-
-            <p className="text-[14px] text-label-2 mb-4">
-              Ask about your medicines, lab report values, or symptoms. Answers are grounded in trusted clinical sources.
-            </p>
-
-            <form onSubmit={(e) => handleAskSubmit(e)} className="space-y-3">
-              <div className="relative flex items-center">
-                <label htmlFor="ask-dashboard-input" className="sr-only">
-                  Ask a health question
-                </label>
-                <input
-                  id="ask-dashboard-input"
-                  type="text"
-                  value={askQuery}
-                  onChange={(e) => setAskQuery(e.target.value)}
-                  placeholder="Ask about medications, symptoms, or lab results…"
-                  className="w-full min-h-[44px] rounded-full border border-separator bg-canvas px-4 py-2.5 pr-20 text-[14px] text-label placeholder:text-label-3 focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-                <button
-                  type="submit"
-                  disabled={askLoading || !askQuery.trim()}
-                  aria-label="Submit question"
-                  className="absolute right-1.5 top-1.5 bottom-1.5 inline-flex min-h-[36px] items-center justify-center rounded-full bg-accent px-4 text-[13px] font-semibold text-white transition-opacity hover:bg-accent-strong disabled:opacity-40"
-                >
-                  {askLoading ? "Searching…" : "Ask"}
-                </button>
-              </div>
-
-              {/* Quick suggestions pills */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {QUICK_PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => {
-                      setAskQuery(prompt);
-                      handleAskSubmit(undefined, prompt);
-                    }}
-                    className="inline-flex min-h-[36px] items-center rounded-full border border-separator bg-canvas px-3 py-1 text-[12px] font-medium text-label-2 transition-colors hover:bg-fill hover:text-label"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </form>
-
-            {/* Answer Display */}
-            {askAnswer ? (
-              <div className="mt-4 rounded-row border border-separator bg-canvas/60 p-4 space-y-2 text-[14px]">
-                <p className="leading-relaxed text-label">{askAnswer.text}</p>
-                {askAnswer.sources && askAnswer.sources.length > 0 ? (
-                  <div className="pt-2 border-t border-separator text-[12px] text-label-3">
-                    <span className="font-semibold block mb-1">Sources consulted:</span>
-                    <ul className="space-y-0.5">
-                      {askAnswer.sources.map((s, idx) => (
-                        <li key={idx}>
-                          <a
-                            href={s.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-accent underline hover:text-accent-strong"
-                          >
-                            {s.title}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <p className="mt-4 text-[12px] text-label-3">
-              Answers are for information only. Vyana never diagnoses and never prescribes medication.
-            </p>
+            <CardHeader title="Do more with Vyana" />
+            <div className="mt-3 grid gap-3">
+              <ButtonLink href="/prescriptions/scan" variant="primary" size="lg" className="w-full">
+                Scan a prescription
+              </ButtonLink>
+              <ButtonLink href="/reports/upload" variant="secondary" size="lg" className="w-full">
+                Upload a lab report
+              </ButtonLink>
+              <ButtonLink href="/basket" variant="secondary" size="lg" className="w-full">
+                Compare medicine prices
+              </ButtonLink>
+            </div>
           </div>
         </Card>
       </div>
@@ -853,19 +627,19 @@ export default function PatientDashboardPage() {
                 return (
                   <div
                     key={cp.id}
-                    className="rounded-row border border-separator bg-canvas/50 p-4 text-[14px] space-y-2"
+                    className="rounded-row border border-separator bg-canvas/50 p-4 text-[15px] space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-label">{plan.condition}</h3>
-                      <Pill tone="ok" className="uppercase text-[11px]">
+                      <Pill tone="ok" className="uppercase text-[15px]">
                         {cp.status}
                       </Pill>
                     </div>
-                    <p className="text-[13px] text-label-2">{plan.summary}</p>
+                    <p className="text-[15px] text-label-2">{plan.summary}</p>
                     {plan.do && plan.do.length > 0 ? (
-                      <div className="rounded-lg bg-surface p-3 text-[13px] text-label-2 space-y-1">
+                      <div className="rounded-lg bg-surface p-3 text-[15px] text-label-2 space-y-1">
                         <span className="font-semibold text-label block">Key recommendations:</span>
-                        <ul className="list-disc pl-4 space-y-0.5 text-[12px] text-label-2">
+                        <ul className="list-disc pl-4 space-y-0.5 text-[15px] text-label-2">
                           {plan.do.slice(0, 2).map((item, i) => (
                             <li key={i}>{item}</li>
                           ))}
@@ -907,13 +681,13 @@ export default function PatientDashboardPage() {
               {labReports.slice(0, 3).map((rep) => (
                 <div
                   key={rep.id}
-                  className="rounded-row border border-separator bg-canvas/50 p-3.5 text-[13px] space-y-1"
+                  className="rounded-row border border-separator bg-canvas/50 p-3.5 text-[15px] space-y-1"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-label">
                       {rep.lab_name || "Diagnostic Laboratory"}
                     </span>
-                    <span className="text-[12px] text-label-3">
+                    <span className="text-[15px] text-label-3">
                       {rep.report_date || rep.created_at.slice(0, 10)}
                     </span>
                   </div>
@@ -928,7 +702,7 @@ export default function PatientDashboardPage() {
       {/* Personal Data Rights & Privacy (DPDP Act 2023) */}
       <Card>
         <CardHeader title="Personal health records & privacy" />
-        <p className="text-[14px] text-label-2 leading-relaxed">
+        <p className="text-[15px] text-label-2 leading-relaxed">
           Under the Digital Personal Data Protection Act 2023, you have full ownership of your personal health data. You can download a portable copy of your complete records or permanently delete your account at any time.
         </p>
 
@@ -956,63 +730,34 @@ export default function PatientDashboardPage() {
         </div>
       </Card>
 
-      {/* Account Deletion Dialog Modal */}
-      {showDeleteModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-dialog-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
-        >
-          <div className="w-full max-w-md rounded-card border border-separator bg-surface p-6 shadow-float">
-            <h3 id="delete-dialog-title" className="text-[18px] font-semibold text-danger-text">
-              Permanently delete account & records
-            </h3>
-            <p className="mt-2 text-[14px] text-label-2 leading-relaxed">
-              This action is permanent and cannot be reversed. Your profile, prescriptions, lab values, and uploaded documents will be erased immediately.
-            </p>
-
-            <form onSubmit={handleConfirmDelete} className="mt-5 space-y-4">
-              <div>
-                <label
-                  htmlFor="delete-pass-input"
-                  className="block text-[13px] font-semibold text-label mb-1.5"
-                >
-                  Confirm password:
-                </label>
-                <input
-                  id="delete-pass-input"
-                  type="password"
-                  required
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="w-full min-h-[44px] rounded-row border border-separator bg-canvas px-3.5 py-2 text-[14px] text-label focus:outline-none focus:ring-2 focus:ring-danger"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowDeleteModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  size="sm"
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending ? "Deleting…" : "Confirm deletion"}
-                </Button>
-              </div>
-            </form>
+      <Sheet
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Permanently delete account & records"
+      >
+        <p className="text-[15px] leading-relaxed text-label-2">
+          This action is permanent and cannot be reversed. Your profile, prescriptions, lab values, and uploaded documents will be erased immediately.
+        </p>
+        <form onSubmit={handleConfirmDelete} className="mt-5 space-y-4">
+          <Field
+            id="delete-pass-input"
+            label="Confirm password"
+            type="password"
+            required
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            placeholder="Enter current password"
+          />
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" size="md" disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? "Deleting…" : "Confirm deletion"}
+            </Button>
           </div>
-        </div>
-      )}
+        </form>
+      </Sheet>
 
       {/* AI Safety Banner */}
       <AiSafetyBanner feature="patient-dashboard" />
