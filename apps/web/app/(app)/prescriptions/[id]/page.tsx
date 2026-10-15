@@ -168,7 +168,7 @@ export default function PrescriptionDetailPage() {
             ? `Prescription · ${prescription.doctor_name}`
             : "Prescription"
         }
-        subtitle={`Issued on ${prescription.issued_on || "an unknown date"} · ${
+        subtitle={`Issued on ${prescription.issued_on || "Not found on the prescription"} · ${
           prescription.source === "doctor" ? "Doctor e-Rx" : "Scanned paper Rx"
         }`}
       />
@@ -180,7 +180,7 @@ export default function PrescriptionDetailPage() {
             <div className="flex items-baseline justify-between gap-4 py-2.5">
               <dt className="text-[15px] text-label-3">Diagnosis</dt>
               <dd className="text-right text-[17px] font-semibold text-label">
-                {prescription.diagnosis || "General consultation"}
+                {prescription.diagnosis || "Not found on the prescription"}
               </dd>
             </div>
             {prescription.notes && (
@@ -342,12 +342,12 @@ export default function PrescriptionDetailPage() {
                       {item.strength ? ` ${item.strength}` : ""}
                     </p>
                     <p className="mt-1 text-[15px] text-label-2">
-                      {item.dose || "1 dose"} · {item.frequency}
+                      {item.dose ? `${item.dose} · ` : ""}{item.frequency}
                       {item.times && item.times.length > 0
                         ? ` (${item.times.join(", ")})`
                         : ""}
                       {" · "}
-                      {item.with_food ? `${item.with_food} food` : "anytime"}
+                      {item.with_food ? `${item.with_food} food` : "food timing not specified"}
                     </p>
                   </div>
                   <Button
