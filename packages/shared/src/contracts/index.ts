@@ -2,7 +2,7 @@
 // Field names are final: JSON over HTTP is snake_case, the same as the DB columns.
 import { z } from "zod";
 
-export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","RATE_LIMITED","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL"]);
+export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD

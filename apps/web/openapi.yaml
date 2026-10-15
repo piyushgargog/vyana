@@ -1108,7 +1108,6 @@ components:
                 - FORBIDDEN
                 - BAD_REQUEST
                 - NOT_FOUND
-                - RATE_LIMITED
                 - UPSTREAM_TIMEOUT
                 - UPSTREAM_ERROR
                 - INTERNAL
