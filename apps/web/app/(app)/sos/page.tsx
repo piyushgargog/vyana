@@ -142,7 +142,7 @@ export default function SosPage() {
         ) : nearby.data ? (
           <>
             {area && (
-              <p className="mb-3 text-[13px] text-label-3">Near {area}</p>
+              <p className="mb-3 text-[15px] text-label-3">Near {area}</p>
             )}
             {hospitals.length === 0 ? (
               <EmptyState
@@ -299,7 +299,7 @@ export default function SosPage() {
               Prepare the alert
             </Button>
             {!coords && (
-              <p className="mt-2 text-[13px] text-label-3">
+              <p className="mt-2 text-[15px] text-label-3">
                 Tap &ldquo;Use my location&rdquo; first.
               </p>
             )}
