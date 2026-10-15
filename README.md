@@ -10,6 +10,8 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 
 **Live:** [vyanahealth.app](https://vyanahealth.app) (web app and API, hosted in Mumbai behind Cloudflare). Sign up with an email address; please use made-up details only, not your real health data.
 
+**Android app:** the installable preview (APK) is attached to each [release](https://github.com/piyushgargog/vyana/releases); how it is built: [`apps/mobile/BUILD.md`](apps/mobile/BUILD.md). It talks to the same live backend, so the demo accounts work in both.
+
 *A portfolio project by four developers.*
 
 ---

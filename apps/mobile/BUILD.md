@@ -37,6 +37,16 @@ The build runs in the cloud. When it finishes, EAS prints a link and a QR code f
 - Push notifications on Android need the Expo push credentials: `npx eas-cli credentials` (or let the first build offer to set them up).
 - Check on the phone: sign in as the demo patient, see the medicines and reminders, scan a prescription, book a token, and open a share link.
 
+## Release: attach the APK to the GitHub Release
+
+1. Build the APK from the final `main` (`npx eas-cli build --platform android --profile preview`) and wait until it is finished (`npx eas-cli build:view <id>`).
+2. Tag the release (`git tag v1.0.0 && git push origin v1.0.0`): the release workflow creates the GitHub Release from the matching section of `CHANGELOG.md`.
+3. Download the `.apk` from the build page and attach it: `gh release upload v1.0.0 vyana-1.0.0.apk`.
+
+## A pitfall that closed the first APK on launch
+
+React Compiler (`experiments.reactCompiler`) writes `Symbol.for("react.memo_cache_sentinel")` into every compiled component. A file that imports a component called `Symbol` (our icon) hides the built-in `Symbol`, so the call fails with "undefined is not a function" and the app closes. The compiler is off in `app.json`. Before turning it on again, rename the icon component (for example to `SymbolIcon`) in every file. A release build prints no JavaScript error on screen: read the crash with `adb logcat -b events | grep am_crash` on a phone connected by USB or wireless debugging.
+
 ## Check the JavaScript without a build
 
 ```bash

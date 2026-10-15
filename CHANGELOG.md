@@ -4,6 +4,25 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-18
+
+The first release: the web app at https://vyanahealth.app and the Android app (preview APK, attached to this release).
+
+### Added (this release, on top of everything below)
+- **Web patient pages:** scan a prescription and read one (`/prescriptions/scan`, `/prescriptions/[id]`), upload a lab report and read one with its trend (`/reports/upload`, `/reports/[id]`), compare medicine prices (`/basket`), book an OPD token (`/appointments/book`), see and cancel your tokens (`/appointments`), ask the AI assistant (`/assistant`), emergency help (`/sos`: call 108 or 112 only when you tap, nearby hospitals, an alert for your contacts after a confirmation) and the care plan (`/care/[conditionId]`; a draft plan is never shown to a patient).
+- **Liquid Glass design system** for web and mobile (iOS 26 style: glass on the navigation, white cards on grey), the restyled patient dashboard, public pages, login and sign-up, and the new Vyana icon, link preview and web manifest.
+- **A welcome screen** when the Android app opens: three seconds with the logo, the tagline and the Indian flag with "Made with love in India" (tap to skip; reduced motion respected).
+- **Per-user rate limits** on the AI and web-agent routes (a database counter, 429 `RATE_LIMITED` with `Retry-After`, fail-open, SOS never limited) and friendly "try again in N minutes" messages in the web and mobile apps; `RATE_LIMIT_EXEMPT_USER_IDS` for tests and demos.
+- **Branded sign-up and sign-in emails** (confirm, magic link, reset, new email) sent through Resend from the project's own domain.
+- **Content Security Policy** on every web route, a nightly database backup, security workflows (container scan, secret scan, ZAP, uptime), Scorecard, Dependabot for Docker and a tag-triggered release workflow.
+- **End-to-end tests** (Playwright) of the demo path and a script that refreshes the demo data; chat helpers with unit tests for the assistant.
+
+### Changed
+- The home page and the sign-in pages show **"Open Vyana"** when you are already signed in (the session cookie was never lost; the pages just did not say so), and `/login` and `/sign-up` send a signed-in person into the app. The proxy refreshes the session only on full page loads.
+- The seeded demo accounts use **one password per role**; the seed refuses to touch a live database unless asked to.
+- The Android build no longer uses React Compiler: it wrote `Symbol.for(...)` into every component, and our icon component named `Symbol` hid the built-in, which closed the app at launch.
+- Demo hospital pins (GTB, Max Patparganj) match OpenStreetMap.
+
 ### Fixed
 - **Safety:** the SOS screen no longer calls 108 by itself after a countdown; a call only starts when the user taps a call button.
 - **Privacy:** the caregiver screen shows the linked patient's prescriptions, never the caregiver's own.
