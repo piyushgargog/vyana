@@ -191,14 +191,14 @@ export default function CarePlanPage() {
           {isDoctorApproved ? (
             <>
               <Pill tone="ok">Doctor reviewed and approved</Pill>
-              <p className="mt-2 text-[13px] leading-relaxed text-label-3">
+              <p className="mt-2 text-[15px] leading-relaxed text-label-3">
                 Approved by your doctor. Follow this plan as advised.
               </p>
             </>
           ) : (
             <>
               <Pill tone="warn">Not reviewed by a doctor</Pill>
-              <p className="mt-2 text-[13px] leading-relaxed text-label-3">
+              <p className="mt-2 text-[15px] leading-relaxed text-label-3">
                 Created from trusted health guidelines. Please discuss it with your doctor.
               </p>
             </>
@@ -325,7 +325,7 @@ export default function CarePlanPage() {
                   <span className="text-[15px] text-label-2">
                     {test.test}
                   </span>
-                  <span className="shrink-0 text-[13px] text-label-3">
+                  <span className="shrink-0 text-[15px] text-label-3">
                     every {test.every_days} days
                   </span>
                 </li>
