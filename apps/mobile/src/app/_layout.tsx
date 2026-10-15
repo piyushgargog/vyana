@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-r
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { MobileAppProviders } from '@/components/providers';
+import { WelcomeSplash } from '@/components/welcome-splash';
 import { onNotificationTap } from '@/lib/notifications';
 import { useReminderSync } from '@/lib/useReminderSync';
 
@@ -194,6 +195,7 @@ export default function RootLayout() {
   return (
     <MobileAppProviders>
       <RootNavigator />
+      <WelcomeSplash />
     </MobileAppProviders>
   );
 }
