@@ -1,9 +1,7 @@
 import React from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,7 +12,17 @@ import {
   MobileSkeletonCard,
   MobileTrendChart,
 } from '@/components/ui-primitives';
-import { ErrorState } from '@/components/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  IconTile,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 
 export default function MobileReportsTab() {
   const router = useRouter();
@@ -33,44 +41,75 @@ export default function MobileReportsTab() {
   const refHigh = hba1cHistory[0]?.ref_high ?? null;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <Screen
+      title="Reports"
+      trailing={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
+          onPress={() => router.push('/sos')}
+          style={styles.sosHeaderBtn}
+        >
+          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
+            SOS 108
+          </Text>
+        </Pressable>
+      }
+    >
       {/* Action Buttons */}
       <View style={styles.actionRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Upload and analyze a new lab report"
+        <Button
+          title="Upload Lab Report"
+          variant="primary"
+          size="md"
+          icon={
+            <Symbol
+              ios="doc.viewfinder.fill"
+              android="document_scanner"
+              size={18}
+              color={T.color.white}
+            />
+          }
           onPress={() => router.push('/reports/upload')}
-          style={styles.uploadBtn}
-        >
-          <Text style={styles.uploadBtnText}>+ Upload Lab Report</Text>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Compare lab test prices across diagnostic labs"
+          style={styles.actionBtn}
+        />
+        <Button
+          title="Compare Lab Prices"
+          variant="secondary"
+          size="md"
           onPress={() => router.push('/labs-compare')}
-          style={styles.compareBtn}
-        >
-          <Text style={styles.compareBtnText}>Compare Lab Prices</Text>
-        </Pressable>
+          style={styles.actionBtn}
+        />
       </View>
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open chronological health timeline and create doctor share link"
         onPress={() => router.push('/timeline')}
-        style={styles.timelineBanner}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.timelineBannerTitle}>
-            Chronological Health Timeline & Doctor Share Link
-          </Text>
-          <Text style={styles.timelineBannerSub}>
-            View all prescriptions, lab reports & OPD visits · Generate 24h QR
-            link
-          </Text>
-        </View>
-        <Text style={styles.timelineArrow}>Open →</Text>
+        <Card style={styles.timelineBanner}>
+          <View style={styles.timelineContent}>
+            <IconTile
+              ios="clock.arrow.circlepath"
+              android="history"
+              color="accent"
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="headline">
+                Chronological Health Timeline & Doctor Share Link
+              </Text>
+              <Text variant="footnote" tone="secondary" style={styles.timelineSub}>
+                View all prescriptions, lab reports & OPD visits · Generate 24h QR link
+              </Text>
+            </View>
+            <Symbol
+              ios="chevron.right"
+              android="chevron_right"
+              size={16}
+              color={T.color.label3}
+            />
+          </View>
+        </Card>
       </Pressable>
 
       {/* Historical HbA1c Trend Chart */}
@@ -86,134 +125,125 @@ export default function MobileReportsTab() {
       {reportsLoading ? (
         <MobileSkeletonCard lines={3} />
       ) : reportsError ? (
-        <View style={styles.reportCard}>
+        <Card>
           <ErrorState onRetry={() => refetchReports()} />
-        </View>
+        </Card>
       ) : reports.length === 0 ? (
-        <View style={styles.reportCard}>
-          <Text style={styles.summaryText}>
-            No lab reports uploaded yet. Upload a report photo or PDF to see extracted values, abnormal flags, and health trends.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Upload your first lab report"
-            onPress={() => router.push('/reports/upload')}
-            style={[styles.uploadBtn, { marginTop: 12 }]}
-          >
-            <Text style={styles.uploadBtnText}>+ Upload First Report</Text>
-          </Pressable>
-        </View>
+        <Card>
+          <EmptyState
+            ios="doc.text.fill"
+            android="description"
+            title="No lab reports yet"
+            body="Upload a report photo or PDF to see extracted values, abnormal flags, and health trends."
+            action={
+              <Button
+                title="Upload First Report"
+                variant="primary"
+                size="md"
+                icon={
+                  <Symbol
+                    ios="doc.viewfinder.fill"
+                    android="document_scanner"
+                    size={18}
+                    color={T.color.white}
+                  />
+                }
+                onPress={() => router.push('/reports/upload')}
+              />
+            }
+          />
+        </Card>
       ) : (
         reports.map((rep) => (
-          <View key={rep.id} style={styles.reportCard}>
+          <Card key={rep.id} style={styles.reportCard}>
             <View style={styles.reportHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.labName}>
+                <Text variant="caption" tone="accent" style={styles.labName}>
                   {rep.lab_name || 'Diagnostic Laboratory'}
                   {rep.report_date ? ` · ${rep.report_date}` : ''}
                 </Text>
-                <Text style={styles.reportTitle}>
+                <Text variant="headline" style={styles.reportTitle}>
                   {rep.lab_name ? `${rep.lab_name} Report` : 'Lab Report'}
                 </Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Open full report ${rep.id}`}
+              <Button
+                title="Details"
+                variant="secondary"
+                size="sm"
+                label={`Open full report ${rep.id}`}
                 onPress={() => router.push(`/reports/${rep.id}`)}
-                style={styles.openBtn}
-              >
-                <Text style={styles.openBtnText}>Details →</Text>
-              </Pressable>
+                style={styles.detailsBtn}
+              />
             </View>
 
             {rep.summary && (
               <>
                 <MobileAiSafetyBanner feature="report_analyze" />
                 <View style={styles.summaryBox}>
-                  <Text style={styles.summaryLabel}>
+                  <Text variant="caption" tone="secondary" style={styles.summaryLabel}>
                     Plain-Language Summary
                   </Text>
-                  <Text style={styles.summaryText}>{rep.summary}</Text>
+                  <Text variant="subhead">{rep.summary}</Text>
                 </View>
               </>
             )}
-          </View>
+          </Card>
         ))
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  uploadBtn: {
-    flex: 1,
-    backgroundColor: '#0D9488',
-    paddingVertical: 13,
-    borderRadius: 14,
+  sosHeaderBtn: {
+    backgroundColor: T.color.dangerSoft,
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs,
+    borderRadius: T.radius.pill,
+    minHeight: 36,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  uploadBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  compareBtn: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    paddingVertical: 13,
-    borderRadius: 14,
-    alignItems: 'center',
+  sosHeaderText: {
+    fontWeight: '700',
   },
-  compareBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  actionRow: { flexDirection: 'row', gap: T.space.sm },
+  actionBtn: { flex: 1 },
   timelineBanner: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
+    backgroundColor: T.color.accentSoft,
+    borderColor: T.color.separator,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  timelineContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
+    gap: T.space.md,
   },
-  timelineBannerTitle: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
-  timelineBannerSub: { fontSize: 11, color: '#115E59', marginTop: 2 },
-  timelineArrow: { fontSize: 12, fontWeight: '800', color: '#0F766E' },
+  timelineSub: { marginTop: T.space.xs },
   reportCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
+    gap: T.space.md,
   },
   reportHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: T.space.sm,
   },
-  labName: { fontSize: 11, fontWeight: '700', color: '#0F766E' },
+  labName: { fontWeight: '700' },
   reportTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 2,
+    marginTop: T.space.xs,
   },
-  openBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+  detailsBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  openBtnText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
   summaryBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    padding: T.space.md,
+    gap: T.space.xs,
   },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: '#475569' },
-  summaryText: { fontSize: 13, color: '#1E293B', lineHeight: 19 },
+  summaryLabel: { fontWeight: '700' },
 });

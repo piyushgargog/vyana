@@ -183,7 +183,22 @@ export default function MobileProfileTab() {
   };
 
   return (
-    <Screen title="Profile" eyebrow={profile?.full_name || 'Your account'}>
+    <Screen
+      title="Profile"
+      eyebrow={profile?.full_name || 'Your account'}
+      trailing={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
+          onPress={() => router.push('/sos')}
+          style={styles.sosHeaderBtn}
+        >
+          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
+            SOS 108
+          </Text>
+        </Pressable>
+      }
+    >
       {/* Quick links */}
       <ListGroup header="Quick links">
         <ListRow
@@ -499,6 +514,15 @@ export default function MobileProfileTab() {
 }
 
 const styles = StyleSheet.create({
+  sosHeaderBtn: {
+    backgroundColor: T.color.dangerSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: T.radius.pill,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  sosHeaderText: { fontWeight: '700' },
   field: { gap: T.space.xs },
   label: { fontWeight: '600' },
   input: {
