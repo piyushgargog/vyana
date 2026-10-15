@@ -30,8 +30,8 @@ values
   ('51000000-0000-0000-0000-000000000002', 'Safdarjung Hospital', 'government', 'Ansari Nagar West, New Delhi 110029', 'Delhi', 28.5677, 77.2058, null, true),
   ('51000000-0000-0000-0000-000000000003', 'Dr. Ram Manohar Lohia Hospital', 'government', 'Baba Kharak Singh Marg, New Delhi 110001', 'Delhi', 28.6258, 77.2, 'https://rmlh.mohfw.gov.in/', true),
   ('51000000-0000-0000-0000-000000000004', 'Lok Nayak Hospital (LNJP)', 'government', 'Jawahar Lal Nehru Marg, Delhi Gate, New Delhi 110002', 'Delhi', 28.6382, 77.2386, null, true),
-  ('51000000-0000-0000-0000-000000000005', 'Guru Teg Bahadur Hospital (GTB)', 'government', 'Tahirpur Road, GTB Enclave, Dilshad Garden, Delhi 110095', 'Delhi', 28.6782, 77.3155, null, true),
-  ('51000000-0000-0000-0000-000000000006', 'Max Super Speciality Hospital, Patparganj', 'private', '108A, I.P. Extension, Patparganj, Delhi 110092', 'Delhi', 28.6293, 77.3095, 'https://www.maxhealthcare.in', false),
+  ('51000000-0000-0000-0000-000000000005', 'Guru Teg Bahadur Hospital (GTB)', 'government', 'Tahirpur Road, GTB Enclave, Dilshad Garden, Delhi 110095', 'Delhi', 28.6857, 77.3075, null, true),
+  ('51000000-0000-0000-0000-000000000006', 'Max Super Speciality Hospital, Patparganj', 'private', '108A, I.P. Extension, Patparganj, Delhi 110092', 'Delhi', 28.6332, 77.3089, 'https://www.maxhealthcare.in', false),
   ('51000000-0000-0000-0000-000000000007', 'Sir Ganga Ram Hospital', 'private', 'Sir Ganga Ram Hospital Marg, Rajinder Nagar, New Delhi 110060', 'Delhi', 28.6385, 77.191, 'https://sgrh.com', false),
   ('51000000-0000-0000-0000-000000000008', 'Indraprastha Apollo Hospitals', 'private', 'Sarita Vihar, Delhi Mathura Road, New Delhi 110076', 'Delhi', 28.5409, 77.284, 'https://www.apollohospitals.com/delhi/', false),
   ('51000000-0000-0000-0000-000000000009', 'Max Super Speciality Hospital, Saket', 'private', '1, 2, Press Enclave Road, Mandir Marg, Saket, New Delhi 110017', 'Delhi', 28.5276, 77.2118, 'https://www.maxhealthcare.in', false)
