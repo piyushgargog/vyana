@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- **Text fixes from QA:** the doctor header no longer shows a doubled "Dr. Dr." when the stored name already has the title; basket prices always show two decimals (₹163.40, not ₹163.4); the onboarding emergency-contact relationship field no longer comes prefilled; the "Account Role" badge reads "Account Role: Patient" instead of the all-caps constant style.
+
 ## [1.0.0] - 2026-10-18
 
 The first release: the web app at https://vyanahealth.app and the Android app (preview APK, attached to this release).
