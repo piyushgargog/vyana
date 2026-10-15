@@ -101,12 +101,11 @@ export function AppointmentBookForm() {
 
   // 4. Appointment date state
   const [dateDefaults] = useState(() => {
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const tomorrow = new Date(now.getTime() + 86400000)
-      .toISOString()
-      .slice(0, 10);
-    return { today, tomorrow };
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return { today: iso(now), tomorrow: iso(next) };
   });
 
   const [appointmentDate, setAppointmentDate] = useState<string>(dateDefaults.today);
@@ -120,7 +119,7 @@ export function AppointmentBookForm() {
   } = useTokensLeft(selectedDeptId || undefined, appointmentDate || undefined);
 
   // 6. Reason for visit
-  const [reason, setReason] = useState<string>("General OPD consultation");
+  const [reason, setReason] = useState<string>("");
 
   // 7. Booking mutation and confirmation modal state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -204,7 +203,7 @@ export function AppointmentBookForm() {
     setConfirmedAppt(null);
     setBookingError(null);
     setAppointmentDate(dateDefaults.today);
-    setReason("General OPD consultation");
+    setReason("");
   };
 
   return (
@@ -239,7 +238,7 @@ export function AppointmentBookForm() {
                       : "Private Hospital"}
                   </p>
                 </div>
-                <Pill tone="neutral" className="uppercase font-semibold text-[13px]">
+                <Pill tone="neutral" className="font-semibold text-[15px]">
                   {confirmedAppt.status}
                 </Pill>
               </div>
@@ -382,7 +381,7 @@ export function AppointmentBookForm() {
                           </span>
                           <Pill
                             tone={isSelected ? "accent" : "neutral"}
-                            className="text-[12px] shrink-0"
+                            className="text-[15px] shrink-0"
                           >
                             {h.kind === "government" ? "Government" : "Private"}
                           </Pill>
@@ -416,7 +415,7 @@ export function AppointmentBookForm() {
                   <Pill tone="accent">Live OPD info</Pill>
                   {opdInfo?.cached && <Pill tone="neutral">Cached</Pill>}
                 </div>
-                <span className="text-[13px] text-label-3">
+                <span className="text-[15px] text-label-3">
                   Verified OPD registration timings
                 </span>
               </div>
@@ -442,7 +441,7 @@ export function AppointmentBookForm() {
                     </div>
                   ))}
                   {opdInfo.notes && (
-                    <p className="pt-2 text-[14px] italic text-label-3">
+                    <p className="pt-2 text-[15px] text-label-3">
                       Note: {opdInfo.notes}
                     </p>
                   )}
@@ -604,7 +603,7 @@ export function AppointmentBookForm() {
                     <button
                       type="button"
                       onClick={() => refetchTokens()}
-                      className="text-[14px] font-semibold text-accent-strong hover:underline"
+                      className="text-[15px] font-semibold text-accent-strong hover:underline"
                     >
                       Retry
                     </button>
