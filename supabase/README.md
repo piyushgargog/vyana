@@ -17,6 +17,7 @@ How the data moves through the app, and who can reach it at each step: [`DATA-FL
 | `migrations/0009_share_link_cap.sql` | a share link expires within 30 days of its creation (a CHECK on `share_links`, one hour of slack for phone clocks) |
 | `migrations/0010_account_deletion.sql` | A doctor or a caregiver can delete their account: links from other people's records to them (`doctor_id`, `diagnosed_by`, `reviewed_by`, `used_by`) are cleared instead of blocking the deletion |
 | `migrations/0011_meal_log_limits.sql` | The meal log keeps its limits in the database (a description of 1 to 200 characters, 0 to 5,000 calories) and is indexed by patient and time |
+| `migrations/0012_rate_limits.sql` | The counters behind the per-user limits on the AI and web-agent routes: the table `rate_limits` and the function `hit_rate_limit()`, which only the server may call; a pg_cron job clears old rows every hour |
 | `seed/seed-users.ts` | Creates the demo auth users through the admin API |
 | `seed/seed.sql` | Demo rows for those users (safe to run again) |
 | `tests/database/*.test.sql` | pgTAP tests of the schema and every access path |
@@ -71,6 +72,28 @@ select vault.create_secret('<the value of CRON_SECRET>', 'cron_secret');
 
 Until both exist the job logs a warning and does nothing. To see the runs: `select * from cron.job_run_details order by start_time desc limit 5;`.
 To run one by hand: `select public.run_missed_dose_check();`.
+
+## Rate limits (migration 0012)
+
+The API limits how often one user can call the AI and web-agent routes, so one account cannot use up the team's Groq and
+TinyFish credits. The database only keeps the counters; the API (`withRoute`, issue #138) decides the limits.
+
+| What | Detail |
+|---|---|
+| Table `public.rate_limits` | `user_id`, `bucket` (a name such as `ai_chat` or `agent`), `window_start`, `hits`. One row per user, bucket and window. Deleted with the account |
+| Who can read or write it | **Nobody from the app.** RLS is on with no policy at all, and the privileges of `anon` and `authenticated` are removed too |
+| Function `hit_rate_limit(p_user, p_bucket, p_window_seconds, p_max)` | Counts one call and returns `allowed` (false when this call is over the maximum), `remaining` and `reset_at` (when the window ends) |
+| Who can call it | **Only `service_role`**, the admin client of the server, after it has checked who the user is. A signed-in user could otherwise spend another user's allowance |
+| How it counts | One statement, `insert ... on conflict do update set hits = hits + 1 returning ...`, so two calls at the same moment each get their own number. The window is a fixed slice of time that starts on a multiple of its length since 1970 (every 10 minutes on the clock, for example). Refused calls are counted too |
+| Wrong arguments | A window of 0 or less, a negative maximum, no user or a bucket name of 0 or over 64 characters raise `22023` |
+| Clean-up | The pg_cron job `rate-limits-cleanup` runs at minute 17 of every hour and deletes rows older than one day |
+
+From the server:
+
+```ts
+const { data } = await supabaseAdmin().rpc("hit_rate_limit", { p_user: user.id, p_bucket: "ai_chat", p_window_seconds: 600, p_max: 20 });
+// data[0] = { allowed, remaining, reset_at }
+```
 
 ## Tests
 

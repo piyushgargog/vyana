@@ -147,4 +147,52 @@ describe("createApiClient", () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.method).toBe("GET");
   });
+
+  it("handles 429 RATE_LIMITED with Retry-After header and triggers onRateLimit", async () => {
+    const onRateLimitMock = vi.fn();
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ error: { code: "RATE_LIMITED", message: "Too many requests" } }),
+          { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "180" } },
+        ),
+    );
+    const testClient = createApiClient({
+      baseUrl: "https://api.example.com",
+      getAccessToken: async () => "tok-123",
+      fetch: fetchMock,
+      onRateLimit: onRateLimitMock,
+    });
+
+    const err = await testClient.medicines.compare({ medicine: "Dolo" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({
+      code: "RATE_LIMITED",
+      status: 429,
+      retryAfterSeconds: 180,
+      message: "Too many requests. Try again in 3 minutes.",
+    });
+    expect(onRateLimitMock).toHaveBeenCalledWith({
+      message: "Too many requests. Try again in 3 minutes.",
+      retryAfterSeconds: 180,
+    });
+  });
+
+  it("handles 429 RATE_LIMITED without Retry-After header gracefully", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ error: { code: "RATE_LIMITED", message: "Server rate limit" } }),
+          { status: 429, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+    const err = await client(fetchMock).medicines.compare({ medicine: "Dolo" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({
+      code: "RATE_LIMITED",
+      status: 429,
+      retryAfterSeconds: undefined,
+      message: "Server rate limit",
+    });
+  });
 });

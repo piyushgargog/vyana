@@ -61,10 +61,44 @@ export function ButtonLink({ variant = "primary", size = "md", icon, className, 
   );
 }
 
-/** A round icon-only button; `label` is required for screen readers. */
-export function IconButton({ label, variant = "glass", className, children, type = "button", ...rest }: { label: string; variant?: Variant } & ComponentProps<"button">) {
+const ICON_SIZES: Record<Size, string> = {
+  sm: "h-9 w-9 p-0",
+  md: "h-11 w-11 p-0",
+  lg: "h-[52px] w-[52px] p-0",
+};
+
+export type IconButtonProps = {
+  label: string;
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+  children?: ReactNode;
+  href?: string;
+} & Omit<ComponentProps<"button"> & ComponentProps<"a">, "href" | "type"> & {
+  type?: "button" | "submit" | "reset";
+};
+
+/** A round icon-only button or link; `label` is required for screen readers. */
+export function IconButton({ label, variant = "glass", size = "md", className, children, href, ...rest }: IconButtonProps) {
+  const cls = cn(BASE, VARIANTS[variant], ICON_SIZES[size], className);
+  if (href) {
+    const linkRest = rest as Record<string, unknown>;
+    if (href.startsWith("/")) {
+      return (
+        <Link href={href} aria-label={label} title={label} className={cls} {...linkRest}>
+          {children}
+        </Link>
+      );
+    }
+    return (
+      <a href={href} aria-label={label} title={label} className={cls} {...linkRest}>
+        {children}
+      </a>
+    );
+  }
+  const { type = "button", ...buttonRest } = rest as ComponentProps<"button">;
   return (
-    <button type={type} aria-label={label} title={label} className={cn(BASE, VARIANTS[variant], "h-11 w-11 p-0", className)} {...rest}>
+    <button type={type} aria-label={label} title={label} className={cls} {...buttonRest}>
       {children}
     </button>
   );
