@@ -384,3 +384,359 @@ where id in (
   '00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000005'
 )
 on conflict (user_id, version) do nothing;
+
+
+-- 14. Five more demo PATIENTS, each showing different features (all people, phone numbers and records are fictional).
+--   Meera Iyer     heart patient: a drug-interaction warning (clopidogrel with omeprazole), a cholesterol trend, a refill card
+--   Rohan Verma    asthma: inhalers (one as needed), Medical ID with allergies, a patient-generated care plan, SOS demo
+--   Kavita Joshi   hypothyroidism: TSH trend from high to normal, an approved care plan, meal log, follow-up tests
+--   Gopal Prasad   kidney disease and blood pressure: abnormal lab flags, missed doses, Hindi as the preferred language
+--   Ananya Reddy   a scanned paper prescription for an acute illness: active medicines to price in the basket, fever readings
+-- Same password rule as the other patient: the patient-role demo password (see seed-users.ts).
+
+insert into public.profiles (id, role, full_name, phone, dob, gender, blood_group, allergies, city, preferred_language, onboarded)
+values
+  ('00000000-0000-0000-0000-000000000201', 'patient', 'Meera Iyer', '+91 00000 00201', '1962-03-09', 'female', 'B+', '{}', 'Delhi', 'en', true),
+  ('00000000-0000-0000-0000-000000000202', 'patient', 'Rohan Verma', '+91 00000 00202', '1997-08-21', 'male', 'O+', '{"Dust mites","Sulfa drugs"}', 'Noida', 'hinglish', true),
+  ('00000000-0000-0000-0000-000000000203', 'patient', 'Kavita Joshi', '+91 00000 00203', '1981-11-30', 'female', 'A+', '{}', 'Gurugram', 'en', true),
+  ('00000000-0000-0000-0000-000000000204', 'patient', 'Gopal Prasad', '+91 00000 00204', '1954-06-18', 'male', 'AB+', '{}', 'Ghaziabad', 'hi', true),
+  ('00000000-0000-0000-0000-000000000205', 'patient', 'Ananya Reddy', '+91 00000 00205', '1991-02-14', 'female', 'O-', '{"Sulfa drugs"}', 'Delhi', 'en', true)
+on conflict (id) do update set
+  full_name = excluded.full_name,
+  role = excluded.role,
+  dob = excluded.dob,
+  gender = excluded.gender,
+  blood_group = excluded.blood_group,
+  allergies = excluded.allergies,
+  city = excluded.city,
+  preferred_language = excluded.preferred_language,
+  onboarded = excluded.onboarded;
+
+insert into public.emergency_contacts (id, patient_id, name, phone, relation)
+values
+  ('e9000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Karthik Iyer', '+91 00000 00301', 'Son'),
+  ('e9000001-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000201', 'Lakshmi Narayanan', '+91 00000 00302', 'Sister'),
+  ('e9000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Suresh Verma', '+91 00000 00303', 'Father'),
+  ('e9000002-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000202', 'Aditya Rao', '+91 00000 00304', 'Friend'),
+  ('e9000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'Manish Joshi', '+91 00000 00305', 'Husband'),
+  ('e9000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Rajesh Prasad', '+91 00000 00306', 'Son'),
+  ('e9000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', 'Sita Prasad', '+91 00000 00307', 'Wife'),
+  ('e9000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Kiran Reddy', '+91 00000 00308', 'Husband'),
+  ('e9000005-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000205', 'Lata Reddy', '+91 00000 00309', 'Mother')
+on conflict (id) do nothing;
+
+-- Conditions (a doctor's diagnosis creates the condition; they are linked to the prescriptions below first, as for the first demo patient)
+insert into public.conditions (id, patient_id, name, diagnosed_on, notes, active, source)
+values
+  ('cd000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Coronary artery disease', '2024-02-12', 'Stent placed in 2024; on regular follow-up', true, 'doctor'),
+  ('cd000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Asthma', '2015-04-03', 'Allergic asthma; keeps a reliever inhaler with him', true, 'doctor'),
+  ('cd000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'Hypothyroidism', '2021-09-07', 'On a daily thyroid tablet; TSH checked every 3 months', true, 'doctor'),
+  ('cd000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Hypertension', '2012-05-20', 'Long-standing high blood pressure', true, 'doctor'),
+  ('cd000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', 'Chronic kidney disease (stage 3)', '2023-08-02', 'Kidney function checked every few months', true, 'doctor')
+on conflict (id) do nothing;
+
+-- Appointments: one completed visit and one upcoming token each
+insert into public.appointments (id, patient_id, doctor_id, hospital_id, department_id, appointment_date, token_no, scheduled_at, status, reason, doctor_notes)
+values
+  ('a9000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000002', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000002', current_date - 21, 31, now() - interval '21 days', 'completed', 'Cardiology follow-up', 'Stable. Continue the medicines as prescribed. Review after 3 months.'),
+  ('a9000001-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000201', null, '51000000-0000-0000-0000-000000000003', '52000000-0000-0000-0000-000000000202', current_date + 6, 23, now() + interval '6 days', 'confirmed', 'Cardiology check and lipid profile review', null),
+  ('a9000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000002', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', current_date - 40, 27, now() - interval '40 days', 'completed', 'Asthma review', 'Inhaler technique checked. Keep the reliever inhaler with you.'),
+  ('a9000002-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000202', null, '51000000-0000-0000-0000-000000000002', '52000000-0000-0000-0000-000000000101', current_date + 9, 14, now() + interval '9 days', 'confirmed', 'Routine asthma follow-up', null),
+  ('a9000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000003', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', current_date - 20, 35, now() - interval '20 days', 'completed', 'Thyroid review', 'TSH is coming down. Repeat in 3 months.'),
+  ('a9000003-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000203', null, '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', current_date + 12, 29, now() + interval '12 days', 'confirmed', 'Vitamin D and thyroid follow-up', null),
+  ('a9000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000002', '51000000-0000-0000-0000-000000000003', '52000000-0000-0000-0000-000000000201', current_date - 12, 17, now() - interval '12 days', 'completed', 'Kidney and blood pressure check', 'Creatinine is higher than last time. Please do not miss doses. Review in 2 weeks.'),
+  ('a9000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', null, '51000000-0000-0000-0000-000000000003', '52000000-0000-0000-0000-000000000201', current_date + 2, 9, now() + interval '2 days', 'confirmed', 'Review of kidney tests', null),
+  ('a9000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', null, '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000006', current_date - 2, 41, now() - interval '2 days', 'completed', 'Sore throat and fever', null),
+  ('a9000005-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000205', null, '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000006', current_date + 5, 18, now() + interval '5 days', 'confirmed', 'Follow-up after the course of medicines', null)
+on conflict (id) do nothing;
+
+-- Prescriptions (four from a doctor, one scanned from paper)
+insert into public.prescriptions (id, patient_id, doctor_id, appointment_id, source, doctor_name, diagnosis, notes, issued_on)
+values
+  ('b1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000002', 'a9000001-0000-0000-0000-000000000001', 'doctor', 'Dr. Rajesh Mehta', null, 'Continue the medicines as prescribed. Review after 3 months.', current_date - 21),
+  ('b1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000002', 'a9000002-0000-0000-0000-000000000001', 'doctor', 'Dr. Rajesh Mehta', null, 'Use the controller inhaler every day. The reliever only when needed.', current_date - 40),
+  ('b1000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000003', 'a9000003-0000-0000-0000-000000000001', 'doctor', 'Dr. Sneha Gupta', null, 'Take the thyroid tablet on an empty stomach. Repeat the TSH test in 3 months.', current_date - 20),
+  ('b1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000002', 'a9000004-0000-0000-0000-000000000001', 'doctor', 'Dr. Rajesh Mehta', null, 'Take the medicines every day. Come back with a fresh creatinine and urea report.', current_date - 12),
+  ('b1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', null, null, 'upload', 'Dr. A. Khan', 'Acute tonsillitis', 'Scanned from a paper prescription. Finish the whole course.', current_date - 2)
+on conflict (id) do nothing;
+
+update public.conditions set prescription_id = 'b1000001-0000-0000-0000-000000000001' where id = 'cd000001-0000-0000-0000-000000000001' and prescription_id is null;
+update public.conditions set prescription_id = 'b1000002-0000-0000-0000-000000000001' where id = 'cd000002-0000-0000-0000-000000000001' and prescription_id is null;
+update public.conditions set prescription_id = 'b1000003-0000-0000-0000-000000000001' where id = 'cd000003-0000-0000-0000-000000000001' and prescription_id is null;
+update public.conditions set prescription_id = 'b1000004-0000-0000-0000-000000000001' where id = 'cd000004-0000-0000-0000-000000000001' and prescription_id is null;
+update public.prescriptions set diagnosis = 'Coronary artery disease' where id = 'b1000001-0000-0000-0000-000000000001' and diagnosis is distinct from 'Coronary artery disease';
+update public.prescriptions set diagnosis = 'Asthma' where id = 'b1000002-0000-0000-0000-000000000001' and diagnosis is distinct from 'Asthma';
+update public.prescriptions set diagnosis = 'Hypothyroidism' where id = 'b1000003-0000-0000-0000-000000000001' and diagnosis is distinct from 'Hypothyroidism';
+update public.prescriptions set diagnosis = 'Hypertension' where id = 'b1000004-0000-0000-0000-000000000001' and diagnosis is distinct from 'Hypertension';
+
+-- Medicines (item id: ...b2 + patient number, then 1, 2, 3 ...)
+insert into public.prescription_items (id, prescription_id, patient_id, medicine_name, strength, form, dose, frequency, times, with_food, duration_days, start_date, instructions, active, quantity_total)
+values
+  ('b2000001-0000-0000-0000-000000000001', 'b1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Clopidogrel', '75 mg', 'tablet', '1 tablet', 'OD', '{"09:00"}', 'after', 90, current_date - 21, null, true, null),
+  ('b2000001-0000-0000-0000-000000000002', 'b1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Omeprazole', '20 mg', 'capsule', '1 capsule', 'OD', '{"08:00"}', 'before', 90, current_date - 21, 'Before breakfast', true, 30),
+  ('b2000001-0000-0000-0000-000000000003', 'b1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Atorvastatin', '20 mg', 'tablet', '1 tablet', 'OD', '{"21:00"}', 'after', 90, current_date - 21, null, true, 30),
+  ('b2000001-0000-0000-0000-000000000004', 'b1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Metoprolol Succinate', '25 mg', 'tablet', '1 tablet', 'OD', '{"09:00"}', 'after', 90, current_date - 21, null, true, 30),
+  ('b2000002-0000-0000-0000-000000000001', 'b1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Budesonide + Formoterol', '200/6 mcg', 'inhaler', '2 puffs', 'BD', '{"08:00","20:00"}', 'any', 90, current_date - 40, 'Rinse the mouth after use', true, 120),
+  ('b2000002-0000-0000-0000-000000000002', 'b1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Salbutamol', '100 mcg', 'inhaler', '2 puffs', 'SOS', '{}', 'any', 90, current_date - 40, 'Only when wheezing or short of breath', true, 200),
+  ('b2000002-0000-0000-0000-000000000003', 'b1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Montelukast', '10 mg', 'tablet', '1 tablet', 'HS', '{"22:00"}', 'any', 90, current_date - 40, null, true, 30),
+  ('b2000003-0000-0000-0000-000000000001', 'b1000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'Levothyroxine', '75 mcg', 'tablet', '1 tablet', 'OD', '{"06:30"}', 'before', 90, current_date - 20, 'On an empty stomach, 30 minutes before breakfast', true, 30),
+  ('b2000003-0000-0000-0000-000000000002', 'b1000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'Vitamin D3', '1000 IU', 'tablet', '1 tablet', 'OD', '{"13:30"}', 'after', 90, current_date - 20, null, true, 60),
+  ('b2000004-0000-0000-0000-000000000001', 'b1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Amlodipine', '5 mg', 'tablet', '1 tablet', 'OD', '{"09:00"}', 'after', 60, current_date - 12, null, true, 30),
+  ('b2000004-0000-0000-0000-000000000002', 'b1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Telmisartan', '40 mg', 'tablet', '1 tablet', 'OD', '{"09:00"}', 'after', 60, current_date - 12, null, true, 30),
+  ('b2000004-0000-0000-0000-000000000003', 'b1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Atorvastatin', '10 mg', 'tablet', '1 tablet', 'HS', '{"21:00"}', 'after', 60, current_date - 12, null, true, 30),
+  ('b2000004-0000-0000-0000-000000000004', 'b1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Folic Acid', '5 mg', 'tablet', '1 tablet', 'OD', '{"13:00"}', 'after', 60, current_date - 12, null, true, 30),
+  ('b2000005-0000-0000-0000-000000000001', 'b1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Amoxicillin + Clavulanic Acid', '625 mg', 'tablet', '1 tablet', 'BD', '{"09:00","21:00"}', 'after', 5, current_date - 2, 'Finish the whole course', true, 10),
+  ('b2000005-0000-0000-0000-000000000002', 'b1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Paracetamol', '650 mg', 'tablet', '1 tablet', 'SOS', '{}', 'after', 5, current_date - 2, 'Only for fever or pain', true, 10),
+  ('b2000005-0000-0000-0000-000000000003', 'b1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Pantoprazole', '40 mg', 'tablet', '1 tablet', 'OD', '{"08:00"}', 'before', 5, current_date - 2, 'Before breakfast', true, 5),
+  ('b2000005-0000-0000-0000-000000000004', 'b1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Cetirizine', '10 mg', 'tablet', '1 tablet', 'HS', '{"22:00"}', 'any', 5, current_date - 2, null, true, 5)
+on conflict (id) do nothing;
+
+-- Dose logs for the last 7 days (India time). Columns: item, hour, day offsets that were missed, day offsets that were skipped.
+delete from public.dose_logs where patient_id in ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000205');
+
+do $$
+declare
+  r record;
+  d int;
+  day_start timestamptz;
+  at timestamptz;
+begin
+  for r in
+    select * from (values
+      -- Meera: very regular, one missed evening statin
+      ('b2000001-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000201'::uuid, 9, array[]::int[], array[]::int[]),
+      ('b2000001-0000-0000-0000-000000000002'::uuid, '00000000-0000-0000-0000-000000000201'::uuid, 8, array[]::int[], array[]::int[]),
+      ('b2000001-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000201'::uuid, 21, array[3], array[]::int[]),
+      ('b2000001-0000-0000-0000-000000000004'::uuid, '00000000-0000-0000-0000-000000000201'::uuid, 9, array[]::int[], array[]::int[]),
+      -- Rohan: good, two skipped evening puffs
+      ('b2000002-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000202'::uuid, 8, array[]::int[], array[]::int[]),
+      ('b2000002-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000202'::uuid, 22, array[]::int[], array[1,4]),
+      -- Kavita: perfect streak
+      ('b2000003-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000203'::uuid, 6, array[]::int[], array[]::int[]),
+      ('b2000003-0000-0000-0000-000000000002'::uuid, '00000000-0000-0000-0000-000000000203'::uuid, 13, array[]::int[], array[]::int[]),
+      -- Gopal: poor, many missed doses (shows the missed-dose logic and the caregiver alert)
+      ('b2000004-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000204'::uuid, 9, array[0,1,3,5], array[]::int[]),
+      ('b2000004-0000-0000-0000-000000000002'::uuid, '00000000-0000-0000-0000-000000000204'::uuid, 9, array[0,1,3,5], array[]::int[]),
+      ('b2000004-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000204'::uuid, 21, array[1,2,4], array[]::int[]),
+      -- Ananya: only the last two days of the antibiotic course
+      ('b2000005-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000205'::uuid, 9, array[]::int[], array[]::int[]),
+      ('b2000005-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000205'::uuid, 8, array[]::int[], array[]::int[])
+    ) as t(item_id, patient_id, hour, missed_days, skipped_days)
+  loop
+    for d in 0..6 loop
+      -- Ananya's course began 2 days ago
+      continue when r.patient_id = '00000000-0000-0000-0000-000000000205'::uuid and d > 2;
+      day_start := date_trunc('day', (now() at time zone 'Asia/Kolkata') - (d || ' days')::interval) at time zone 'Asia/Kolkata';
+      at := day_start + (r.hour || ' hours')::interval;
+      if at <= now() - interval '5 minutes' then
+        insert into public.dose_logs (patient_id, item_id, scheduled_for, status, logged_at)
+        values (r.patient_id, r.item_id, at,
+                case when d = any (r.missed_days) then 'missed' when d = any (r.skipped_days) then 'skipped' else 'taken' end,
+                at + interval '10 minutes')
+        on conflict (item_id, scheduled_for) do nothing;
+      end if;
+    end loop;
+  end loop;
+end $$;
+
+-- Ananya's evening antibiotic dose too (2 per day)
+do $$
+declare d int; day_start timestamptz; at timestamptz;
+begin
+  for d in 0..2 loop
+    day_start := date_trunc('day', (now() at time zone 'Asia/Kolkata') - (d || ' days')::interval) at time zone 'Asia/Kolkata';
+    at := day_start + interval '21 hours';
+    if at <= now() - interval '5 minutes' then
+      insert into public.dose_logs (patient_id, item_id, scheduled_for, status, logged_at)
+      values ('00000000-0000-0000-0000-000000000205', 'b2000005-0000-0000-0000-000000000001', at, 'taken', at + interval '8 minutes')
+      on conflict (item_id, scheduled_for) do nothing;
+    end if;
+  end loop;
+end $$;
+
+-- Refill cards: Meera's clopidogrel and Gopal's atorvastatin run out in a few days.
+update public.prescription_items i
+  set quantity_total = 4 + (select count(*) from public.dose_logs l where l.item_id = i.id and l.status = 'taken')
+  where i.id in ('b2000001-0000-0000-0000-000000000001', 'b2000004-0000-0000-0000-000000000003');
+
+-- Lab reports and values (the file paths are placeholders: no real files)
+insert into public.lab_reports (id, patient_id, file_path, lab_name, report_date, status, summary)
+values
+  ('f1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000201/lipid-1.pdf', 'Sample Diagnostics', current_date - 240, 'done', 'LDL cholesterol 142 mg/dL, above the reference range.'),
+  ('f1000001-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000201/lipid-2.pdf', 'Sample Diagnostics', current_date - 120, 'done', 'LDL cholesterol 118 mg/dL, lower but still above the reference range.'),
+  ('f1000001-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000201/lipid-3.pdf', 'Sample Diagnostics', current_date - 14, 'done', 'LDL cholesterol 96 mg/dL, within the reference range.'),
+  ('f1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000202/cbc-1.pdf', 'Sample Diagnostics', current_date - 38, 'done', 'Eosinophils are above the reference range. Other values are within range.'),
+  ('f1000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000203/thyroid-1.pdf', 'Sample Diagnostics', current_date - 270, 'done', 'TSH 8.2 mIU/L, above the reference range.'),
+  ('f1000003-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000203/thyroid-2.pdf', 'Sample Diagnostics', current_date - 150, 'done', 'TSH 5.9 mIU/L, lower but still above the reference range.'),
+  ('f1000003-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000203/thyroid-3.pdf', 'Sample Diagnostics', current_date - 21, 'done', 'TSH 3.8 mIU/L, within the reference range. Vitamin D is below the reference range.'),
+  ('f1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000204/kidney-1.pdf', 'Sample Diagnostics', current_date - 300, 'done', 'Creatinine 1.5 mg/dL and urea above the reference range.'),
+  ('f1000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000204/kidney-2.pdf', 'Sample Diagnostics', current_date - 140, 'done', 'Creatinine 1.8 mg/dL, higher than before. Haemoglobin is below the reference range.'),
+  ('f1000004-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000204/kidney-3.pdf', 'Sample Diagnostics', current_date - 13, 'done', 'Creatinine 2.1 mg/dL, higher again. Urea and haemoglobin are outside the reference range.'),
+  ('f1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000205/cbc-1.pdf', 'Sample Diagnostics', current_date - 2, 'done', 'White cell count and CRP are above the reference range; haemoglobin is below it.')
+on conflict (id) do nothing;
+
+insert into public.lab_values (id, report_id, patient_id, test_name, value, unit, ref_low, ref_high, flag, measured_on)
+values
+  ('f2000001-0000-0000-0000-000000000001', 'f1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'LDL Cholesterol', 142, 'mg/dL', 0, 100, 'high', current_date - 240),
+  ('f2000001-0000-0000-0000-000000000002', 'f1000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'Total Cholesterol', 214, 'mg/dL', 0, 200, 'high', current_date - 240),
+  ('f2000001-0000-0000-0000-000000000003', 'f1000001-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000201', 'LDL Cholesterol', 118, 'mg/dL', 0, 100, 'high', current_date - 120),
+  ('f2000001-0000-0000-0000-000000000004', 'f1000001-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000201', 'Total Cholesterol', 192, 'mg/dL', 0, 200, 'normal', current_date - 120),
+  ('f2000001-0000-0000-0000-000000000005', 'f1000001-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000201', 'LDL Cholesterol', 96, 'mg/dL', 0, 100, 'normal', current_date - 14),
+  ('f2000001-0000-0000-0000-000000000006', 'f1000001-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000201', 'Total Cholesterol', 171, 'mg/dL', 0, 200, 'normal', current_date - 14),
+  ('f2000002-0000-0000-0000-000000000001', 'f1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Eosinophils', 0.62, '10^3/uL', 0, 0.5, 'high', current_date - 38),
+  ('f2000002-0000-0000-0000-000000000002', 'f1000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'Hemoglobin', 14.8, 'g/dL', 13, 17, 'normal', current_date - 38),
+  ('f2000003-0000-0000-0000-000000000001', 'f1000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'TSH', 8.2, 'mIU/L', 0.4, 4.0, 'high', current_date - 270),
+  ('f2000003-0000-0000-0000-000000000002', 'f1000003-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000203', 'TSH', 5.9, 'mIU/L', 0.4, 4.0, 'high', current_date - 150),
+  ('f2000003-0000-0000-0000-000000000003', 'f1000003-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000203', 'TSH', 3.8, 'mIU/L', 0.4, 4.0, 'normal', current_date - 21),
+  ('f2000003-0000-0000-0000-000000000004', 'f1000003-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000203', 'Vitamin D (25-OH)', 18, 'ng/mL', 30, 100, 'low', current_date - 21),
+  ('f2000004-0000-0000-0000-000000000001', 'f1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Creatinine', 1.5, 'mg/dL', 0.7, 1.2, 'high', current_date - 300),
+  ('f2000004-0000-0000-0000-000000000002', 'f1000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'Urea', 48, 'mg/dL', 17, 43, 'high', current_date - 300),
+  ('f2000004-0000-0000-0000-000000000003', 'f1000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', 'Creatinine', 1.8, 'mg/dL', 0.7, 1.2, 'high', current_date - 140),
+  ('f2000004-0000-0000-0000-000000000004', 'f1000004-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000204', 'Hemoglobin', 11.6, 'g/dL', 13, 17, 'low', current_date - 140),
+  ('f2000004-0000-0000-0000-000000000005', 'f1000004-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000204', 'Creatinine', 2.1, 'mg/dL', 0.7, 1.2, 'high', current_date - 13),
+  ('f2000004-0000-0000-0000-000000000006', 'f1000004-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000204', 'Urea', 58, 'mg/dL', 17, 43, 'high', current_date - 13),
+  ('f2000004-0000-0000-0000-000000000007', 'f1000004-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000204', 'Hemoglobin', 11.2, 'g/dL', 13, 17, 'low', current_date - 13),
+  ('f2000005-0000-0000-0000-000000000001', 'f1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'White Blood Cells', 13.2, '10^3/uL', 4, 11, 'high', current_date - 2),
+  ('f2000005-0000-0000-0000-000000000002', 'f1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'C-Reactive Protein', 18, 'mg/L', 0, 5, 'high', current_date - 2),
+  ('f2000005-0000-0000-0000-000000000003', 'f1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Hemoglobin', 10.4, 'g/dL', 12, 15, 'low', current_date - 2),
+  ('f2000005-0000-0000-0000-000000000004', 'f1000005-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000205', 'Platelets', 240, '10^3/uL', 150, 410, 'normal', current_date - 2)
+on conflict (id) do nothing;
+
+-- Seven days of readings. Meera: blood pressure and pulse. Rohan: oxygen level and pulse. Kavita: weight.
+-- Gopal: high blood pressure. Ananya: a fever that comes down over four days.
+delete from public.vitals where patient_id in ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000205');
+
+do $$
+declare
+  d int;
+  t timestamptz;
+begin
+  for d in 0..6 loop
+    t := now() - (d || ' days')::interval;
+    insert into public.vitals (patient_id, type, value, value2, unit, measured_at) values
+      ('00000000-0000-0000-0000-000000000201', 'bp', 132 + (d % 4), 82 + (d % 3), 'mmHg', t - interval '1 hour'),
+      ('00000000-0000-0000-0000-000000000204', 'bp', 148 + (d % 5), 90 + (d % 4), 'mmHg', t - interval '1 hour');
+    insert into public.vitals (patient_id, type, value, unit, measured_at) values
+      ('00000000-0000-0000-0000-000000000201', 'heart_rate', 66 + (d % 5), 'bpm', t - interval '90 minutes'),
+      ('00000000-0000-0000-0000-000000000202', 'spo2', 97 + (d % 3), '%', t - interval '1 hour'),
+      ('00000000-0000-0000-0000-000000000202', 'heart_rate', 70 + (d % 6), 'bpm', t - interval '90 minutes'),
+      ('00000000-0000-0000-0000-000000000203', 'weight', 64.6 - (d * 0.1), 'kg', t - interval '3 hours'),
+      ('00000000-0000-0000-0000-000000000204', 'weight', 68.2 - (d * 0.1), 'kg', t - interval '3 hours');
+  end loop;
+  for d in 0..3 loop
+    t := now() - (d || ' days')::interval;
+    insert into public.vitals (patient_id, type, value, unit, measured_at)
+    values ('00000000-0000-0000-0000-000000000205', 'temperature', 98.6 + (case when d = 0 then 0.3 when d = 1 then 1.1 when d = 2 then 2.2 else 2.6 end), '°F', t - interval '2 hours');
+  end loop;
+end $$;
+
+-- Kavita's meals for three days (for the meal log in the care plan)
+delete from public.meal_logs where patient_id = '00000000-0000-0000-0000-000000000203';
+do $$
+declare d int; day_start timestamptz;
+begin
+  for d in 0..2 loop
+    day_start := date_trunc('day', (now() at time zone 'Asia/Kolkata') - (d || ' days')::interval) at time zone 'Asia/Kolkata';
+    insert into public.meal_logs (patient_id, meal, description, calories, logged_at) values
+      ('00000000-0000-0000-0000-000000000203', 'breakfast', 'Oats upma, one banana', 340, day_start + interval '8 hours 15 minutes'),
+      ('00000000-0000-0000-0000-000000000203', 'lunch', '2 rotis, rajma, salad, curd', 560, day_start + interval '13 hours'),
+      ('00000000-0000-0000-0000-000000000203', 'snack', 'Roasted makhana, green tea', 130, day_start + interval '17 hours'),
+      ('00000000-0000-0000-0000-000000000203', 'dinner', 'Vegetable khichdi, a bowl of dal', 450, day_start + interval '20 hours');
+  end loop;
+end $$;
+
+-- Care plans (written by hand for the demo; real plans come from POST /api/care-plan, where every line is checked
+-- against a fetched guideline page). Kavita's is approved by the demo doctor; Rohan's shows the "not reviewed by a doctor" badge.
+insert into public.care_plans (id, patient_id, condition_id, status, language, plan_json, reviewed_by, reviewed_at)
+values (
+  'c9000003-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000203', 'cd000003-0000-0000-0000-000000000001', 'approved', 'en',
+  $plan$
+  {
+    "condition": "Hypothyroidism",
+    "summary": "With an underactive thyroid the body makes too little thyroid hormone. A daily tablet replaces it, and regular blood tests (TSH) show whether the amount is right.",
+    "do": [
+      "Take your thyroid tablet at the same time every day, on an empty stomach.",
+      "Wait about 30 minutes before eating breakfast or having tea or coffee.",
+      "Get your TSH checked when your doctor asks, usually every few months.",
+      "Tell your doctor about every other medicine or supplement you take."
+    ],
+    "dont": [
+      "Do not stop or change the tablet on your own, even when you feel well.",
+      "Do not take the tablet together with calcium or iron supplements; ask your doctor how far apart to take them."
+    ],
+    "diet": {
+      "eat_more": ["Fruits and vegetables", "Whole grains such as oats and whole wheat roti", "Dal, beans and other pulses"],
+      "limit": ["Very large amounts of soy products", "Highly processed snacks"],
+      "sample_day": [
+        { "meal": "breakfast", "items": ["Oats upma", "A banana"] },
+        { "meal": "lunch", "items": ["2 rotis", "Rajma", "Salad", "Curd"] },
+        { "meal": "snack", "items": ["Roasted makhana"] },
+        { "meal": "dinner", "items": ["Vegetable khichdi", "A bowl of dal"] }
+      ]
+    },
+    "red_flags": [
+      "Chest pain, a very fast or irregular heartbeat, or trouble breathing: call 108.",
+      "Extreme tiredness with confusion, a very slow pulse or feeling very cold: go to the nearest hospital.",
+      "A new swelling in the neck or trouble swallowing: see a doctor soon."
+    ],
+    "follow_up_tests": [
+      { "test": "TSH", "every_days": 90 },
+      { "test": "Vitamin D", "every_days": 180 }
+    ],
+    "sources": [
+      { "title": "NHS: Underactive thyroid", "url": "https://www.nhs.uk/conditions/underactive-thyroid-hypothyroidism/" },
+      { "title": "MedlinePlus: Hypothyroidism", "url": "https://medlineplus.gov/hypothyroidism.html" }
+    ],
+    "language": "en"
+  }
+  $plan$::jsonb,
+  '00000000-0000-0000-0000-000000000003', now() - interval '20 days'
+),
+(
+  'c9000002-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202', 'cd000002-0000-0000-0000-000000000001', 'patient_generated', 'en',
+  $plan$
+  {
+    "condition": "Asthma",
+    "summary": "Asthma makes the airways narrow and swollen, which causes wheezing and shortness of breath. Using the controller inhaler every day and knowing your triggers keeps symptoms down.",
+    "do": [
+      "Use your controller inhaler every day, even when you feel well.",
+      "Keep your reliever inhaler with you at all times.",
+      "Note what sets off your symptoms (dust, smoke, cold air, pollen) and avoid them where you can.",
+      "Keep a written asthma action plan from your doctor."
+    ],
+    "dont": [
+      "Do not stop the controller inhaler without asking your doctor.",
+      "Do not smoke, and stay away from other people's smoke."
+    ],
+    "diet": {
+      "eat_more": ["Fruits and vegetables", "A balanced diet with enough water"],
+      "limit": ["Foods you know trigger your symptoms"],
+      "sample_day": [
+        { "meal": "breakfast", "items": ["Oats with fruit"] },
+        { "meal": "lunch", "items": ["Rotis", "Dal", "Vegetables", "Curd"] },
+        { "meal": "dinner", "items": ["Khichdi", "Salad"] }
+      ]
+    },
+    "red_flags": [
+      "Severe breathlessness, being unable to speak a full sentence, or blue lips: call 108 now.",
+      "Your reliever inhaler gives no relief or you need it more often than usual: get medical help the same day."
+    ],
+    "follow_up_tests": [
+      { "test": "Peak flow or lung function check", "every_days": 180 }
+    ],
+    "sources": [
+      { "title": "NHS: Asthma", "url": "https://www.nhs.uk/conditions/asthma/" },
+      { "title": "MedlinePlus: Asthma", "url": "https://medlineplus.gov/asthma.html" }
+    ],
+    "language": "en"
+  }
+  $plan$::jsonb,
+  null, null
+)
+on conflict (id) do nothing;
+
+-- The new demo patients accepted the current consent text, so the app does not ask them again.
+insert into public.consents (user_id, version)
+select id, '2026-10-11' from public.profiles
+where id in ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000205')
+on conflict (user_id, version) do nothing;

@@ -112,6 +112,12 @@ const DEMO_USERS: SeedUser[] = [
     passwordRole: 'caregiver',
     fullName: 'Neha Sharma',
   },
+  // Five more fictional demo patients, each showing different features (seed.sql section 14). They use the patient password.
+  { id: '00000000-0000-0000-0000-000000000201', email: 'meera@vyana.test', role: 'patient', fullName: 'Meera Iyer' },
+  { id: '00000000-0000-0000-0000-000000000202', email: 'rohan@vyana.test', role: 'patient', fullName: 'Rohan Verma' },
+  { id: '00000000-0000-0000-0000-000000000203', email: 'kavita@vyana.test', role: 'patient', fullName: 'Kavita Joshi' },
+  { id: '00000000-0000-0000-0000-000000000204', email: 'gopal@vyana.test', role: 'patient', fullName: 'Gopal Prasad' },
+  { id: '00000000-0000-0000-0000-000000000205', email: 'ananya@vyana.test', role: 'patient', fullName: 'Ananya Reddy' },
   // Two fictional doctors for each hospital in seed.sql (verified there).
   { id: '00000000-0000-0000-0000-000000000101', email: 'doc01@vyana.test', role: 'doctor', fullName: 'Dr. Kavita Nair' },
   { id: '00000000-0000-0000-0000-000000000102', email: 'doc02@vyana.test', role: 'doctor', fullName: 'Dr. Sandeep Bhatia' },

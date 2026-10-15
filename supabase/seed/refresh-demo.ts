@@ -30,6 +30,7 @@ const DEMO_IDS = [
   "00000000-0000-0000-0000-000000000004", // admin
   "00000000-0000-0000-0000-000000000005", // caregiver
   ...Array.from({ length: 18 }, (_, i) => `00000000-0000-0000-0000-0000000001${String(i + 1).padStart(2, "0")}`),
+  ...Array.from({ length: 5 }, (_, i) => `00000000-0000-0000-0000-0000000002${String(i + 1).padStart(2, "0")}`), // the five extra demo patients
 ];
 
 const dbUrl = process.env.SUPABASE_DB_URL ?? "";
@@ -92,13 +93,13 @@ const deleteSql = DELETES.map(
 console.log(`Deleting demo rows from ${DELETES.length} table scopes...`);
 execFileSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1", "-c", deleteSql], { stdio: "inherit" });
 
-// Re-seed the demo sections of seed.sql (1 and 4-13). Sections 2-3 are
+// Re-seed the demo sections of seed.sql (1 and 4-14). Sections 2-3 are
 // reference data (hospitals, doctor details) and are left alone.
 const seedPath = fileURLToPath(new URL("./seed.sql", import.meta.url));
 const seed = readFileSync(seedPath, "utf8");
 const sections = seed.split(/^-- \d+\. /m);
 // sections[0] is the header; [1] is section 1, [4..13] are sections 4-13.
-const wanted = [sections[1], ...sections.slice(4, 14)].filter(Boolean).map((s) => "-- " + s).join("\n");
+const wanted = [sections[1], ...sections.slice(4, 15)].filter(Boolean).map((s) => "-- " + s).join("\n");
 if (!wanted.trim()) fail("Could not find the demo sections in seed.sql.");
 
 console.log("Re-seeding the demo sections...");
