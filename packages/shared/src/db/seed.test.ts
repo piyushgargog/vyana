@@ -81,7 +81,7 @@ describe("seed-users.ts and seed.sql agree on the hospital doctors", () => {
 
   it("uses the .test domain for every account and no password in the script", () => {
     const emails = [...seedUsers.matchAll(/email: '([^']+)'/g)].map((m) => m[1]);
-    expect(emails.length).toBe(23);
+    expect(emails.length).toBe(28);
     for (const e of emails) expect(e, e).toMatch(/@vyana\.test$/);
     expect(seedUsers).toContain("process.env.SEED_PASSWORD_PATIENT");
     expect(seedUsers).toContain("process.env.SEED_PASSWORD_DOCTOR");
