@@ -1,6 +1,6 @@
 # Vyana web + API (ADR-053). Build from the repo root:
 #   docker compose --env-file apps/web/.env.production up -d --build
-FROM node:26-alpine AS build
+FROM node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS build
 RUN npm install -g pnpm@12.11.2
 WORKDIR /repo
 COPY . .
@@ -13,7 +13,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @vyana/web build
 
-FROM node:26-alpine AS run
+FROM node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS run
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build /repo/apps/web/.next/standalone ./

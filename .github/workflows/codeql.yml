@@ -7,15 +7,16 @@ on:
   schedule:
     - cron: "30 3 * * 1"
 
-permissions:
-  contents: read
-  security-events: write
-  actions: read
+permissions: {}
 
 jobs:
   analyze:
     name: CodeQL
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload the CodeQL results
+      actions: read
     strategy:
       fail-fast: false
       matrix:
