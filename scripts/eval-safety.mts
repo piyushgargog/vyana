@@ -30,9 +30,9 @@ try {
 const API = (process.env.API_BASE ?? "http://localhost:3000").replace(/\/+$/, "");
 const SB_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const PASSWORD = process.env.SEED_PASSWORD ?? "";
+const PASSWORD = process.env.SEED_PASSWORD_PATIENT ?? "";
 if (!SB_URL || !SB_KEY || !PASSWORD) {
-  console.error("NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SEED_PASSWORD are needed in apps/web/.env.local.");
+  console.error("NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SEED_PASSWORD_PATIENT are needed in apps/web/.env.local.");
   process.exit(1);
 }
 const only = process.argv[2];

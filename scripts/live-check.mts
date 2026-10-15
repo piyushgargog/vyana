@@ -20,11 +20,12 @@ try {
 const API = (process.env.API_BASE ?? "http://localhost:3000").replace(/\/+$/, "");
 const SB_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const PASSWORD = process.env.SEED_PASSWORD ?? "";
+const PASSWORD_PATIENT = process.env.SEED_PASSWORD_PATIENT ?? "";
+const PASSWORD_DOCTOR = process.env.SEED_PASSWORD_DOCTOR ?? "";
 const WITH_LLM = process.argv.includes("--llm");
 const WITH_AGENTS = process.argv.includes("--agents");
 
-for (const [name, value] of [["NEXT_PUBLIC_SUPABASE_URL", SB_URL], ["NEXT_PUBLIC_SUPABASE_ANON_KEY", SB_KEY], ["SEED_PASSWORD", PASSWORD]] as const) {
+for (const [name, value] of [["NEXT_PUBLIC_SUPABASE_URL", SB_URL], ["NEXT_PUBLIC_SUPABASE_ANON_KEY", SB_KEY], ["SEED_PASSWORD_PATIENT", PASSWORD_PATIENT], ["SEED_PASSWORD_DOCTOR", PASSWORD_DOCTOR]] as const) {
   if (!value) {
     console.error(`${name} is missing in apps/web/.env.local.`);
     process.exit(1);
@@ -50,11 +51,11 @@ function expect(cond: unknown, message: string): asserts cond {
 
 // ---------------------------------------------------------------- helpers
 
-async function signIn(email: string): Promise<{ token: string; id: string }> {
+async function signIn(email: string, password: string): Promise<{ token: string; id: string }> {
   const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: { apikey: SB_KEY, "content-type": "application/json" },
-    body: JSON.stringify({ email, password: PASSWORD }),
+    body: JSON.stringify({ email, password }),
   });
   const body = (await res.json()) as { access_token?: string; user?: { id: string }; error_description?: string };
   if (!res.ok || !body.access_token || !body.user) throw new Error(`sign-in as ${email} failed: ${body.error_description ?? res.status}`);
@@ -98,9 +99,9 @@ let patient: { token: string; id: string } | undefined;
 let doctor: { token: string; id: string } | undefined;
 let doctor2: { token: string; id: string } | undefined;
 await check("sign in as the demo patient, doctor and pending doctor", async () => {
-  patient = await signIn("patient@vyana.test");
-  doctor = await signIn("doctor@vyana.test");
-  doctor2 = await signIn("doctor2@vyana.test");
+  patient = await signIn("patient@vyana.test", PASSWORD_PATIENT);
+  doctor = await signIn("doctor@vyana.test", PASSWORD_DOCTOR);
+  doctor2 = await signIn("doctor2@vyana.test", PASSWORD_DOCTOR);
 });
 if (!patient || !doctor || !doctor2) {
   console.log("\nCan't go on without the demo users: run supabase/seed/seed-users.ts, then seed.sql.");

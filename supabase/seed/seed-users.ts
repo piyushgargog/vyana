@@ -57,7 +57,7 @@ function projectRef(url: string): string {
 
 if (!isLocalUrl(supabaseUrl) && process.env.ALLOW_LIVE_SEED !== 'yes') {
   console.error(
-    `Refusing: ${supabaseUrl} is not a local Supabase URL. ` +
+    `Refusing: this is not a local Supabase URL. ` +
       `This would seed the live project "${projectRef(supabaseUrl)}". ` +
       `Set ALLOW_LIVE_SEED=yes to do it on purpose.`,
   );
