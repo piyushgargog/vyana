@@ -29,15 +29,9 @@ test.describe("patient flow", () => {
     await expect(page).toHaveURL(/\/reports\/upload/);
     await expectNoHorizontalScroll(page);
 
-    // Ask: type a question, an answer (or the safe-error sentence) appears.
-    // AI itself is not under test; the safe fallback counts as a pass.
+    // Ask: the page only has to load. Sending a message would write chat rows and make a paid AI call on the live site every night.
     await page.goto("/assistant");
-    const box = page.getByRole("textbox").first();
-    if (await box.count()) {
-      await box.fill("What are my active medicines?");
-      await page.getByRole("button", { name: /send/i }).click();
-      await expect(page.getByText(/vyana assistant|vyana is thinking|couldn.t answer/i).first()).toBeVisible({ timeout: 60000 });
-    }
+    await expect(page.getByRole("textbox").first()).toBeVisible();
 
     await expect(errors, `console errors: ${errors.join("; ")}`).toHaveLength(0);
     await signOut(page);

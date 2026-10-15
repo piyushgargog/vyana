@@ -82,8 +82,6 @@ const DELETES: Array<[table: string, column: string]> = [
   ["consents", "user_id"],
   ["care_links", "patient_id"],
   ["care_links", "caregiver_id"],
-  ["doctors", "id"],
-  ["profiles", "id"],
 ];
 
 const ids = DEMO_IDS.map((id) => `'${id}'`).join(", ");
@@ -100,7 +98,7 @@ const seedPath = fileURLToPath(new URL("./seed.sql", import.meta.url));
 const seed = readFileSync(seedPath, "utf8");
 const sections = seed.split(/^-- \d+\. /m);
 // sections[0] is the header; [1] is section 1, [4..13] are sections 4-13.
-const wanted = [sections[1], ...sections.slice(4, 14)].filter(Boolean).join("\n-- ");
+const wanted = [sections[1], ...sections.slice(4, 14)].filter(Boolean).map((s) => "-- " + s).join("\n");
 if (!wanted.trim()) fail("Could not find the demo sections in seed.sql.");
 
 console.log("Re-seeding the demo sections...");

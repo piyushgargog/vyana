@@ -2,7 +2,9 @@ import { expect, type Page } from "@playwright/test";
 
 /** Fails fast with a clear message when a credential is missing. */
 export function requiredEnv(name: string): string {
-  const value = process.env[name];
+  // E2E_PASSWORD_<ROLE>, else SEED_PASSWORD_<ROLE> (per-role demo passwords), else one shared E2E_PASSWORD.
+  const role = name.replace(/^E2E_PASSWORD_/, "");
+  const value = process.env[name] ?? process.env[`SEED_PASSWORD_${role}`] ?? process.env.E2E_PASSWORD;
   if (!value) throw new Error(`Set ${name} to run the E2E tests (never commit it).`);
   return value;
 }
