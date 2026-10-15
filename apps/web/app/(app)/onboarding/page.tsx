@@ -43,7 +43,7 @@ export default function OnboardingPage() {
   const [newCondition, setNewCondition] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [contactRel, setContactRel] = useState("Family");
+  const [contactRel, setContactRel] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fullName = fullNameOverride ?? profile?.full_name ?? "";
@@ -175,8 +175,8 @@ export default function OnboardingPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
         <div>
-          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900 uppercase">
-            Account Role: {role}
+          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900">
+            Account Role: {role.charAt(0).toUpperCase() + role.slice(1)}
           </span>
           <h1 className="text-2xl font-bold text-slate-900 mt-2">
             Complete Your Vyana Onboarding

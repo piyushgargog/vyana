@@ -118,7 +118,7 @@ export default function DoctorQueuePage() {
               )}
             </div>
             <p className="mt-1 text-xs sm:text-sm text-slate-600">
-              {profile?.full_name ? `Dr. ${profile.full_name}` : "Doctor Portal"}
+              {profile?.full_name ? `Dr. ${profile.full_name.replace(/^Dr\.\s*/i, "")}` : "Doctor Portal"}
               {doctorProfile?.specialization ? ` · ${doctorProfile.specialization}` : ""}
               {doctorProfile?.reg_no ? ` (Reg: ${doctorProfile.reg_no})` : ""}
             </p>
