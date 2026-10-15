@@ -621,10 +621,21 @@ begin
       ('00000000-0000-0000-0000-000000000202', 'spo2', 97 + (d % 3), '%', t - interval '1 hour'),
       ('00000000-0000-0000-0000-000000000202', 'heart_rate', 70 + (d % 6), 'bpm', t - interval '90 minutes'),
       ('00000000-0000-0000-0000-000000000203', 'weight', 64.6 - (d * 0.1), 'kg', t - interval '3 hours'),
-      ('00000000-0000-0000-0000-000000000204', 'weight', 68.2 - (d * 0.1), 'kg', t - interval '3 hours');
+      ('00000000-0000-0000-0000-000000000204', 'weight', 68.2 - (d * 0.1), 'kg', t - interval '3 hours'),
+      ('00000000-0000-0000-0000-000000000201', 'weight', 61.4 - (d * 0.1), 'kg', t - interval '3 hours'),
+      ('00000000-0000-0000-0000-000000000201', 'spo2', 97 + (d % 2), '%', t - interval '100 minutes'),
+      ('00000000-0000-0000-0000-000000000202', 'weight', 70.8 - (d * 0.1), 'kg', t - interval '3 hours'),
+      ('00000000-0000-0000-0000-000000000203', 'heart_rate', 72 + (d % 6), 'bpm', t - interval '90 minutes'),
+      ('00000000-0000-0000-0000-000000000203', 'spo2', 98 + (d % 2), '%', t - interval '100 minutes'),
+      ('00000000-0000-0000-0000-000000000204', 'heart_rate', 74 + (d % 7), 'bpm', t - interval '90 minutes'),
+      ('00000000-0000-0000-0000-000000000204', 'spo2', 95 + (d % 3), '%', t - interval '100 minutes'),
+      ('00000000-0000-0000-0000-000000000204', 'sugar_random', 128 + (d * 3), 'mg/dL', t - interval '4 hours');
   end loop;
   for d in 0..3 loop
     t := now() - (d || ' days')::interval;
+    insert into public.vitals (patient_id, type, value, unit, measured_at)
+    values ('00000000-0000-0000-0000-000000000205', 'heart_rate', 96 - (d * 5), 'bpm', t - interval '150 minutes'),
+           ('00000000-0000-0000-0000-000000000205', 'spo2', 97 + (case when d < 2 then 2 else 0 end), '%', t - interval '110 minutes');
     insert into public.vitals (patient_id, type, value, unit, measured_at)
     values ('00000000-0000-0000-0000-000000000205', 'temperature', 98.6 + (case when d = 0 then 0.3 when d = 1 then 1.1 when d = 2 then 2.2 else 2.6 end), '°F', t - interval '2 hours');
   end loop;
@@ -642,6 +653,24 @@ begin
       ('00000000-0000-0000-0000-000000000203', 'lunch', '2 rotis, rajma, salad, curd', 560, day_start + interval '13 hours'),
       ('00000000-0000-0000-0000-000000000203', 'snack', 'Roasted makhana, green tea', 130, day_start + interval '17 hours'),
       ('00000000-0000-0000-0000-000000000203', 'dinner', 'Vegetable khichdi, a bowl of dal', 450, day_start + interval '20 hours');
+  end loop;
+end $$;
+
+-- Meera and Gopal: three days of meals (a heart-friendly diet; a low-salt diet)
+delete from public.meal_logs where patient_id in ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000204');
+do $$
+declare d int; day_start timestamptz;
+begin
+  for d in 0..2 loop
+    day_start := date_trunc('day', (now() at time zone 'Asia/Kolkata') - (d || ' days')::interval) at time zone 'Asia/Kolkata';
+    insert into public.meal_logs (patient_id, meal, description, calories, logged_at) values
+      ('00000000-0000-0000-0000-000000000201', 'breakfast', 'Vegetable daliya, a glass of low-fat milk', 290, day_start + interval '8 hours'),
+      ('00000000-0000-0000-0000-000000000201', 'lunch', '2 rotis, lauki sabzi, dal, salad', 480, day_start + interval '13 hours'),
+      ('00000000-0000-0000-0000-000000000201', 'snack', 'A handful of almonds, one guava', 190, day_start + interval '17 hours'),
+      ('00000000-0000-0000-0000-000000000201', 'dinner', 'Vegetable soup, 1 roti, paneer bhurji', 410, day_start + interval '20 hours'),
+      ('00000000-0000-0000-0000-000000000204', 'breakfast', 'Plain upma without added salt, tea', 260, day_start + interval '7 hours 45 minutes'),
+      ('00000000-0000-0000-0000-000000000204', 'lunch', '2 rotis, moong dal, bottle gourd sabzi', 440, day_start + interval '12 hours 30 minutes'),
+      ('00000000-0000-0000-0000-000000000204', 'dinner', 'Khichdi with curd, cucumber salad', 380, day_start + interval '19 hours 30 minutes');
   end loop;
 end $$;
 
@@ -732,6 +761,97 @@ values (
   }
   $plan$::jsonb,
   null, null
+)
+on conflict (id) do nothing;
+
+insert into public.care_plans (id, patient_id, condition_id, status, language, plan_json, reviewed_by, reviewed_at)
+values
+(
+  'c9000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000201', 'cd000001-0000-0000-0000-000000000001', 'approved', 'en',
+  $plan$
+  {
+    "condition": "Coronary artery disease",
+    "summary": "Coronary artery disease means the arteries that feed the heart have narrowed. Taking your medicines every day, eating well, staying active and keeping blood pressure and cholesterol in check lowers the chance of problems.",
+    "do": [
+      "Take every heart medicine at the time shown in the app, including the one that protects your stent.",
+      "Walk or do other gentle activity most days, as your doctor allows.",
+      "Check your blood pressure and pulse regularly and note the readings.",
+      "Keep your follow-up visits and cholesterol tests."
+    ],
+    "dont": [
+      "Do not stop a heart medicine on your own, even when you feel well.",
+      "Do not smoke, and avoid other people's smoke."
+    ],
+    "diet": {
+      "eat_more": ["Vegetables and fruit", "Whole grains such as oats and whole wheat roti", "Dal, beans, nuts and fish"],
+      "limit": ["Salt", "Fried and fatty foods", "Sweets and sugary drinks"],
+      "sample_day": [
+        { "meal": "breakfast", "items": ["Vegetable daliya", "Low-fat milk"] },
+        { "meal": "lunch", "items": ["2 rotis", "Lauki sabzi", "Dal", "Salad"] },
+        { "meal": "snack", "items": ["A handful of almonds", "A guava"] },
+        { "meal": "dinner", "items": ["Vegetable soup", "1 roti", "Paneer bhurji"] }
+      ]
+    },
+    "red_flags": [
+      "Chest pain, pressure or tightness, especially with sweating, breathlessness or pain spreading to the arm or jaw: call 108 now.",
+      "Fainting, or a very fast or irregular heartbeat that does not settle: call 108.",
+      "Unusual bleeding or black stools while on blood-thinning medicines: contact your doctor the same day."
+    ],
+    "follow_up_tests": [
+      { "test": "Lipid profile", "every_days": 120 },
+      { "test": "ECG", "every_days": 180 }
+    ],
+    "sources": [
+      { "title": "NHS: Coronary heart disease", "url": "https://www.nhs.uk/conditions/coronary-heart-disease/" },
+      { "title": "MedlinePlus: Coronary artery disease", "url": "https://medlineplus.gov/coronaryarterydisease.html" }
+    ],
+    "language": "en"
+  }
+  $plan$::jsonb,
+  '00000000-0000-0000-0000-000000000002', now() - interval '21 days'
+),
+(
+  'c9000004-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000204', 'cd000004-0000-0000-0000-000000000001', 'approved', 'en',
+  $plan$
+  {
+    "condition": "Hypertension",
+    "summary": "High blood pressure often has no symptoms but strains the heart, brain and kidneys over time. Medicines, less salt, regular activity and regular readings keep it under control.",
+    "do": [
+      "Take your blood pressure medicines every day at the times shown in the app.",
+      "Measure your blood pressure at home as your doctor advised and note the readings.",
+      "Cut down on salt: avoid adding extra salt, pickles and papad.",
+      "Keep your follow-up visits and your kidney tests."
+    ],
+    "dont": [
+      "Do not stop or skip the medicines because you feel fine.",
+      "Do not take painkillers such as ibuprofen without asking your doctor, as they can affect blood pressure and the kidneys."
+    ],
+    "diet": {
+      "eat_more": ["Fresh vegetables and fruit your doctor allows", "Whole grains", "Dal and curd in the amounts your doctor advised"],
+      "limit": ["Salt and salty snacks", "Pickles, papad and processed food", "Tea and coffee in large amounts"],
+      "sample_day": [
+        { "meal": "breakfast", "items": ["Plain upma without added salt", "Tea"] },
+        { "meal": "lunch", "items": ["2 rotis", "Moong dal", "Bottle gourd sabzi"] },
+        { "meal": "dinner", "items": ["Khichdi with curd", "Cucumber salad"] }
+      ]
+    },
+    "red_flags": [
+      "A very severe headache with confusion, chest pain, trouble speaking or weakness on one side of the body: call 108 now.",
+      "Blood pressure readings that stay very high even after taking your medicines: contact your doctor the same day.",
+      "Swelling of the face or legs, or passing much less urine than usual: see a doctor soon."
+    ],
+    "follow_up_tests": [
+      { "test": "Kidney function (creatinine, urea)", "every_days": 90 },
+      { "test": "Haemoglobin", "every_days": 90 }
+    ],
+    "sources": [
+      { "title": "NHS: High blood pressure (hypertension)", "url": "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/" },
+      { "title": "MedlinePlus: High blood pressure", "url": "https://medlineplus.gov/highbloodpressure.html" }
+    ],
+    "language": "en"
+  }
+  $plan$::jsonb,
+  '00000000-0000-0000-0000-000000000002', now() - interval '12 days'
 )
 on conflict (id) do nothing;
 

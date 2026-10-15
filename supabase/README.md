@@ -56,6 +56,20 @@ Users are created only through the admin API, which also writes `auth.identities
 - **Reports:** four reports with an HbA1c trend of 8.1, 7.8, 7.4 and 6.8 over nine months.
 - **People and more:** two conditions, two appointments, vitals, two emergency contacts, a caregiver (`caregiver@vyana.test`), and accepted consents.
 
+### Five more demo patients (one portal, different stories)
+
+All use the patient password and are fully set up (consent accepted, onboarded):
+
+| Login | Story and what it shows |
+|---|---|
+| `meera@vyana.test` (Meera Iyer, 62) | Heart patient. A curated drug-interaction warning (clopidogrel with omeprazole), a cholesterol trend (LDL 142, 118, 96), a refill card, an approved care plan, a meal log |
+| `rohan@vyana.test` (Rohan Verma, 28) | Asthma, Hinglish. A daily and an as-needed inhaler, allergies in the Medical ID, a patient-generated care plan ("not reviewed by a doctor"), oxygen and pulse readings |
+| `kavita@vyana.test` (Kavita Joshi, 45) | Hypothyroidism. TSH trend from 8.2 to 3.8 (high, high, normal), low vitamin D, an approved care plan with follow-up tests, a meal log |
+| `gopal@vyana.test` (Gopal Prasad, 71) | Kidney disease and blood pressure, Hindi. Creatinine rising (1.5, 1.8, 2.1), low haemoglobin, many missed doses, a refill card, an approved care plan |
+| `ananya@vyana.test` (Ananya Reddy, 34) | An acute illness from a scanned paper prescription: four active medicines to price in the basket, a fever coming down over four days, blood counts out of range |
+
+They are section 14 of `seed.sql` and the last users in `seed-users.ts`; `pnpm seed:demo:refresh` resets them with the others. All names, numbers and records are made up.
+
 Run the seed again at any time: it replaces the dose logs and vitals and leaves the rest as it is.
 
 ## Missed-dose alerts (pg_cron)
