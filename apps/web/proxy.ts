@@ -6,6 +6,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  // Only a full page load refreshes the session cookie. Link prefetches and client-side navigations (RSC requests) used to
+  // do it too: a page with six links sent six requests at once, each trying to refresh the same refresh token, which
+  // Supabase can treat as a replay and end the session. The browser client refreshes its own token as well.
+  const h = request.headers;
+  if (h.get("rsc") || h.get("next-router-prefetch") || h.get("purpose") === "prefetch" || h.get("next-router-state-tree")) {
+    return NextResponse.next({ request: { headers: request.headers } });
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,

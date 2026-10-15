@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMyProfile } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { useRedirectIfSignedIn } from "@/components/auth-actions";
 import { PublicHeader } from "@/components/public-header";
 import {
   BrandMark,
@@ -21,6 +22,7 @@ const SEEDED_TEST_ACCOUNTS = [
 ] as const;
 
 export function LoginForm() {
+  useRedirectIfSignedIn();
   const router = useRouter();
   const { supabase, showToast } = useVyanaWeb();
   const [email, setEmail] = useState("");

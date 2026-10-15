@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVyanaWeb } from "@/components/providers";
+import { useRedirectIfSignedIn } from "@/components/auth-actions";
 import { PublicHeader } from "@/components/public-header";
 import {
   BrandMark,
@@ -15,6 +16,7 @@ import {
 type SignupRole = "patient" | "doctor";
 
 export function SignupForm() {
+  useRedirectIfSignedIn();
   const router = useRouter();
   const { supabase, showToast } = useVyanaWeb();
 

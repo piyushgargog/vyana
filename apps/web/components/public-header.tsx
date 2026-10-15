@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { BrandMark, ButtonLink, IconButton } from "@/components/ui";
+import { AuthActions } from "@/components/auth-actions";
+import { BrandMark, IconButton } from "@/components/ui";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -64,20 +65,7 @@ export function PublicHeader({ navLinks }: PublicHeaderProps) {
         )}
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
-          <ButtonLink
-            href="/login"
-            variant="secondary"
-            size="sm"
-          >
-            Sign in
-          </ButtonLink>
-          <ButtonLink
-            href="/signup"
-            variant="primary"
-            size="sm"
-          >
-            Get started
-          </ButtonLink>
+          <AuthActions />
           <IconButton
             href="https://github.com/piyushgargog/vyana"
             label="GitHub"

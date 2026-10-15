@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { AuthActions, HeroActions } from "@/components/auth-actions";
 import {
   BrandMark,
   ButtonLink,
@@ -57,12 +58,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <ButtonLink href="/login" variant="plain" size="sm">
-              Sign in
-            </ButtonLink>
-            <ButtonLink href="/signup" variant="primary" size="sm">
-              Get started
-            </ButtonLink>
+            <AuthActions plainSignIn />
           </div>
         </div>
       </header>
@@ -86,12 +82,7 @@ export default function LandingPage() {
 
           {/* Primary CTA (Rule: one primary action per screen) */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <ButtonLink href="/signup" variant="primary" size="lg">
-              Get started with Vyana
-            </ButtonLink>
-            <ButtonLink href="/dashboard" variant="secondary" size="lg">
-              Open patient dashboard
-            </ButtonLink>
+            <HeroActions />
           </div>
 
           {/* 4. The App Displayed Inside a Phone Frame */}
