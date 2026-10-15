@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { Button } from "./button";
 import { cn } from "./cn";
 
 /** The page's large title (iOS style), with an optional line above and actions on the right. */
@@ -52,6 +53,41 @@ export function EmptyState({ icon, title, body, action, className }: { icon?: Re
       {body ? <p className="max-w-sm text-[15px] leading-relaxed text-label-3">{body}</p> : null}
       {action}
     </div>
+  );
+}
+
+/** A calm error state: soft neutral icon, calm title/body, and a "Try again" action (Issue #139). */
+export function ErrorState({
+  title = "Couldn't load this",
+  body = "Check your connection or try again.",
+  onRetry,
+  retryLabel = "Try again",
+  className,
+}: {
+  title?: ReactNode;
+  body?: ReactNode;
+  onRetry?: () => void;
+  retryLabel?: string;
+  className?: string;
+}) {
+  return (
+    <EmptyState
+      icon={
+        <svg aria-hidden="true" className="h-7 w-7 text-label-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+      }
+      title={title}
+      body={body}
+      action={
+        onRetry ? (
+          <Button variant="secondary" size="sm" onClick={onRetry} className="mt-1">
+            {retryLabel}
+          </Button>
+        ) : undefined
+      }
+      className={className}
+    />
   );
 }
 

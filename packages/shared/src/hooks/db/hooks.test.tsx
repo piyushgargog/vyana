@@ -111,13 +111,32 @@ describe("live updates", () => {
     await waitFor(() => expect(fake.channels.filter((c) => c.subscribed)).toHaveLength(1));
     const names = fake.channels.map((c) => c.name);
     expect(new Set(names).size).toBe(1);
-    expect(names.every((n) => n === "appointments:doctor:user-1")).toBe(true);
+    expect(names.every((n) => n.startsWith("appointments:doctor:user-1"))).toBe(true);
     expect(fake.channels[0].handlers[0].filter).toMatchObject({ event: "*", schema: "public", table: "appointments" });
 
     mine.unmount();
     expect(fake.channels[0].removed).toBe(false);
     queue.unmount();
-    expect(fake.channels[0].removed).toBe(true);
+    await waitFor(() => expect(fake.channels[0].removed).toBe(true));
+  });
+
+  it("keep delivering changes when a hook mounts right after the last one unmounts (React StrictMode)", async () => {
+    const fake = fakeSupabase({
+      responses: { care_plans: [ok([{ id: "cp-1", status: "draft" }]), ok([{ id: "cp-1", status: "approved" }])] },
+    });
+    const { wrapper: Inner } = setup(fake);
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <React.StrictMode>
+        <Inner>{children}</Inner>
+      </React.StrictMode>
+    );
+    const { result } = renderHook(() => useCarePlans(), { wrapper });
+    await waitFor(() => expect(result.current.data?.[0].status).toBe("draft"));
+
+    const live = () => fake.channels.filter((c) => c.name.startsWith("care-plans:user-1") && c.subscribed && !c.removed);
+    await waitFor(() => expect(live()).toHaveLength(1));
+    act(() => fake.emitChange(live()[0].name));
+    await waitFor(() => expect(result.current.data?.[0].status).toBe("approved"));
   });
 
   it("refetch the care plans when a doctor approves one", async () => {
@@ -128,7 +147,7 @@ describe("live updates", () => {
     const { result } = renderHook(() => useCarePlans(), { wrapper });
     await waitFor(() => expect(result.current.data?.[0].status).toBe("draft"));
 
-    const channel = fake.channels.find((c) => c.name === "care-plans:user-1");
+    const channel = fake.channels.find((c) => c.name.startsWith("care-plans:user-1"));
     expect(channel).toBeDefined();
     act(() => fake.emitChange(channel!.name));
     await waitFor(() => expect(result.current.data?.[0].status).toBe("approved"));

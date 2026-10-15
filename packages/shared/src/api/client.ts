@@ -39,13 +39,24 @@ import {
 } from "../contracts";
 import * as mocks from "../mocks";
 
+export type RateLimitEvent = {
+  message: string;
+  retryAfterSeconds?: number;
+};
+
 /**
  * `code` is a server ErrorCode, or one of the client-side codes:
  * NETWORK_ERROR (server unreachable) and INVALID_RESPONSE (response did not match its schema).
  * `status` is the HTTP status, or 0 when no response arrived.
+ * `retryAfterSeconds` is present on 429 RATE_LIMITED responses when the server sent a Retry-After header.
  */
 export class ApiError extends Error {
-  constructor(public code: string, message: string, public status: number) {
+  constructor(
+    public code: string,
+    message: string,
+    public status: number,
+    public retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -59,6 +70,8 @@ export type ApiClientOptions = {
   fetch?: typeof fetch;
   /** Random delay range for mock responses, so loading states are visible. Defaults to [800, 2500]. */
   mockDelayMs?: [number, number];
+  /** Callback fired when a 429 RATE_LIMITED response is received. */
+  onRateLimit?: (event: RateLimitEvent) => void;
 };
 
 export type ApiClient = {
@@ -92,6 +105,7 @@ const STATUS_CODES: Record<number, string> = {
   401: "UNAUTHORIZED",
   403: "FORBIDDEN",
   404: "NOT_FOUND",
+  429: "RATE_LIMITED",
   502: "UPSTREAM_ERROR",
   504: "UPSTREAM_TIMEOUT",
 };
@@ -147,9 +161,38 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     const json: unknown = await res.json().catch(() => null);
 
     if (!res.ok) {
+      let retryAfterSeconds: number | undefined;
+      const retryHeader = res.headers?.get?.("retry-after") ?? res.headers?.get?.("Retry-After");
+      if (retryHeader) {
+        const asSec = parseInt(retryHeader, 10);
+        if (!isNaN(asSec) && asSec >= 0) {
+          retryAfterSeconds = asSec;
+        } else {
+          const asDate = Date.parse(retryHeader);
+          if (!isNaN(asDate)) {
+            retryAfterSeconds = Math.max(0, Math.ceil((asDate - Date.now()) / 1000));
+          }
+        }
+      }
+
       const err = ApiErrorBody.safeParse(json);
-      if (err.success) throw new ApiError(err.data.error.code, err.data.error.message, res.status);
-      throw new ApiError(STATUS_CODES[res.status] ?? "INTERNAL", `Request failed with status ${res.status}.`, res.status);
+      let code = err.success ? err.data.error.code : (STATUS_CODES[res.status] ?? "INTERNAL");
+      let message = err.success ? err.data.error.message : `Request failed with status ${res.status}.`;
+
+      if (res.status === 429 || code === "RATE_LIMITED") {
+        code = "RATE_LIMITED";
+        if (retryAfterSeconds !== undefined && retryAfterSeconds > 0) {
+          const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+          const wait = `Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+          message = err.success ? `${message.replace(/\.?$/, ".")} ${wait}` : `You've reached the limit for now. ${wait}`;
+        } else if (!err.success) {
+          message = "You've reached the limit for now. Try again later.";
+        }
+        const event: RateLimitEvent = { message, retryAfterSeconds };
+        opts.onRateLimit?.(event);
+      }
+
+      throw new ApiError(code, message, res.status, retryAfterSeconds);
     }
 
     const parsed = resSchema.safeParse(json);

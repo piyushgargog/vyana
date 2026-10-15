@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -20,9 +17,38 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
+  Button,
+  Card,
+  CardHeader,
+  IconTile,
+  ListGroup,
+  ListRow,
+  Pill,
+  Screen,
+  Sheet,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
+import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
+
+function flagTone(flag: string): 'danger' | 'warn' | 'ok' | 'neutral' {
+  if (flag === 'high') return 'danger';
+  if (flag === 'low') return 'warn';
+  if (flag === 'normal') return 'ok';
+  return 'neutral';
+}
+
+function formatRange(val: LabValue): string {
+  if (val.ref_low !== null && val.ref_high !== null)
+    return `${val.ref_low} – ${val.ref_high} ${val.unit ?? ''}`.trim();
+  if (val.ref_high !== null) return `< ${val.ref_high} ${val.unit ?? ''}`.trim();
+  if (val.ref_low !== null) return `> ${val.ref_low} ${val.unit ?? ''}`.trim();
+  return 'No range on the report';
+}
 
 export default function ReportUploadScreen() {
   const router = useRouter();
@@ -31,6 +57,7 @@ export default function ReportUploadScreen() {
   const correctMutation = useCorrectLabValue();
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [reportDate, setReportDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
@@ -75,6 +102,7 @@ export default function ReportUploadScreen() {
       if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
       const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setPickerOpen(false);
       setIsUploading(true);
       const uploadedPath = await uploadFile(
         supabase,
@@ -104,6 +132,7 @@ export default function ReportUploadScreen() {
       if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
       const ext = asset.fileName?.split('.').pop() || 'jpg';
+      setPickerOpen(false);
       setIsUploading(true);
       const uploadedPath = await uploadFile(
         supabase,
@@ -127,6 +156,7 @@ export default function ReportUploadScreen() {
       });
       if (result.canceled || !result.assets || !result.assets[0]) return;
       const asset = result.assets[0];
+      setPickerOpen(false);
       setIsUploading(true);
       const uploadedPath = await uploadFile(
         supabase,
@@ -180,445 +210,240 @@ export default function ReportUploadScreen() {
     router.replace('/(tabs)/reports');
   };
 
+  const busy = isUploading || analyzeMutation.isPending;
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Upload Lab Report</Text>
-          <Text style={styles.headerSub}>
-            AI extraction of test values, reference flags & summary
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cancel upload"
-          onPress={() => router.back()}
-          style={styles.closeBtn}
-        >
-          <Text style={styles.closeBtnText}>Cancel</Text>
-        </Pressable>
-      </View>
-
+    <Screen
+      title="Upload lab report"
+      eyebrow="Add results"
+      trailing={
+        <Button title="Cancel" variant="secondary" onPress={() => router.back()} label="Cancel upload" />
+      }
+    >
       {step === 'upload' ? (
-        <View style={styles.uploadContainer}>
-          {/* Diagnostic Report Source Picker */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Choose Report Document</Text>
-            <Text style={styles.cardSub}>
-              Take a photo or pick a diagnostic test report (PDF, JPG, PNG) to extract values and reference ranges.
+        <>
+          <Card>
+            <CardHeader title="Choose report document" />
+            <Text variant="subhead" tone="secondary">
+              Take a photo or pick a diagnostic test report (PDF, JPG, PNG) to
+              extract values and reference ranges.
             </Text>
-
-            <View style={styles.dateGroup}>
-              <Text style={styles.inputLabel}>Report Test Date:</Text>
+            <View style={styles.field}>
+              <Text variant="footnote" tone="secondary" style={styles.label}>
+                Report date
+              </Text>
               <TextInput
-                accessibilityLabel="Report Test Date"
+                accessibilityLabel="Report test date"
                 value={reportDate}
                 onChangeText={setReportDate}
                 placeholder="YYYY-MM-DD"
-                style={styles.textInput}
+                placeholderTextColor={T.color.label3}
+                style={styles.input}
               />
             </View>
-
-            {isUploading || analyzeMutation.isPending ? (
+            {busy ? (
               <View style={styles.loadingBox}>
-                <ActivityIndicator size="small" color="#0D9488" />
-                <Text style={styles.loadingText}>
+                <ActivityIndicator size="small" color={T.color.accent} />
+                <Text variant="subhead" tone="accent" style={styles.strong}>
                   {isUploading
                     ? 'Uploading report document…'
                     : 'Analyzing lab values with AI…'}
                 </Text>
               </View>
             ) : (
-              <View style={styles.pickerActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Photograph lab report with camera"
-                  onPress={handlePickFromCamera}
-                  style={styles.pickerBtn}
-                >
-                  <Text style={styles.pickerBtnTitle}>📷 Take Photo with Camera</Text>
-                  <Text style={styles.pickerBtnSub}>Snap a picture of your physical lab sheet</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Pick lab report image from gallery"
-                  onPress={handlePickFromGallery}
-                  style={styles.pickerBtn}
-                >
-                  <Text style={styles.pickerBtnTitle}>🖼️ Pick from Photo Gallery</Text>
-                  <Text style={styles.pickerBtnSub}>Select JPG or PNG from photos</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Upload lab report PDF document"
-                  onPress={handlePickPdfDocument}
-                  style={styles.pickerBtn}
-                >
-                  <Text style={styles.pickerBtnTitle}>📄 Choose PDF Document</Text>
-                  <Text style={styles.pickerBtnSub}>Select digital diagnostic PDF from lab</Text>
-                </Pressable>
-              </View>
+              <Button
+                title="Choose report"
+                onPress={() => setPickerOpen(true)}
+                label="Choose lab report photo or PDF"
+                icon={<Symbol ios="doc.fill" android="description" size={16} color={T.color.white} />}
+              />
             )}
-          </View>
+          </Card>
 
-          {/* AI Safety Rule Card */}
-          <View style={styles.safetyCard}>
-            <Text style={styles.safetyTitle}>Medical Safety Rules</Text>
-            <Text style={styles.safetyText}>
-              • Values and units are verified verbatim against the document.
-              {'\n'}• Flags (High, Low, Normal) are calculated by code, not guessed by AI.
-              {'\n'}• Summary strictly restates extracted numbers without diagnosing diseases.
+          <Card>
+            <View style={styles.safetyRow}>
+              <Symbol ios="shield.fill" android="shield" size={20} color={T.color.accent} />
+              <Text variant="headline">How we keep it safe</Text>
+            </View>
+            <Text variant="subhead" tone="secondary">
+              Values and units are checked against the document. Flags (high, low,
+              normal) are worked out by code, not guessed by AI. The summary only
+              restates your numbers.
             </Text>
-          </View>
-        </View>
+          </Card>
+        </>
       ) : (
-        <View style={styles.reviewContainer}>
-          {/* Review Header */}
-          <View style={styles.reviewBanner}>
-            <Text style={styles.reviewStepBadge}>MANDATORY LAB REVIEW</Text>
-            <Text style={styles.reviewTitle}>Review Extracted Lab Values</Text>
-            <Text style={styles.reviewSub}>
-              Check each value against your paper report. If a number is wrong, type the correct one and tap Save; the flag is worked out again on our server.
+        <>
+          <Card>
+            <View style={styles.reviewHead}>
+              <Pill text="Check every value" tone="warn" />
+              <Text variant="title3">Review the extracted values</Text>
+            </View>
+            <Text variant="subhead" tone="secondary">
+              Check each value against your paper report. If a number is wrong,
+              type the correct one and tap Save — the flag is worked out again on
+              our server.
             </Text>
-          </View>
+          </Card>
 
-          {/* AI Safety Banner */}
           <MobileAiSafetyBanner feature="reports_analyze" aiRunId={analyzedData?.ai?.run_id} />
 
-          {/* Plain-Language Summary */}
           {analyzedData?.summary && (
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Plain-Language Summary</Text>
-              <Text style={styles.summaryBody}>{analyzedData.summary}</Text>
-            </View>
+            <Card>
+              <CardHeader title="Summary in plain words" />
+              <Text variant="subhead">{analyzedData.summary}</Text>
+            </Card>
           )}
 
-          {/* Follow-Up Tests */}
-          {analyzedData?.follow_up_tests &&
-            analyzedData.follow_up_tests.length > 0 && (
-              <View style={styles.followUpCard}>
-                <Text style={styles.followUpTitle}>
-                  Suggested Follow-Up Tests
-                </Text>
-                <View style={styles.tagsRow}>
-                  {analyzedData.follow_up_tests.map((test, idx) => (
-                    <View key={idx} style={styles.testTag}>
-                      <Text style={styles.testTagText}>{test}</Text>
-                    </View>
-                  ))}
-                </View>
+          {analyzedData?.follow_up_tests && analyzedData.follow_up_tests.length > 0 && (
+            <Card>
+              <CardHeader title="Suggested follow-up tests" />
+              <View style={styles.tagsRow}>
+                {analyzedData.follow_up_tests.map((test, idx) => (
+                  <Pill key={idx} text={test} tone="accent" />
+                ))}
               </View>
-            )}
+            </Card>
+          )}
 
-          {/* Values List with in-code flag recomputation */}
-          <Text style={styles.valuesHeaderTitle}>
-            Extracted Test Values ({editedValues.length})
+          <Text variant="title3" accessibilityRole="header" style={styles.sectionTitle}>
+            Test values ({editedValues.length})
           </Text>
 
-          {editedValues.map((val, idx) => {
-            const isHigh = val.flag === 'high';
-            const isLow = val.flag === 'low';
-
-            return (
-              <View
-                key={idx}
-                style={[
-                  styles.valueCard,
-                  val.needs_review && styles.valueCardReview,
-                ]}
-              >
-                {val.needs_review && (
-                  <View style={styles.needsReviewBox}>
-                    <Text style={styles.needsReviewText}>
-                      ⚠ NEEDS REVIEW: {val.evidence || 'Check document value'}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.valueRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.testName}>{val.test_name}</Text>
-                    <Text style={styles.refRange}>
-                      Reference:{' '}
-                      {val.ref_low !== null && val.ref_high !== null
-                        ? `${val.ref_low} – ${val.ref_high} ${val.unit ?? ''}`
-                        : val.ref_high !== null
-                          ? `< ${val.ref_high} ${val.unit ?? ''}`
-                          : val.ref_low !== null
-                            ? `> ${val.ref_low} ${val.unit ?? ''}`
-                            : 'No range on the report'}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.flagBadge,
-                      isHigh
-                        ? styles.flagHigh
-                        : isLow
-                          ? styles.flagLow
-                          : styles.flagNormal,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.flagBadgeText,
-                        isHigh
-                          ? styles.flagHighText
-                          : isLow
-                            ? styles.flagLowText
-                            : styles.flagNormalText,
-                      ]}
-                    >
-                      {val.flag.toUpperCase()}
-                    </Text>
-                  </View>
+          {editedValues.map((val, idx) => (
+            <Card key={idx}>
+              <View style={styles.valueHead}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="headline">{val.test_name}</Text>
+                  <Text variant="footnote" tone="tertiary">
+                    Reference: {formatRange(val)}
+                  </Text>
                 </View>
-
-                {/* Correct a value: saved through the server */}
-                <View style={styles.valueInputRow}>
-                  <Text style={styles.valueInputLabel}>{val.corrected ? 'Corrected value:' : 'Measured value:'}</Text>
-                  <TextInput
-                    accessibilityLabel={`${val.test_name} value`}
-                    value={drafts[idx] ?? (val.value !== null ? String(val.value) : val.value_text ?? '')}
-                    onChangeText={(t) => setDrafts((prev) => ({ ...prev, [idx]: t }))}
-                    style={styles.numericInput}
-                    keyboardType="decimal-pad"
-                    editable={savingIdx === null && val.value_text === null}
-                  />
-                  <Text style={styles.unitText}>{val.unit || ''}</Text>
-                  {drafts[idx] !== undefined && (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Save corrected ${val.test_name}`}
-                      onPress={() => handleSaveValue(idx)}
-                      disabled={savingIdx !== null}
-                      style={styles.rowSaveBtn}
-                    >
-                      {savingIdx === idx ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.rowSaveBtnText}>Save</Text>
-                      )}
-                    </Pressable>
-                  )}
-                </View>
+                <Pill text={val.flag.toUpperCase()} tone={flagTone(val.flag)} />
               </View>
-            );
-          })}
 
-          {/* Done Button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Done and view in health records"
+              {val.needs_review && (
+                <Text variant="footnote" tone="warn">
+                  Needs review: {val.evidence || 'check the value on your report'}
+                </Text>
+              )}
+
+              <View style={styles.correctionRow}>
+                <Text variant="footnote" tone="secondary">
+                  {val.corrected ? 'Corrected:' : 'Measured:'}
+                </Text>
+                <TextInput
+                  accessibilityLabel={`${val.test_name} value`}
+                  value={drafts[idx] ?? (val.value !== null ? String(val.value) : val.value_text ?? '')}
+                  onChangeText={(t) => setDrafts((prev) => ({ ...prev, [idx]: t }))}
+                  style={styles.numericInput}
+                  keyboardType="decimal-pad"
+                  editable={savingIdx === null && val.value_text === null}
+                />
+                {val.unit ? (
+                  <Text variant="footnote" tone="secondary">
+                    {val.unit}
+                  </Text>
+                ) : null}
+                {drafts[idx] !== undefined && (
+                  <Button
+                    title="Save"
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => handleSaveValue(idx)}
+                    disabled={savingIdx !== null}
+                    loading={savingIdx === idx}
+                    label={`Save corrected ${val.test_name}`}
+                    style={styles.rowSave}
+                  />
+                )}
+              </View>
+            </Card>
+          ))}
+
+          <Button
+            title="Done · View in health records"
             onPress={handleDone}
-            style={styles.saveBtn}
-          >
-            <Text style={styles.saveBtnText}>
-              ✓ Done · View in Health Records
-            </Text>
-          </Pressable>
-        </View>
+            label="Done and view in health records"
+            icon={<Symbol ios="checkmark" android="check" size={16} color={T.color.white} />}
+          />
+        </>
       )}
 
+      {/* Camera / photo / PDF choice */}
+      <Sheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title="Add lab report">
+        <ListGroup>
+          <ListRow
+            icon={<IconTile ios="camera.fill" android="photo_camera" color="blue" />}
+            title="Take photo"
+            subtitle="Snap a picture of your lab sheet"
+            onPress={handlePickFromCamera}
+          />
+          <ListRow
+            icon={<IconTile ios="photo.fill" android="photo_library" color="green" />}
+            title="Choose from gallery"
+            subtitle="JPG or PNG from your photos"
+            onPress={handlePickFromGallery}
+          />
+          <ListRow
+            icon={<IconTile ios="doc.fill" android="description" color="orange" />}
+            title="Choose PDF"
+            subtitle="Digital report PDF from your lab"
+            onPress={handlePickPdfDocument}
+          />
+        </ListGroup>
+      </Sheet>
+
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  rowSaveBtn: {
-    backgroundColor: '#0D9488',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 56,
-    alignItems: 'center',
-  },
-  rowSaveBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  closeBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  closeBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
-  uploadContainer: { gap: 14 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  cardSub: { fontSize: 13, color: '#64748B', lineHeight: 18 },
-  dateGroup: { gap: 6, marginBottom: 4 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: '#334155' },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
+  strong: { fontWeight: '600' },
+  field: { gap: T.space.xs },
+  label: { fontWeight: '600' },
+  input: {
+    ...T.text.body,
+    color: T.color.label,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.sm,
+    minHeight: 44,
   },
   loadingBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#F0FDFA',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
+    gap: T.space.md,
+    backgroundColor: T.color.accentSoft,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    padding: T.space.lg,
   },
-  loadingText: { fontSize: 13, color: '#0F766E', fontWeight: '600' },
-  pickerActions: { gap: 10 },
-  pickerBtn: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#CBD5E1',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
-  },
-  pickerBtnTitle: { fontSize: 15, fontWeight: '700', color: '#0F766E' },
-  pickerBtnSub: { fontSize: 12, color: '#64748B' },
-  saveBtnDisabled: { opacity: 0.6 },
-  safetyCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
-  },
-  safetyTitle: { fontSize: 13, fontWeight: '800', color: '#1E40AF' },
-  safetyText: { fontSize: 12, color: '#1E3A8A', lineHeight: 18 },
-  reviewContainer: { gap: 14 },
-  reviewBanner: {
-    backgroundColor: '#0F766E',
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
-  },
-  reviewStepBadge: {
-    color: '#99F6E4',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  reviewTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  reviewSub: { fontSize: 13, color: '#CCFBF1', lineHeight: 18 },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  summaryTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  summaryBody: { fontSize: 13, color: '#334155', lineHeight: 20 },
-  followUpCard: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#CCFBF1',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 8,
-  },
-  followUpTitle: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  testTag: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  testTagText: { fontSize: 12, fontWeight: '600', color: '#0F766E' },
-  valuesHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  valueCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  valueCardReview: { borderColor: '#F59E0B', borderWidth: 2 },
-  needsReviewBox: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 8,
-    padding: 8,
-  },
-  needsReviewText: { fontSize: 11, fontWeight: '800', color: '#92400E' },
-  valueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  testName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  refRange: { fontSize: 12, color: '#64748B' },
-  flagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  flagHigh: { backgroundColor: '#FEE2E2' },
-  flagLow: { backgroundColor: '#FEF3C7' },
-  flagNormal: { backgroundColor: '#D1FAE5' },
-  flagBadgeText: { fontSize: 11, fontWeight: '800' },
-  flagHighText: { color: '#B91C1C' },
-  flagLowText: { color: '#B45309' },
-  flagNormalText: { color: '#065F46' },
-  valueInputRow: {
+  safetyRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  reviewHead: { gap: T.space.sm, alignItems: 'flex-start' },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  sectionTitle: { paddingHorizontal: T.space.xs, marginTop: T.space.sm },
+  valueHead: { flexDirection: 'row', alignItems: 'flex-start', gap: T.space.sm },
+  correctionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 4,
+    gap: T.space.sm,
+    flexWrap: 'wrap',
   },
-  valueInputLabel: { fontSize: 12, color: '#475569', fontWeight: '500' },
   numericInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 14,
+    ...T.text.body,
     fontWeight: '700',
-    color: '#0F172A',
-    minWidth: 80,
+    color: T.color.label,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.sm,
+    minHeight: 44,
+    minWidth: 88,
   },
-  unitText: { fontSize: 13, color: '#64748B', fontWeight: '600' },
-  saveBtn: {
-    backgroundColor: '#0F766E',
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    shadowColor: '#0F766E',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  rowSave: { minHeight: 44, justifyContent: 'center' },
 });

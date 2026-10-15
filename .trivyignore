@@ -1,0 +1,10 @@
+# Dev-toolchain audit exceptions (issue #154, 2026-10-14).
+# node-forge, braces, uuid and decode-uri-component reach us only through the
+# Expo/mobile dev toolchain and the web devDependencies (eslint). None of them
+# is in the production web image (Next.js standalone output). No patched version
+# exists upstream yet. Re-check on Dependabot alerts; remove an ignore when a
+# patched version exists.
+GHSA-86w9-cpqp-85rv
+GHSA-vfj7-8cjw-p6xm
+GHSA-w5hq-g745-h8pq
+GHSA-vcc3-ghjq-m6fr

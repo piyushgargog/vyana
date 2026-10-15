@@ -8,11 +8,6 @@ export const metadata: Metadata = {
   title: "Vyana: your health, in one calm place",
   description:
     "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/apple-touch-icon.png",
-  },
   openGraph: {
     title: "Vyana: your health, in one calm place",
     description:
@@ -21,21 +16,12 @@ export const metadata: Metadata = {
     siteName: "Vyana",
     locale: "en_IN",
     type: "website",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Vyana: your health, in one calm place",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Vyana: your health, in one calm place",
     description:
       "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
-    images: ["/og-image.png"],
   },
 };
 

@@ -65,7 +65,12 @@ export function MobileAppProviders({
   );
 
   return (
-    <AppProviders supabase={supabase} apiBaseUrl={baseUrl} useMocks={useMocks}>
+    <AppProviders
+      supabase={supabase}
+      apiBaseUrl={baseUrl}
+      useMocks={useMocks}
+      onRateLimit={(event) => showToast(event.message, 'info')}
+    >
       <VyanaMobileContext.Provider value={value}>
         {children}
         {toasts.length > 0 && (

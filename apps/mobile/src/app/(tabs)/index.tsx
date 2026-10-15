@@ -24,6 +24,7 @@ import {
   Button,
   Card,
   CardHeader,
+  ErrorState,
   Glass,
   IconTile,
   ListGroup,
@@ -41,7 +42,7 @@ export default function PatientHomeScreen() {
   const { setSelectedBasketMedicines, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
-  const { data: activeItems = [], isLoading: itemsLoading, refetch: refetchItems } = useActiveItems();
+  const { data: activeItems = [], isLoading: itemsLoading, isError: itemsError, refetch: refetchItems } = useActiveItems();
   const { data: conditions = [] } = useConditions();
   const { data: carePlans = [] } = useCarePlans();
   const activeCarePlan = parseCarePlanJson(carePlans[0]?.plan_json);
@@ -232,6 +233,8 @@ export default function PatientHomeScreen() {
 
           {itemsLoading ? (
             <MobileSkeletonCard lines={2} />
+          ) : itemsError ? (
+            <ErrorState onRetry={() => refetchItems()} />
           ) : scheduledSlots.length === 0 ? (
             <View style={styles.emptyDoses}>
               <Text variant="subhead" tone="secondary">

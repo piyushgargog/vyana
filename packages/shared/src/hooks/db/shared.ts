@@ -54,6 +54,13 @@ export function useInvalidate(): (...roots: string[]) => Promise<void> {
  * hook just registers its own invalidate callback (ref counted at module level).
  */
 const sharedChannels = new Map<string, { stop: () => void; refs: number; callbacks: Set<() => void> }>();
+/**
+ * `removeChannel` is async: the old channel stays registered under its topic until the leave finishes, and asking for
+ * the same topic again returns that leaving channel, which never delivers anything. So every channel gets its own topic
+ * (a counter suffix), and the last hook's release is deferred by a tick so a hook that mounts straight after (React
+ * StrictMode, a route change between two screens on the same table) reuses the open channel.
+ */
+let channelSeq = 0;
 
 /**
  * Refreshes the queries under `roots` whenever `table` changes for this user (Realtime applies RLS, so
@@ -70,7 +77,7 @@ export function useLiveInvalidate(table: LiveTable, ...roots: string[]): void {
     let entry = sharedChannels.get(name);
     if (!entry) {
       const callbacks = new Set<() => void>();
-      const stop = subscribeTable(sb, name, table, () => {
+      const stop = subscribeTable(sb, `${name}:${++channelSeq}`, table, () => {
         for (const cb of callbacks) cb();
       });
       entry = { stop, refs: 0, callbacks };
@@ -84,8 +91,11 @@ export function useLiveInvalidate(table: LiveTable, ...roots: string[]): void {
       live.callbacks.delete(onChange);
       live.refs -= 1;
       if (live.refs <= 0) {
-        live.stop();
-        sharedChannels.delete(name);
+        setTimeout(() => {
+          if (live.refs > 0 || sharedChannels.get(name) !== live) return;
+          live.stop();
+          sharedChannels.delete(name);
+        }, 0);
       }
     };
   }, [sb, ready, userId, table, rootKey, invalidate]);

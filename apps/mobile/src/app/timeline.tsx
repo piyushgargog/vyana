@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -18,20 +17,46 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  MobileDisclaimerFooter,
-  MobileQrGrid,
-} from '@/components/ui-primitives';
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  Pill,
+  Screen,
+  Symbol,
+  Text,
+} from '@/components/ui';
+import { MobileDisclaimerFooter, MobileQrGrid } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
-function kindBadge(kind: TimelineKind): { label: string; bg: string; color: string } {
+const FILTERS = ['all', 'prescription', 'report', 'appointment', 'condition'] as const;
+
+function filterLabel(f: (typeof FILTERS)[number]): string {
+  switch (f) {
+    case 'all':
+      return 'All events';
+    case 'prescription':
+      return 'Prescriptions';
+    case 'report':
+      return 'Lab reports';
+    case 'appointment':
+      return 'OPD visits';
+    case 'condition':
+      return 'Care plans';
+  }
+}
+
+function kindPill(kind: TimelineKind): { label: string; tone: 'accent' | 'neutral' | 'warn' } {
   switch (kind) {
     case 'prescription':
-      return { label: 'RX', bg: '#F0FDFA', color: '#0F766E' };
+      return { label: 'Prescription', tone: 'accent' };
     case 'report':
-      return { label: 'LAB', bg: '#EFF6FF', color: '#1D4ED8' };
+      return { label: 'Lab report', tone: 'neutral' };
     case 'appointment':
-      return { label: 'OPD', bg: '#FEF3C7', color: '#B45309' };
+      return { label: 'OPD visit', tone: 'warn' };
     case 'condition':
-      return { label: 'CARE', bg: '#FDF2F8', color: '#BE185D' };
+      return { label: 'Care plan', tone: 'neutral' };
   }
 }
 
@@ -42,27 +67,33 @@ const TimelineItem = memo(function TimelineItem({
   item: TimelineEntry;
   onPress: (entry: TimelineEntry) => void;
 }) {
-  const badge = kindBadge(item.kind);
+  const pill = kindPill(item.kind);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${item.title} on ${item.date}`}
       onPress={() => onPress(item)}
-      style={styles.timelineCard}
     >
-      <View style={styles.cardHeader}>
-        <View style={[styles.kindBadge, { backgroundColor: badge.bg }]}>
-          <Text style={[styles.kindBadgeText, { color: badge.color }]}>
-            {badge.label}
+      <Card>
+        <View style={styles.cardHeader}>
+          <Pill text={pill.label} tone={pill.tone} />
+          <Text variant="footnote" tone="tertiary">
+            {item.date}
           </Text>
         </View>
-        <Text style={styles.dateText}>{item.date}</Text>
-      </View>
-
-      <Text style={styles.entryTitle}>{item.title}</Text>
-      {item.subtitle && <Text style={styles.entrySub}>{item.subtitle}</Text>}
-
-      <Text style={styles.tapDetailsText}>View details →</Text>
+        <Text variant="headline">{item.title}</Text>
+        {item.subtitle ? (
+          <Text variant="subhead" tone="secondary">
+            {item.subtitle}
+          </Text>
+        ) : null}
+        <View style={styles.detailsRow}>
+          <Text variant="footnote" tone="accent" style={styles.detailsText}>
+            View details
+          </Text>
+          <Symbol ios="chevron.right" android="chevron_right" size={14} color={T.color.accentStrong} />
+        </View>
+      </Card>
     </Pressable>
   );
 });
@@ -71,7 +102,7 @@ export default function TimelineScreen() {
   const router = useRouter();
   const { baseUrl, showToast } = useVyanaMobile();
 
-  const { data: timeline = [], isLoading } = useTimeline();
+  const { data: timeline = [], isLoading, isError: timelineError, refetch: refetchTimeline } = useTimeline();
   const createShareMutation = useCreateShareLink();
 
   const [filter, setFilter] = useState<'all' | TimelineKind>('all');
@@ -91,7 +122,7 @@ export default function TimelineScreen() {
       const fullUrl = res.url || `${baseUrl}/share/${res.token}`;
       setShareUrl(fullUrl);
       setShareOpen(true);
-      showToast('24-Hour Doctor Share Link created', 'success');
+      showToast('24-hour doctor share link created', 'success');
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : 'Could not create share link',
@@ -135,308 +166,170 @@ export default function TimelineScreen() {
   );
 
   return (
-    <View style={styles.screen}>
+    <Screen title="Timeline" eyebrow="Health" scroll={false}>
       <FlatList
         data={filteredEntries}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => `${item.kind}:${item.id}`}
         renderItem={renderItem}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.listContent}
         removeClippedSubviews
         maxToRenderPerBatch={10}
         windowSize={11}
         initialNumToRender={10}
         ListHeaderComponent={
-          <>
-
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Health Timeline</Text>
-          <Text style={styles.headerSub}>
-            Unified chronological record of care & visits
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Done</Text>
-        </Pressable>
-      </View>
-
-      {/* Share with Doctor Card */}
-      <View style={styles.shareBanner}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.shareBannerTitle}>Share with Doctor</Text>
-          <Text style={styles.shareBannerSub}>
-            Create an expiring 24h link & QR for a doctor to review your full history.
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Create 24-hour doctor share link and QR"
-          disabled={createShareMutation.isPending}
-          onPress={handleGenerateShare}
-          style={styles.shareActionBtn}
-        >
-          <Text style={styles.shareActionBtnText}>
-            {createShareMutation.isPending ? 'Generating…' : 'Share (24h) →'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Active Share Modal / Drawer */}
-      {shareOpen && shareUrl && (
-        <View style={styles.shareBox}>
-          <View style={styles.shareHeader}>
-            <Text style={styles.shareBoxTitle}>Doctor Share Link Active (24h)</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss share view"
-              onPress={() => setShareOpen(false)}
-            >
-              <Text style={styles.dismissText}>✕</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.qrCenter}>
-            <MobileQrGrid
-              data={shareUrl}
-              size={200}
-              label="Doctor Timeline Share QR"
-            />
-            <Text style={styles.qrSub}>Share URL or open web view below</Text>
-          </View>
-
-          <Text style={styles.shareUrlText} numberOfLines={2}>
-            {shareUrl}
-          </Text>
-
-          <View style={styles.shareBtnRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Copy link to clipboard"
-              onPress={handleCopyShare}
-              style={styles.copyBtn}
-            >
-              <Text style={styles.copyBtnText}>Copy Link</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open share link in browser"
-              onPress={handleOpenShare}
-              style={styles.previewBtn}
-            >
-              <Text style={styles.previewBtnText}>Open Web View ↗</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {/* Filter Pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {(
-          [
-            'all',
-            'prescription',
-            'report',
-            'appointment',
-            'condition',
-          ] as const
-        ).map((f) => {
-          const isSelected = filter === f;
-          return (
-            <Pressable
-              key={f}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter ${f}`}
-              onPress={() => setFilter(f)}
-              style={[
-                styles.filterPill,
-                isSelected && styles.filterPillActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  isSelected && styles.filterPillTextActive,
-                ]}
-              >
-                {f === 'all'
-                  ? 'All Events'
-                  : f === 'prescription'
-                    ? 'Prescriptions'
-                    : f === 'report'
-                      ? 'Lab Reports'
-                      : f === 'appointment'
-                        ? 'OPD Visits'
-                        : 'Care Plans'}
+          <View style={styles.headerStack}>
+            {/* Share with doctor */}
+            <Card>
+              <CardHeader title="Share with doctor" />
+              <Text variant="subhead" tone="secondary">
+                Create an expiring 24-hour link and QR code for a doctor to
+                review your full history.
               </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-          </>
+              <Button
+                title={createShareMutation.isPending ? 'Generating…' : 'Share for 24 hours'}
+                onPress={handleGenerateShare}
+                loading={createShareMutation.isPending}
+                disabled={createShareMutation.isPending}
+                icon={<Symbol ios="square.and.arrow.up" android="share" size={18} color={T.color.white} />}
+              />
+            </Card>
+
+            {/* Active share link */}
+            {shareOpen && shareUrl ? (
+              <Card>
+                <View style={styles.shareHeader}>
+                  <Text variant="headline">Doctor share link active</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss share view"
+                    onPress={() => setShareOpen(false)}
+                    style={styles.dismissBtn}
+                  >
+                    <Symbol ios="xmark" android="close" size={18} color={T.color.label2} label="Dismiss share view" />
+                  </Pressable>
+                </View>
+                <Pill text="Expires in 24 hours" tone="warn" />
+                <View style={styles.qrCenter}>
+                  <MobileQrGrid
+                    data={shareUrl}
+                    size={200}
+                    label="Doctor Timeline Share QR"
+                  />
+                </View>
+                <Text variant="footnote" tone="accent" numberOfLines={2}>
+                  {shareUrl}
+                </Text>
+                <View style={styles.shareBtnRow}>
+                  <Button title="Copy link" variant="secondary" onPress={handleCopyShare} />
+                  <Button title="Open web view" variant="plain" onPress={handleOpenShare} />
+                </View>
+              </Card>
+            ) : null}
+
+            {/* Filters */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              {FILTERS.map((f) => {
+                const isSelected = filter === f;
+                return (
+                  <Pressable
+                    key={f}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter: ${filterLabel(f)}`}
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => setFilter(f)}
+                    style={[
+                      styles.filterChip,
+                      isSelected && styles.filterChipActive,
+                    ]}
+                  >
+                    <Text
+                      variant="footnote"
+                      tone={isSelected ? 'white' : 'secondary'}
+                      style={styles.filterChipText}
+                    >
+                      {filterLabel(f)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
         }
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color="#0D9488" />
-              <Text style={styles.loadingText}>Building your timeline…</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No Timeline Events</Text>
-              <Text style={styles.emptySub}>
-                Your prescriptions, lab reports, and doctor visits will appear here
-                in chronological order.
+              <ActivityIndicator size="small" color={T.color.accent} />
+              <Text variant="subhead" tone="secondary">
+                Building your timeline…
               </Text>
             </View>
+          ) : timelineError ? (
+            <ErrorState onRetry={() => refetchTimeline()} />
+          ) : (
+            <EmptyState
+              ios="calendar"
+              android="calendar_month"
+              title="No timeline events yet"
+              body="Your prescriptions, lab reports and doctor visits will appear here in chronological order."
+            />
           )
         }
         ListFooterComponent={<MobileDisclaimerFooter />}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  backBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  backBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
-  shareBanner: {
-    backgroundColor: '#0F766E',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  shareBannerTitle: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  shareBannerSub: { fontSize: 12, color: '#CCFBF1', lineHeight: 16 },
-  shareActionBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  shareActionBtnText: { color: '#0F766E', fontSize: 13, fontWeight: '800' },
-  shareBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#99F6E4',
-  },
-  shareHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  shareBoxTitle: { fontSize: 14, fontWeight: '700', color: '#0F766E' },
-  dismissText: { fontSize: 16, color: '#64748B', fontWeight: '700' },
-  qrCenter: { alignItems: 'center', gap: 6 },
-  qrSub: { fontSize: 12, color: '#64748B' },
-  shareUrlText: {
-    fontSize: 11,
-    color: '#0F766E',
-    backgroundColor: '#F0FDFA',
-    padding: 8,
-    borderRadius: 8,
-  },
-  shareBtnRow: { flexDirection: 'row', gap: 10 },
-  copyBtn: {
-    flex: 1,
-    backgroundColor: '#0F766E',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  copyBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  previewBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  previewBtnText: { color: '#0F172A', fontSize: 13, fontWeight: '600' },
-  filterRow: { gap: 8, paddingBottom: 4 },
-  filterPill: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  filterPillActive: {
-    backgroundColor: '#0F766E',
-    borderColor: '#0F766E',
-  },
-  filterPillText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  filterPillTextActive: { color: '#FFFFFF' },
-  loadingBox: { padding: 24, alignItems: 'center', gap: 8 },
-  loadingText: { fontSize: 13, color: '#64748B' },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  timelineList: { gap: 12 },
-  timelineCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
+  listContent: { gap: T.space.lg, paddingBottom: T.space.xl },
+  headerStack: { gap: T.space.lg },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  kindBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.xs,
+    marginTop: T.space.xs,
   },
-  kindBadgeText: { fontSize: 10, fontWeight: '800' },
-  dateText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  entryTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  entrySub: { fontSize: 13, color: '#475569', lineHeight: 18 },
-  tapDetailsText: {
-    fontSize: 12,
-    color: '#0D9488',
-    fontWeight: '600',
-    marginTop: 4,
+  detailsText: { fontWeight: '600' },
+  shareHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dismissBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrCenter: { alignItems: 'center' },
+  shareBtnRow: { flexDirection: 'row', gap: T.space.sm },
+  filterRow: { gap: T.space.sm },
+  filterChip: {
+    backgroundColor: T.color.surface,
+    borderWidth: 1,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.pill,
+    paddingHorizontal: T.space.lg,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  filterChipActive: {
+    backgroundColor: T.color.accent,
+    borderColor: T.color.accent,
+  },
+  filterChipText: { fontWeight: '600' },
+  loadingBox: {
+    padding: T.space.xl,
+    alignItems: 'center',
+    gap: T.space.sm,
   },
 });
