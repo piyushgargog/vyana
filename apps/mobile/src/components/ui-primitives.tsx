@@ -213,6 +213,7 @@ export function MobileAiSafetyBanner({
           ) : (
             <Button
               title={open ? 'Close' : 'Report a mistake'}
+              label="Report an AI mistake"
               variant="plain"
               onPress={() => setOpen((v) => !v)}
             />
@@ -235,6 +236,7 @@ export function MobileAiSafetyBanner({
           />
           <Button
             title="Submit Report"
+            label="Submit AI mistake report"
             variant="secondary"
             loading={reportMutation.isPending}
             onPress={handleSubmit}
