@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -24,6 +22,15 @@ import {
   useUpsertDoctorProfile,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  CardHeader,
+  Pill,
+  Screen,
+  Text,
+} from '@/components/ui';
+import { T } from '@/constants/theme';
 
 export default function MobileOnboardingScreen() {
   const router = useRouter();
@@ -168,374 +175,395 @@ export default function MobileOnboardingScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <Text style={styles.stepTag}>
-          Account Role: {role.toUpperCase()} · Health Profile Setup
-        </Text>
-        <Text style={styles.title}>Complete Your Vyana Setup</Text>
+    <Screen
+      eyebrow={`Health profile setup · ${role === 'doctor' ? 'Doctor' : 'Patient'}`}
+      title="Complete your setup"
+    >
+      {errorMsg && (
+        <View accessibilityRole="alert" style={styles.errorBox}>
+          <Text variant="footnote" tone="danger" style={styles.errorText}>
+            {errorMsg}
+          </Text>
+        </View>
+      )}
 
-        {errorMsg && (
-          <View accessibilityRole="alert" style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
-          </View>
-        )}
-
-        {role === 'doctor' ? (
-          <View style={styles.docBox}>
-            <Text style={styles.docTitle}>
-              Doctor Onboarding · Hospital, Department & NMC Registration
+      {role === 'doctor' && (
+        <Card>
+          <CardHeader title="Doctor details" />
+          <View style={styles.fieldGroup}>
+            <Text variant="footnote" style={styles.label}>
+              Hospital
             </Text>
-            <Text style={styles.label}>Hospital</Text>
-            <View style={styles.tagsWrap}>
-              {hospitals.map((h) => (
-                <Pressable
-                  key={h.id}
-                  accessibilityRole="button"
-                  onPress={() => setHospitalId(h.id)}
-                  style={[
-                    styles.chip,
-                    hospitalId === h.id && styles.chipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      hospitalId === h.id && styles.chipTextActive,
-                    ]}
+            <View style={styles.chipWrap}>
+              {hospitals.map((h) => {
+                const selected = hospitalId === h.id;
+                return (
+                  <Pressable
+                    key={h.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`Select hospital ${h.name}`}
+                    onPress={() => setHospitalId(h.id)}
+                    style={[styles.chip, selected && styles.chipActive]}
                   >
-                    {h.name.split('(')[0].trim()}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      variant="footnote"
+                      tone={selected ? 'accent' : 'secondary'}
+                      style={selected ? styles.chipTextActive : undefined}
+                    >
+                      {h.name.split('(')[0].trim()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
+          </View>
 
-            <Text style={styles.label}>Department</Text>
-            <View style={styles.tagsWrap}>
-              {departments.map((dept) => (
-                <Pressable
-                  key={dept.id}
-                  accessibilityRole="button"
-                  onPress={() => setDepartmentName(dept.name)}
-                  style={[
-                    styles.chip,
-                    departmentName === dept.name && styles.chipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      departmentName === dept.name && styles.chipTextActive,
-                    ]}
+          <View style={styles.fieldGroup}>
+            <Text variant="footnote" style={styles.label}>
+              Department
+            </Text>
+            <View style={styles.chipWrap}>
+              {departments.map((dept) => {
+                const selected = departmentName === dept.name;
+                return (
+                  <Pressable
+                    key={dept.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`Select department ${dept.name}`}
+                    onPress={() => setDepartmentName(dept.name)}
+                    style={[styles.chip, selected && styles.chipActive]}
                   >
-                    {dept.name}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      variant="footnote"
+                      tone={selected ? 'accent' : 'secondary'}
+                      style={selected ? styles.chipTextActive : undefined}
+                    >
+                      {dept.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
+          </View>
 
-            <Text style={styles.label}>NMC Registration No.</Text>
+          <View style={styles.fieldGroup}>
+            <Text variant="footnote" style={styles.label}>
+              NMC Registration No.
+            </Text>
             <TextInput
               accessibilityLabel="NMC Registration Number"
               value={regNo}
               onChangeText={setRegNo}
               placeholder="e.g., DMC-45892"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
+          </View>
 
-            <Text style={styles.label}>State Medical Council</Text>
+          <View style={styles.fieldGroup}>
+            <Text variant="footnote" style={styles.label}>
+              State Medical Council
+            </Text>
             <TextInput
               accessibilityLabel="State Medical Council"
               value={stateCouncil}
               onChangeText={setStateCouncil}
               placeholder="e.g., Delhi Medical Council"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
+          </View>
 
-            <Text style={styles.label}>Specialization</Text>
+          <View style={styles.fieldGroup}>
+            <Text variant="footnote" style={styles.label}>
+              Specialization
+            </Text>
             <TextInput
               accessibilityLabel="Doctor Specialization"
               value={specialization}
               onChangeText={setSpecialization}
               placeholder="e.g., General Medicine"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
           </View>
-        ) : null}
+        </Card>
+      )}
 
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          accessibilityLabel="Full Name"
-          value={fullName}
-          onChangeText={setFullName}
-          style={styles.input}
-        />
+      <Card>
+        <CardHeader title="About you" />
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            Full Name
+          </Text>
+          <TextInput
+            accessibilityLabel="Full Name"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
+        </View>
 
-        <Text style={styles.label}>Mobile Number</Text>
-        <TextInput
-          accessibilityLabel="Mobile Number"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          style={styles.input}
-        />
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            Mobile Number
+          </Text>
+          <TextInput
+            accessibilityLabel="Mobile Number"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
+        </View>
 
         <View style={styles.row}>
           <View style={styles.half}>
-            <Text style={styles.label}>Date of Birth (YYYY-MM-DD)</Text>
+            <Text variant="footnote" style={styles.label}>
+              Date of Birth (YYYY-MM-DD)
+            </Text>
             <TextInput
               accessibilityLabel="Date of Birth"
               value={dob}
               onChangeText={setDob}
               placeholder="1980-01-15"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
           </View>
           <View style={styles.half}>
-            <Text style={styles.label}>Blood Group</Text>
+            <Text variant="footnote" style={styles.label}>
+              Blood Group
+            </Text>
             <TextInput
               accessibilityLabel="Blood Group"
               value={bloodGroup}
               onChangeText={setBloodGroup}
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
           </View>
         </View>
 
-        <Text style={styles.label}>City</Text>
-        <TextInput
-          accessibilityLabel="City"
-          value={city}
-          onChangeText={setCity}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Preferred Language</Text>
-        <View style={styles.row}>
-          {[
-            { id: 'en', label: 'English' },
-            { id: 'hi', label: 'Hindi' },
-            { id: 'hinglish', label: 'Hinglish' },
-          ].map((l) => (
-            <Pressable
-              key={l.id}
-              accessibilityRole="button"
-              accessibilityState={{ selected: preferredLang === l.id }}
-              accessibilityLabel={`Language ${l.label}`}
-              onPress={() => setPreferredLang(l.id)}
-              style={[
-                styles.chip,
-                preferredLang === l.id && styles.chipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  preferredLang === l.id && styles.chipTextActive,
-                ]}
-              >
-                {l.label}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            City
+          </Text>
+          <TextInput
+            accessibilityLabel="City"
+            value={city}
+            onChangeText={setCity}
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
         </View>
 
-        <Text style={styles.label}>Known Allergies (comma-separated)</Text>
-        <TextInput
-          accessibilityLabel="Known Allergies"
-          value={allergiesStr}
-          onChangeText={setAllergiesStr}
-          placeholder="e.g., Penicillin, Peanuts"
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Chronic Conditions</Text>
-        <View style={styles.tagsWrap}>
-          {conditions.map((c) => (
-            <View key={c.id} style={styles.condBadge}>
-              <Text style={styles.condBadgeText}>{c.name}</Text>
-            </View>
-          ))}
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            Preferred Language
+          </Text>
+          <View style={styles.row}>
+            {[
+              { id: 'en', label: 'English' },
+              { id: 'hi', label: 'Hindi' },
+              { id: 'hinglish', label: 'Hinglish' },
+            ].map((l) => {
+              const selected = preferredLang === l.id;
+              return (
+                <Pressable
+                  key={l.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Language ${l.label}`}
+                  onPress={() => setPreferredLang(l.id)}
+                  style={[styles.chip, selected && styles.chipActive]}
+                >
+                  <Text
+                    variant="footnote"
+                    tone={selected ? 'accent' : 'secondary'}
+                    style={selected ? styles.chipTextActive : undefined}
+                  >
+                    {l.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
+
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            Known Allergies (comma-separated)
+          </Text>
+          <TextInput
+            accessibilityLabel="Known Allergies"
+            value={allergiesStr}
+            onChangeText={setAllergiesStr}
+            placeholder="e.g., Penicillin, Peanuts"
+            placeholderTextColor={T.color.label3}
+            style={styles.input}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <CardHeader title="Chronic conditions" />
+        {conditions.length > 0 && (
+          <View style={styles.chipWrap}>
+            {conditions.map((c) => (
+              <Pill key={c.id} text={c.name} tone="accent" />
+            ))}
+          </View>
+        )}
         <View style={styles.row}>
           <TextInput
             accessibilityLabel="Add new chronic condition"
             value={newCondition}
             onChangeText={setNewCondition}
             placeholder="e.g., Asthma, Hypothyroidism"
+            placeholderTextColor={T.color.label3}
             style={[styles.input, { flex: 1 }]}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add condition"
+          <Button
+            title="Add"
+            variant="secondary"
+            size="sm"
+            label="Add condition"
             disabled={addConditionMutation.isPending}
             onPress={handleAddCondition}
-            style={styles.secondaryBtn}
-          >
-            <Text style={styles.secondaryBtnText}>+ Add</Text>
-          </Pressable>
+          />
         </View>
+      </Card>
 
-        <View style={styles.ecBox}>
-          <Text style={styles.ecTitle}>
-            Primary Emergency Contact (For SOS 108 & Medical ID)
+      <Card style={styles.ecCard}>
+        <CardHeader title="Emergency contact" trailing="For SOS 108" />
+        {emergencyContacts.length > 0 && (
+          <View style={styles.chipWrap}>
+            {emergencyContacts.map((ec) => (
+              <Pill
+                key={ec.id}
+                text={`${ec.name} (${ec.phone})`}
+                tone="neutral"
+              />
+            ))}
+          </View>
+        )}
+        <View style={styles.fieldGroup}>
+          <Text variant="footnote" style={styles.label}>
+            Contact Name
           </Text>
-          {emergencyContacts.length > 0 && (
-            <View style={styles.tagsWrap}>
-              {emergencyContacts.map((ec) => (
-                <View key={ec.id} style={styles.condBadge}>
-                  <Text style={styles.condBadgeText}>
-                    {ec.name} ({ec.phone})
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-          <Text style={styles.label}>Contact Name</Text>
           <TextInput
             accessibilityLabel="Emergency Contact Name"
             value={ecName}
             onChangeText={setEcName}
             placeholder="Family member name"
+            placeholderTextColor={T.color.label3}
             style={styles.input}
           />
-          <View style={styles.row}>
-            <View style={styles.half}>
-              <Text style={styles.label}>Mobile Number</Text>
-              <TextInput
-                accessibilityLabel="Emergency Contact Phone"
-                keyboardType="phone-pad"
-                value={ecPhone}
-                onChangeText={setEcPhone}
-                placeholder="+91 98111 00000"
-                style={styles.input}
-              />
-            </View>
-            <View style={styles.half}>
-              <Text style={styles.label}>Relationship</Text>
-              <TextInput
-                accessibilityLabel="Emergency Contact Relationship"
-                value={ecRel}
-                onChangeText={setEcRel}
-                style={styles.input}
-              />
-            </View>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.half}>
+            <Text variant="footnote" style={styles.label}>
+              Mobile Number
+            </Text>
+            <TextInput
+              accessibilityLabel="Emergency Contact Phone"
+              keyboardType="phone-pad"
+              value={ecPhone}
+              onChangeText={setEcPhone}
+              placeholder="+91 98111 00000"
+              placeholderTextColor={T.color.label3}
+              style={styles.input}
+            />
+          </View>
+          <View style={styles.half}>
+            <Text variant="footnote" style={styles.label}>
+              Relationship
+            </Text>
+            <TextInput
+              accessibilityLabel="Emergency Contact Relationship"
+              value={ecRel}
+              onChangeText={setEcRel}
+              placeholderTextColor={T.color.label3}
+              style={styles.input}
+            />
           </View>
         </View>
+      </Card>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save Profile and Open Home"
-          disabled={completeOnboardingMutation.isPending}
-          onPress={handleSaveOnboarding}
-          style={styles.primaryBtn}
-        >
-          <Text style={styles.primaryBtnText}>
-            {completeOnboardingMutation.isPending
-              ? 'Saving Profile…'
-              : 'Save Profile & Open Home →'}
-          </Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+      <Button
+        title="Save profile and open home"
+        label="Save profile and open home"
+        loading={completeOnboardingMutation.isPending}
+        onPress={handleSaveOnboarding}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
-  },
-  stepTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#CCFBF1',
-    color: '#0F766E',
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: T.color.dangerSoft,
+    borderRadius: T.radius.row,
+    padding: T.space.md,
   },
-  errorText: { color: '#991B1B', fontSize: 12, fontWeight: '600' },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  errorText: {
+    fontWeight: '600',
+  },
+  fieldGroup: {
+    gap: T.space.xs,
+  },
+  label: {
+    fontWeight: '700',
+  },
   input: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    paddingHorizontal: T.space.md,
+    minHeight: 46,
+    ...T.text.body,
+    color: T.color.label,
   },
-  row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  half: { flex: 1, gap: 4 },
-  chip: {
+  row: {
+    flexDirection: 'row',
+    gap: T.space.sm,
+    alignItems: 'center',
+  },
+  half: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 8,
+    gap: T.space.xs,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: T.space.xs,
+  },
+  chip: {
+    minHeight: 44,
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    paddingVertical: T.space.sm,
+    paddingHorizontal: T.space.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  chipActive: { borderColor: '#0D9488', backgroundColor: '#F0FDFA' },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  chipTextActive: { color: '#0F766E', fontWeight: '700' },
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  condBadge: {
-    backgroundColor: '#CCFBF1',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  chipActive: {
+    backgroundColor: T.color.accentSoft,
+    borderWidth: 1.5,
+    borderColor: T.color.accent,
   },
-  condBadgeText: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: '#0D9488',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  chipTextActive: {
+    fontWeight: '700',
   },
-  secondaryBtnText: { color: '#0F766E', fontSize: 12, fontWeight: '700' },
-  docBox: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#99F6E4',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
+  ecCard: {
+    backgroundColor: T.color.dangerSoft,
   },
-  docTitle: { fontSize: 12, fontWeight: '700', color: '#0F766E' },
-  ecBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  ecTitle: { fontSize: 12, fontWeight: '700', color: '#991B1B' },
-  primaryBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

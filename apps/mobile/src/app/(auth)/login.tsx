@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getMyProfile } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import {
+  Button,
+  Card,
+  Screen,
+  Text,
+} from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { T } from '@/constants/theme';
 
 const SEEDED_TEST_EMAILS = [
   { label: 'Patient', email: 'patient@vyana.test' },
@@ -64,22 +69,24 @@ export default function MobileLoginScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <Text style={styles.brandBadge}>Vyana</Text>
-        <Text style={styles.title}>Sign in to your companion</Text>
-        <Text style={styles.subtitle}>
+    <Screen eyebrow="Vyana" title="Sign in">
+      <Card>
+        <Text variant="subhead" tone="secondary">
           Manage prescriptions, OPD tokens, lab trends, and emergency Medical ID.
         </Text>
 
         {errorMsg && (
           <View accessibilityRole="alert" style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Text variant="footnote" tone="danger" style={styles.errorText}>
+              {errorMsg}
+            </Text>
           </View>
         )}
 
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text variant="footnote" style={styles.label}>
+            Email Address
+          </Text>
           <TextInput
             accessibilityLabel="Email Address"
             keyboardType="email-address"
@@ -87,40 +94,38 @@ export default function MobileLoginScreen() {
             value={email}
             onChangeText={setEmail}
             placeholder="patient@vyana.test"
+            placeholderTextColor={T.color.label3}
             style={styles.input}
           />
         </View>
 
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Password</Text>
+          <Text variant="footnote" style={styles.label}>
+            Password
+          </Text>
           <TextInput
             accessibilityLabel="Password"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
+            placeholderTextColor={T.color.label3}
             style={styles.input}
           />
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign In"
-          disabled={loading}
+        <Button
+          title="Sign In"
+          label="Sign In"
+          loading={loading}
           onPress={handleLogin}
-          style={styles.primaryBtn}
-        >
-          <Text style={styles.primaryBtnText}>
-            {loading ? 'Signing in…' : 'Sign In'}
-          </Text>
-        </Pressable>
+        />
 
         {__DEV__ && (
-          <>
+          <View style={styles.devSection}>
             <View style={styles.divider} />
-
-            <Text style={styles.sectionLabel}>
-              Seeded Test Emails (enter SEED_PASSWORD above)
+            <Text variant="sectionHeader" tone="tertiary">
+              Seeded test emails (enter seed password above)
             </Text>
             <View style={styles.demoRow}>
               {SEEDED_TEST_EMAILS.map((acct) => (
@@ -131,101 +136,79 @@ export default function MobileLoginScreen() {
                   onPress={() => setEmail(acct.email)}
                   style={styles.demoBtn}
                 >
-                  <Text style={styles.demoBtnText}>{acct.label}</Text>
-                  <Text style={styles.demoEmailText}>{acct.email}</Text>
+                  <Text variant="footnote" style={styles.demoBtnText}>
+                    {acct.label}
+                  </Text>
+                  <Text variant="caption" tone="tertiary">
+                    {acct.email}
+                  </Text>
                 </Pressable>
               ))}
             </View>
-          </>
+          </View>
         )}
 
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel="Create a new Vyana account"
+        <Button
+          title="New to Vyana? Create your account"
+          variant="plain"
           onPress={() => router.push('/(auth)/signup')}
-          style={styles.switchLink}
-        >
-          <Text style={styles.switchLinkText}>
-            New to Vyana? Create your account →
-          </Text>
-        </Pressable>
-      </View>
+        />
+      </Card>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 16 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 14,
-  },
-  brandBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#CCFBF1',
-    color: '#0F766E',
-    fontWeight: '700',
-    fontSize: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  title: { fontSize: 22, fontWeight: '700', color: '#0F172A' },
-  subtitle: { fontSize: 13, color: '#475569', lineHeight: 19 },
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: T.color.dangerSoft,
+    borderRadius: T.radius.row,
+    padding: T.space.md,
   },
-  errorText: { color: '#991B1B', fontSize: 12, fontWeight: '600' },
-  fieldGroup: { gap: 6 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+  errorText: {
+    fontWeight: '600',
   },
-  primaryBtn: {
-    backgroundColor: '#0D9488',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 4,
+  fieldGroup: {
+    gap: T.space.xs,
   },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  divider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 4 },
-  sectionLabel: {
-    fontSize: 11,
+  label: {
     fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
   },
-  demoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  input: {
+    backgroundColor: T.color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    paddingHorizontal: T.space.lg,
+    minHeight: 46,
+    ...T.text.body,
+    color: T.color.label,
+  },
+  devSection: {
+    gap: T.space.md,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: T.color.separator,
+  },
+  demoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: T.space.sm,
+  },
   demoBtn: {
     flex: 1,
     minWidth: 96,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    minHeight: 44,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    paddingVertical: T.space.sm,
+    paddingHorizontal: T.space.sm,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  demoBtnText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
-  demoEmailText: { fontSize: 10, color: '#64748B' },
-  switchLink: { alignItems: 'center', paddingTop: 6 },
-  switchLinkText: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
+  demoBtnText: {
+    fontWeight: '700',
+  },
 });

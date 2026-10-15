@@ -164,12 +164,6 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
-          name="labs/compare"
-          options={{
-            title: 'Compare Lab Prices',
-          }}
-        />
-        <Stack.Screen
           name="alerts"
           options={{
             title: 'CDSCO Drug Quality Alerts',
@@ -182,19 +176,7 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
-          name="pmjay"
-          options={{
-            title: 'PM-JAY Empanelled Hospitals',
-          }}
-        />
-        <Stack.Screen
           name="care/meals"
-          options={{
-            title: 'Daily Meal Log',
-          }}
-        />
-        <Stack.Screen
-          name="meals"
           options={{
             title: 'Daily Meal Log',
           }}

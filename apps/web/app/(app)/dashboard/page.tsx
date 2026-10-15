@@ -15,7 +15,7 @@ import {
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 import { AiSafetyBanner, SkeletonCard } from "@/components/ui-primitives";
-import { BrandMark } from "@/components/ui";
+import { BrandMark, ErrorState } from "@/components/ui";
 
 export default function PatientDashboardPage() {
   const router = useRouter();
@@ -23,16 +23,16 @@ export default function PatientDashboardPage() {
   const { data: profile, isLoading: profileLoading } = useMyProfile();
 
   // Active prescribed medications
-  const { data: activeItems, isLoading: medsLoading } = useActiveItems();
+  const { data: activeItems, isLoading: medsLoading, isError: medsError, refetch: refetchMeds } = useActiveItems();
 
   // Appointments (OPD Tokens)
-  const { data: appointments, isLoading: apptsLoading } = useMyAppointments();
+  const { data: appointments, isLoading: apptsLoading, isError: apptsError, refetch: refetchAppts } = useMyAppointments();
 
   // Approved Care Plans
-  const { data: carePlans, isLoading: carePlansLoading } = useCarePlans();
+  const { data: carePlans, isLoading: carePlansLoading, isError: carePlansError, refetch: refetchCarePlans } = useCarePlans();
 
   // Diagnostic Lab Reports
-  const { data: labReports, isLoading: reportsLoading } = useLabReports();
+  const { data: labReports, isLoading: reportsLoading, isError: reportsError, refetch: refetchReports } = useLabReports();
 
   // Privacy: DPDP Data Export
   const exportMutation = useExportMyData();
@@ -200,6 +200,8 @@ export default function PatientDashboardPage() {
 
           {medsLoading ? (
             <SkeletonCard lines={2} />
+          ) : medsError ? (
+            <ErrorState onRetry={() => refetchMeds()} />
           ) : !activeItems || activeItems.length === 0 ? (
             <p className="text-xs text-slate-500 py-4 text-center">
               No active medications on your record.
@@ -256,6 +258,8 @@ export default function PatientDashboardPage() {
 
           {apptsLoading ? (
             <SkeletonCard lines={2} />
+          ) : apptsError ? (
+            <ErrorState onRetry={() => refetchAppts()} />
           ) : upcomingAppointments.length === 0 ? (
             <p className="text-xs text-slate-500 py-4 text-center">
               No upcoming appointments. Book your next visit on mobile or ORS portal.
@@ -311,6 +315,8 @@ export default function PatientDashboardPage() {
 
         {carePlansLoading ? (
           <SkeletonCard lines={2} />
+        ) : carePlansError ? (
+          <ErrorState onRetry={() => refetchCarePlans()} />
         ) : !carePlans || carePlans.length === 0 ? (
           <p className="text-xs text-slate-500 py-4 text-center">
             No active care plans approved yet.
@@ -374,6 +380,8 @@ export default function PatientDashboardPage() {
 
         {reportsLoading ? (
           <SkeletonCard lines={2} />
+        ) : reportsError ? (
+          <ErrorState onRetry={() => refetchReports()} />
         ) : !labReports || labReports.length === 0 ? (
           <p className="text-xs text-slate-500 py-4 text-center">
             No lab reports uploaded yet.

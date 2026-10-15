@@ -2,7 +2,7 @@
 // '@/constants/theme'; never raw hex.
 export { Button } from './button';
 export { Card, CardHeader } from './card';
-export { EmptyState } from './empty-state';
+export { EmptyState, ErrorState } from './empty-state';
 export { Glass } from './glass';
 export { IconTile, ListGroup, ListRow, type TileColor } from './list';
 export { Pill } from './pill';

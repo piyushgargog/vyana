@@ -1284,6 +1284,36 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          bucket: string
+          hits: number
+          user_id: string
+          window_start: string
+        }
+        ComputedFields: never
+        Insert: {
+          bucket: string
+          hits?: number
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          hits?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           created_at: string
@@ -1495,6 +1525,19 @@ export type Database = {
           state_council: string
           verified_at: string
           year_of_registration: number
+        }[]
+      }
+      hit_rate_limit: {
+        Args: {
+          p_bucket: string
+          p_max: number
+          p_user: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          reset_at: string
         }[]
       }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }

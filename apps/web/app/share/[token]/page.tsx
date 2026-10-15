@@ -1,10 +1,17 @@
 "use client";
 
 import React, { Suspense, use, useEffect, useState } from "react";
-import Link from "next/link";
+import { AlertCircle, Phone, ShieldAlert } from "lucide-react";
 import { useSharedRecord } from "@vyana/shared";
-import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
-import { BrandMark } from "@/components/ui";
+import { PublicHeader } from "@/components/public-header";
+import {
+  ButtonLink,
+  Card,
+  CardHeader,
+  Pill,
+  SiteFooter,
+  SkeletonLine,
+} from "@/components/ui";
 
 function useIsExpired(expiresAt: string | undefined): boolean {
   const [isExpired, setIsExpired] = useState(false);
@@ -37,50 +44,49 @@ function PublicShareRecordContent({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
-        <div className="mx-auto max-w-4xl space-y-4">
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={4} />
-          <SkeletonCard lines={3} />
-        </div>
+      <div className="min-h-screen flex flex-col bg-canvas text-label">
+        <PublicHeader />
+        <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8 space-y-4">
+          <Card className="space-y-4 p-6">
+            <SkeletonLine className="h-8 w-64" />
+            <SkeletonLine className="h-4 w-48" />
+            <SkeletonLine className="h-20 w-full" />
+          </Card>
+        </main>
+        <SiteFooter />
       </div>
     );
   }
 
   if (error || !record) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
-        <header className="border-b border-slate-200 bg-white py-3 px-4">
-          <div className="mx-auto max-w-4xl flex items-center justify-between">
-            <span className="text-base font-bold text-slate-900">
-              Vyana: temporary health record
-            </span>
-          </div>
-        </header>
+      <div className="min-h-screen flex flex-col bg-canvas text-label">
+        <PublicHeader />
 
         <main className="flex-1 mx-auto w-full max-w-md px-4 py-16 text-center">
-          <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm space-y-3">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 font-bold text-xl">
-              !
+          <Card className="p-8 shadow-float space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger-text">
+              <AlertCircle className="h-6 w-6" aria-hidden="true" />
             </div>
-            <h1 className="text-lg font-bold text-slate-900">
-              Access Link Expired or Revoked
+            <h1 className="text-[20px] font-bold text-label">
+              Access link expired or revoked
             </h1>
-            <p className="text-xs text-slate-600">
+            <p className="text-[14px] text-label-2 leading-relaxed">
               This temporary clinical access link is no longer valid. The patient may have revoked access or the temporary 24-hour validity window has passed.
             </p>
-            <div className="pt-3">
-              <Link
+            <div className="pt-2">
+              <ButtonLink
                 href="/login"
-                className="inline-block rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                variant="primary"
+                size="md"
               >
-                Sign In to Vyana
-              </Link>
+                Sign in to Vyana
+              </ButtonLink>
             </div>
-          </div>
+          </Card>
         </main>
 
-        <MedicalDisclaimerFooter />
+        <SiteFooter />
       </div>
     );
   }
@@ -89,77 +95,56 @@ function PublicShareRecordContent({
   const expiresDate = new Date(expires_at);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Public Header */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-20 shadow-xs">
-        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <BrandMark size={36} />
-            <div>
-              <span className="text-sm font-bold text-slate-900">
-                Vyana · Emergency Medical Record
-              </span>
-              <span className="ml-2 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900 uppercase">
-                Temporary Doctor Share
-              </span>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col bg-canvas text-label">
+      <PublicHeader />
 
-          <div className="text-right">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                isExpired
-                  ? "bg-red-100 text-red-800"
-                  : "bg-emerald-100 text-emerald-800"
-              }`}
-            >
-              {isExpired
-                ? "Expired"
-                : `Valid until: ${expiresDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-6 sm:py-8 space-y-6">
         {/* Patient Hero Details */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+        <Card className="p-6 sm:p-8 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                {profile.full_name || "Patient Record"}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-[22px] sm:text-[26px] font-bold tracking-tight text-label">
+                  {profile.full_name || "Patient Record"}
+                </h1>
+                <Pill tone={isExpired ? "danger" : "ok"}>
+                  {isExpired
+                    ? "Expired"
+                    : `Valid until ${expiresDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                </Pill>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-[14px] text-label-2">
                 {profile.age != null && (
                   <span>
-                    Age: <strong>{profile.age} years</strong>
+                    Age: <strong className="text-label">{profile.age} years</strong>
                   </span>
                 )}
                 {profile.blood_group && (
-                  <span className="inline-flex items-center gap-1 font-bold text-red-700 bg-red-50 border border-red-200 rounded-md px-2 py-0.5">
-                    Blood Group: {profile.blood_group}
-                  </span>
+                  <Pill tone="danger">
+                    Blood group: {profile.blood_group}
+                  </Pill>
                 )}
-                <span className="text-slate-400">·</span>
-                <span className="capitalize text-slate-500">
-                  Record Scope: {kind.replace("_", " ")}
+                <span className="text-label-3">·</span>
+                <span className="capitalize text-label-3">
+                  Scope: {kind.replace("_", " ")}
                 </span>
               </div>
 
               {/* Emergency Contacts with Click-to-Call */}
               {profile.emergency_contacts && profile.emergency_contacts.length > 0 && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-semibold text-slate-700">
-                    Emergency Contacts:
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] pt-1">
+                  <span className="font-semibold text-label">
+                    Emergency contacts:
                   </span>
                   {profile.emergency_contacts.map((c, i) => (
                     <a
                       key={i}
                       href={`tel:${c.phone}`}
-                      className="rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1 text-teal-900 font-semibold hover:bg-teal-100"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-separator bg-fill px-3 py-1 font-semibold text-label transition-colors hover:bg-accent-soft hover:text-accent-strong"
                     >
-                      {c.name}: {c.phone} 📞
+                      <Phone className="h-3 w-3" aria-hidden="true" />
+                      <span>{c.name}: {c.phone}</span>
                     </a>
                   ))}
                 </div>
@@ -169,128 +154,119 @@ function PublicShareRecordContent({
             {/* Critical Allergies Box */}
             <div className="w-full sm:w-72 shrink-0">
               {profile.allergies && profile.allergies.length > 0 ? (
-                <div className="rounded-xl border border-red-300 bg-red-50 p-3.5 text-xs text-red-950">
-                  <div className="flex items-center gap-1.5 font-bold text-red-800">
-                    <span
-                      aria-hidden="true"
-                      className="flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px]"
-                    >
-                      !
-                    </span>
-                    <span>KNOWN ALLERGIES</span>
+                <div className="rounded-card border border-danger-soft bg-danger-soft p-4 text-[13px] text-danger-text space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]">
+                    <ShieldAlert className="h-4 w-4" aria-hidden="true" />
+                    <span>Known Allergies</span>
                   </div>
-                  <ul className="mt-1 list-disc pl-4 font-semibold text-red-900 space-y-0.5">
+                  <ul className="list-disc pl-4 font-semibold space-y-0.5">
                     {profile.allergies.map((alg, i) => (
                       <li key={i}>{alg}</li>
                     ))}
                   </ul>
                 </div>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <div className="rounded-card border border-separator bg-fill/50 p-3.5 text-[13px] text-label-3">
                   No drug allergies recorded.
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Active Medical Conditions & Medications */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Active Conditions */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
-              Active Medical Conditions ({profile.conditions?.length || 0})
-            </h2>
+          <Card className="space-y-3">
+            <CardHeader
+              title={`Active conditions (${profile.conditions?.length || 0})`}
+            />
 
             {!profile.conditions || profile.conditions.length === 0 ? (
-              <p className="text-xs text-slate-500 py-3">
+              <p className="text-[14px] text-label-3 py-2">
                 No active diagnosed conditions listed.
               </p>
             ) : (
-              <ul className="space-y-1.5 text-xs">
+              <ul className="space-y-2 text-[14px]">
                 {profile.conditions.map((cond, i) => (
                   <li
                     key={i}
-                    className="rounded-lg bg-slate-50 border border-slate-200 p-2 font-semibold text-slate-900"
+                    className="rounded-row border border-separator bg-fill/50 px-3.5 py-2 font-medium text-label"
                   >
                     {cond}
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
 
           {/* Active Medications */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
-              Active Medications ({profile.active_medicines?.length || 0})
-            </h2>
+          <Card className="space-y-3">
+            <CardHeader
+              title={`Active medications (${profile.active_medicines?.length || 0})`}
+            />
 
             {!profile.active_medicines || profile.active_medicines.length === 0 ? (
-              <p className="text-xs text-slate-500 py-3">
+              <p className="text-[14px] text-label-3 py-2">
                 No active prescribed medications listed.
               </p>
             ) : (
-              <div className="space-y-2 text-xs">
+              <div className="space-y-2 text-[14px]">
                 {profile.active_medicines.map((med, i) => (
                   <div
                     key={i}
-                    className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 flex items-center justify-between"
+                    className="rounded-row border border-separator bg-fill/50 px-3.5 py-2.5 flex items-center justify-between gap-3"
                   >
                     <div>
-                      <strong className="text-slate-900 block font-bold">
+                      <strong className="text-label block font-semibold">
                         {med.name} {med.strength || ""}
                       </strong>
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[12px] text-label-3">
                         {med.dose || "1 dose"} · {med.frequency}
                       </span>
                     </div>
-                    <span className="rounded bg-teal-50 border border-teal-200 text-teal-800 px-1.5 py-0.5 text-[10px] font-bold uppercase">
-                      Active
-                    </span>
+                    <Pill tone="accent">Active</Pill>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Clinical Timeline (if kind === 'timeline' and present) */}
         {timeline && timeline.length > 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
-              Clinical History & Timeline ({timeline.length} events)
-            </h2>
+          <Card className="space-y-4">
+            <CardHeader
+              title={`Clinical history & timeline (${timeline.length} events)`}
+            />
 
-            <div className="space-y-2.5 border-l-2 border-teal-600/30 pl-4 ml-2">
+            <div className="space-y-3 border-l-2 border-accent/40 pl-4 ml-2">
               {timeline.map((event, idx) => (
                 <div
                   key={idx}
-                  className="relative rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs"
+                  className="relative rounded-row border border-separator bg-fill/40 p-3.5 text-[13px] space-y-1"
                 >
-                  <span className="absolute -left-[23px] top-3.5 h-3 w-3 rounded-full bg-teal-700 ring-4 ring-white" />
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-400">
+                  <span className="absolute -left-[23px] top-4 h-2.5 w-2.5 rounded-full bg-accent ring-4 ring-canvas" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-label-3 text-[12px]">
                       {event.date}
                     </span>
-                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-700">
-                      {event.kind}
-                    </span>
+                    <Pill tone="neutral">{event.kind}</Pill>
                   </div>
-                  <h3 className="mt-1 font-bold text-slate-900 text-sm">
+                  <h3 className="font-semibold text-label text-[14px]">
                     {event.title}
                   </h3>
                   {event.summary && (
-                    <p className="mt-0.5 text-slate-600">{event.summary}</p>
+                    <p className="text-label-2 leading-relaxed">{event.summary}</p>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )}
       </main>
 
-      <MedicalDisclaimerFooter />
+      <SiteFooter />
     </div>
   );
 }
@@ -301,11 +277,15 @@ export default function PublicShareRecordPage(props: {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
-          <div className="mx-auto max-w-4xl space-y-4">
-            <SkeletonCard lines={2} />
-            <SkeletonCard lines={4} />
-          </div>
+        <div className="min-h-screen flex flex-col bg-canvas text-label">
+          <PublicHeader />
+          <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8 space-y-4">
+            <Card className="space-y-4 p-6">
+              <SkeletonLine className="h-8 w-64" />
+              <SkeletonLine className="h-4 w-48" />
+            </Card>
+          </main>
+          <SiteFooter />
         </div>
       }
     >

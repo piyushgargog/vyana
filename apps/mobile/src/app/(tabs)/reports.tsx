@@ -14,10 +14,11 @@ import {
   MobileSkeletonCard,
   MobileTrendChart,
 } from '@/components/ui-primitives';
+import { ErrorState } from '@/components/ui';
 
 export default function MobileReportsTab() {
   const router = useRouter();
-  const { data: reports = [], isLoading: reportsLoading } = useLabReports();
+  const { data: reports = [], isLoading: reportsLoading, isError: reportsError, refetch: refetchReports } = useLabReports();
   const { data: hba1cHistory = [] } = useLabValueHistory('HbA1c');
 
   const chartPoints = hba1cHistory
@@ -84,6 +85,10 @@ export default function MobileReportsTab() {
       {/* Lab Reports List */}
       {reportsLoading ? (
         <MobileSkeletonCard lines={3} />
+      ) : reportsError ? (
+        <View style={styles.reportCard}>
+          <ErrorState onRetry={() => refetchReports()} />
+        </View>
       ) : reports.length === 0 ? (
         <View style={styles.reportCard}>
           <Text style={styles.summaryText}>
