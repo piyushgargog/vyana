@@ -33,6 +33,12 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 | 🔎 | **More from the live web** | Lab test price comparison and Ayushman Bharat (PM-JAY) hospitals near you |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
+## Screenshots
+
+| Home | Emergency SOS |
+|---|---|
+| ![Vyana home page](.github/assets/home.png) | ![Emergency page with 108/112 call buttons](.github/assets/emergency.png) |
+
 ## How TinyFish is used
 
 Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
