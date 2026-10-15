@@ -588,6 +588,9 @@ export default function PatientDashboardPage() {
               <ButtonLink href="/basket" variant="secondary" size="lg" className="w-full">
                 Compare medicine prices
               </ButtonLink>
+              <ButtonLink href="/sos" variant="secondary" size="lg" className="w-full">
+                Emergency help
+              </ButtonLink>
             </div>
           </div>
         </Card>
