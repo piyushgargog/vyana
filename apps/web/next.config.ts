@@ -38,7 +38,8 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           {
-            key: "Content-Security-Policy",
+            // Report-Only first (issue #151): open every page, check the console for violations, then drop "-Report-Only".
+            key: "Content-Security-Policy-Report-Only",
             value: cspDirectives.join("; "),
           },
         ],
