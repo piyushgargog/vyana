@@ -30,7 +30,8 @@ export function MobileQrGrid({
   size?: number;
   label?: string;
 }) {
-  const matrix = buildQrMatrix(data);
+  // Error level M: more damage tolerance for emergency scanning (#210)
+  const matrix = buildQrMatrix(data, 'M');
   const grid = matrix.length;
   const quiet = 4;
   const cellSize = Math.max(1, Math.floor(size / (grid + quiet * 2)));
@@ -345,8 +346,9 @@ const styles = StyleSheet.create({
   qrBox: {
     backgroundColor: T.color.white,
     padding: T.space.lg,
-    borderRadius: T.radius.card,
-    borderCurve: 'continuous',
+    // No border radius: QR codes need square corners for reliable scanning.
+    // Rounded corners clip the quiet zone on Android (#210).
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: T.color.separator,
     alignItems: 'center',
