@@ -10,6 +10,7 @@ import {
   useEmergencyContacts,
   useExportMyData,
   useMyProfile,
+  isShareLinkActive,
   useRevokeShareLink,
   useShareLinks,
   useUpdateProfile,
@@ -40,7 +41,8 @@ export default function MobileProfileTab() {
   const { data: contacts = [] } = useEmergencyContacts();
   const addContactMutation = useAddContact();
   const deleteContactMutation = useDeleteContact();
-  const { data: shareLinks = [] } = useShareLinks();
+  const { data: allShareLinks = [] } = useShareLinks();
+  const shareLinks = allShareLinks.filter((l) => isShareLinkActive(l));
   const revokeShareMutation = useRevokeShareLink();
   const exportDataMutation = useExportMyData();
   const deleteAccountMutation = useDeleteAccount();
@@ -338,7 +340,13 @@ export default function MobileProfileTab() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Revoke share link"
-                  onPress={() => revokeShareMutation.mutate(link.token)}
+                  disabled={revokeShareMutation.isPending}
+                  onPress={() =>
+                    revokeShareMutation.mutate(link.token, {
+                      onSuccess: () => showToast('Link turned off. It no longer opens.', 'success'),
+                      onError: (err) => showToast(err.message || 'Could not turn the link off', 'error'),
+                    })
+                  }
                   style={styles.removeBtn}
                 >
                   <Text variant="footnote" tone="danger" style={styles.removeText}>

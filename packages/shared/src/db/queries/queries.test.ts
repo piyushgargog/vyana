@@ -37,6 +37,9 @@ import {
   requireUserId,
   revokeCareLink,
   revokeShareLink,
+  isShareLinkActive,
+  isShareUrlDead,
+  shareTokenFromUrl,
   savePushToken,
   shareUrl,
   startOfLocalDay,
@@ -444,10 +447,27 @@ describe("care plans, caregivers, sharing", () => {
   });
 
   it("revokes a share link by token", async () => {
-    const f = fakeSupabase({ responses: { share_links: [ok(null)] } });
+    const f = fakeSupabase({ responses: { share_links: [ok([{ token: "tok123" }])] } });
     await revokeShareLink(f.sb, "tok123");
     expect(f.argsOf("update")).toEqual([{ revoked: true }]);
     expect(f.argsOf("eq")).toEqual(["token", "tok123"]);
+  });
+
+  it("says so when a revoke changed no row (not the patient's link, or no such link)", async () => {
+    const f = fakeSupabase({ responses: { share_links: [ok([])] } });
+    await expect(revokeShareLink(f.sb, "nope")).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("knows which links still open their page", () => {
+    const now = new Date("2026-10-20T10:00:00Z");
+    expect(isShareLinkActive({ revoked: false, expires_at: "2026-10-21T10:00:00Z" }, now)).toBe(true);
+    expect(isShareLinkActive({ revoked: true, expires_at: "2026-10-21T10:00:00Z" }, now)).toBe(false);
+    expect(isShareLinkActive({ revoked: false, expires_at: "2026-10-20T09:59:59Z" }, now)).toBe(false);
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/other")).toBeNull();
+    const links = [{ token: "0a1b2c", revoked: true, expires_at: "2026-10-21T10:00:00Z" }];
+    expect(isShareUrlDead(links, "https://vyana.app/share/0a1b2c", now)).toBe(true);
+    expect(isShareUrlDead(links, "https://vyana.app/share/ffff", now)).toBe(false); // not in the list (yet): treat as live
   });
 });
 

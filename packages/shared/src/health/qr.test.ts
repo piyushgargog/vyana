@@ -2,7 +2,7 @@ import jsQR from "jsqr";
 import { describe, expect, it } from "vitest";
 
 import { generateQrMatrix } from "../ui-helpers";
-import { buildMedicalIdQr, MEDICAL_ID_MAX_LENGTH, parseMedicalIdQr } from "./index";
+import { buildMedicalIdQr, MEDICAL_ID_MAX_LENGTH } from "./index";
 import { buildQrMatrix } from "./qr";
 
 /** Draws the matrix as a phone screen would (dark squares on white, with a 4-module quiet zone) and reads it with an independent decoder. */
@@ -31,7 +31,6 @@ const meds = [
   { medicine_name: "Telma (Telmisartan)", strength: "40 mg" },
 ];
 const contact = { name: "Sunita Sharma", phone: "+91 00000 00006" };
-const link = "https://vyanahealth.app/share/0123456789abcdef0123456789abcdef0123456789abcdef";
 
 describe("buildQrMatrix", () => {
   it("makes a square QR code that a decoder reads back", () => {
@@ -51,11 +50,12 @@ describe("buildQrMatrix", () => {
     expect(decode(buildQrMatrix(long))).toBe(long);
   });
 
-  it("holds the real Medical ID of the demo patient, and that parses back to the person", () => {
-    const text = buildMedicalIdQr(profile, meds, contact, link);
-    const read = decode(buildQrMatrix(text));
+  it("holds the real Medical ID of the demo patient, which a scanner reads back as plain text", () => {
+    const text = buildMedicalIdQr(profile, meds, contact);
+    const read = decode(buildQrMatrix(text, "M"));
     expect(read).toBe(text);
-    expect(parseMedicalIdQr(read as string)).toMatchObject({ name: "Aryan Sharma", blood_group: "O+", contact: { name: "Sunita Sharma" } });
+    expect(read).toContain("Blood group: O+");
+    expect(read).toContain("Emergency contact: Sunita Sharma");
   });
 
   it("holds a Medical ID of the longest size the app makes", () => {
@@ -63,10 +63,9 @@ describe("buildQrMatrix", () => {
       { full_name: "Aryan Kumar Sharma-Verma", blood_group: "AB-", allergies: Array.from({ length: 20 }, (_, i) => `Allergy number ${i}`) },
       Array.from({ length: 30 }, (_, i) => ({ medicine_name: `Medicine ${i}`, strength: "500 mg" })),
       contact,
-      link,
     );
-    expect(text.length).toBeLessThanOrEqual(MEDICAL_ID_MAX_LENGTH);
-    expect(decode(buildQrMatrix(text), 5)).toBe(text);
+    expect(new TextEncoder().encode(text).length).toBeLessThanOrEqual(MEDICAL_ID_MAX_LENGTH);
+    expect(decode(buildQrMatrix(text, "M"), 5)).toBe(text);
   });
 
   it("grows with the text and is the same every time", () => {
