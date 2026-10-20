@@ -119,7 +119,6 @@ await check("auth: no token → 401, a wrong token → 401, a real token loads t
 
 await check("roles: a patient can't verify as a doctor; a doctor can't use patient routes", async () => {
   expect((await api("POST", "/api/doctors/verify", P, { reg_no: "1", state_council: "Delhi Medical Council" })).status === 403, "patient → doctors/verify should be 403");
-  expect((await api("POST", "/api/alerts/check", doctor!.token, {})).status === 403, "doctor → alerts/check should be 403");
 });
 
 await check("rls: a patient can't read another user's profile or prescriptions", async () => {

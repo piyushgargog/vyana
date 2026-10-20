@@ -16,7 +16,6 @@
     "verify:brands": "tsx --conditions=react-server ../../scripts/verify-brands.mts",
     "prewarm": "tsx --conditions=react-server ../../scripts/prewarm-cache.mts",
     "live:check": "tsx ../../scripts/live-check.mts",
-    "monitor:create": "tsx --conditions=react-server ../../scripts/create-monitor.mts",
     "review:sheet": "tsx --conditions=react-server ../../scripts/review-sheet.mts",
     "eval:safety": "tsx --conditions=react-server ../../scripts/eval-safety.mts"
   },

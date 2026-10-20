@@ -7,7 +7,6 @@ export { doctorsVerifyMock } from "./doctors-verify";
 export { prescriptionsExtractMock } from "./prescriptions-extract";
 export { reportsAnalyzeMock } from "./reports-analyze";
 export { labValueCorrectMock } from "./lab-value-correct";
-export { alertsCheckMock } from "./alerts-check";
 export { basketCompareMock, basketJobRunningMock, singleMedicineJobMock } from "./basket-compare";
 export { carePlanMock } from "./care-plan";
 export { interactionsMock } from "./interactions";

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
+import { KeyboardAvoidingView, KeyboardProvider } from 'react-native-keyboard-controller';
 import { MobileAppProviders } from '@/components/providers';
 import { WelcomeSplash } from '@/components/welcome-splash';
 import { onNotificationTap } from '@/lib/notifications';
@@ -42,6 +43,8 @@ function RootNavigator() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Lifts the whole screen above the keyboard, so no input is ever covered (Android is edge-to-edge) */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: '#0F766E' },
@@ -165,12 +168,6 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
-          name="alerts"
-          options={{
-            title: 'CDSCO Drug Quality Alerts',
-          }}
-        />
-        <Stack.Screen
           name="schemes/pmjay"
           options={{
             title: 'PM-JAY Empanelled Hospitals',
@@ -183,6 +180,7 @@ function RootNavigator() {
           }}
         />
       </Stack>
+      </KeyboardAvoidingView>
     </ThemeProvider>
   );
 }
@@ -193,9 +191,11 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <MobileAppProviders>
-      <RootNavigator />
-      <WelcomeSplash />
-    </MobileAppProviders>
+    <KeyboardProvider>
+      <MobileAppProviders>
+        <RootNavigator />
+        <WelcomeSplash />
+      </MobileAppProviders>
+    </KeyboardProvider>
   );
 }

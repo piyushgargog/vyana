@@ -42,7 +42,9 @@
       [
         "expo-notifications",
         {
-          "defaultChannel": "doses"
+          "defaultChannel": "doses",
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#0D9488"
         }
       ],
       [

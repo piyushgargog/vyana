@@ -29,5 +29,4 @@ export type DbChatSession = Tables<"chat_sessions">;
 export type DbChatMessage = Tables<"chat_messages">;
 export type DbEmergencyRequest = Tables<"emergency_requests">;
 export type DbPriceQuote = Tables<"price_quotes">;
-export type DbDrugAlert = Tables<"drug_alerts">;
 export type DbPushToken = Tables<"push_tokens">;
