@@ -51,8 +51,15 @@ export function isShareLinkActive(link: Pick<DbShareLink, "revoked" | "expires_a
 
 /** The token at the end of a share URL (`{baseUrl}/share/{token}`), or null. */
 export function shareTokenFromUrl(url: string): string | null {
-  const match = /\/share\/([0-9a-f]+)\/?(?:[?#].*)?$/.exec(url);
-  return match ? match[1] : null;
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+  const parts = path.split("/").filter((part) => part !== "");
+  const token = parts.length >= 2 && parts[parts.length - 2] === "share" ? parts[parts.length - 1] : "";
+  return token !== "" && token.length <= 128 && [...token].every((c) => "0123456789abcdef".includes(c)) ? token : null;
 }
 
 /** True when `url` is a link of this patient that is turned off or expired (a link not in the list counts as live: the list may still be loading). */

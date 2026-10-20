@@ -465,6 +465,11 @@ describe("care plans, caregivers, sharing", () => {
     expect(isShareLinkActive({ revoked: false, expires_at: "2026-10-20T09:59:59Z" }, now)).toBe(false);
     expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c")).toBe("0a1b2c");
     expect(shareTokenFromUrl("https://vyana.app/other")).toBeNull();
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c/")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c?x=1#top")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/share/NOTHEX")).toBeNull();
+    expect(shareTokenFromUrl("not a url")).toBeNull();
+    expect(shareTokenFromUrl(`https://vyana.app/share/${"a".repeat(129)}`)).toBeNull();
     const links = [{ token: "0a1b2c", revoked: true, expires_at: "2026-10-21T10:00:00Z" }];
     expect(isShareUrlDead(links, "https://vyana.app/share/0a1b2c", now)).toBe(true);
     expect(isShareUrlDead(links, "https://vyana.app/share/ffff", now)).toBe(false); // not in the list (yet): treat as live
