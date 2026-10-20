@@ -177,7 +177,8 @@ export default function MobileProfileTab() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // Only this phone: the default (global) scope would also sign the account out on every other device.
+    await supabase.auth.signOut({ scope: 'local' });
     showToast('Signed out', 'info');
     router.replace('/(auth)/login');
   };
