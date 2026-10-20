@@ -5,7 +5,6 @@ export const QUERY_ROOTS = {
   activeItems: "active-items",
   labReports: "lab-reports",
   labValues: "lab-values",
-  drugAlerts: "drug-alerts",
   doctors: "doctors",
   emergency: "emergency",
   carePlans: "care-plans",

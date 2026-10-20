@@ -13,6 +13,8 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
+  // GitHub runners reach the Mumbai server slowly: 5 seconds is too short for a page change.
+  expect: { timeout: 15_000 },
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: process.env.CI ? "github" : "list",

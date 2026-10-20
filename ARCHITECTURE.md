@@ -22,7 +22,7 @@ flowchart LR
     RT["Realtime"]
     AU["Auth"]
   end
-  WEB(("Live web<br/>pharmacies · labs · NMC register<br/>hospitals · CDSCO · health sites"))
+  WEB(("Live web<br/>pharmacies · labs · NMC register<br/>hospitals · health sites"))
 
   M & W -- "@vyana/shared hooks<br/>(Bearer JWT)" --> CF --> CD --> API
   M & W -- "direct CRUD under RLS" --> DB
@@ -61,7 +61,6 @@ flowchart LR
 | Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
 | Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
 | Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
-| Medicine quality alerts | **Monitor** + **Search** + **Fetch** | A monitor watches CDSCO quality alerts and calls a webhook; government sources only; matches against users' medicines become push notifications |
 | Lab test price compare | **Agent** (async), **Search**, **Fetch** | One agent per lab in the background, like the basket; a price counts only when it appears on the lab's page |
 | PM-JAY hospitals | **Search** + **Fetch** | Empanelled hospitals near the user from government pages; names, addresses and specialities verbatim |
 

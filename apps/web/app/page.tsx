@@ -14,6 +14,7 @@ import {
   Activity,
   Building2,
   CheckCircle2,
+  Download,
   HeartPulse,
   Receipt,
   ShieldCheck,
@@ -55,6 +56,9 @@ export default function LandingPage() {
             <a href="#doctors" className="hover:text-label transition-colors">
               For doctors
             </a>
+            <a href="/download/android" className="hover:text-label transition-colors">
+              Android app
+            </a>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -83,7 +87,13 @@ export default function LandingPage() {
           {/* Primary CTA (Rule: one primary action per screen) */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <HeroActions />
+            <ButtonLink href="/download/android" native variant="secondary" size="lg" icon={<Download className="h-5 w-5" aria-hidden="true" />}>
+              Download for Android
+            </ButtonLink>
           </div>
+          <p className="mt-3 text-[13px] text-label-3">
+            The Android app is a direct download (APK). On iPhone, use vyanahealth.app in your browser.
+          </p>
 
           {/* 4. The App Displayed Inside a Phone Frame */}
           <div className="mt-14 sm:mt-18 flex justify-center">

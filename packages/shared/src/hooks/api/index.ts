@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiError } from "../../api/client";
 import { useApi } from "../../api/context";
 import type {
-  AlertsCheckRes,
   BasketCompareReq,
   BasketCompareRes,
   DoctorVerifyReq,
@@ -207,16 +206,6 @@ export function useTriage() {
   return useMutation<TriageRes, ApiError, TriageReq>({
     mutationKey: ["triage"],
     mutationFn: (body) => api.triage.assess(body),
-  });
-}
-
-export function useCheckAlerts() {
-  const api = useApi();
-  const qc = useQueryClient();
-  return useMutation<AlertsCheckRes, ApiError, void>({
-    mutationKey: ["alerts", "check"],
-    mutationFn: () => api.alerts.check(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.drugAlerts] }),
   });
 }
 

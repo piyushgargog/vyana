@@ -44,7 +44,36 @@ export async function listShareLinks(sb: Sb): Promise<DbShareLink[]> {
   return unwrap(await sb.from("share_links").select("*").eq("patient_id", patientId).order("created_at", { ascending: false }));
 }
 
-/** Turns a link off at once. The page then answers 404. */
+/** True while a link still opens its page: not turned off and not past its time. */
+export function isShareLinkActive(link: Pick<DbShareLink, "revoked" | "expires_at">, now: Date = new Date()): boolean {
+  return !link.revoked && new Date(link.expires_at).getTime() > now.getTime();
+}
+
+/** The token at the end of a share URL (`{baseUrl}/share/{token}`), or null. */
+export function shareTokenFromUrl(url: string): string | null {
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+  const parts = path.split("/").filter((part) => part !== "");
+  const token = parts.length >= 2 && parts[parts.length - 2] === "share" ? parts[parts.length - 1] : "";
+  return token !== "" && token.length <= 128 && [...token].every((c) => "0123456789abcdef".includes(c)) ? token : null;
+}
+
+/** True when `url` is a link of this patient that is turned off or expired (a link not in the list counts as live: the list may still be loading). */
+export function isShareUrlDead(links: Pick<DbShareLink, "token" | "revoked" | "expires_at">[], url: string, now: Date = new Date()): boolean {
+  const token = shareTokenFromUrl(url);
+  const link = token ? links.find((l) => l.token === token) : undefined;
+  return link ? !isShareLinkActive(link, now) : false;
+}
+
+/**
+ * Turns a link off at once. The page then answers 404. A link that is not the patient's (or does not exist) changes
+ * no row, and that is an error: the database would otherwise answer "ok" and the app would say it was turned off.
+ */
 export async function revokeShareLink(sb: Sb, token: string): Promise<void> {
-  check(await sb.from("share_links").update({ revoked: true }).eq("token", token));
+  const rows = unwrap(await sb.from("share_links").update({ revoked: true }).eq("token", token).select("token"));
+  if (rows.length === 0) throw new DbError("That link was not found", "not_found");
 }

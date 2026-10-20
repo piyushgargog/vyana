@@ -71,11 +71,6 @@ export const LabValue = z.object({
   corrected: z.boolean().optional(),                  // the patient corrected this value (ADR-062)
 });
 
-export const DrugAlert = z.object({
-  id: z.guid(), medicine_name: z.string(), title: z.string(),
-  url: z.string(), snippet: z.string().nullable(), created_at: z.string(),
-});
-
 export const SourceLink = z.object({ title: z.string(), url: z.string() });
 
 // ---------- single-medicine price check ----------
@@ -321,9 +316,6 @@ export const ShareRes = z.object({
 export const MeExportRes = z.record(z.string(), z.unknown()); // every row the user owns, keyed by table
 export const OkRes = z.object({ ok: z.literal(true) });
 
-// ---------- POST /api/alerts/check ----------  (checks the caller's active medicines now)
-export const AlertsCheckReq = z.object({});
-export const AlertsCheckRes = z.object({ checked_medicines: z.array(z.string()), alerts: z.array(DrugAlert) });
 
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
@@ -334,7 +326,6 @@ export type SourceStatus = z.infer<typeof SourceStatus>;
 export type Hospital = z.infer<typeof Hospital>;
 export type PrescriptionItem = z.infer<typeof PrescriptionItem>;
 export type LabValue = z.infer<typeof LabValue>;
-export type DrugAlert = z.infer<typeof DrugAlert>;
 export type SourceLink = z.infer<typeof SourceLink>;
 export type MedicinesCompareReq = z.infer<typeof MedicinesCompareReq>;
 export type LabsCompareReq = z.infer<typeof LabsCompareReq>;
@@ -375,5 +366,3 @@ export type SharedProfile = z.infer<typeof SharedProfile>;
 export type ShareRes = z.infer<typeof ShareRes>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;
-export type AlertsCheckReq = z.infer<typeof AlertsCheckReq>;
-export type AlertsCheckRes = z.infer<typeof AlertsCheckRes>;

@@ -67,7 +67,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          gh label create incident --color B60205 --description "The live site is not answering" --force > /dev/null
+          # A GitHub API hiccup here (it answered HTTP 500 once) must not fail the run: the label exists already.
+          gh label create incident --color B60205 --description "The live site is not answering" --force > /dev/null || true
           open=$(gh issue list --label incident --state open --json number --jq '.[0].number // empty')
 
           if [ "$OK" = "true" ]; then

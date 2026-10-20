@@ -10,6 +10,7 @@ import {
   useEmergencyContacts,
   useExportMyData,
   useMyProfile,
+  isShareLinkActive,
   useRevokeShareLink,
   useShareLinks,
   useUpdateProfile,
@@ -40,7 +41,8 @@ export default function MobileProfileTab() {
   const { data: contacts = [] } = useEmergencyContacts();
   const addContactMutation = useAddContact();
   const deleteContactMutation = useDeleteContact();
-  const { data: shareLinks = [] } = useShareLinks();
+  const { data: allShareLinks = [] } = useShareLinks();
+  const shareLinks = allShareLinks.filter((l) => isShareLinkActive(l));
   const revokeShareMutation = useRevokeShareLink();
   const exportDataMutation = useExportMyData();
   const deleteAccountMutation = useDeleteAccount();
@@ -177,13 +179,14 @@ export default function MobileProfileTab() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // Only this phone: the default (global) scope would also sign the account out on every other device.
+    await supabase.auth.signOut({ scope: 'local' });
     showToast('Signed out', 'info');
     router.replace('/(auth)/login');
   };
 
   return (
-    <Screen title="Profile" eyebrow={profile?.full_name || 'Your account'}>
+    <Screen inset={false}>
       {/* Quick links */}
       <ListGroup header="Quick links">
         <ListRow
@@ -337,7 +340,13 @@ export default function MobileProfileTab() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Revoke share link"
-                  onPress={() => revokeShareMutation.mutate(link.token)}
+                  disabled={revokeShareMutation.isPending}
+                  onPress={() =>
+                    revokeShareMutation.mutate(link.token, {
+                      onSuccess: () => showToast('Link turned off. It no longer opens.', 'success'),
+                      onError: (err) => showToast(err.message || 'Could not turn the link off', 'error'),
+                    })
+                  }
                   style={styles.removeBtn}
                 >
                   <Text variant="footnote" tone="danger" style={styles.removeText}>

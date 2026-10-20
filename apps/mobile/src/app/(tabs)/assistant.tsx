@@ -1,9 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -322,11 +320,8 @@ export default function MobileAssistantTab() {
   }, []);
 
   return (
-    <Screen title="Assistant" scroll={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboard}
-      >
+    <Screen scroll={false} inset={false}>
+      <View style={styles.keyboard}>
         <ScrollView
           style={styles.messages}
           contentContainerStyle={styles.messagesContent}
@@ -489,7 +484,7 @@ export default function MobileAssistantTab() {
             icon={<Symbol ios="paperplane.fill" android="send" size={16} color={T.color.white} />}
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Screen>
   );
 }
