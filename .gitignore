@@ -8,6 +8,7 @@ build/
 web-build/
 ios/
 android/
+!/apps/web/app/download/android/
 *.tsbuildinfo
 next-env.d.ts
 
