@@ -118,6 +118,21 @@ const DEMO_USERS: SeedUser[] = [
   { id: '00000000-0000-0000-0000-000000000203', email: 'kavita@vyana.test', role: 'patient', fullName: 'Kavita Joshi' },
   { id: '00000000-0000-0000-0000-000000000204', email: 'gopal@vyana.test', role: 'patient', fullName: 'Gopal Prasad' },
   { id: '00000000-0000-0000-0000-000000000205', email: 'ananya@vyana.test', role: 'patient', fullName: 'Ananya Reddy' },
+  // Ten more fictional demo patients with different diseases (seed.sql section 15). They use the patient password.
+  { id: '00000000-0000-0000-0000-000000000206', email: 'arjun@vyana.test', role: 'patient', fullName: 'Arjun Malhotra' },
+  { id: '00000000-0000-0000-0000-000000000207', email: 'shabnam@vyana.test', role: 'patient', fullName: 'Shabnam Khan' },
+  { id: '00000000-0000-0000-0000-000000000208', email: 'ramesh@vyana.test', role: 'patient', fullName: 'Ramesh Chandra' },
+  { id: '00000000-0000-0000-0000-000000000209', email: 'priya@vyana.test', role: 'patient', fullName: 'Priya Nair' },
+  { id: '00000000-0000-0000-0000-000000000210', email: 'harpreet@vyana.test', role: 'patient', fullName: 'Harpreet Singh' },
+  { id: '00000000-0000-0000-0000-000000000211', email: 'lakshmi@vyana.test', role: 'patient', fullName: 'Lakshmi Pillai' },
+  { id: '00000000-0000-0000-0000-000000000212', email: 'aarav@vyana.test', role: 'patient', fullName: 'Aarav Mehta' },
+  { id: '00000000-0000-0000-0000-000000000213', email: 'fatima@vyana.test', role: 'patient', fullName: 'Fatima Sheikh' },
+  { id: '00000000-0000-0000-0000-000000000214', email: 'deepak@vyana.test', role: 'patient', fullName: 'Deepak Yadav' },
+  { id: '00000000-0000-0000-0000-000000000215', email: 'sanjay@vyana.test', role: 'patient', fullName: 'Sanjay Kulkarni' },
+  // Three caregivers (they use the caregiver password): Rajesh looks after Gopal, Rukhsana after Shabnam, Sunita after Aarav.
+  { id: '00000000-0000-0000-0000-000000000216', email: 'caregiver2@vyana.test', role: 'patient', passwordRole: 'caregiver', fullName: 'Rajesh Prasad' },
+  { id: '00000000-0000-0000-0000-000000000217', email: 'caregiver3@vyana.test', role: 'patient', passwordRole: 'caregiver', fullName: 'Rukhsana Khan' },
+  { id: '00000000-0000-0000-0000-000000000218', email: 'caregiver4@vyana.test', role: 'patient', passwordRole: 'caregiver', fullName: 'Sunita Mehta' },
   // Two fictional doctors for each hospital in seed.sql (verified there).
   { id: '00000000-0000-0000-0000-000000000101', email: 'doc01@vyana.test', role: 'doctor', fullName: 'Dr. Kavita Nair' },
   { id: '00000000-0000-0000-0000-000000000102', email: 'doc02@vyana.test', role: 'doctor', fullName: 'Dr. Sandeep Bhatia' },

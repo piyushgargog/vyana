@@ -22,6 +22,24 @@ describe("seed.sql", () => {
     expect(plan.red_flags.length).toBeGreaterThan(0);
   });
 
+  it("has only care plans that are valid against the CarePlan contract (every demo patient's plan)", () => {
+    const plans = [...seedSql.matchAll(/\$plan\$([\s\S]*?)\$plan\$::jsonb/g)].map((m) => m[1]);
+    expect(plans.length).toBeGreaterThanOrEqual(9);
+    for (const json of plans) {
+      const plan = CarePlan.parse(JSON.parse(json));
+      expect(plan.sources.length, plan.condition).toBeGreaterThanOrEqual(2);
+      expect(plan.sources.every((s) => s.url.startsWith("https://")), plan.condition).toBe(true);
+      expect(plan.red_flags.length, plan.condition).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps the dose logs of the year-long history out of the future and inside each medicine's dates", () => {
+    const section15 = seedSql.slice(seedSql.indexOf("-- 15. Ten more demo PATIENTS"));
+    expect(section15).toContain("t.at <= now() - interval '5 minutes'");
+    expect(section15).toContain("(t.at at time zone 'Asia/Kolkata')::date >= i.start_date");
+    expect(section15).toContain("<= coalesce(i.end_date, current_date)");
+  });
+
   it("has follow-up tests that the reminders can match to the seeded lab results", () => {
     const json = seedSql.match(/\$plan\$([\s\S]*?)\$plan\$::jsonb/)?.[1] as string;
     const plan = CarePlan.parse(JSON.parse(json));
@@ -81,7 +99,7 @@ describe("seed-users.ts and seed.sql agree on the hospital doctors", () => {
 
   it("uses the .test domain for every account and no password in the script", () => {
     const emails = [...seedUsers.matchAll(/email: '([^']+)'/g)].map((m) => m[1]);
-    expect(emails.length).toBe(28);
+    expect(emails.length).toBe(41);
     for (const e of emails) expect(e, e).toMatch(/@vyana\.test$/);
     expect(seedUsers).toContain("process.env.SEED_PASSWORD_PATIENT");
     expect(seedUsers).toContain("process.env.SEED_PASSWORD_DOCTOR");

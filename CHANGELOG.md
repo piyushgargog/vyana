@@ -11,6 +11,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Medicine quality alerts (CDSCO): the alerts screen, `POST /api/alerts/check`, the TinyFish Monitor webhook and the `monitor:create` script. The `drug_alerts` and `tinyfish_monitors` tables stay in the database, unused.
 
 ### Changed
+- Demo data: ten more fictional demo patients with different diseases and three caregivers, and a year of lab reports, vitals and dose logs for every demo patient (for the charts and the shared record).
 - The website no longer offers "Install app" in mobile browsers (the web manifest uses `display: browser`), so visitors do not mistake it for the Android app.
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 

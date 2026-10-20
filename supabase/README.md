@@ -70,6 +70,25 @@ All use the patient password and are fully set up (consent accepted, onboarded):
 
 They are section 14 of `seed.sql` and the last users in `seed-users.ts`; `pnpm seed:demo:refresh` resets them with the others. All names, numbers and records are made up.
 
+### Ten more demo patients and three caregivers (a year of history each)
+
+All use the patient password (the caregivers use the caregiver password). Each has about a year of lab reports, vitals and dose logs (with realistic missed doses), so charts, trends, adherence and medicine timelines have something to show. They are section 15 of `seed.sql` and the last users in `seed-users.ts`.
+
+| Login | Story and what it shows |
+|---|---|
+| `arjun@vyana.test` (Arjun Malhotra, 52, A+) | Type 2 diabetes, high blood pressure and cholesterol. HbA1c 9.4 down to 7.1 over a year, a falling LDL, kidney and urine tests, five medicines, an approved care plan, a meal log, an active 30-day share link |
+| `shabnam@vyana.test` (Shabnam Khan, 26, **B-**) | Beta-thalassemia major: a transfusion every 3 weeks (an upcoming one needs B-negative blood), ferritin trend 3100 down to 1820, an iron-removal medicine, an approved care plan. Caregiver: `caregiver3@vyana.test` (her mother) |
+| `ramesh@vyana.test` (Ramesh Chandra, 67, O+) | COPD and high blood pressure, Hindi. Lung function tests, a flare-up with a short steroid course (a medicine with an end date), oxygen readings, a penicillin allergy |
+| `priya@vyana.test` (Priya Nair, 29, AB+) | PCOS, iron-deficiency anaemia and vitamin D deficiency. Haemoglobin 8.9 up to 11.9, weight 79 down to 71 kg, a finished weekly vitamin D course, a meal log |
+| `harpreet@vyana.test` (Harpreet Singh, 58, B+) | Atrial fibrillation on warfarin. A monthly INR for a year (in range, one high reading), an ibuprofen prescription that triggers the curated interaction warning, an active 30-day share link |
+| `lakshmi@vyana.test` (Lakshmi Pillai, 70, O+) | Seven medicines at 70 (osteoporosis, thyroid, blood pressure, knees), a weekly tablet, a bone density test, many missed doses |
+| `aarav@vyana.test` (Aarav Mehta, 9, A+) | Type 1 diabetes in a child: insulin, a sugar reading several times a day, an approved care plan. Caregiver: `caregiver4@vyana.test` (his mother) |
+| `fatima@vyana.test` (Fatima Sheikh, 28, **A-**) | Gestational diabetes and anaemia at 30 weeks of pregnancy: sugar and weight gain readings, an antenatal visit, a meal log |
+| `deepak@vyana.test` (Deepak Yadav, 41, O+) | Pulmonary tuberculosis, month 3 of 6, Hindi: a finished first phase and a current second phase, liver tests, an approved care plan, a meal log |
+| `sanjay@vyana.test` (Sanjay Kulkarni, 36, B+) | Epilepsy; lives in Pune, a scanned prescription, a phenytoin allergy, very regular doses |
+
+`caregiver2@vyana.test` (Rajesh Prasad) looks after Gopal. Aryan and the five earlier patients got a year of history too (more lab reports, vitals and dose logs). `pnpm seed:demo:refresh` resets every demo patient together; it deletes and re-seeds the demo rows in two steps, so for a live database run the same SQL in a single transaction.
+
 Run the seed again at any time: it replaces the dose logs and vitals and leaves the rest as it is.
 
 ## Missed-dose alerts (pg_cron)
