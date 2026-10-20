@@ -714,6 +714,7 @@ export default function PatientDashboardPage() {
             type="button"
             variant="secondary"
             size="md"
+            className="max-w-full whitespace-normal! text-center"
             icon={<Download className="h-4 w-4" aria-hidden="true" />}
             disabled={exportMutation.isPending}
             onClick={handleDownloadMyData}
@@ -725,6 +726,7 @@ export default function PatientDashboardPage() {
             type="button"
             variant="destructive"
             size="md"
+            className="max-w-full whitespace-normal! text-center"
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
             onClick={() => setShowDeleteModal(true)}
           >

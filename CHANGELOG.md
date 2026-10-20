@@ -15,6 +15,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 
 ### Fixed
+- **Text fixes from QA:** the doctor header no longer shows a doubled "Dr. Dr." when the stored name already has the title; basket prices always show two decimals (₹163.40, not ₹163.4); the onboarding emergency-contact relationship field no longer comes prefilled; the "Account Role" badge reads "Account Role: Patient" instead of the all-caps constant style.
 - The emergency Medical ID QR is now plain readable text (name, blood group, allergies, medicines, one emergency contact) that any phone camera shows without internet. It used to be base64 text that only looked like gibberish, and its link needed internet. A long medicine list is cut with a "+N more" note. The QR has square corners and error level M so it scans on Android.
 - "Revoke" on a share link now visibly works: turned-off and expired links leave the "Active share links" list and the Medical ID and Timeline screens, the app confirms it, and a revoke that changes no row is an error instead of a silent "ok".
 - Signing out on one device no longer signs you out everywhere (web and Android; the Android fix ships with the next APK).

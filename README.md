@@ -129,10 +129,10 @@ We work in feature branches and merge through pull requests only. Read [`CONTRIB
 
 | | Role |
 |---|---|
-| **Piyush Garg** | Team Lead · Backend |
-| **Arvind Kushwaha** | Frontend (web + mobile) |
-| **Vaibhav Parmar** | Database + data layer |
-| **Kareena Sah** | Product |
+| **Piyush Garg** ([@piyushgargog](https://github.com/piyushgargog)) | Team Lead · Backend |
+| **Arvind Kushwaha** ([@arvindkushwaha55](https://github.com/arvindkushwaha55)) | Frontend (web + mobile) |
+| **Vaibhav Parmar** ([@vaibhavparmarog](https://github.com/vaibhavparmarog)) | Database + data layer |
+| **Kareena Sah** ([@middaymyse](https://github.com/middaymyse)) | Product |
 
 ## Disclaimer
 

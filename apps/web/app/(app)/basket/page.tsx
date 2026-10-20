@@ -52,7 +52,7 @@ function formatSource(source: string): string {
 }
 
 function formatTotal(total: number | null): string {
-  return total === null ? "—" : `₹${total.toFixed(1)}`;
+  return total === null ? "—" : `₹${total.toFixed(2)}`;
 }
 
 function StatusPill({ status }: { status: PharmacyBasket["status"] }) {
@@ -357,7 +357,7 @@ export default function BasketPage() {
                 {currentResult.savings_vs_highest !== null &&
                   currentResult.savings_vs_highest > 0 && (
                     <p className="mt-2 text-[15px] text-label-2">
-                      Save ₹{currentResult.savings_vs_highest.toFixed(1)} vs
+                      Save ₹{currentResult.savings_vs_highest.toFixed(2)} vs
                       the highest pharmacy
                     </p>
                   )}

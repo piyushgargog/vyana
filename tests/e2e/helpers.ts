@@ -34,6 +34,23 @@ export async function signOut(page: Page): Promise<void> {
 
 /** Asserts no horizontal scroll at the current viewport. */
 export async function expectNoHorizontalScroll(page: Page): Promise<void> {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow, "page must not scroll sideways").toBeLessThanOrEqual(1);
+  const measure = () =>
+    page.evaluate(() => {
+      const width = document.documentElement.clientWidth;
+      const wide: string[] = [];
+      for (const el of Array.from(document.querySelectorAll("body *"))) {
+        const box = el.getBoundingClientRect();
+        if (box.width > 0 && (box.right > width + 1 || box.left < -1)) {
+          wide.push(`${el.tagName.toLowerCase()}.${String(el.className).slice(0, 60)} [${Math.round(box.left)}..${Math.round(box.right)}] "${(el.textContent ?? "").trim().slice(0, 30)}"`);
+        }
+      }
+      return { overflow: document.documentElement.scrollWidth - width, wide: wide.slice(0, 8) };
+    });
+  // A page may still be settling (skeletons, a toast sliding in): wait for it, and say which elements stick out if it never does.
+  let last = await measure();
+  for (let i = 0; i < 20 && last.overflow > 1; i++) {
+    await page.waitForTimeout(250);
+    last = await measure();
+  }
+  expect(last.overflow, `page must not scroll sideways; wider than the screen: ${last.wide.join(" | ")}`).toBeLessThanOrEqual(1);
 }
