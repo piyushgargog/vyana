@@ -71,7 +71,9 @@ function AppShellContent({
   ]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // Only this browser: the default (global) scope would also sign the account out on every other device, and the
+    // nightly E2E test signs the demo accounts in and out.
+    await supabase.auth.signOut({ scope: "local" });
     showToast("Signed out of Vyana", "info");
     router.replace("/login");
   };

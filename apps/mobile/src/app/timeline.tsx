@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  isShareUrlDead,
   useCreateShareLink,
+  useShareLinks,
   useTimeline,
   type TimelineEntry,
   type TimelineKind,
@@ -107,7 +109,10 @@ export default function TimelineScreen() {
 
   const [filter, setFilter] = useState<'all' | TimelineKind>('all');
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [createdUrl, setShareUrl] = useState<string | null>(null);
+  const { data: shareLinks = [] } = useShareLinks();
+  // A link turned off (or expired) in Profile must not keep showing here as active.
+  const shareUrl = createdUrl && !isShareUrlDead(shareLinks, createdUrl) ? createdUrl : null;
 
   const filteredEntries = timeline.filter((e) =>
     filter === 'all' ? true : e.kind === filter

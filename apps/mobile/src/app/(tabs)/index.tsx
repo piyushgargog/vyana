@@ -13,7 +13,6 @@ import {
   useCarePlans,
   useConditions,
   useDoseLogs,
-  useDrugAlerts,
   useLogDose,
   useMyAppointments,
   useMyProfile,
@@ -68,7 +67,6 @@ export default function PatientHomeScreen() {
   const { data: todayDoseLogs = [], refetch: refetchLogs } = useDoseLogs(startOfDay, endOfDay);
   const { data: adherence } = useAdherence(30);
   const { data: appointments = [], refetch: refetchAppts } = useMyAppointments();
-  const { data: drugAlerts = [] } = useDrugAlerts();
   const logDoseMutation = useLogDose();
 
   const onRefresh = () => {
@@ -130,8 +128,6 @@ export default function PatientHomeScreen() {
   );
   const nextAppt = upcomingAppointments[0];
 
-  const unseenAlerts = drugAlerts.filter((a) => !a.seen);
-
   const handleDoseAction = async (
     itemId: string,
     scheduledIso: string,
@@ -175,6 +171,11 @@ export default function PatientHomeScreen() {
     ? `/care/${conditions[0].id}`
     : '/onboarding';
 
+  const hour = now.getHours();
+  const greetingTime = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0];
+  const greeting = firstName ? `${greetingTime}, ${firstName}` : greetingTime;
+
   const eyebrowDate = now.toLocaleDateString('en-US', {
     weekday: 'long',
     day: 'numeric',
@@ -185,7 +186,7 @@ export default function PatientHomeScreen() {
     <View style={styles.container}>
       <Screen
         eyebrow={eyebrowDate}
-        title="Today"
+        title={greeting}
         onRefresh={onRefresh}
         trailing={
           <Pressable
@@ -200,30 +201,6 @@ export default function PatientHomeScreen() {
           </Pressable>
         }
       >
-        {/* Unseen Drug Safety Alert */}
-        {unseenAlerts.length > 0 && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`CDSCO Drug Quality Alert for ${unseenAlerts[0].medicine_name}`}
-            onPress={() => router.push('/alerts')}
-          >
-            <Card style={styles.alertCard}>
-              <View style={styles.alertHeader}>
-                <Pill text={`CDSCO Alert (${unseenAlerts.length})`} tone="warn" />
-                <Text variant="footnote" tone="accent">
-                  View →
-                </Text>
-              </View>
-              <Text variant="headline" style={{ marginTop: T.space.xs }}>
-                {unseenAlerts[0].medicine_name}: {unseenAlerts[0].title}
-              </Text>
-              <Text variant="footnote" tone="secondary" numberOfLines={2}>
-                {unseenAlerts[0].snippet}
-              </Text>
-            </Card>
-          </Pressable>
-        )}
-
         {/* Doses Card with Progress */}
         <Card>
           <CardHeader
@@ -524,16 +501,6 @@ const styles = StyleSheet.create({
   },
   sosHeaderText: {
     fontWeight: '700',
-  },
-  alertCard: {
-    borderWidth: 1,
-    borderColor: T.color.warnSoft,
-    backgroundColor: T.color.surface,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   emptyDoses: {
     alignItems: 'center',

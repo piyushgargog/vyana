@@ -6,15 +6,13 @@ import { REALTIME } from "../../constants";
 import type { Sb } from "./helpers";
 
 /** The tables that publish live changes (supabase/migrations/0004_realtime.sql). */
-export type LiveTable = "care_plans" | "appointments" | "drug_alerts" | "emergency_requests";
+export type LiveTable = "care_plans" | "appointments" | "emergency_requests";
 
 /** The Realtime channel name of a live table for one user (plan 7.1 `REALTIME`; care plans have no entry there). */
 export function liveChannelName(table: LiveTable, userId: string): string {
   switch (table) {
     case "appointments":
       return REALTIME.appointmentsForDoctor(userId);
-    case "drug_alerts":
-      return REALTIME.alertsForPatient(userId);
     case "care_plans":
       return `care-plans:${userId}`;
     case "emergency_requests":

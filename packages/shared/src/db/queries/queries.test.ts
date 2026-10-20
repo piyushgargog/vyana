@@ -32,12 +32,14 @@ import {
   liveChannelName,
   subscribeTable,
   logDose,
-  markAlertSeen,
   randomUuid,
   reportAiMistake,
   requireUserId,
   revokeCareLink,
   revokeShareLink,
+  isShareLinkActive,
+  isShareUrlDead,
+  shareTokenFromUrl,
   savePushToken,
   shareUrl,
   startOfLocalDay,
@@ -445,14 +447,36 @@ describe("care plans, caregivers, sharing", () => {
   });
 
   it("revokes a share link by token", async () => {
-    const f = fakeSupabase({ responses: { share_links: [ok(null)] } });
+    const f = fakeSupabase({ responses: { share_links: [ok([{ token: "tok123" }])] } });
     await revokeShareLink(f.sb, "tok123");
     expect(f.argsOf("update")).toEqual([{ revoked: true }]);
     expect(f.argsOf("eq")).toEqual(["token", "tok123"]);
   });
+
+  it("says so when a revoke changed no row (not the patient's link, or no such link)", async () => {
+    const f = fakeSupabase({ responses: { share_links: [ok([])] } });
+    await expect(revokeShareLink(f.sb, "nope")).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("knows which links still open their page", () => {
+    const now = new Date("2026-10-20T10:00:00Z");
+    expect(isShareLinkActive({ revoked: false, expires_at: "2026-10-21T10:00:00Z" }, now)).toBe(true);
+    expect(isShareLinkActive({ revoked: true, expires_at: "2026-10-21T10:00:00Z" }, now)).toBe(false);
+    expect(isShareLinkActive({ revoked: false, expires_at: "2026-10-20T09:59:59Z" }, now)).toBe(false);
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/other")).toBeNull();
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c/")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/share/0a1b2c?x=1#top")).toBe("0a1b2c");
+    expect(shareTokenFromUrl("https://vyana.app/share/NOTHEX")).toBeNull();
+    expect(shareTokenFromUrl("not a url")).toBeNull();
+    expect(shareTokenFromUrl(`https://vyana.app/share/${"a".repeat(129)}`)).toBeNull();
+    const links = [{ token: "0a1b2c", revoked: true, expires_at: "2026-10-21T10:00:00Z" }];
+    expect(isShareUrlDead(links, "https://vyana.app/share/0a1b2c", now)).toBe(true);
+    expect(isShareUrlDead(links, "https://vyana.app/share/ffff", now)).toBe(false); // not in the list (yet): treat as live
+  });
 });
 
-describe("conditions, vitals, consents, alerts, AI runs, push", () => {
+describe("conditions, vitals, consents, AI runs, push", () => {
   it("adds a condition as the patient's own (never as a doctor's)", async () => {
     const f = fakeSupabase({ responses: { conditions: [ok({ id: "c" })] } });
     await addCondition(f.sb, { name: "Asthma" });
@@ -469,12 +493,6 @@ describe("conditions, vitals, consents, alerts, AI runs, push", () => {
     const f = fakeSupabase({ responses: { consents: [ok(null), ok({ id: "c-1", version: "2026-10-11" })] } });
     expect(await acceptConsent(f.sb, "2026-10-11")).toMatchObject({ version: "2026-10-11" });
     expect(f.argsOf("upsert")).toEqual([{ user_id: "user-1", version: "2026-10-11" }, { onConflict: "user_id,version", ignoreDuplicates: true }]);
-  });
-
-  it("marks an alert seen", async () => {
-    const f = fakeSupabase({ responses: { drug_alerts: [ok({ id: "a", seen: true })] } });
-    await markAlertSeen(f.sb, "a");
-    expect(f.argsOf("update")).toEqual([{ seen: true }]);
   });
 
   it("reports an AI mistake: the status, and the note when there is one", async () => {
@@ -564,7 +582,6 @@ describe("storage", () => {
 describe("realtime", () => {
   it("names the channel of each live table for one user", () => {
     expect(liveChannelName("appointments", "u1")).toBe("appointments:doctor:u1");
-    expect(liveChannelName("drug_alerts", "u1")).toBe("alerts:u1");
     expect(liveChannelName("care_plans", "u1")).toBe("care-plans:u1");
   });
 

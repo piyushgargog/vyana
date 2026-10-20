@@ -16,6 +16,7 @@ export function Screen({
   refreshing,
   onRefresh,
   scroll = true,
+  inset = true,
 }: {
   title?: string;
   eyebrow?: string;
@@ -24,8 +25,11 @@ export function Screen({
   refreshing?: boolean;
   onRefresh?: () => void;
   scroll?: boolean;
+  /** Add the status-bar inset on top. Turn off under a native header, which already does. */
+  inset?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const top = (inset ? insets.top : 0) + T.space.sm;
   const header = title ? (
     <View style={styles.header}>
       <View style={styles.titles}>
@@ -44,7 +48,7 @@ export function Screen({
 
   if (!scroll) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + T.space.sm }]}>
+      <View style={[styles.screen, { paddingTop: top }]}>
         {header}
         <View style={[styles.content, { flex: 1 }]}>{children}</View>
       </View>
@@ -54,7 +58,7 @@ export function Screen({
     <ScrollView
       style={styles.screen}
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + T.space.sm, paddingBottom: insets.bottom + 110 }]}
+      contentContainerStyle={[styles.content, { paddingTop: top, paddingBottom: insets.bottom + 110 }]}
       refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={T.color.accent} /> : undefined}
     >
       {header}

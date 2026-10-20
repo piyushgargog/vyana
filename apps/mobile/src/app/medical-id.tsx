@@ -4,8 +4,10 @@ import {
   buildMedicalIdQr,
   useActiveItems,
   useCreateShareLink,
+  isShareUrlDead,
   useEmergencyContacts,
   useMyProfile,
+  useShareLinks,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
@@ -31,7 +33,10 @@ export default function MedicalIdScreen() {
   const { data: contacts = [] } = useEmergencyContacts();
   const createShareMutation = useCreateShareLink();
 
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [createdUrl, setShareUrl] = useState<string | null>(null);
+  const { data: shareLinks = [] } = useShareLinks();
+  // A link turned off (or expired) in Profile must not keep showing here as active.
+  const shareUrl = createdUrl && !isShareUrlDead(shareLinks, createdUrl) ? createdUrl : null;
 
   const primaryContact = useMemo(
     () =>
@@ -51,8 +56,8 @@ export default function MedicalIdScreen() {
       medicine_name: item.medicine_name,
       strength: item.strength,
     }));
-    return buildMedicalIdQr(p, m, primaryContact, shareUrl ?? undefined);
-  }, [profile, activeItems, primaryContact, shareUrl]);
+    return buildMedicalIdQr(p, m, primaryContact);
+  }, [profile, activeItems, primaryContact]);
 
   const handleCreateShareLink = async () => {
     try {
@@ -91,8 +96,9 @@ export default function MedicalIdScreen() {
         <CardHeader title="Offline scannable" />
         <Text variant="footnote" tone="secondary">
           Self-contained offline QR code. Any phone camera or first responder can
-          scan to read your blood group, allergies, active medicines, and
-          emergency contacts without internet.
+          scan it to read your name, blood group, allergies, medicines and one
+          emergency contact as plain text, without internet. A long medicine list
+          is cut, and the text then says how many more there are.
         </Text>
       </Card>
 
@@ -103,7 +109,7 @@ export default function MedicalIdScreen() {
           label="Offline Emergency Medical ID QR Code"
         />
         <Text variant="footnote" tone="tertiary" style={styles.center}>
-          Scan with phone camera or QR scanner · or use the 24h link below
+          Any phone camera shows the details as plain text, no internet needed. The 24h link below needs internet.
         </Text>
       </Card>
 
