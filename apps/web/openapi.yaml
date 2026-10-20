@@ -28,8 +28,6 @@ tags:
     description: SOS, nearby emergency hospitals and PM-JAY hospitals
   - name: Doctors
     description: Doctor verification
-  - name: Wellness
-    description: Medicine quality alerts
   - name: Sharing
     description: Read-only medical ID and timeline links
   - name: Account

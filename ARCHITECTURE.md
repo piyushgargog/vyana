@@ -12,7 +12,7 @@ flowchart LR
   CD["Caddy<br/>HTTPS · headers"]
   subgraph Server["Next.js API routes (apps/web/app/api)"]
     API["Route handlers<br/>auth · validation · errors"]
-    TF["TinyFish layer<br/>Search · Fetch · Agent · Monitor"]
+    TF["TinyFish layer<br/>Search · Fetch · Agent"]
     AI["AI layer<br/>Vercel AI SDK"]
     C[("web_cache")]
   end

@@ -138,7 +138,6 @@ const doc = {
     { name: "Appointments", description: "Hospital information for token booking" },
     { name: "Emergency", description: "SOS, nearby emergency hospitals and PM-JAY hospitals" },
     { name: "Doctors", description: "Doctor verification" },
-    { name: "Wellness", description: "Medicine quality alerts" },
     { name: "Sharing", description: "Read-only medical ID and timeline links" },
     { name: "Account", description: "Data export and account deletion" },
     { name: "Assistant", description: "AI health assistant chat" },
