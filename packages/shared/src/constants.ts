@@ -32,7 +32,6 @@ export const VITAL_UNITS = {
 export const REALTIME = {
   emergency: (requestId: string) => `emergency:${requestId}`,
   appointmentsForDoctor: (doctorId: string) => `appointments:doctor:${doctorId}`,
-  alertsForPatient: (patientId: string) => `alerts:${patientId}`,
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -92,6 +91,5 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "doctors/verify": "agent",
   "hospitals/info": "agent",
   "schemes/pmjay-hospitals": "agent",
-  "alerts/check": "agent",
   "emergency/nearby": "public",
 };

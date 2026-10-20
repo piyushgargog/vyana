@@ -3,7 +3,6 @@
 // Owner: Vaibhav Parmar
 
 export * from "./aiRuns";
-export * from "./alerts";
 export * from "./appointments";
 export * from "./carePlans";
 export * from "./careLinks";

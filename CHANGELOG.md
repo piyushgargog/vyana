@@ -4,6 +4,17 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Removed
+- Medicine quality alerts (CDSCO): the alerts screen, `POST /api/alerts/check`, the TinyFish Monitor webhook and the `monitor:create` script. The `drug_alerts` and `tinyfish_monitors` tables stay in the database, unused.
+
+### Changed
+- Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
+
+### Fixed
+- Signing out on one device no longer signs you out everywhere (web and Android; the Android fix ships with the next APK).
+- Android app: the keyboard no longer covers the text field; "Ask Vyana" and "Me" no longer show a second title and a gap under the header; notifications use the Vyana mark as the small icon.
+- Public pages meet the AA colour-contrast limit; CI is green again (contrast, slow E2E waits, a secret-scan false positive).
+
 ## [1.0.0] - 2026-10-18
 
 The first release: the web app at https://vyanahealth.app and the Android app (preview APK, attached to this release).

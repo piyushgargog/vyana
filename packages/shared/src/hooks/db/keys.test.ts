@@ -24,7 +24,7 @@ describe("DB hook query keys", () => {
   });
 
   it("use the roots that the API hooks invalidate, so a scan or an upload refreshes the screens", () => {
-    for (const root of ["prescriptions", "activeItems", "labReports", "labValues", "drugAlerts", "doctors", "emergency", "carePlans", "hospitals"] as const) {
+    for (const root of ["prescriptions", "activeItems", "labReports", "labValues", "doctors", "emergency", "carePlans", "hospitals"] as const) {
       expect(allSource, root).toContain(`QUERY_ROOTS.${root}`);
     }
   });
