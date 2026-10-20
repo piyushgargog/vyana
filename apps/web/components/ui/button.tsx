@@ -42,10 +42,10 @@ export function Button({ variant = "primary", size = "md", icon, className, chil
   );
 }
 
-/** The same pill as a link (internal routes use Next's Link, `tel:` / `mailto:` / external a plain anchor). */
-export function ButtonLink({ variant = "primary", size = "md", icon, className, children, href, ...rest }: Common & Omit<ComponentProps<"a">, "href"> & { href: string }) {
+/** The same pill as a link (internal routes use Next's Link, `tel:` / `mailto:` / external a plain anchor; `native` forces a plain anchor for a route that is not a page, such as a download). */
+export function ButtonLink({ variant = "primary", size = "md", icon, className, children, href, native, ...rest }: Common & Omit<ComponentProps<"a">, "href"> & { href: string; native?: boolean }) {
   const cls = cn(BASE, VARIANTS[variant], SIZES[size], className);
-  if (href.startsWith("/")) {
+  if (href.startsWith("/") && !native) {
     return (
       <Link href={href} className={cls} {...rest}>
         {icon}

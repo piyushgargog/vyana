@@ -6,7 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Vyana",
     description: "Your health, in one calm place.",
     start_url: "/",
-    display: "standalone",
+    // "browser", not "standalone": Chrome then offers only "Add to Home screen", never "Install app", so nobody mistakes the website for our Android app (that is the APK).
+    display: "browser",
     background_color: "#F2F2F7",
     theme_color: "#0D9488",
     icons: [

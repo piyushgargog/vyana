@@ -4,6 +4,12 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
+
+### Changed
+- The website no longer offers "Install app" in mobile browsers (the web manifest uses `display: browser`), so visitors do not mistake it for the Android app.
+
 ## [1.0.0] - 2026-10-18
 
 The first release: the web app at https://vyanahealth.app and the Android app (preview APK, attached to this release).
