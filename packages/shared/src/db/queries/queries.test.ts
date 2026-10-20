@@ -32,7 +32,6 @@ import {
   liveChannelName,
   subscribeTable,
   logDose,
-  markAlertSeen,
   randomUuid,
   reportAiMistake,
   requireUserId,
@@ -452,7 +451,7 @@ describe("care plans, caregivers, sharing", () => {
   });
 });
 
-describe("conditions, vitals, consents, alerts, AI runs, push", () => {
+describe("conditions, vitals, consents, AI runs, push", () => {
   it("adds a condition as the patient's own (never as a doctor's)", async () => {
     const f = fakeSupabase({ responses: { conditions: [ok({ id: "c" })] } });
     await addCondition(f.sb, { name: "Asthma" });
@@ -469,12 +468,6 @@ describe("conditions, vitals, consents, alerts, AI runs, push", () => {
     const f = fakeSupabase({ responses: { consents: [ok(null), ok({ id: "c-1", version: "2026-10-11" })] } });
     expect(await acceptConsent(f.sb, "2026-10-11")).toMatchObject({ version: "2026-10-11" });
     expect(f.argsOf("upsert")).toEqual([{ user_id: "user-1", version: "2026-10-11" }, { onConflict: "user_id,version", ignoreDuplicates: true }]);
-  });
-
-  it("marks an alert seen", async () => {
-    const f = fakeSupabase({ responses: { drug_alerts: [ok({ id: "a", seen: true })] } });
-    await markAlertSeen(f.sb, "a");
-    expect(f.argsOf("update")).toEqual([{ seen: true }]);
   });
 
   it("reports an AI mistake: the status, and the note when there is one", async () => {
@@ -564,7 +557,6 @@ describe("storage", () => {
 describe("realtime", () => {
   it("names the channel of each live table for one user", () => {
     expect(liveChannelName("appointments", "u1")).toBe("appointments:doctor:u1");
-    expect(liveChannelName("drug_alerts", "u1")).toBe("alerts:u1");
     expect(liveChannelName("care_plans", "u1")).toBe("care-plans:u1");
   });
 

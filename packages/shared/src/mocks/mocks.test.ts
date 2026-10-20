@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { ZodType } from "zod";
 
 import {
-  AlertsCheckRes,
   BasketCompareReq,
   BasketCompareRes,
   DoctorVerifyRes,
@@ -20,7 +19,6 @@ import {
   TriageRes,
 } from "../contracts";
 import {
-  alertsCheckMock,
   basketCompareMock,
   basketJobRunningMock,
   singleMedicineJobMock,
@@ -48,7 +46,6 @@ const cases: [string, ZodType, unknown][] = [
   ["prescriptions/extract", PrescriptionExtractRes, prescriptionsExtractMock],
   ["reports/analyze", ReportAnalyzeRes, reportsAnalyzeMock],
   ["reports/values/correct", LabValueCorrectRes, labValueCorrectMock],
-  ["alerts/check", AlertsCheckRes, alertsCheckMock],
   ["prescriptions/basket", BasketCompareRes, basketCompareMock],
   ["prescriptions/basket (running)", BasketCompareRes, basketJobRunningMock],
   ["single medicine (one-item basket)", BasketCompareRes, singleMedicineJobMock],

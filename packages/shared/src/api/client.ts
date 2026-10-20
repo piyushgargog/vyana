@@ -3,8 +3,6 @@
 import type { ZodType } from "zod";
 
 import {
-  AlertsCheckReq,
-  AlertsCheckRes,
   ApiErrorBody,
   BasketCompareReq,
   BasketCompareRes,
@@ -90,7 +88,6 @@ export type ApiClient = {
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
   interactions: { check(body: InteractionsReq): Promise<InteractionsRes> };
   triage: { assess(body: TriageReq): Promise<TriageRes> };
-  alerts: { check(): Promise<AlertsCheckRes> };
   /** Public, token-based read of a shared medical ID / timeline. Sends no auth header. */
   share: { get(token: string): Promise<ShareRes> };
   me: { exportData(): Promise<MeExportRes>; deleteAccount(): Promise<OkRes> };
@@ -241,7 +238,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     carePlans: { generate: (body) => post("/api/care-plan", GenerateCarePlanReq, GenerateCarePlanRes, body, mocks.carePlanMock) },
     interactions: { check: (body) => post("/api/medicines/interactions", InteractionsReq, InteractionsRes, body, mocks.interactionsMock) },
     triage: { assess: (body) => post("/api/triage", TriageReq, TriageRes, body, mocks.triageMock) },
-    alerts: { check: () => post("/api/alerts/check", AlertsCheckReq, AlertsCheckRes, {}, mocks.alertsCheckMock) },
     share: {
       get: (token) => {
         if (!token.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "token: missing", 400));

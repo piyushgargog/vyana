@@ -184,7 +184,7 @@ export default function MobileProfileTab() {
   };
 
   return (
-    <Screen title="Profile" eyebrow={profile?.full_name || 'Your account'}>
+    <Screen inset={false}>
       {/* Quick links */}
       <ListGroup header="Quick links">
         <ListRow

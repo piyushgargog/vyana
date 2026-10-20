@@ -51,7 +51,6 @@ describe("Shared Constants", () => {
   it("formats realtime subscription channel identifiers properly", () => {
     expect(REALTIME.emergency("req-123")).toBe("emergency:req-123");
     expect(REALTIME.appointmentsForDoctor("doc-456")).toBe("appointments:doctor:doc-456");
-    expect(REALTIME.alertsForPatient("pat-789")).toBe("alerts:pat-789");
   });
 
   it("exports the Indian national emergency ambulance number", () => {
@@ -106,7 +105,7 @@ describe("Scope v2 constants", () => {
 
   it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
     expect(Object.keys(RATE_LIMITED_ROUTES).sort()).toEqual([
-      "alerts/check", "assistant/chat", "care-plan", "doctors/verify", "emergency/nearby", "hospitals/info", "labs/compare",
+      "assistant/chat", "care-plan", "doctors/verify", "emergency/nearby", "hospitals/info", "labs/compare",
       "medicines/interactions", "prescriptions/basket", "prescriptions/extract", "reports/analyze", "schemes/pmjay-hospitals", "triage",
     ]);
     expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();

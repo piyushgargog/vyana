@@ -17,7 +17,6 @@
     "verify:brands": "pnpm --filter @vyana/web verify:brands",
     "prewarm": "pnpm --filter @vyana/web prewarm",
     "live:check": "pnpm --filter @vyana/web live:check",
-    "monitor:create": "pnpm --filter @vyana/web monitor:create",
     "review:sheet": "pnpm --filter @vyana/web review:sheet",
     "eval:safety": "pnpm --filter @vyana/web eval:safety",
     "e2e": "playwright test",

@@ -89,7 +89,7 @@ export default function MobileTabsLayout() {
         ),
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Today', headerTitle: 'Today', tabBarIcon: icon('house.fill', 'home') }} />
+      <Tabs.Screen name="index" options={{ title: 'Today', headerShown: false, tabBarIcon: icon('house.fill', 'home') }} />
       <Tabs.Screen name="meds" options={{ title: 'Medicines', headerTitle: 'Medicines', tabBarIcon: icon('pills.fill', 'medication') }} />
       <Tabs.Screen name="reports" options={{ title: 'Reports', headerTitle: 'Reports', tabBarIcon: icon('doc.text.fill', 'lab_profile') }} />
       <Tabs.Screen name="assistant" options={{ title: 'Ask', headerTitle: 'Ask Vyana', tabBarIcon: icon('bubble.left.and.text.bubble.right.fill', 'forum') }} />

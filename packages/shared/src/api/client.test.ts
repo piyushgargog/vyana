@@ -41,7 +41,7 @@ describe("createApiClient", () => {
 
   it("falls back to a code from the HTTP status when the error body is not JSON", async () => {
     const fetchMock = vi.fn(async () => new Response("<html>Unauthorized</html>", { status: 401 }));
-    await expect(client(fetchMock).alerts.check()).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
+    await expect(client(fetchMock).medicines.compare({ medicine: "Dolo" })).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
   });
 
   it("rejects a response that does not match the schema", async () => {
