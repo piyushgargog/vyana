@@ -13,6 +13,109 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_actions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          patient_id: string
+          proposal_id: string
+          result: NonNullable<Json>
+          status: string
+        }
+        ComputedFields: never
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          proposal_id: string
+          result?: NonNullable<Json>
+          status: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          proposal_id?: string
+          result?: NonNullable<Json>
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_actions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_actions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "agent_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_proposals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          dedupe_key: string | null
+          evidence: NonNullable<Json>
+          expires_at: string | null
+          id: string
+          kind: string
+          patient_id: string
+          payload: NonNullable<Json>
+          reason: string
+          rule_id: string | null
+          status: string
+          title: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          dedupe_key?: string | null
+          evidence?: NonNullable<Json>
+          expires_at?: string | null
+          id?: string
+          kind: string
+          patient_id: string
+          payload?: NonNullable<Json>
+          reason: string
+          rule_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          dedupe_key?: string | null
+          evidence?: NonNullable<Json>
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          patient_id?: string
+          payload?: NonNullable<Json>
+          reason?: string
+          rule_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_proposals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_runs: {
         Row: {
           created_at: string
@@ -1722,6 +1825,30 @@ export type Database = {
           source: string
         }[]
       }
+      decide_proposal: {
+        Args: { p_approve: boolean; p_proposal_id: string }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          dedupe_key: string | null
+          evidence: NonNullable<Json>
+          expires_at: string | null
+          id: string
+          kind: string
+          patient_id: string
+          payload: NonNullable<Json>
+          reason: string
+          rule_id: string | null
+          status: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "agent_proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       department_tokens: {
         Args: { p_date: string; p_department: string }
         Returns: {
@@ -1748,6 +1875,7 @@ export type Database = {
           year_of_registration: number
         }[]
       }
+      expire_proposals: { Args: Record<PropertyKey, never>; Returns: number }
       hit_rate_limit: {
         Args: {
           p_bucket: string
