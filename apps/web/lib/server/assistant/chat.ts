@@ -28,6 +28,12 @@ import { assistantTools } from "./tools";
 
 const HISTORY = 20;
 const MAX_TEXT = 4_000;
+/**
+ * The history sent to the model is cut to this many characters (about 1,500 tokens), newest turns first. Patient data may
+ * only go to Groq, whose free tier refuses a request over 8,000 tokens (413) and a tool loop sends the history again at
+ * every step, so a long chat would otherwise fail on every key.
+ */
+const HISTORY_CHARS = 6_000;
 /** Separates messages while the whole history is redacted in one pass (one placeholder per person). */
 const SEPARATOR = "\n\n␞\n\n";
 /** The question asks how much or how often to take a medicine, or whether to change it (ADR-065). */
@@ -58,7 +64,20 @@ export function historyFrom(messages: ChatBody["messages"]): Turn[] {
   const last = turns.at(-1);
   if (!last || last.role !== "user" || messages.at(-1)?.role !== "user") throw badRequest("The last message must be a question from the user.");
   if (turns.some((t) => t.text.length > MAX_TEXT)) throw badRequest(`A message can be at most ${MAX_TEXT} characters.`);
-  return turns;
+  return fitHistory(turns);
+}
+
+/** The newest turns that fit `HISTORY_CHARS` (the last question is always kept); a history that had to be cut starts with a user turn again. */
+export function fitHistory(turns: Turn[]): Turn[] {
+  let total = 0;
+  const kept: Turn[] = [];
+  for (let i = turns.length - 1; i >= 0; i--) {
+    total += turns[i].text.length;
+    if (kept.length > 0 && total > HISTORY_CHARS) break;
+    kept.unshift(turns[i]);
+  }
+  if (kept.length < turns.length) while (kept.length > 1 && kept[0].role !== "user") kept.shift(); // only a cut history needs a new start
+  return kept;
 }
 
 /** Redacts the whole history at once (rule 9). Falls back to the last message alone if the split doesn't line up. */

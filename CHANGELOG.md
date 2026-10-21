@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- Booking flow (issue #223): the hospital list could come back empty on the first visit after signing in and then stay empty until a full reload. The hospitals and departments tables are readable by signed-in users only, so a read that reached the database before the browser client had attached the user's token looked exactly like "no hospitals" — a success with no rows, which the query cache kept. The hospital hooks now wait for the client's own session before reading, and the empty states on the booking page offer a retry instead of a dead end.
+
 ### Added
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
 - New API shapes for v1.1.0, with fictional mocks and hooks, before the screens exist: `POST /api/blood/search` and `GET /api/blood/search/{job_id}` (blood bank search job; `useSearchBlood`, `useBloodJob`) and `memory` on `GET /api/share/{token}` (the sections a Health Memory Graph link contains; `null` for a link without scopes). The routes answer 404 until the server work lands.
@@ -19,6 +22,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 
 ### Fixed
+- A long chat with the assistant no longer fails with "Something went wrong": the history sent to the model is cut to the newest turns that fit the provider's size limit (the last question is always kept).
 - The assistant's first answer in a new chat now stays on screen. It used to vanish when the stream ended (the page reloaded the saved chat, which did not have the answer yet) and only came back after a reload.
 - **Text fixes from QA:** the doctor header no longer shows a doubled "Dr. Dr." when the stored name already has the title; basket prices always show two decimals (₹163.40, not ₹163.4); the onboarding emergency-contact relationship field no longer comes prefilled; the "Account Role" badge reads "Account Role: Patient" instead of the all-caps constant style.
 - The emergency Medical ID QR is now plain readable text (name, blood group, allergies, medicines, one emergency contact) that any phone camera shows without internet. It used to be base64 text that only looked like gibberish, and its link needed internet. A long medicine list is cut with a "+N more" note. The QR has square corners and error level M so it scans on Android.
