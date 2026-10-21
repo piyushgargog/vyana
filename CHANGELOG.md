@@ -7,6 +7,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ### Added
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
 - New API shapes for v1.1.0, with fictional mocks and hooks, before the screens exist: `POST /api/blood/search` and `GET /api/blood/search/{job_id}` (blood bank search job; `useSearchBlood`, `useBloodJob`; rate-limited like the other web-agent routes) and `memory` on `GET /api/share/{token}` (the sections a Health Memory Graph link contains; `null` for a link without scopes). The routes answer 404 until the server work lands.
+- RapidBlood server: `POST /api/blood/search` starts one web agent per area (your city and up to three nearby cities) on the public e-RaktKosh stock page; `GET /api/blood/search/{job_id}` returns the banks. A row counts as verified only when the copied row text holds the bank name and the unit count; results are cached for 15 minutes. The screens follow.
 
 ### Removed
 - Medicine quality alerts (CDSCO): the alerts screen, `POST /api/alerts/check`, the TinyFish Monitor webhook and the `monitor:create` script. The `drug_alerts` and `tinyfish_monitors` tables stay in the database, unused.
