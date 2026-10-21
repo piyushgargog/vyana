@@ -139,6 +139,63 @@ export type Database = {
           },
         ]
       }
+      blood_requests: {
+        Row: {
+          blood_group: string
+          city: string
+          component: string
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          hospital_name: string
+          id: string
+          note: string | null
+          patient_id: string
+          status: string
+          units: number
+          updated_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          blood_group: string
+          city: string
+          component: string
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          hospital_name: string
+          id?: string
+          note?: string | null
+          patient_id: string
+          status?: string
+          units: number
+          updated_at?: string
+        }
+        Update: {
+          blood_group?: string
+          city?: string
+          component?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          hospital_name?: string
+          id?: string
+          note?: string | null
+          patient_id?: string
+          status?: string
+          units?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       care_invite_attempts: {
         Row: {
           attempted_at: string
@@ -1319,8 +1376,11 @@ export type Database = {
           created_at: string
           expires_at: string
           kind: string
+          last_opened_at: string | null
+          open_count: number
           patient_id: string
           revoked: boolean
+          scopes: string[]
           token: string
         }
         ComputedFields: never
@@ -1328,16 +1388,22 @@ export type Database = {
           created_at?: string
           expires_at: string
           kind: string
+          last_opened_at?: string | null
+          open_count?: number
           patient_id: string
           revoked?: boolean
+          scopes?: string[]
           token?: string
         }
         Update: {
           created_at?: string
           expires_at?: string
           kind?: string
+          last_opened_at?: string | null
+          open_count?: number
           patient_id?: string
           revoked?: boolean
+          scopes?: string[]
           token?: string
         }
         Relationships: [

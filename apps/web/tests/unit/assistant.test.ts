@@ -144,6 +144,21 @@ describe("historyFrom", () => {
     expect(h.at(-1)).toEqual({ role: "user", text: "last" });
     expect(h.some((t) => t.text === "rules")).toBe(false);
   });
+
+  it("drops the oldest turns of a long chat so the request stays under the provider's limit, and starts on a user turn", () => {
+    const long = "x".repeat(1_500);
+    const msgs = Array.from({ length: 12 }, (_, i) => m(i % 2 ? "assistant" : "user", `${i}:${long}`)).concat(m("user", "last question"));
+    const h = historyFrom(msgs);
+    expect(h.reduce((n, t) => n + t.text.length, 0)).toBeLessThanOrEqual(6_000 + 1_500);
+    expect(h.length).toBeLessThan(13);
+    expect(h[0].role).toBe("user");
+    expect(h.at(-1)).toEqual({ role: "user", text: "last question" });
+  });
+
+  it("always keeps the last question, even a long one", () => {
+    const h = historyFrom([m("assistant", "old answer"), m("user", "q".repeat(3_900))]);
+    expect(h.at(-1)?.text).toHaveLength(3_900);
+  });
 });
 
 describe("assistant tools", () => {

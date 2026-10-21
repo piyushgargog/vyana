@@ -13,7 +13,7 @@ select is(
     'prescriptions', 'prescription_items', 'dose_logs', 'lab_reports', 'lab_values', 'vitals', 'meal_logs',
     'care_plans', 'care_invites', 'care_links', 'missed_dose_alerts', 'share_links', 'interaction_checks',
     'consents', 'ai_runs', 'chat_sessions', 'chat_messages', 'emergency_requests', 'price_quotes',
-    'drug_alerts', 'push_tokens', 'web_cache', 'tinyfish_monitors'
+    'drug_alerts', 'push_tokens', 'web_cache', 'tinyfish_monitors', 'blood_requests'
   ]) t where to_regclass('public.' || t) is null),
   0, 'every table of plan 5.1 and 5.6 exists');
 

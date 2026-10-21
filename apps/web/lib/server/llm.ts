@@ -123,10 +123,10 @@ function build({ provider, id, apiKey }: Candidate): ModelV4 {
   return model as unknown as ModelV4;
 }
 
-/** A failure another key, model or provider may not have: too large for the limit (413), rate limit (429), server errors, timeouts, network. */
+/** A failure another key, model or provider may not have: a key that is dead, revoked or out of credit (401, 402, 403), timeout (408), too large for the limit (413), rate limit (429), server errors, network. */
 export function isRetryable(err: unknown): boolean {
   const e = err as { statusCode?: unknown; name?: unknown; isRetryable?: unknown; cause?: unknown } | null;
-  if (typeof e?.statusCode === "number") return e.statusCode === 413 || e.statusCode === 429 || e.statusCode >= 500;
+  if (typeof e?.statusCode === "number") return [401, 402, 403, 408, 413, 429].includes(e.statusCode) || e.statusCode >= 500;
   if (e?.name === "TimeoutError" || e?.name === "AbortError") return true;
   if (e instanceof TypeError) return true; // `fetch failed`
   return e?.isRetryable === true;

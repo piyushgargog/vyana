@@ -6,6 +6,8 @@ import {
   ApiErrorBody,
   BasketCompareReq,
   BasketCompareRes,
+  BloodSearchReq,
+  BloodSearchRes,
   DoctorVerifyReq,
   DoctorVerifyRes,
   EmergencyNearbyReq,
@@ -79,6 +81,8 @@ export type ApiClient = {
   basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes>; job(jobId: string): Promise<BasketCompareRes> };
   /** `compare` starts a lab job; poll `job(job_id)` until `status === "done"` (ADR-050). */
   labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes>; job(jobId: string): Promise<LabsCompareRes> };
+  /** RapidBlood: `search` starts a blood bank search job; poll `job(job_id)` until `status === "done"`. */
+  blood: { search(body: BloodSearchReq): Promise<BloodSearchRes>; job(jobId: string): Promise<BloodSearchRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
   hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
   schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
@@ -222,6 +226,13 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsJobRunningMock),
       job: (jobId) =>
         request({ method: "GET", path: `/api/labs/compare/${encodeURIComponent(jobId)}`, resSchema: LabsCompareRes, mock: mocks.labsCompareMock }),
+    },
+    blood: {
+      search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
+      job: (jobId) => {
+        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
+        return request({ method: "GET", path: `/api/blood/search/${encodeURIComponent(jobId)}`, resSchema: BloodSearchRes, mock: mocks.bloodSearchMock });
+      },
     },
     emergency: {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
