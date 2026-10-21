@@ -19,6 +19,7 @@ import {
   type FrequencyType,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { SuggestionsForYou } from '@/components/suggestions';
 import {
   Button,
   Card,
@@ -191,6 +192,9 @@ export default function PatientHomeScreen() {
         onRefresh={onRefresh}
         trailing={<SosPill />}
       >
+        {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
+        <SuggestionsForYou />
+
         {/* Doses Card with Progress */}
         <Card>
           <CardHeader
