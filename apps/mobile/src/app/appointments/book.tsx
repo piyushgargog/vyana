@@ -45,14 +45,15 @@ export default function AppointmentBookScreen() {
   const { data: hospital, isLoading: hospLoading } =
     useHospital(selectedHospitalId);
   const infoMutation = useHospitalInfo();
+  const loadHospitalInfo = infoMutation.mutate; // stable between renders (the mutation object is not)
   const bookMutation = useBookAppointment();
 
-  // Load OPD timings via TinyFish
+  // Load OPD timings via TinyFish, once per hospital
   useEffect(() => {
     if (selectedHospitalId) {
-      infoMutation.mutate({ hospital_id: selectedHospitalId });
+      loadHospitalInfo({ hospital_id: selectedHospitalId });
     }
-  }, [selectedHospitalId, infoMutation]);
+  }, [selectedHospitalId, loadHospitalInfo]);
 
   const departments = useMemo(
     () => hospital?.departments ?? [],

@@ -316,8 +316,8 @@ export default function MobileAssistantTab() {
   );
   const handleOpenSos = useCallback(() => router.push('/sos'), [router]);
   const handleCallEmergency = useCallback(() => {
-    Linking.openURL(`tel:${EMERGENCY.ambulance}`);
-  }, []);
+    Linking.openURL(`tel:${EMERGENCY.ambulance}`).catch(() => showToast('Could not open the dialer. Dial 108 yourself.', 'error'));
+  }, [showToast]);
 
   return (
     <Screen

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import { Linking, StyleSheet, View } from 'react-native';
 import {
   buildMedicalIdQr,
@@ -76,9 +77,14 @@ export default function MedicalIdScreen() {
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (!shareUrl) return;
-    showToast('Share link ready to share with your doctor', 'info');
+    try {
+      await Clipboard.setStringAsync(shareUrl);
+      showToast('Link copied for your doctor', 'success');
+    } catch {
+      showToast('Could not copy the link', 'error');
+    }
   };
 
   const handleOpenLink = () => {
