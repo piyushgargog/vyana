@@ -8,6 +8,8 @@ import { useApi } from "../../api/context";
 import type {
   BasketCompareReq,
   BasketCompareRes,
+  BloodSearchReq,
+  BloodSearchRes,
   DoctorVerifyReq,
   DoctorVerifyRes,
   EmergencyNearbyReq,
@@ -84,6 +86,26 @@ export function useLabsJob(jobId: string | null | undefined) {
   return useQuery<LabsCompareRes, ApiError>({
     queryKey: ["labs-job", jobId],
     queryFn: () => api.labs.job(jobId as string),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    retry: 1,
+  });
+}
+
+export function useSearchBlood() {
+  const api = useApi();
+  return useMutation<BloodSearchRes, ApiError, BloodSearchReq>({
+    mutationKey: ["blood", "search"],
+    mutationFn: (body) => api.blood.search(body),
+  });
+}
+
+/** Polls a blood bank search job every 4 s until it is done. Pass the `job_id` from `useSearchBlood`. */
+export function useBloodJob(jobId: string | null | undefined) {
+  const api = useApi();
+  return useQuery<BloodSearchRes, ApiError>({
+    queryKey: ["blood-job", jobId],
+    queryFn: () => api.blood.job(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
     retry: 1,

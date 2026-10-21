@@ -4,6 +4,7 @@ import type { ZodType } from "zod";
 import {
   BasketCompareReq,
   BasketCompareRes,
+  BloodSearchRes,
   DoctorVerifyRes,
   EmergencyNearbyRes,
   EmergencySosRes,
@@ -21,6 +22,9 @@ import {
 import {
   basketCompareMock,
   basketJobRunningMock,
+  bloodJobRunningMock,
+  bloodSearchMock,
+  shareMemoryMock,
   singleMedicineJobMock,
   carePlanMock,
   doctorsVerifyMock,
@@ -56,6 +60,9 @@ const cases: [string, ZodType, unknown][] = [
   ["hospitals/info", HospitalInfoRes, hospitalInfoMock],
   ["schemes/pmjay-hospitals", PmjayHospitalsRes, pmjayHospitalsMock],
   ["share/[token]", ShareRes, shareMock],
+  ["share/[token] (memory)", ShareRes, shareMemoryMock],
+  ["blood/search", BloodSearchRes, bloodSearchMock],
+  ["blood/search (running)", BloodSearchRes, bloodJobRunningMock],
 ];
 
 const round = (n: number) => Math.round(n * 100) / 100;
