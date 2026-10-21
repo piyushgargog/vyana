@@ -88,9 +88,12 @@ export default function TermsOfServicePage() {
 
               {/* 3. Essential Medical Disclaimer */}
               <section id="disclaimer" className="scroll-mt-24 rounded-card border border-danger-soft bg-danger-soft p-5 space-y-2 text-danger-text">
-                <h3 className="font-bold uppercase tracking-wider text-[12px]">
-                  3. Essential Medical &amp; Emergency Disclaimer
-                </h3>
+                <h2 className="text-[20px] font-semibold tracking-tight flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger/20 text-danger-text text-xs font-bold">
+                    3
+                  </span>
+                  Essential Medical &amp; Emergency Disclaimer
+                </h2>
                 <p className="font-semibold text-[15px] sm:text-[16px]">
                   &ldquo;Vyana is not a substitute for professional medical advice; in an emergency call 108&rdquo;
                 </p>
@@ -209,9 +212,9 @@ export default function TermsOfServicePage() {
           {/* Desktop "On this page" Anchor Navigation Sidebar */}
           <aside className="hidden lg:block lg:w-64 shrink-0 sticky top-24 self-start space-y-3">
             <div className="rounded-card border border-separator bg-surface p-4 shadow-xs space-y-3">
-              <h3 className="px-1 text-[13px] font-semibold text-label uppercase tracking-wider">
+              <p className="px-1 text-[13px] font-semibold text-label">
                 On this page
-              </h3>
+              </p>
               <nav aria-label="Terms of service sections" className="space-y-1">
                 {SECTIONS.map((sec) => (
                   <a

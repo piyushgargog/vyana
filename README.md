@@ -6,7 +6,7 @@
 
 **Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, get your medicines delivered at the best price straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
 
-Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the live web (pharmacies, labs, the NMC medical register, hospitals) and bring back what your health needs.
+Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the live web (pharmacies, labs, blood banks, the NMC medical register, hospitals) and bring back what your health needs.
 
 **Live:** [vyanahealth.app](https://vyanahealth.app) (web app and API, hosted in Mumbai behind Cloudflare). Sign up with an email address; please use made-up details only, not your real health data.
 
@@ -31,6 +31,7 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 | 👨‍👩‍👧 | **Caregiver mode** | Family members can follow a patient's medicines and get an alert when a dose is missed |
 | ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions, a symptom check that points you to the right department or to 108 |
 | 🔎 | **More from the live web** | Lab test price comparison and Ayushman Bharat (PM-JAY) hospitals near you |
+| 🩸 | **RapidBlood** | Look up blood stock by blood group and component in your city and nearby cities, from the public e-RaktKosh stock page. Vyana lists the blood banks it finds and tracks your blood requests; you call the bank to confirm |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
 ## Screenshots
@@ -53,6 +54,8 @@ Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | AI assistant | **Search** + **Fetch** as the assistant's tools, trusted health sites only; only fetched links can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
 | Lab test price compare | **Agent** per lab in the background; each price is confirmed on the lab's page with **Fetch** | `POST /api/labs/compare`, `GET /api/labs/compare/{job_id}` | [`tinyfish/labs.ts`](apps/web/lib/server/tinyfish/labs.ts) |
 | PM-JAY hospitals | **Search** + **Fetch**, government pages only | `POST /api/schemes/pmjay-hospitals` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
+
+**RapidBlood** runs one agent per area (the searched city and up to three nearby cities) on the public e-RaktKosh stock page, through `POST /api/blood/search` and `GET /api/blood/search/{job_id}` ([`tinyfish/blood.ts`](apps/web/lib/server/tinyfish/blood.ts)). A bank is marked verified only when the stock cell the agent copied matches its unit count and sits in the same row as the bank's name. Results are cached for 15 minutes. RapidBlood does not reserve or move blood: it lists what the source showed, with the time the source gave, and tells the patient to call the blood bank.
 
 Every TinyFish call goes through one client ([`tinyfish/client.ts`](apps/web/lib/server/tinyfish/client.ts)) with timeouts, a per-minute agent limit and an offline mock mode. Public results are cached in Postgres, and `pnpm prewarm` fills the cache before a demo. Live checks: `pnpm smoke:tinyfish`, `pnpm smoke:basket`, and `pnpm verify:interactions`, `verify:red-flags` and `verify:brands`, which re-check the reviewed safety lists against their source pages.
 

@@ -1,6 +1,6 @@
 import { DEFAULT_TIMES, type FrequencyType } from "./constants";
 import { CarePlan } from "./contracts";
-import type { DbPrescriptionItem } from "./db/types";
+import type { DbPrescriptionItem, DbShareLink } from "./db/types";
 import { carePlanMock } from "./mocks/care-plan";
 
 export function parseCarePlanJson(
@@ -118,4 +118,67 @@ export function generateQrMatrix(text: string, size: number = 25): boolean[][] {
   }
 
   return matrix;
+}
+
+// ---------------------------------------------------------------- share links
+
+const SHARE_SCOPE_LABELS: Record<string, string> = {
+  labs: "Labs",
+  vitals: "Vitals",
+  medicines: "Medicines",
+  adherence: "Adherence",
+};
+
+/** The human name of one share-link scope (#237), the same words on phone and web. */
+export function shareScopeLabel(scope: string): string {
+  return SHARE_SCOPE_LABELS[scope] ?? scope;
+}
+
+/**
+ * "just now", "5 min ago", "1 h ago", "29 d ago", then a plain date — for "last opened"
+ * lines (#239). Floored, never rounded up: 90 minutes reads "1 h ago", 23.5 hours reads
+ * "23 h ago". A timestamp in the future reads "just now".
+ */
+export function relativeTime(iso: string, now: Date = new Date()): string {
+  const ms = now.getTime() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 60_000) return "just now";
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} d ago`;
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+/** What an active share link covers and how it has been used (#239) — one line for link lists. */
+export function shareLinkSubtitle(
+  link: Pick<DbShareLink, "kind" | "scopes" | "expires_at" | "open_count" | "last_opened_at">,
+  now: Date = new Date()
+): string {
+  const parts: string[] = [];
+  // A row read from a database without migration 0014 has neither column: treat it as an old link, never crash the list.
+  const scopes = link.scopes ?? [];
+  const opens = link.open_count ?? 0;
+  if (link.kind === "timeline") {
+    parts.push(
+      scopes.length > 0
+        ? `Includes ${scopes.map(shareScopeLabel).join(", ")}`
+        : "No summary sections"
+    );
+  }
+  parts.push(
+    `Expires ${new Date(link.expires_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`
+  );
+  parts.push(
+    opens > 0
+      ? `Opened ${opens} ${opens === 1 ? "time" : "times"}${link.last_opened_at ? `, last ${relativeTime(link.last_opened_at, now)}` : ""}`
+      : "Not opened yet"
+  );
+  return parts.join(" · ");
 }

@@ -22,7 +22,7 @@ import {
   type Language,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
-import { Button, EmptyState, Screen, Symbol, Text } from '@/components/ui';
+import { Button, EmptyState, Screen, SosPill, Symbol, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
   MobileAiSafetyBanner,
@@ -320,7 +320,11 @@ export default function MobileAssistantTab() {
   }, []);
 
   return (
-    <Screen scroll={false} inset={false}>
+    <Screen
+      title="Ask Vyana"
+      scroll={false}
+      trailing={<SosPill />}
+    >
       <View style={styles.keyboard}>
         <ScrollView
           style={styles.messages}

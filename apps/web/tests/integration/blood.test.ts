@@ -68,17 +68,22 @@ describe("POST /api/blood/search + GET /{job_id}", () => {
 });
 
 describe("processBloodResult / summarizeBlood / bloodAreas", () => {
-  const row = (over: Record<string, unknown> = {}) => ({ name: "City Blood Bank", phone: "011 2222 3333", units: 5, component: "Whole Blood", updated: "21-10-2026 09:10", row_text: "City Blood Bank 011 2222 3333 5 Whole Blood", ...over });
+  const row = (over: Record<string, unknown> = {}) => ({ name: "City Blood Bank", phone: "011 2222 3333", units: 5, units_text: "5", component: "Whole Blood", updated: "21-10-2026 09:10", row_text: "City Blood Bank 011 2222 3333 5 Whole Blood", ...over });
 
-  it("verifies a row only when its copied text holds the name and the unit count", () => {
+  it("verifies a row only when the stock cell reads as the number and the copied row holds the name and the cell", () => {
     const out = processBloodResult("Delhi", { found: true, banks: [row(), row({ name: "No Text Bank", phone: "1", row_text: null }), row({ name: "Wrong Units Bank", phone: "2", row_text: "Wrong Units Bank 9" })] });
     expect(out.status).toBe("ok");
     expect(out.banks.map((b) => [b.name, b.verified])).toEqual([["City Blood Bank", true], ["No Text Bank", false], ["Wrong Units Bank", false]]);
   });
 
   it("does not take 15 for 5, and ignores an impossible or fractional unit count", () => {
-    const out = processBloodResult("Delhi", { found: true, banks: [row({ units: 5, row_text: "City Blood Bank 15" }), row({ name: "B", phone: "2", units: 5000, row_text: "B 5000" }), row({ name: "C", phone: "3", units: 2.5, row_text: "C 2.5" })] });
+    const out = processBloodResult("Delhi", { found: true, banks: [row({ units: 5, units_text: "15", row_text: "City Blood Bank 15" }), row({ name: "B", phone: "2", units: 5000, units_text: "5000", row_text: "B 5000" }), row({ name: "C", phone: "3", units: 2.5, units_text: "2.5", row_text: "C 2.5" })] });
     expect(out.banks.map((b) => [b.units, b.verified])).toEqual([[5, false], [null, false], [null, false]]);
+  });
+
+  it("a stray number in the row is not a confirmation: without the stock cell nothing is verified", () => {
+    const out = processBloodResult("Delhi", { found: true, banks: [row({ name: "Block 1 Bank", phone: "7", units: 1, units_text: null, row_text: "Block 1 Bank 1" }), row({ name: "Gate 2 Bank", phone: "8", units: 2, units_text: "2", row_text: "Gate 2 Bank 2" })] });
+    expect(out.banks.map((b) => [b.name, b.verified])).toEqual([["Block 1 Bank", false], ["Gate 2 Bank", true]]);
   });
 
   it("drops duplicates, a missing name, found=false and a bad shape", () => {
@@ -89,7 +94,7 @@ describe("processBloodResult / summarizeBlood / bloodAreas", () => {
   });
 
   it("puts verified rows first, then more units, and the job is running while an area is pending", () => {
-    const bank = (name: string, units: number | null, verified: boolean) => processBloodResult("X", { found: true, banks: [{ name, units, row_text: verified ? `${name} ${units}` : null }] }).banks[0];
+    const bank = (name: string, units: number | null, verified: boolean) => processBloodResult("X", { found: true, banks: [{ name, units, units_text: verified ? String(units) : null, row_text: verified ? `${name} ${units}` : null }] }).banks[0];
     const s = summarizeBlood([
       { area: "A", status: "ok", banks: [bank("low", 1, true), bank("unconfirmed", 50, false)] },
       { area: "B", status: "ok", banks: [bank("high", 9, true)] },

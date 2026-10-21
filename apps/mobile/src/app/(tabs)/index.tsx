@@ -30,6 +30,7 @@ import {
   ListRow,
   Pill,
   Screen,
+  SosPill,
   Symbol,
   Text,
 } from '@/components/ui';
@@ -188,18 +189,7 @@ export default function PatientHomeScreen() {
         eyebrow={eyebrowDate}
         title={greeting}
         onRefresh={onRefresh}
-        trailing={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Emergency SOS — Call 108 Ambulance"
-            onPress={() => router.push('/sos')}
-            style={styles.sosHeaderBtn}
-          >
-            <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
-              SOS 108
-            </Text>
-          </Pressable>
-        }
+        trailing={<SosPill />}
       >
         {/* Doses Card with Progress */}
         <Card>
@@ -489,18 +479,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: T.color.canvas,
-  },
-  sosHeaderBtn: {
-    backgroundColor: T.color.dangerSoft,
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.xs,
-    borderRadius: T.radius.pill,
-    minHeight: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sosHeaderText: {
-    fontWeight: '700',
   },
   emptyDoses: {
     alignItems: 'center',

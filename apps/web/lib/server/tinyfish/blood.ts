@@ -31,7 +31,7 @@ export function bloodGoal(group: BloodGroup, component: BloodComponent, area: st
     "Open this public blood stock availability search.",
     `Choose blood group "${group}", component "${COMPONENT_LABEL[component]}" and the state and district of "${area}", then search.`,
     "Do NOT log in or book anything. If a CAPTCHA or login appears, stop and return found=false.",
-    "Return up to 8 blood banks exactly as listed: name, address, phone, units (a number), component, the page's own updated text, and row_text (the whole row copied as shown).",
+    "Return up to 8 blood banks exactly as listed: name, address, phone, units (a number), units_text (the stock cell exactly as shown), component, the page's own updated text, and row_text (the whole row copied as shown).",
     "Never estimate; return found=false if no bank is listed.",
   ].join(" ");
 }
@@ -45,7 +45,7 @@ export const BLOOD_OUTPUT_SCHEMA: OutputSchema = {
       type: "array",
       items: {
         type: "object",
-        properties: { name: { type: "string" }, address: nullableString, phone: nullableString, units: { type: "number", nullable: true }, component: nullableString, updated: nullableString, row_text: nullableString },
+        properties: { name: { type: "string" }, address: nullableString, phone: nullableString, units: { type: "number", nullable: true }, units_text: nullableString, component: nullableString, updated: nullableString, row_text: nullableString },
         required: ["name"],
       },
     },
@@ -58,6 +58,7 @@ const Row = z.object({
   address: z.string().nullish(),
   phone: z.string().nullish(),
   units: z.number().nullish(),
+  units_text: z.string().nullish(),
   component: z.string().nullish(),
   updated: z.string().nullish(),
   row_text: z.string().nullish(),
@@ -67,10 +68,14 @@ const AgentResult = z.object({ found: z.boolean(), banks: z.array(Row).optional(
 type AreaStatus = BloodSearchSource["status"];
 type AreaOutcome = { status: Exclude<AreaStatus, "pending">; banks: BloodBank[] };
 
-/** The bank's name and its unit count both stand in the copied row text. */
-function rowConfirms(name: string, units: number | null, rowText: string | null | undefined): boolean {
-  if (units === null || !rowText) return false;
-  return rowText.toLowerCase().includes(name.toLowerCase()) && rowText.split(/\D+/).includes(String(units));
+/**
+ * The stock cell the agent copied (`units_text`) must read exactly as the number it reports, and the whole copied row
+ * must hold both that cell and the bank's name. A stray number elsewhere in the row (a block number, a phone) is not enough.
+ */
+function rowConfirms(name: string, units: number | null, unitsText: string | null | undefined, rowText: string | null | undefined): boolean {
+  const cell = unitsText?.trim();
+  if (units === null || !cell || !rowText || cell !== String(units)) return false;
+  return rowText.toLowerCase().includes(name.toLowerCase()) && rowText.includes(cell);
 }
 
 /** One area's agent result → checked rows: a believable unit count, a verified flag, no duplicates. */
@@ -96,7 +101,7 @@ export function processBloodResult(area: string, raw: unknown, fetchedAt = new D
       source_url: BLOOD_SOURCE.startUrl,
       fetched_at: fetchedAt,
       last_updated_text: r.updated?.trim() || null,
-      verified: rowConfirms(name, units, r.row_text),
+      verified: rowConfirms(name, units, r.units_text, r.row_text),
     });
   }
   return { status: banks.length ? "ok" : "not_found", banks };
@@ -134,7 +139,7 @@ const cacheKey = (r: BloodSearchReq) => `blood:${bloodQuery(r)}`;
 const jobRequest = (j: BloodJob) => BloodSearchReq.parse({ blood_group: j.blood_group, component: j.component, city: j.city });
 
 function mockResult(area: string) {
-  const row = (n: string, units: number) => ({ name: `[mock] Blood Bank ${n} ${area}`, address: `${area} (fictional)`, phone: "+91 90000 00020", units, component: "Whole Blood", updated: "mock", row_text: `[mock] Blood Bank ${n} ${area} ${units} Whole Blood` });
+  const row = (n: string, units: number) => ({ name: `[mock] Blood Bank ${n} ${area}`, address: `${area} (fictional)`, phone: "+91 90000 00020", units, units_text: String(units), component: "Whole Blood", updated: "mock", row_text: `[mock] Blood Bank ${n} ${area} ${units} Whole Blood` });
   return { found: true, banks: [row("A", 4), row("B", 0)] };
 }
 
