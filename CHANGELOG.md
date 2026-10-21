@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- Booking flow (issue #223): the hospital list could come back empty on the first visit after signing in and then stay empty until a full reload. The hospitals and departments tables are readable by signed-in users only, so a read that reached the database before the browser client had attached the user's token looked exactly like "no hospitals" — a success with no rows, which the query cache kept. The hospital hooks now wait for the client's own session before reading, and the empty states on the booking page offer a retry instead of a dead end.
+
 ### Added
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
 
