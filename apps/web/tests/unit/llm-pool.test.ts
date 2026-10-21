@@ -176,7 +176,8 @@ describe("failover (retryable failures only)", () => {
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 429 }))).toBe(true);
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 502 }))).toBe(true);
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 400 }))).toBe(false);
-    expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 401 }))).toBe(false);
+    for (const statusCode of [401, 402, 403, 408]) expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode }))).toBe(true); // a dead key must not stop the other keys
+    expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 404 }))).toBe(false);
     expect(isRetryable(new TypeError("fetch failed"))).toBe(true);
     expect(isRetryable(Object.assign(new Error("t"), { name: "TimeoutError" }))).toBe(true);
     expect(isRetryable(new Error("boom"))).toBe(false);
