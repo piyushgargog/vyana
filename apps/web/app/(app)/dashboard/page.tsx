@@ -32,6 +32,7 @@ import {
   type FrequencyType,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { SuggestionsForYou } from "@/components/suggestions";
 import { AiSafetyBanner, TrendChartSvg } from "@/components/ui-primitives";
 import {
   Button,
@@ -337,6 +338,11 @@ export default function PatientDashboardPage() {
             </ButtonLink>
           }
         />
+      </Reveal>
+
+      {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
+      <Reveal>
+        <SuggestionsForYou />
       </Reveal>
 
       {/* Main Grid: Doses & Visit Token */}
