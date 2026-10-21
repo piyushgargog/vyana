@@ -39,6 +39,15 @@ export default function AppointmentBookScreen() {
   const { showToast } = useVyanaMobile();
 
   const { data: hospitals = [] } = useHospitals();
+  const [hospitalQuery, setHospitalQuery] = useState('');
+  const filteredHospitals = useMemo(() => {
+    const q = hospitalQuery.trim().toLowerCase();
+    if (!q) return hospitals;
+    return hospitals.filter(
+      (h) =>
+        h.name.toLowerCase().includes(q) || h.city.toLowerCase().includes(q)
+    );
+  }, [hospitals, hospitalQuery]);
   const [userHospitalId, setUserHospitalId] = useState<string>(
     initialHospitalId || ''
   );
@@ -202,8 +211,37 @@ export default function AppointmentBookScreen() {
           {/* 1. Select Hospital */}
           <Card>
             <CardHeader title="1. Select Hospital" />
+            {/* A real search field (U2): search keyboard, a clear button, results under it. */}
+            <View style={styles.searchRow}>
+              <TextInput
+                accessibilityLabel="Search hospitals"
+                placeholder="Search hospitals"
+                placeholderTextColor={T.color.label3}
+                value={hospitalQuery}
+                onChangeText={setHospitalQuery}
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.searchInput}
+              />
+              {hospitalQuery.length > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear the hospital search"
+                  onPress={() => setHospitalQuery('')}
+                  style={styles.clearBtn}
+                >
+                  <Symbol ios="xmark.circle.fill" android="cancel" size={20} color={T.color.label3} />
+                </Pressable>
+              )}
+            </View>
             <View style={styles.stackSm}>
-              {hospitals.map((h) => {
+              {filteredHospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospital matches that search.
+                </Text>
+              ) : null}
+              {filteredHospitals.map((h) => {
                 const isSelected = h.id === selectedHospitalId;
                 return (
                   <Pressable
@@ -501,5 +539,22 @@ const styles = StyleSheet.create({
     minHeight: 44,
     ...T.text.subhead,
     color: T.color.label,
+  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  searchInput: {
+    flex: 1,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    minHeight: 44,
+    ...T.text.subhead,
+    color: T.color.label,
+  },
+  clearBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

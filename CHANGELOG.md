@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Changed
+- Phone navigation pass (U2): sheets now show a grabber and the Android sheet closes by tapping the dimmed area behind it, not only the close button. Haptics land on the moments that confirm something — a success tap when a dose is marked taken and when a share link is copied, and the warning tap when an SOS starts — never on ordinary taps. The hospital picker in appointment booking gets a real search field (search keyboard, clear button, results under it, a "no match" line).
+
 ### Added
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
 
