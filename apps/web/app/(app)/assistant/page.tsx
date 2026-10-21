@@ -42,10 +42,7 @@ export default function AssistantPage() {
 
   // The live messages are newer than the saved ones (the reply is saved when the stream ends), so a session created by
   // this chat must not be hydrated from the database over them.
-  const adoptSession = useCallback((id: string) => {
-    hydratedSessionRef.current = id;
-    setSessionId(id);
-  }, []);
+  const [startedHere, setStartedHere] = useState<string | undefined>(undefined);
 
   const transport = useMemo(
     () =>
@@ -56,11 +53,14 @@ export default function AssistantPage() {
         fetch: async (input, init) => {
           const res = await fetch(input, init);
           const next = res.headers.get("x-session-id");
-          if (next && next !== sessionId) adoptSession(next);
+          if (next && next !== sessionId) {
+            setStartedHere(next);
+            setSessionId(next);
+          }
           return res;
         },
       }),
-    [api, sessionId, adoptSession]
+    [api, sessionId]
   );
 
   const { messages, setMessages, sendMessage, status, error, clearError } =
@@ -71,6 +71,7 @@ export default function AssistantPage() {
       sessionId &&
       savedMessages &&
       hydratedSessionRef.current !== sessionId &&
+      startedHere !== sessionId &&
       status === "ready"
     ) {
       hydratedSessionRef.current = sessionId;
@@ -85,7 +86,7 @@ export default function AssistantPage() {
         }));
       setMessages(mapped);
     }
-  }, [sessionId, savedMessages, setMessages, status]);
+  }, [sessionId, savedMessages, setMessages, status, startedHere]);
 
   const [input, setInput] = useState("");
   const isStreaming = status === "submitted" || status === "streaming";
@@ -93,6 +94,7 @@ export default function AssistantPage() {
   const newChat = useCallback(() => {
     hydratedSessionRef.current = "new";
     setSessionId(undefined);
+    setStartedHere(undefined);
     clearError();
     setMessages([]);
   }, [clearError, setMessages]);
