@@ -138,6 +138,14 @@ describe("failover (retryable failures only)", () => {
     expect(await ask("public")).toBe("nvidia|n1|big-model");
   });
 
+  it("after a model rejected its output it skips that model's other keys and goes to the next model", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:second-model");
+    script.set("groq|k1|main-model", "json_validate_failed");
+    expect(await ask("public")).toBe("groq|k1|second-model");
+    expect(calls).toEqual(["groq|k1|main-model", "groq|k1|second-model"]); // groq|k2|main-model was never tried
+  });
+
   it("throws the last error when every candidate fails", async () => {
     vi.stubEnv("GROQ_API_KEYS", "k1,k2");
     script.set("groq|k1|main-model", 429);
