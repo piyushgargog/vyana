@@ -11,7 +11,7 @@ vi.mock("@/lib/server/tinyfish/client", async (orig) => ({
   cancelRun: (...a: unknown[]) => cancelRunMock(...a),
 }));
 
-const { QUEUE_DEADLINE_MS, RUN_DEADLINE_MS, pollBasketJob } = await import("@/lib/server/tinyfish/basket");
+const { QUEUE_DEADLINE_MS, RUN_DEADLINE_MS, pollBasketJob, runDeadlineMs } = await import("@/lib/server/tinyfish/basket");
 const { sealJob } = await import("@/lib/server/jobs");
 
 const NOW = Date.parse("2026-10-12T10:00:00Z");
@@ -57,6 +57,25 @@ describe("basket job deadlines", () => {
     expect((await poll(job(300_000))).status).toBe("pending");
     getRunMock.mockResolvedValue({ status: "RUNNING", result: null, error: null, startedAt: NOW - RUN_DEADLINE_MS - 1000 });
     expect((await poll(job(300_000))).status).toBe("timeout");
+    expect(cancelRunMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives a multi-item basket a longer run deadline than a single item (#225)", async () => {
+    const bigJob = sealJob({
+      v: 1,
+      uid: USER_ID,
+      key: "k",
+      items: Array.from({ length: 10 }, (_, i) => ({ medicine: `Med ${i}`, strength: "10 mg", quantity: 1 })),
+      runs: [{ source: "1mg", run_id: "run-1", error: null }],
+      started_at: NOW - 300_000,
+    });
+    // Past the single-item deadline, still inside the 10-item one: pending, not cancelled.
+    getRunMock.mockResolvedValue({ status: "RUNNING", result: null, error: null, startedAt: NOW - RUN_DEADLINE_MS - 1000 });
+    expect((await poll(bigJob)).status).toBe("pending");
+    expect(cancelRunMock).not.toHaveBeenCalled();
+    // Past the scaled deadline: given up as a timeout.
+    getRunMock.mockResolvedValue({ status: "RUNNING", result: null, error: null, startedAt: NOW - runDeadlineMs(10) - 1000 });
+    expect((await poll(bigJob)).status).toBe("timeout");
     expect(cancelRunMock).toHaveBeenCalledTimes(1);
   });
 

@@ -22,7 +22,12 @@ export default function OnboardingPage() {
   const { showToast } = useVyanaWeb();
 
   const { data: profile, isLoading: profileLoading } = useMyProfile();
-  const { data: conditions = [] } = useConditions();
+  const {
+    data: conditions = [],
+    isLoading: conditionsLoading,
+    isError: conditionsError,
+    refetch: refetchConditions,
+  } = useConditions();
   const { data: emergencyContacts = [] } = useEmergencyContacts();
   const { data: doctorProfile } = useMyDoctorProfile();
   const { data: hospitals = [] } = useHospitals();
@@ -49,8 +54,11 @@ export default function OnboardingPage() {
   const fullName = fullNameOverride ?? profile?.full_name ?? "";
   const phone = phoneOverride ?? profile?.phone ?? "";
   const dob = dobOverride ?? profile?.dob ?? "";
-  const sex = sexOverride ?? profile?.gender ?? "female";
-  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? "B+";
+  // No invented defaults for sex or blood group (#225): a profile whose gender is not
+  // recorded yet showed "Female" (and a save then wrote it back as fact). Empty means
+  // "not recorded" and the selects ask for a real choice.
+  const sex = sexOverride ?? profile?.gender ?? "";
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? "";
   const city = cityOverride ?? profile?.city ?? "";
   const preferredLang =
     preferredLangOverride ?? profile?.preferred_language ?? "en";
@@ -114,8 +122,8 @@ export default function OnboardingPage() {
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         dob: dob || null,
-        gender: sex,
-        blood_group: bloodGroup,
+        gender: sex || null,
+        blood_group: bloodGroup || null,
         city: city.trim() || null,
         preferred_language: preferredLang,
         allergies: parsedAllergies,
@@ -179,11 +187,12 @@ export default function OnboardingPage() {
             Account Role: {role.charAt(0).toUpperCase() + role.slice(1)}
           </span>
           <h1 className="text-2xl font-bold text-slate-900 mt-2">
-            Complete Your Vyana Onboarding
+            {profile?.onboarded ? "Your health profile" : "Complete Your Vyana Onboarding"}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Configure your Medical ID essentials, allergies, emergency contacts,
-            or doctor registration details.
+            {profile?.onboarded
+              ? "Your Medical ID essentials, allergies, emergency contacts and doctor registration details. Changes save to the same profile the rest of the app reads."
+              : "Configure your Medical ID essentials, allergies, emergency contacts, or doctor registration details."}
           </p>
         </div>
 
@@ -363,6 +372,7 @@ export default function OnboardingPage() {
               <input
                 id="ob-dob"
                 type="date"
+                aria-label="Date of birth"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -380,9 +390,13 @@ export default function OnboardingPage() {
                 <select
                   id="ob-sex"
                   value={sex}
+                  required
                   onChange={(e) => setSex(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                 >
+                  <option value="" disabled>
+                    Select sex
+                  </option>
                   <option value="female">Female</option>
                   <option value="male">Male</option>
                   <option value="other">Other</option>
@@ -399,9 +413,13 @@ export default function OnboardingPage() {
                 <select
                   id="ob-blood"
                   value={bloodGroup}
+                  required
                   onChange={(e) => setBloodGroup(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
                 >
+                  <option value="" disabled>
+                    Select blood group
+                  </option>
                   {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
                     (bg) => (
                       <option key={bg} value={bg}>
@@ -479,11 +497,29 @@ export default function OnboardingPage() {
                   {c.name}
                 </span>
               ))}
-              {conditions.length === 0 && (
+              {/* "None recorded" is a fact the page may only state after a successful
+                  read (#225): while loading it says so, and on error it offers a retry
+                  instead of claiming the patient has no conditions. */}
+              {conditionsLoading ? (
+                <span className="text-xs text-slate-500">
+                  Loading your recorded conditions…
+                </span>
+              ) : conditionsError ? (
+                <span className="text-xs text-red-700">
+                  Could not load your conditions.{" "}
+                  <button
+                    type="button"
+                    onClick={() => refetchConditions()}
+                    className="font-semibold underline"
+                  >
+                    Try again
+                  </button>
+                </span>
+              ) : conditions.length === 0 ? (
                 <span className="text-xs text-slate-500">
                   No chronic conditions recorded yet.
                 </span>
-              )}
+              ) : null}
             </div>
             <div className="flex gap-2">
               <label htmlFor="ob-new-cond" className="sr-only">

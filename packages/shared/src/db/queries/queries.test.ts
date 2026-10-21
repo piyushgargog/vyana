@@ -15,6 +15,7 @@ import {
   listDueDoses,
   prepareDoctorItems,
   createCareInvite,
+  createBloodRequest,
   createDoctorPrescription,
   createShareLink,
   daysAgoIso,
@@ -24,6 +25,7 @@ import {
   getSignedUrl,
   getTimeline,
   listActiveItems,
+  listBloodRequests,
   listHospitals,
   listItemDoseLogs,
   listMyAppointments,
@@ -49,6 +51,7 @@ import {
   unwrap,
   unwrapOrNull,
   updateAppointmentStatus,
+  updateBloodRequest,
   updateMyProfile,
   uploadFile,
 } from "./index";
@@ -437,6 +440,19 @@ describe("care plans, caregivers, sharing", () => {
     expect(f.argsOf("select")).toEqual(["token, expires_at"]);
   });
 
+  it("creates a share link with scopes, and the scopes are stored with it", async () => {
+    const f = fakeSupabase({ responses: { share_links: [ok({ token: "tok123", expires_at: "2026-10-13T00:00:00.000Z" })] } });
+    await createShareLink(f.sb, "timeline", 24, "https://vyana.app", ["labs", "adherence"]);
+    const [row] = f.argsOf("insert") as [{ scopes: string[] }];
+    expect(row.scopes).toEqual(["labs", "adherence"]);
+  });
+
+  it("refuses a scope outside the list, before asking the database", async () => {
+    const f = fakeSupabase();
+    await expect(createShareLink(f.sb, "timeline", 24, "https://vyana.app", ["labs", "everything"] as never)).rejects.toMatchObject({ code: "invalid_scopes" });
+    expect(f.argsOf("insert")).toEqual([]);
+  });
+
   it("refuses a share link of no time, of a negative or odd time, or of more than 30 days, before asking the database", async () => {
     const f = fakeSupabase({ responses: { share_links: [ok({ token: "t", expires_at: "x" })] } });
     for (const hours of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 30 * 24 + 1]) {
@@ -473,6 +489,61 @@ describe("care plans, caregivers, sharing", () => {
     const links = [{ token: "0a1b2c", revoked: true, expires_at: "2026-10-21T10:00:00Z" }];
     expect(isShareUrlDead(links, "https://vyana.app/share/0a1b2c", now)).toBe(true);
     expect(isShareUrlDead(links, "https://vyana.app/share/ffff", now)).toBe(false); // not in the list (yet): treat as live
+  });
+});
+
+describe("blood requests", () => {
+  const input = {
+    blood_group: "B-" as const,
+    component: "red_cells" as const,
+    units: 2,
+    hospital_name: "Fortis Hospital",
+    city: "Noida",
+    contact_name: "Rukhsana Khan",
+    contact_phone: "+91 00000 00002",
+  };
+
+  it("creates a request for the signed-in patient", async () => {
+    const f = fakeSupabase({ responses: { blood_requests: [ok({ id: "br-1", status: "searching" })] } });
+    const row = await createBloodRequest(f.sb, input);
+    expect(row).toMatchObject({ id: "br-1", status: "searching" });
+    const [inserted] = f.argsOf("insert") as [Record<string, unknown>];
+    expect(inserted).toEqual({ patient_id: "user-1", ...input, note: null });
+  });
+
+  it("refuses 0 units, more than 10, or a part of a unit, before asking the database", async () => {
+    const f = fakeSupabase();
+    for (const units of [0, 11, 1.5, Number.NaN]) {
+      await expect(createBloodRequest(f.sb, { ...input, units })).rejects.toMatchObject({ code: "invalid_units" });
+    }
+    expect(f.argsOf("insert")).toEqual([]);
+  });
+
+  it("lists the patient's requests, newest first", async () => {
+    const f = fakeSupabase({ responses: { blood_requests: [ok([{ id: "br-2" }, { id: "br-1" }])] } });
+    expect(await listBloodRequests(f.sb)).toEqual([{ id: "br-2" }, { id: "br-1" }]);
+    expect(f.argsOf("eq")).toEqual(["patient_id", "user-1"]);
+    expect(f.argsOf("order")).toEqual(["created_at", { ascending: false }]);
+  });
+
+  it("updates only the patient's own request and returns the row", async () => {
+    const f = fakeSupabase({ responses: { blood_requests: [ok([{ id: "br-1", status: "contacted" }])] } });
+    const row = await updateBloodRequest(f.sb, "br-1", { status: "contacted" });
+    expect(row).toMatchObject({ id: "br-1", status: "contacted" });
+    expect(f.argsOf("update")).toEqual([{ status: "contacted" }]);
+    expect(f.argsOf("eq", 0)).toEqual(["id", "br-1"]);
+    expect(f.argsOf("eq", 1)).toEqual(["patient_id", "user-1"]);
+  });
+
+  it("says so when an update changed no row (not the patient's request, or no such request)", async () => {
+    const f = fakeSupabase({ responses: { blood_requests: [ok([])] } });
+    await expect(updateBloodRequest(f.sb, "nope", { status: "received" })).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("checks the units of an update too", async () => {
+    const f = fakeSupabase();
+    await expect(updateBloodRequest(f.sb, "br-1", { units: 0 })).rejects.toMatchObject({ code: "invalid_units" });
+    expect(f.argsOf("update")).toEqual([]);
   });
 });
 

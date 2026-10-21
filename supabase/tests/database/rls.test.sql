@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(107);
+select plan(124);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures (as the table owner). Everything is rolled back at the end.
@@ -500,6 +500,64 @@ select throws_ok($$ select * from public.profiles $$, '42501', null, 'a signed-o
 select throws_ok(
   $$ select public.book_appointment('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, current_date + 1, 'x') $$,
   '42501', null, 'a signed-out visitor cannot book');
+reset role;
+
+-- ----------------------------------------------------------------------------
+-- Blood requests (0013): the patient who made one is the only signed-in user
+-- who can see it or change it — not another patient, not a doctor, not an admin.
+-- ----------------------------------------------------------------------------
+select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
+select lives_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 2, 'Test Hospital', 'Delhi', 'Kin A', '+91 00000 00011') $$,
+  'a patient starts a blood request (it begins as searching)');
+select is((select count(*)::int from public.blood_requests), 1, 'a patient sees their own request');
+select throws_ok(
+  $$ update public.blood_requests set status = 'bogus' $$,
+  '23514', null, 'a status outside the list is refused');
+select lives_ok(
+  $$ update public.blood_requests set status = 'contacted' $$,
+  'a patient moves their own request on');
+select is((select status from public.blood_requests), 'contacted', 'and the new status is what was set');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000002', 'O+', 'plasma', 1, 'Test Hospital', 'Delhi', 'Kin B', '+91 00000 00012') $$,
+  '42501', null, 'a patient cannot start a request for somebody else');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 11, 'Test Hospital', 'Delhi', 'Kin A', '+91 00000 00011') $$,
+  '23514', null, 'a request is for at most 10 units');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'X', 'Delhi', 'Kin A', '+91 00000 00011') $$,
+  '23514', null, 'a hospital name under 2 characters is refused (the contract minimum)');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'X', 'Kin A', '+91 00000 00011') $$,
+  '23514', null, 'a city under 2 characters is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', ' ', '+91 00000 00011') $$,
+  '23514', null, 'a blank contact name is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', 'Kin A', '1234') $$,
+  '23514', null, 'a contact phone under 5 characters is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone, note)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', 'Kin A', '+91 00000 00011', repeat('x', 501)) $$,
+  '23514', null, 'a note over 500 characters is refused (the contract maximum)');
+
+select public.tap_login('10000000-0000-0000-0000-000000000002');
+select is((select count(*)::int from public.blood_requests), 0, 'another patient sees none of them');
+update public.blood_requests set status = 'cancelled';
+delete from public.blood_requests;
+
+select public.tap_login('10000000-0000-0000-0000-000000000001');
+select is((select status from public.blood_requests), 'contacted', 'and another patient cannot change or delete it');
+select is((select count(*)::int from public.blood_requests), 1, 'the request is still there after all of that');
+select lives_ok($$ delete from public.blood_requests $$, 'a patient can delete their own request');
+select is((select count(*)::int from public.blood_requests), 0, 'and then it is gone');
 reset role;
 
 insert into public.missed_dose_alerts (item_id, scheduled_for) values ('41000000-0000-0000-0000-000000000001', '2026-01-01 09:00+00');

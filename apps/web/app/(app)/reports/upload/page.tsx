@@ -200,6 +200,7 @@ export default function ReportUploadPage() {
               <Field
                 label="Report date"
                 type="date"
+                aria-label="Report date"
                 value={reportDate}
                 max={todayIso()}
                 onChange={(e) => setReportDate(e.target.value)}
