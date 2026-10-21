@@ -11,7 +11,7 @@ tests/
 └─ fixtures/      # request bodies and expected responses shared by tests
 ```
 
-Sample documents for evaluating prescription and lab-report extraction live in `apps/web/test-fixtures/`. They are synthetic or have all personal details removed.
+The safety cases (emergency phrases, no diagnosis, no dose advice, citations, prices, redaction) are the JSON files in `apps/web/tests/safety/`. Sample documents for evaluating prescription and lab-report extraction are not kept in the repository.
 
 ## Rules
 
