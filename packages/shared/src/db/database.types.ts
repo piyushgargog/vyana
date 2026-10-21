@@ -139,6 +139,63 @@ export type Database = {
           },
         ]
       }
+      blood_requests: {
+        Row: {
+          blood_group: string
+          city: string
+          component: string
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          hospital_name: string
+          id: string
+          note: string | null
+          patient_id: string
+          status: string
+          units: number
+          updated_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          blood_group: string
+          city: string
+          component: string
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          hospital_name: string
+          id?: string
+          note?: string | null
+          patient_id: string
+          status?: string
+          units: number
+          updated_at?: string
+        }
+        Update: {
+          blood_group?: string
+          city?: string
+          component?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          hospital_name?: string
+          id?: string
+          note?: string | null
+          patient_id?: string
+          status?: string
+          units?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       care_invite_attempts: {
         Row: {
           attempted_at: string

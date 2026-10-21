@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- RapidBlood tracker data (issue #235): a `blood_requests` table (owner-only) with the queries and hooks the screens build on, the request message a patient can share, and demo requests for two demo patients. The blood-bank search itself is #234 and the screens are #236.
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
 
 ### Removed
