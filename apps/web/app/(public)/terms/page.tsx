@@ -212,9 +212,9 @@ export default function TermsOfServicePage() {
           {/* Desktop "On this page" Anchor Navigation Sidebar */}
           <aside className="hidden lg:block lg:w-64 shrink-0 sticky top-24 self-start space-y-3">
             <div className="rounded-card border border-separator bg-surface p-4 shadow-xs space-y-3">
-              <h3 className="px-1 text-[13px] font-semibold text-label uppercase tracking-wider">
+              <p className="px-1 text-[13px] font-semibold text-label">
                 On this page
-              </h3>
+              </p>
               <nav aria-label="Terms of service sections" className="space-y-1">
                 {SECTIONS.map((sec) => (
                   <a
