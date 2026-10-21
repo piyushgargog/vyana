@@ -188,7 +188,7 @@ function AppShellContent({
       <SiteFooter withTabBar />
 
       {/* Phone: a floating glass tab bar, like iOS 26. */}
-      <nav aria-label="Workspace" className="glass fixed inset-x-4 bottom-4 z-30 flex items-center justify-around rounded-full px-2 py-1.5 md:hidden">
+      <nav aria-label="Workspace" data-tabbar className="glass fixed inset-x-4 bottom-4 z-30 flex items-center justify-around rounded-full px-2 py-1.5 md:hidden">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (

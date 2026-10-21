@@ -20,6 +20,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - The emergency Medical ID QR is now plain readable text (name, blood group, allergies, medicines, one emergency contact) that any phone camera shows without internet. It used to be base64 text that only looked like gibberish, and its link needed internet. A long medicine list is cut with a "+N more" note. The QR has square corners and error level M so it scans on Android.
 - "Revoke" on a share link now visibly works: turned-off and expired links leave the "Active share links" list and the Medical ID and Timeline screens, the app confirms it, and a revoke that changes no row is an error instead of a silent "ok".
 - Signing out on one device no longer signs you out everywhere (web and Android; the Android fix ships with the next APK).
+- The on-screen keyboard no longer covers the field you type in: on the website the page resizes with the keyboard, scrolls the field into view and hides the floating tab bar while you type; in the Android app every scrolling screen scrolls the focused field above the keyboard.
+- The AI pool skips a dead, revoked or out-of-credit key (401, 402, 403, 408) and tries the next key, model or provider instead of failing the whole request.
 - Android app: the keyboard no longer covers the text field; "Ask Vyana" and "Me" no longer show a second title and a gap under the header; notifications use the Vyana mark as the small icon.
 - Public pages meet the AA colour-contrast limit; CI is green again (contrast, slow E2E waits, a secret-scan false positive).
 
