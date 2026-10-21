@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  addDays,
+  formatLocalDate,
   useBookAppointment,
   useHospital,
   useHospitalInfo,
@@ -71,14 +73,10 @@ export default function AppointmentBookScreen() {
 
   const selectedDeptId = userDeptId || matchedDeptId || departments[0]?.id || '';
 
-  // Safe pure date initialization
+  // The phone's own calendar day: the UTC date is still "yesterday" in India until 05:30.
   const [dateDefaults] = useState(() => {
-    const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const tomorrow = new Date(now.getTime() + 86400000)
-      .toISOString()
-      .slice(0, 10);
-    return { today, tomorrow };
+    const today = formatLocalDate(new Date());
+    return { today, tomorrow: addDays(today, 1) };
   });
 
   const [appointmentDate, setAppointmentDate] = useState<string>(

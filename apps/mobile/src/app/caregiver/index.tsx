@@ -278,7 +278,7 @@ export default function CaregiverScreen() {
                           }
                           title={`${item.medicine_name} ${item.strength || ''}`.trim()}
                           subtitle={`${item.frequency} · ${(item.times || []).join(', ')} · ${item.with_food || 'after'} food`}
-                          value={item.dose || '1 dose'}
+                          value={item.dose ?? undefined}
                         />
                       ))
                   )

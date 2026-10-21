@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import {
+  formatLocalDate,
   uploadFile,
   useAnalyzeReport,
   useCorrectLabValue,
@@ -58,9 +59,7 @@ export default function ReportUploadScreen() {
 
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [reportDate, setReportDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [reportDate, setReportDate] = useState(formatLocalDate(new Date()));
   const [isUploading, setIsUploading] = useState(false);
   const [analyzedData, setAnalyzedData] =
     useState<ReportAnalyzeRes | null>(null);
