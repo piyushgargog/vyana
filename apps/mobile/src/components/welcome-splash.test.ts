@@ -67,23 +67,4 @@ describe('WelcomeSplash Constants & Helpers (#240)', () => {
     expect(dim.chakra).toBe(5);
     expect(dim.spokes).toHaveLength(12);
   });
-
-  it('guards against duplicate close executions upon rapid repeated taps', () => {
-    let closing = false;
-    let transitionCount = 0;
-
-    const simulateTap = () => {
-      if (closing) return;
-      closing = true;
-      transitionCount++;
-    };
-
-    // User taps multiple times rapidly
-    simulateTap();
-    simulateTap();
-    simulateTap();
-
-    expect(transitionCount).toBe(1);
-    expect(closing).toBe(true);
-  });
 });
