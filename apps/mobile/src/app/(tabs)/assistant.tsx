@@ -22,7 +22,7 @@ import {
   type Language,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
-import { Button, EmptyState, Screen, Symbol, Text } from '@/components/ui';
+import { Button, EmptyState, Screen, SosPill, Symbol, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
   MobileAiSafetyBanner,
@@ -323,18 +323,7 @@ export default function MobileAssistantTab() {
     <Screen
       title="Ask Vyana"
       scroll={false}
-      trailing={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
-          onPress={() => router.push('/sos')}
-          style={styles.sosHeaderBtn}
-        >
-          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
-            SOS 108
-          </Text>
-        </Pressable>
-      }
+      trailing={<SosPill />}
     >
       <View style={styles.keyboard}>
         <ScrollView
@@ -505,15 +494,6 @@ export default function MobileAssistantTab() {
 }
 
 const styles = StyleSheet.create({
-  sosHeaderBtn: {
-    backgroundColor: T.color.dangerSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: T.radius.pill,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  sosHeaderText: { fontWeight: '700' },
   keyboard: { flex: 1 },
   messages: { flex: 1 },
   messagesContent: {

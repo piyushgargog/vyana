@@ -25,6 +25,7 @@ import {
   ListRow,
   Screen,
   Sheet,
+  SosPill,
   Symbol,
   Text,
 } from '@/components/ui';
@@ -188,18 +189,7 @@ export default function MobileProfileTab() {
   return (
     <Screen
       title="Me"
-      trailing={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
-          onPress={() => router.push('/sos')}
-          style={styles.sosHeaderBtn}
-        >
-          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
-            SOS 108
-          </Text>
-        </Pressable>
-      }
+      trailing={<SosPill />}
     >
       {/* Quick links */}
       <ListGroup header="Quick links">
@@ -522,15 +512,6 @@ export default function MobileProfileTab() {
 }
 
 const styles = StyleSheet.create({
-  sosHeaderBtn: {
-    backgroundColor: T.color.dangerSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: T.radius.pill,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  sosHeaderText: { fontWeight: '700' },
   field: { gap: T.space.xs },
   label: { fontWeight: '600' },
   input: {

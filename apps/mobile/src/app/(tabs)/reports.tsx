@@ -19,6 +19,7 @@ import {
   ErrorState,
   IconTile,
   Screen,
+  SosPill,
   Symbol,
   Text,
 } from '@/components/ui';
@@ -43,18 +44,7 @@ export default function MobileReportsTab() {
   return (
     <Screen
       title="Reports"
-      trailing={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
-          onPress={() => router.push('/sos')}
-          style={styles.sosHeaderBtn}
-        >
-          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
-            SOS 108
-          </Text>
-        </Pressable>
-      }
+      trailing={<SosPill />}
     >
       {/* Action Buttons */}
       <View style={styles.actionRow}>
@@ -197,18 +187,6 @@ export default function MobileReportsTab() {
 }
 
 const styles = StyleSheet.create({
-  sosHeaderBtn: {
-    backgroundColor: T.color.dangerSoft,
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.xs,
-    borderRadius: T.radius.pill,
-    minHeight: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sosHeaderText: {
-    fontWeight: '700',
-  },
   actionRow: { flexDirection: 'row', gap: T.space.sm },
   actionBtn: { flex: 1 },
   timelineBanner: {

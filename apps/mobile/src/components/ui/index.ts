@@ -7,6 +7,7 @@ export { Glass } from './glass';
 export { IconTile, ListGroup, ListRow, type TileColor } from './list';
 export { Pill } from './pill';
 export { Screen } from './screen';
+export { SosPill } from './sos-pill';
 export { Sheet } from './sheet';
 export { Symbol } from './symbol';
 export { Text, type TextVariant } from './text';

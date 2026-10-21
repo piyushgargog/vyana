@@ -20,7 +20,7 @@ import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
 } from '@/components/ui-primitives';
-import { ErrorState, Screen, Text } from '@/components/ui';
+import { ErrorState, Screen, SosPill, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 
 export default function MobileMedsTab() {
@@ -119,18 +119,7 @@ export default function MobileMedsTab() {
   return (
     <Screen
       title="Medicines"
-      trailing={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
-          onPress={() => router.push('/sos')}
-          style={styles.sosHeaderBtn}
-        >
-          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
-            SOS 108
-          </Text>
-        </Pressable>
-      }
+      trailing={<SosPill />}
     >
       {/* Top Action Bar */}
       <View style={styles.topActions}>
@@ -462,16 +451,6 @@ export default function MobileMedsTab() {
 }
 
 const styles = StyleSheet.create({
-  sosHeaderBtn: {
-    backgroundColor: T.color.dangerSoft,
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.xs,
-    borderRadius: T.radius.pill,
-    minHeight: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sosHeaderText: { fontWeight: '700' },
   topActions: { flexDirection: 'row', gap: T.space.sm },
   scanBtn: {
     flex: 1,
