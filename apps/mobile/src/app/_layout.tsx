@@ -176,7 +176,7 @@ function RootNavigator() {
         <Stack.Screen
           name="schemes/pmjay"
           options={{
-            title: 'PM-JAY Empanelled Hospitals',
+            title: 'PM-JAY Hospitals',
           }}
         />
         <Stack.Screen

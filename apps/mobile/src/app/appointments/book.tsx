@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   StyleSheet,
   TextInput,
@@ -12,7 +13,6 @@ import {
   formatLocalDate,
   useBookAppointment,
   useHospital,
-  useHospitalInfo,
   useHospitals,
   type DbAppointment,
 } from '@vyana/shared';
@@ -21,7 +21,6 @@ import {
   Button,
   Card,
   CardHeader,
-  Pill,
   Screen,
   Symbol,
   Text,
@@ -46,16 +45,9 @@ export default function AppointmentBookScreen() {
 
   const { data: hospital, isLoading: hospLoading } =
     useHospital(selectedHospitalId);
-  const infoMutation = useHospitalInfo();
-  const loadHospitalInfo = infoMutation.mutate; // stable between renders (the mutation object is not)
   const bookMutation = useBookAppointment();
 
-  // Load OPD timings via TinyFish, once per hospital
-  useEffect(() => {
-    if (selectedHospitalId) {
-      loadHospitalInfo({ hospital_id: selectedHospitalId });
-    }
-  }, [selectedHospitalId, loadHospitalInfo]);
+  const selectedHospital = hospitals.find((h) => h.id === selectedHospitalId);
 
   const departments = useMemo(
     () => hospital?.departments ?? [],
@@ -113,7 +105,6 @@ export default function AppointmentBookScreen() {
   };
 
   const selectedDeptObj = departments.find((d) => d.id === selectedDeptId);
-  const opdInfo = infoMutation.data;
 
   return (
     <Screen
@@ -245,31 +236,42 @@ export default function AppointmentBookScreen() {
             </View>
           </Card>
 
-          {/* OPD Timings (live lookup) */}
-          {opdInfo && (
-            <Card style={styles.opdCard}>
-              <View style={styles.opdHeader}>
-                <Pill text="LIVE OPD INFO" tone="accent" />
-                {opdInfo.cached && <Pill text="CACHED" tone="neutral" />}
-              </View>
-              <Text variant="headline" tone="accent">
-                Verified OPD Registration Timings
+          {/* The hospital's saved record (W3): no live lookup any more. */}
+          {selectedHospital && (
+            <Card>
+              <CardHeader title="Hospital" />
+              <Text variant="headline">{selectedHospital.name}</Text>
+              <Text variant="footnote" tone="secondary">
+                {[selectedHospital.address, selectedHospital.city]
+                  .filter(Boolean)
+                  .join(', ')}
               </Text>
-              {opdInfo.opd.map((slot, idx) => (
-                <View key={idx} style={styles.opdSlotRow}>
-                  <Text variant="footnote" tone="accent" style={styles.bold}>
-                    {slot.department}:
-                  </Text>
-                  <Text variant="footnote" tone="accent">
-                    {slot.days} ({slot.timings})
-                  </Text>
-                </View>
-              ))}
-              {opdInfo.notes && (
-                <Text variant="footnote" tone="accent" style={styles.italic}>
-                  Note: {opdInfo.notes}
+              {selectedHospital.phone ? (
+                <Text variant="footnote" tone="secondary">
+                  Phone: {selectedHospital.phone}
                 </Text>
-              )}
+              ) : null}
+              {selectedHospital.website ? (
+                <Button
+                  title="Hospital website"
+                  variant="secondary"
+                  size="md"
+                  label={`Open the website of ${selectedHospital.name}`}
+                  icon={
+                    <Symbol
+                      ios="arrow.up.right"
+                      android="open_in_new"
+                      size={14}
+                      color={T.color.accentStrong}
+                    />
+                  }
+                  onPress={() =>
+                    Linking.openURL(selectedHospital.website as string).catch(
+                      () => showToast('Could not open the hospital website', 'error')
+                    )
+                  }
+                />
+              ) : null}
             </Card>
           )}
 
@@ -456,9 +458,6 @@ const styles = StyleSheet.create({
     backgroundColor: T.color.accentSoft,
   },
   hospOptionText: { flex: 1, gap: 2 },
-  opdCard: { borderWidth: 1, borderColor: T.color.accentSoft },
-  opdHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  opdSlotRow: { flexDirection: 'row', gap: T.space.xs, flexWrap: 'wrap' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
   chip: {
     minHeight: 44,
