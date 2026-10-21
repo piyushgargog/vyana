@@ -9,6 +9,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_USE_MOCKS": "false",

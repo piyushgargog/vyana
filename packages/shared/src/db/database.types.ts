@@ -1556,6 +1556,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bump_share_open: { Args: { p_token: string }; Returns: undefined }
       create_care_invite: { Args: Record<PropertyKey, never>; Returns: string }
       create_doctor_prescription: {
         Args: {

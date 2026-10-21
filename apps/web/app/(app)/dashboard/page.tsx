@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -588,6 +589,9 @@ export default function PatientDashboardPage() {
               <ButtonLink href="/basket" variant="secondary" size="lg" className="w-full">
                 Compare medicine prices
               </ButtonLink>
+              <ButtonLink href="/blood" variant="secondary" size="lg" className="w-full">
+                Find blood
+              </ButtonLink>
               <ButtonLink href="/sos" variant="secondary" size="lg" className="w-full">
                 Emergency help
               </ButtonLink>
@@ -633,7 +637,11 @@ export default function PatientDashboardPage() {
                     className="rounded-row border border-separator bg-canvas/50 p-4 text-[15px] space-y-2"
                   >
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-label">{plan.condition}</h3>
+                      <h3 className="font-semibold text-label">
+                        <Link href={`/care/${cp.condition_id}`} className="underline-offset-4 hover:underline focus-visible:underline">
+                          {plan.condition}
+                        </Link>
+                      </h3>
                       {/* Human label, never the raw status enum (#225: "PATIENT_GENERATED"). */}
                       <Pill tone={cp.status === "approved" ? "ok" : "neutral"}>
                         {cp.status === "approved"

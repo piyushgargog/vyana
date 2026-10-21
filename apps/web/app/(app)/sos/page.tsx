@@ -113,6 +113,15 @@ export default function SosPage() {
         </div>
       </Card>
 
+      {/* Find blood */}
+      <Card>
+        <CardHeader title="Need blood?" />
+        <p className="mb-3 text-[15px] text-label-2">See which blood banks list stock for your blood group, and keep track of who you called.</p>
+        <ButtonLink variant="secondary" size="lg" className="w-full" href="/blood">
+          Find blood
+        </ButtonLink>
+      </Card>
+
       {/* Find hospitals near me */}
       <Card>
         <CardHeader title="Find hospitals near me" />

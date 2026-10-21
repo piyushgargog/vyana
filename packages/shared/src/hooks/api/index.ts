@@ -107,7 +107,8 @@ export function useBloodJob(jobId: string | null | undefined) {
     queryKey: ["blood-job", jobId],
     queryFn: () => api.blood.job(jobId as string),
     enabled: Boolean(jobId),
-    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    // Stops on "done" and also after an error (a 404 "expired" would otherwise be asked again every 4 s for ever).
+    refetchInterval: (query) => (query.state.error || query.state.data?.status === "done" ? false : 4000),
     retry: 1,
   });
 }
