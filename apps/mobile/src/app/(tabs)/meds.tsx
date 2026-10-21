@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -22,7 +20,8 @@ import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
 } from '@/components/ui-primitives';
-import { ErrorState } from '@/components/ui';
+import { ErrorState, Screen, Text } from '@/components/ui';
+import { T } from '@/constants/theme';
 
 export default function MobileMedsTab() {
   const router = useRouter();
@@ -118,7 +117,21 @@ export default function MobileMedsTab() {
   const singleResult = singleJobData ?? compareSingleMutation.data;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <Screen
+      title="Medicines"
+      trailing={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Emergency SOS — Call 108 Ambulance"
+          onPress={() => router.push('/sos')}
+          style={styles.sosHeaderBtn}
+        >
+          <Text variant="footnote" tone="danger" style={styles.sosHeaderText}>
+            SOS 108
+          </Text>
+        </Pressable>
+      }
+    >
       {/* Top Action Bar */}
       <View style={styles.topActions}>
         <Pressable
@@ -127,7 +140,9 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/prescriptions/scan')}
           style={styles.scanBtn}
         >
-          <Text style={styles.scanBtnText}>+ Scan Prescription (OCR)</Text>
+          <Text variant="footnote" tone="white" style={styles.scanBtnText}>
+            + Scan Prescription (OCR)
+          </Text>
         </Pressable>
 
         <Pressable
@@ -136,7 +151,9 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/basket')}
           style={styles.basketBtn}
         >
-          <Text style={styles.basketBtnText}>Compare Full Basket →</Text>
+          <Text variant="footnote" tone="white" style={styles.basketBtnText}>
+            Compare Full Basket →
+          </Text>
         </Pressable>
       </View>
 
@@ -144,8 +161,8 @@ export default function MobileMedsTab() {
       <View style={styles.card}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Drug–Drug Interaction Check</Text>
-            <Text style={styles.cardSub}>
+            <Text variant="headline">Drug–Drug Interaction Check</Text>
+            <Text variant="caption" tone="tertiary" style={styles.cardSub}>
               Checks active medicines ({allActiveMedNames.join(', ') || 'None'})
               against a reviewed list of known interactions and trusted medicine
               sites (MedlinePlus, NIH, NHS)
@@ -158,7 +175,7 @@ export default function MobileMedsTab() {
             onPress={handleCheckInteractions}
             style={styles.outlineBtn}
           >
-            <Text style={styles.outlineBtnText}>
+            <Text variant="caption" style={styles.outlineBtnText}>
               {interactionsMutation.isPending ? 'Checking…' : 'Check Now'}
             </Text>
           </Pressable>
@@ -169,7 +186,7 @@ export default function MobileMedsTab() {
             <MobileAiSafetyBanner feature="interactions" />
             {interactionsMutation.data.interactions.length === 0 ? (
               <View style={styles.safeBox}>
-                <Text style={styles.safeText}>
+                <Text variant="caption" style={styles.safeText}>
                   No interaction found in:{' '}
                   {interactionsMutation.data.sources_checked
                     .map((s) => s.title)
@@ -180,28 +197,30 @@ export default function MobileMedsTab() {
               interactionsMutation.data.interactions.map((inter, idx) => (
                 <View key={idx} style={styles.interactionCard}>
                   <View style={styles.headerRow}>
-                    <Text style={styles.interactionPair}>
+                    <Text variant="subhead" style={styles.interactionPair}>
                       {inter.medicine_a} + {inter.medicine_b}
                     </Text>
-                    <Text style={styles.severityBadge}>
+                    <Text variant="caption" tone="white" style={styles.severityBadge}>
                       Severity: {inter.severity.toUpperCase()}
                     </Text>
                   </View>
                   {inter.layer && (
-                    <Text style={styles.interactionSources}>
+                    <Text variant="caption" style={styles.interactionSources}>
                       {inter.layer === 'table'
                         ? 'From the reviewed list'
                         : 'From a trusted source'}
                     </Text>
                   )}
-                  <Text style={styles.interactionEffect}>{inter.effect}</Text>
-                  <Text style={styles.interactionAdvice}>
+                  <Text variant="caption" style={styles.interactionEffect}>
+                    {inter.effect}
+                  </Text>
+                  <Text variant="caption" style={styles.interactionAdvice}>
                     Guidance: {inter.advice}
                   </Text>
-                  <Text style={styles.interactionQuote}>
-                    Verbatim Evidence: &ldquo;{inter.quote}&rdquo;
+                  <Text variant="caption" style={styles.interactionQuote}>
+                    Verbatim Evidence: “{inter.quote}”
                   </Text>
-                  <Text style={styles.interactionSources}>
+                  <Text variant="caption" style={styles.interactionSources}>
                     Sources:{' '}
                     {inter.sources
                       .map((s) => `${s.title} (${s.url})`)
@@ -212,7 +231,7 @@ export default function MobileMedsTab() {
             )}
             {interactionsMutation.data.not_checked &&
               interactionsMutation.data.not_checked.length > 0 && (
-                <Text style={styles.cardSub}>
+                <Text variant="caption" tone="tertiary" style={styles.cardSub}>
                   Not checked:{' '}
                   {interactionsMutation.data.not_checked.join(', ')}
                 </Text>
@@ -230,8 +249,8 @@ export default function MobileMedsTab() {
         </View>
       ) : rxList.length === 0 ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>No Prescriptions Yet</Text>
-          <Text style={styles.cardSub}>
+          <Text variant="headline">No Prescriptions Yet</Text>
+          <Text variant="caption" tone="tertiary" style={styles.cardSub}>
             Scan a prescription image or receive an e-prescription from your
             doctor to see your medicines here.
           </Text>
@@ -239,9 +258,11 @@ export default function MobileMedsTab() {
             accessibilityRole="button"
             accessibilityLabel="Scan a prescription now"
             onPress={() => router.push('/prescriptions/scan')}
-            style={[styles.orderWholeBtn, { marginTop: 12 }]}
+            style={[styles.orderWholeBtn, { marginTop: T.space.md }]}
           >
-            <Text style={styles.orderWholeBtnText}>+ Scan Prescription Now</Text>
+            <Text variant="footnote" style={styles.orderWholeBtnText}>
+              + Scan Prescription Now
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -249,11 +270,15 @@ export default function MobileMedsTab() {
           <View key={rx.id} style={styles.card}>
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                {rx.notes && <Text style={styles.rxHospital}>{rx.notes}</Text>}
-                <Text style={styles.cardTitle}>
+                {rx.notes && (
+                  <Text variant="caption" style={styles.rxHospital}>
+                    {rx.notes}
+                  </Text>
+                )}
+                <Text variant="headline">
                   {rx.diagnosis || 'Prescription'}
                 </Text>
-                <Text style={styles.cardSub}>
+                <Text variant="caption" tone="tertiary" style={styles.cardSub}>
                   {rx.doctor_name ? `Prescribed by ${rx.doctor_name} · ` : ''}
                   {rx.issued_on ? `Issued ${rx.issued_on}` : ''}
                 </Text>
@@ -264,7 +289,9 @@ export default function MobileMedsTab() {
                 onPress={() => router.push(`/prescriptions/${rx.id}`)}
                 style={styles.detailChip}
               >
-                <Text style={styles.detailChipText}>Details →</Text>
+                <Text variant="caption" style={styles.detailChipText}>
+                  Details →
+                </Text>
               </Pressable>
             </View>
 
@@ -274,7 +301,7 @@ export default function MobileMedsTab() {
               onPress={() => handleOrderWholeRx(rx.id)}
               style={styles.orderWholeBtn}
             >
-              <Text style={styles.orderWholeBtnText}>
+              <Text variant="footnote" style={styles.orderWholeBtnText}>
                 Order All{' '}
                 {rx.prescription_items.filter((i) => i.active).length} Medicines
                 (Compare Full Basket) →
@@ -285,22 +312,22 @@ export default function MobileMedsTab() {
               const refill = computeItemRefill(item);
               return (
                 <View key={item.id} style={styles.medItemRow}>
-                  <View style={{ flex: 1, gap: 3 }}>
+                  <View style={{ flex: 1, gap: T.space.xs }}>
                     <View style={styles.medNameRow}>
-                      <Text style={styles.medName}>
+                      <Text variant="subhead" style={styles.medName}>
                         {item.medicine_name} {item.strength}
                       </Text>
                       {refill.needsRefillSoon && refill.daysLeft !== null && (
-                        <Text style={styles.refillSoonBadge}>
+                        <Text variant="caption" style={styles.refillSoonBadge}>
                           Refill due: {refill.daysLeft}d left
                         </Text>
                       )}
                     </View>
-                    <Text style={styles.medGeneric}>
+                    <Text variant="caption" tone="secondary">
                       Form: {item.form || 'tablet'} · {item.dose} (
                       {item.frequency})
                     </Text>
-                    <Text style={styles.medMeta}>
+                    <Text variant="caption" tone="tertiary">
                       Qty: {item.quantity_total ?? '—'}
                       {refill.daysLeft !== null
                         ? ` · ${refill.daysLeft} days left`
@@ -322,7 +349,9 @@ export default function MobileMedsTab() {
                       }
                       style={styles.reorderSmallBtn}
                     >
-                      <Text style={styles.reorderSmallText}>Reorder</Text>
+                      <Text variant="caption" tone="white" style={styles.reorderSmallText}>
+                        Reorder
+                      </Text>
                     </Pressable>
 
                     <Pressable
@@ -336,7 +365,7 @@ export default function MobileMedsTab() {
                         !item.active && styles.toggleBtnPaused,
                       ]}
                     >
-                      <Text style={styles.toggleBtnText}>
+                      <Text variant="caption" style={styles.toggleBtnText}>
                         {item.active ? 'Active' : 'Paused'}
                       </Text>
                     </Pressable>
@@ -350,30 +379,36 @@ export default function MobileMedsTab() {
 
       {/* Single-Medicine Quick Price Lookup */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Single-Medicine Quick Price Lookup</Text>
-        <Text style={styles.cardSub}>
+        <Text variant="headline">Single-Medicine Quick Price Lookup</Text>
+        <Text variant="caption" tone="tertiary" style={styles.cardSub}>
           Search any individual medicine to compare across 1mg, PharmEasy,
           Apollo, Netmeds & Jan Aushadhi
         </Text>
 
         <View style={styles.searchRow}>
           <View style={{ flex: 2 }}>
-            <Text style={styles.inputLabel}>Medicine Name</Text>
+            <Text variant="caption" style={styles.inputLabel}>
+              Medicine Name
+            </Text>
             <TextInput
               accessibilityLabel="Medicine Name"
               value={singleMedQuery}
               onChangeText={setSingleMedQuery}
               placeholder="Enter medicine name"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>Strength</Text>
+            <Text variant="caption" style={styles.inputLabel}>
+              Strength
+            </Text>
             <TextInput
               accessibilityLabel="Medicine Strength"
               value={singleStrength}
               onChangeText={setSingleStrength}
               placeholder="Optional"
+              placeholderTextColor={T.color.label3}
               style={styles.input}
             />
           </View>
@@ -386,7 +421,7 @@ export default function MobileMedsTab() {
           onPress={handleSingleMedicineSearch}
           style={styles.outlineBtnFull}
         >
-          <Text style={styles.outlineBtnText}>
+          <Text variant="caption" style={styles.outlineBtnText}>
             {compareSingleMutation.isPending
               ? 'Checking pharmacies…'
               : 'Compare Single Medicine'}
@@ -398,7 +433,7 @@ export default function MobileMedsTab() {
             {singleResult.baskets.map((b) => (
               <View key={b.source} style={styles.singlePharmacyRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.singlePharmName}>
+                  <Text variant="caption" style={styles.singlePharmName}>
                     {b.source.toUpperCase()} ·{' '}
                     {b.status === 'pending'
                       ? 'Agent is checking…'
@@ -407,12 +442,12 @@ export default function MobileMedsTab() {
                         : 'Unavailable'}
                   </Text>
                   {b.lines[0] && !b.lines[0].price_verified && (
-                    <Text style={styles.unverifiedLabel}>
+                    <Text variant="caption" style={styles.unverifiedLabel}>
                       price not confirmed
                     </Text>
                   )}
                 </View>
-                <Text style={styles.singleTotal}>
+                <Text variant="footnote" style={styles.singleTotal}>
                   {b.total !== null ? `₹${b.total}` : '—'}
                 </Text>
               </View>
@@ -422,190 +457,207 @@ export default function MobileMedsTab() {
       </View>
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 14 },
-  topActions: { flexDirection: 'row', gap: 10 },
+  sosHeaderBtn: {
+    backgroundColor: T.color.dangerSoft,
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.xs,
+    borderRadius: T.radius.pill,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sosHeaderText: { fontWeight: '700' },
+  topActions: { flexDirection: 'row', gap: T.space.sm },
   scanBtn: {
     flex: 1,
-    backgroundColor: '#0D9488',
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    backgroundColor: T.color.accent,
+    paddingVertical: T.space.md,
+    paddingHorizontal: T.space.md,
+    borderRadius: T.radius.row,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
-  scanBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  scanBtnText: { fontWeight: '700' },
   basketBtn: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    backgroundColor: T.color.label,
+    paddingVertical: T.space.md,
+    paddingHorizontal: T.space.md,
+    borderRadius: T.radius.row,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
-  basketBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  basketBtnText: { fontWeight: '700' },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: T.color.surface,
+    borderRadius: T.radius.card,
+    padding: T.space.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
+    borderColor: T.color.separator,
+    gap: T.space.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: T.space.sm,
   },
   rxHospital: {
-    fontSize: 11,
     fontWeight: '700',
-    color: '#0F766E',
+    color: T.color.accentStrong,
     textTransform: 'uppercase',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  cardSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  cardSub: { marginTop: T.space.xs / 2 },
   outlineBtn: {
     borderWidth: 1,
-    borderColor: '#0D9488',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    borderColor: T.color.accent,
+    paddingHorizontal: T.space.md,
+    borderRadius: T.radius.row,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   outlineBtnFull: {
     borderWidth: 1,
-    borderColor: '#0D9488',
-    paddingVertical: 11,
-    borderRadius: 12,
+    borderColor: T.color.accent,
+    borderRadius: T.radius.row,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
-  outlineBtnText: { color: '#0F766E', fontSize: 12, fontWeight: '700' },
-  interactionResults: { gap: 10 },
+  outlineBtnText: { color: T.color.accentStrong, fontWeight: '700' },
+  interactionResults: { gap: T.space.sm },
   safeBox: {
-    backgroundColor: '#ECFDF5',
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: T.color.okSoft,
+    padding: T.space.md,
+    borderRadius: T.radius.row,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: T.color.separator,
   },
-  safeText: { fontSize: 12, color: '#065F46', fontWeight: '600' },
+  safeText: { color: T.color.ok, fontWeight: '600' },
   interactionCard: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: T.color.dangerSoft,
+    borderColor: T.color.separator,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
+    borderRadius: T.radius.row,
+    padding: T.space.md,
+    gap: T.space.xs,
   },
-  interactionPair: { fontSize: 14, fontWeight: '700', color: '#991B1B' },
+  interactionPair: { fontWeight: '700', color: T.color.dangerText },
   severityBadge: {
-    backgroundColor: '#DC2626',
-    color: '#FFFFFF',
-    fontSize: 10,
+    backgroundColor: T.color.danger,
+    paddingHorizontal: T.space.sm,
+    paddingVertical: T.space.xs / 2,
+    borderRadius: T.radius.pill,
+    overflow: 'hidden',
     fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
   },
-  interactionEffect: { fontSize: 12, color: '#7F1D1D', fontWeight: '600' },
-  interactionAdvice: { fontSize: 12, color: '#991B1B' },
+  interactionEffect: { color: T.color.dangerText, fontWeight: '600' },
+  interactionAdvice: { color: T.color.dangerText },
   interactionQuote: {
-    fontSize: 11,
     fontStyle: 'italic',
-    color: '#7F1D1D',
-    marginTop: 2,
+    color: T.color.dangerText,
+    marginTop: T.space.xs / 2,
   },
-  interactionSources: { fontSize: 11, color: '#991B1B', fontWeight: '600' },
+  interactionSources: { color: T.color.dangerText, fontWeight: '600' },
   detailChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  detailChipText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
-  orderWholeBtn: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#0D9488',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 11,
+    backgroundColor: T.color.fill,
+    paddingHorizontal: T.space.sm,
+    borderRadius: T.radius.row,
+    minHeight: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  orderWholeBtnText: { color: '#0F766E', fontSize: 13, fontWeight: '700' },
+  detailChipText: { fontWeight: '700', color: T.color.label },
+  orderWholeBtn: {
+    backgroundColor: T.color.accentSoft,
+    borderColor: T.color.accent,
+    borderWidth: 1,
+    borderRadius: T.radius.row,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: T.space.md,
+  },
+  orderWholeBtnText: { color: T.color.accentStrong, fontWeight: '700' },
   medItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: T.space.sm,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    gap: 10,
+    borderTopColor: T.color.fill,
+    gap: T.space.sm,
   },
   medNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: T.space.xs + 2,
   },
-  medName: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  medName: { fontWeight: '700' },
   refillSoonBadge: {
-    backgroundColor: '#FEF3C7',
-    color: '#92400E',
-    fontSize: 10,
+    backgroundColor: T.color.warnSoft,
+    color: T.color.warn,
     fontWeight: '700',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: T.space.sm - 1,
+    paddingVertical: T.space.xs / 2,
+    borderRadius: T.radius.pill,
+    overflow: 'hidden',
   },
-  medGeneric: { fontSize: 12, color: '#475569' },
-  medMeta: { fontSize: 11, color: '#64748B' },
-  medItemActions: { gap: 6, alignItems: 'flex-end' },
+  medItemActions: { gap: T.space.xs, alignItems: 'flex-end' },
   reorderSmallBtn: {
-    backgroundColor: '#0D9488',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: T.color.accent,
+    paddingHorizontal: T.space.sm,
+    borderRadius: T.radius.row,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  reorderSmallText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  reorderSmallText: { fontWeight: '700' },
   toggleBtn: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: T.color.okSoft,
+    paddingHorizontal: T.space.sm,
+    borderRadius: T.radius.pill,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  toggleBtnPaused: { backgroundColor: '#F1F5F9' },
-  toggleBtnText: { fontSize: 10, fontWeight: '700', color: '#0F766E' },
-  searchRow: { flexDirection: 'row', gap: 8 },
+  toggleBtnPaused: { backgroundColor: T.color.fill },
+  toggleBtnText: { fontWeight: '700', color: T.color.accentStrong },
+  searchRow: { flexDirection: 'row', gap: T.space.sm },
   inputLabel: {
-    fontSize: 11,
     fontWeight: '700',
-    color: '#334155',
-    marginBottom: 4,
+    color: T.color.label2,
+    marginBottom: T.space.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: '#0F172A',
+    borderColor: T.color.separator,
+    borderRadius: T.radius.row,
+    paddingHorizontal: T.space.sm,
+    paddingVertical: T.space.sm,
+    minHeight: 44,
+    ...T.text.footnote,
+    color: T.color.label,
   },
-  singleResultWrap: { gap: 6, paddingTop: 6 },
+  singleResultWrap: { gap: T.space.xs, paddingTop: T.space.xs },
   singlePharmacyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 10,
+    backgroundColor: T.color.fill,
+    padding: T.space.sm,
+    borderRadius: T.radius.row,
   },
-  singlePharmName: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
-  unverifiedLabel: { fontSize: 11, color: '#B45309', fontWeight: '700' },
-  singleTotal: { fontSize: 13, fontWeight: '800', color: '#0F766E' },
+  singlePharmName: { fontWeight: '700' },
+  unverifiedLabel: { color: T.color.warn, fontWeight: '700' },
+  singleTotal: { fontWeight: '800', color: T.color.accentStrong },
 });

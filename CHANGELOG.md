@@ -11,6 +11,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Medicine quality alerts (CDSCO): the alerts screen, `POST /api/alerts/check`, the TinyFish Monitor webhook and the `monitor:create` script. The `drug_alerts` and `tinyfish_monitors` tables stay in the database, unused.
 
 ### Changed
+- Android app: the native glass tab bar is back (issue #241, re-applying #204 on top of current main). All five tabs draw their own large title with the SOS button beside it; Medicines and Reports move onto the shared `Screen`, Ask and Me keep their one title from #229, Today keeps its greeting, and the root keyboard provider is untouched. Needs a real-device pass on Android and iOS before it is marked ready.
 - Demo data: ten more fictional demo patients with different diseases and three caregivers, and a year of lab reports, vitals and dose logs for every demo patient (for the charts and the shared record).
 - The website no longer offers "Install app" in mobile browsers (the web manifest uses `display: browser`), so visitors do not mistake it for the Android app.
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
