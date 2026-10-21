@@ -3,6 +3,9 @@
 import type { ZodType } from "zod";
 
 import {
+  AgentDecideReq,
+  AgentDecideRes,
+  AgentProposalsRes,
   ApiErrorBody,
   BasketCompareReq,
   BasketCompareRes,
@@ -87,6 +90,8 @@ export type ApiClient = {
   hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
   schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
+  /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
+  agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
   reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes>; correctValue(body: LabValueCorrectReq): Promise<LabValueCorrectRes> };
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
@@ -241,6 +246,28 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, mocks.hospitalInfoMock) },
     schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
+    agentProposals: {
+      // Mock mode uses the stateful in-memory store (not the copied static fixture), so an approve
+      // or reject actually settles the card for the rest of the session (#304, mock-first).
+      list: async () => {
+        if (opts.useMocks) {
+          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
+          return AgentProposalsRes.parse(JSON.parse(JSON.stringify(mocks.agentProposalsMock())));
+        }
+        return request({ method: "GET", path: "/api/agent/proposals", resSchema: AgentProposalsRes, mock: mocks.agentProposalsMock() });
+      },
+      decide: async (body) => {
+        const req = AgentDecideReq.safeParse(body);
+        if (!req.success) {
+          throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
+        }
+        if (opts.useMocks) {
+          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
+          return AgentDecideRes.parse(mocks.agentDecideMock(req.data));
+        }
+        return post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, req.data, mocks.agentDecideMock(req.data));
+      },
+    },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
     reports: {
       analyze: (body) => post("/api/reports/analyze", ReportAnalyzeReq, ReportAnalyzeRes, body, mocks.reportsAnalyzeMock),

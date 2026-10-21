@@ -42,6 +42,7 @@ import type {
 import { QUERY_ROOTS } from "./query-roots";
 
 export { QUERY_ROOTS } from "./query-roots";
+export { useMyProposals, useDecideProposal } from "./agent-proposals";
 
 export function useCompareMedicine() {
   const api = useApi();

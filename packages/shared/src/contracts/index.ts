@@ -164,6 +164,36 @@ export const DoctorVerifyRes = z.object({
   checked_at: z.string(),
 });
 
+// ---------- Care agent proposals (v1.3, #304) ----------
+// PROVISIONAL, mock-first: the final contract lands with the care-agent server PR and Vaibhav's
+// M3 hooks; these schemas exist so the patient screens can be built and reviewed against the
+// shape the issue describes. A proposal is proposed by rules from the patient's own records;
+// the patient confirms ("approve") or dismisses ("reject") it, and a rejected one can be
+// restored while the server allows undo. Wording never carries a dose or a diagnosis.
+export const AgentProposalKind = z.enum(["refill_reminder", "lab_recheck", "notify_caregiver"]);
+export const AgentProposal = z.object({
+  id: z.string().min(1),
+  kind: AgentProposalKind,
+  title: z.string().min(1),
+  reason: z.string().min(1),
+  evidence: z.array(z.object({ label: z.string().min(1), detail: z.string().min(1) })),
+  created_at: z.string(),
+  expires_at: z.string().nullable(),
+  status: z.enum(["pending", "approved", "rejected"]),
+});
+export const AgentProposalsRes = z.object({ proposals: z.array(AgentProposal) });
+export const AgentDecideReq = z.object({
+  id: z.string().min(1),
+  decision: z.enum(["approve", "reject", "restore"]),
+});
+export const AgentDecideRes = z.object({
+  status: z.enum(["approved", "rejected", "pending"]),
+  /** What happened, in words for the confirmation toast; null when there is nothing to say. */
+  result_text: z.string().nullable(),
+  /** Seconds during which a rejection can be undone; 0 when the server does not allow undo. */
+  undo_seconds: z.number().int().min(0),
+});
+
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
 export const PrescriptionExtractReq = z.object({ file_path: z.string() });
@@ -411,6 +441,11 @@ export type EmergencySosReq = z.infer<typeof EmergencySosReq>;
 export type EmergencySosRes = z.infer<typeof EmergencySosRes>;
 export type DoctorVerifyReq = z.infer<typeof DoctorVerifyReq>;
 export type DoctorVerifyRes = z.infer<typeof DoctorVerifyRes>;
+export type AgentProposalKind = z.infer<typeof AgentProposalKind>;
+export type AgentProposal = z.infer<typeof AgentProposal>;
+export type AgentProposalsRes = z.infer<typeof AgentProposalsRes>;
+export type AgentDecideReq = z.infer<typeof AgentDecideReq>;
+export type AgentDecideRes = z.infer<typeof AgentDecideRes>;
 export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;
 export type ReportAnalyzeReq = z.infer<typeof ReportAnalyzeReq>;
