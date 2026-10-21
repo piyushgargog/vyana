@@ -58,6 +58,13 @@ describe("shareLinkSubtitle", () => {
     expect(once).toContain("Opened 1 time, last 5 min ago");
   });
 
+  it("does not crash on a row from a database without migration 0014 (no scopes, no open_count)", () => {
+    const old = { kind: "timeline", expires_at: "2026-10-23T09:00:00.000Z" } as unknown as Parameters<typeof shareLinkSubtitle>[0];
+    const text = shareLinkSubtitle(old, new Date("2026-10-22T09:00:00.000Z"));
+    expect(text).toContain("No summary sections");
+    expect(text).toContain("Not opened yet");
+  });
+
   it("says nothing about scopes for a medical_id link", () => {
     const s = shareLinkSubtitle({ ...base, kind: "medical_id" }, NOW);
     expect(s).not.toContain("Includes");

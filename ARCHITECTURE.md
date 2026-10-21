@@ -49,7 +49,7 @@ flowchart LR
 
 | Path | Used for | Protection |
 |---|---|---|
-| **Direct to Supabase** (supabase-js under the user's session) | Plain reads and writes of the user's own records: profile, contacts, vitals, appointments, dose logs | Row Level Security on every table |
+| **Direct to Supabase** (supabase-js under the user's session) | Plain reads and writes of the user's own records: profile, contacts, vitals, appointments, dose logs, blood requests | Row Level Security on every table |
 | **Through the API** (`/api/*`) | Anything that needs a secret or the live web: TinyFish agents, LLM calls, server-owned records | Bearer token check, Zod validation, server-only keys |
 
 ## How the live web is used (TinyFish)
@@ -62,6 +62,7 @@ flowchart LR
 | Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
 | Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
 | Lab test price compare | **Agent** (async), **Search**, **Fetch** | One agent per lab in the background, like the basket; a price counts only when it appears on the lab's page |
+| Blood stock (RapidBlood) | **Agent** ×up to 4 (async) | One agent per area (the searched city and up to three nearby cities) reads the public e-RaktKosh stock page; a bank is verified only when its copied stock cell equals its unit count and the same row holds its name; cached for 15 minutes |
 | PM-JAY hospitals | **Search** + **Fetch** | Empanelled hospitals near the user from government pages; names, addresses and specialities verbatim |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
@@ -98,6 +99,23 @@ sequenceDiagram
 - The `job_id` is the job itself, encrypted and signed by the server, so no job table is needed and its contents can't be read or changed by the client. Only the user who started a job can read it.
 - A price that the product page doesn't show is returned as unconfirmed and left out of totals, so it can never make a basket look cheapest.
 - If a pharmacy times out or lacks a medicine, the job still finishes and says so per pharmacy.
+
+## Blood stock search, step by step
+
+RapidBlood follows the same pattern: a background job that the app polls.
+
+- `POST /api/blood/search` (`apps/web/app/api/blood/search/route.ts`) calls `startBloodJob` in [`tinyfish/blood.ts`](apps/web/lib/server/tinyfish/blood.ts). It returns a finished search from the cache, or starts one agent per area and returns a `job_id`.
+- `GET /api/blood/search/{job_id}` calls `pollBloodJob`. It reads each agent's run, checks its rows in `processBloodResult`, and returns the banks found so far, verified rows first.
+- The `job_id` is sealed by the server, and only the user who started the search can read it.
+- A finished search is cached for 15 minutes under its blood group, component and city.
+- Requests that the patient tracks are rows in `blood_requests` (migration `0013`). The app reads and writes that table directly under owner-only row level security, and the patient sets each status. The search itself keeps no table.
+
+## Share links and the Health Memory Graph
+
+- The phone creates share links that last 24 hours, 7 days or 30 days, with optional scopes (labs, vitals, medicines, adherence). The scopes are stored in `share_links.scopes` (migration `0014`).
+- `GET /api/share/{token}` returns the shared record from `loadSharedRecord` in [`data/share.ts`](apps/web/lib/server/data/share.ts). For a timeline link with scopes, the record also has a `memory` section, built by `buildMemory` in [`packages/shared/src/health/memory.ts`](packages/shared/src/health/memory.ts) from stored rows only. A medical ID link never carries memory.
+- Each successful open calls `bump_share_open`, one atomic update that counts the open and sets `last_opened_at`. Only the service role can run it. No viewer identity or address is stored.
+- The memory section contains no AI output.
 
 ## AI safety
 

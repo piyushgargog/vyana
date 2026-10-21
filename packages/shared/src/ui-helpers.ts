@@ -162,10 +162,13 @@ export function shareLinkSubtitle(
   now: Date = new Date()
 ): string {
   const parts: string[] = [];
+  // A row read from a database without migration 0014 has neither column: treat it as an old link, never crash the list.
+  const scopes = link.scopes ?? [];
+  const opens = link.open_count ?? 0;
   if (link.kind === "timeline") {
     parts.push(
-      link.scopes.length > 0
-        ? `Includes ${link.scopes.map(shareScopeLabel).join(", ")}`
+      scopes.length > 0
+        ? `Includes ${scopes.map(shareScopeLabel).join(", ")}`
         : "No summary sections"
     );
   }
@@ -173,8 +176,8 @@ export function shareLinkSubtitle(
     `Expires ${new Date(link.expires_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`
   );
   parts.push(
-    link.open_count > 0
-      ? `Opened ${link.open_count} ${link.open_count === 1 ? "time" : "times"}${link.last_opened_at ? `, last ${relativeTime(link.last_opened_at, now)}` : ""}`
+    opens > 0
+      ? `Opened ${opens} ${opens === 1 ? "time" : "times"}${link.last_opened_at ? `, last ${relativeTime(link.last_opened_at, now)}` : ""}`
       : "Not opened yet"
   );
   return parts.join(" · ");
