@@ -202,7 +202,7 @@ export default function BasketPage() {
             Could not load your medicines
           </p>
           <p className="mt-1 text-[15px] text-label-2">
-            Something went wrong while fetching your active prescriptions.
+            Your active prescriptions could not be loaded. Check your connection and try again.
           </p>
           <Button
             variant="secondary"
