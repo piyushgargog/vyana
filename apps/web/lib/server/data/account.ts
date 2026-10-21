@@ -43,6 +43,7 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "emergency_contacts", owner: ["patient_id"], order: "id" },
   { table: "conditions", owner: ["patient_id"], order: "id" },
   { table: "appointments", owner: ["patient_id"], order: "id" },
+  { table: "blood_requests", owner: ["patient_id"], order: "id" },
   { table: "prescriptions", owner: ["patient_id"], order: "id" },
   { table: "prescription_items", owner: ["patient_id"], order: "id" },
   { table: "dose_logs", owner: ["patient_id"], order: "id" },

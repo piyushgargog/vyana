@@ -239,6 +239,10 @@ export function useSharedRecord(token: string | null | undefined) {
     queryFn: () => api.share.get(token as string),
     enabled: Boolean(token),
     retry: false,
+    // One visit is one open (#237): the server counts every read of the record, so a doctor
+    // switching tabs and back must not count as opening the link again.
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 30,
   });
 }
 

@@ -5,4 +5,6 @@ export * from "./dates";
 export * from "./refill";
 export * from "./reminders";
 export * from "./medical-id";
+export * from "./memory";
+export * from "./blood-request";
 export * from "./qr";

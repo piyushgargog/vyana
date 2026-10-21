@@ -25,6 +25,7 @@ export const DB_KEYS = {
   meals: "meals",
   chatSessions: "chat-sessions",
   chatMessages: "chat-messages",
+  bloodRequests: "blood-requests",
   consent: "consent",
   timeline: "timeline",
 } as const;
@@ -34,6 +35,22 @@ export function useDb(): { sb: Sb; userId: string | null; ready: boolean } {
   const sb = useSupabase();
   const { user, loading } = useSession();
   return { sb, userId: user?.id ?? null, ready: !loading && !!user };
+}
+
+/**
+ * Runs a read only once the client's own session is attached (#223, #225). useDb's `ready`
+ * follows the React session state, which settles at a different moment than the Supabase
+ * client's token; a read that goes out in between reaches RLS without the user's JWT and
+ * comes back as a successful EMPTY result, which the query cache then keeps. Awaiting
+ * getSession() first makes the read carry the token or not run at all.
+ */
+export async function afterSession<T>(sb: Sb, run: (sb: Sb) => Promise<T>): Promise<T> {
+  try {
+    await sb.auth.getSession();
+  } catch {
+    // A failed session read must not block the query; the read itself will surface any real error.
+  }
+  return run(sb);
 }
 
 /** `invalidate(root1, root2, ...)` refreshes every query whose key starts with one of the roots. */
