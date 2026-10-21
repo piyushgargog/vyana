@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import {
   isShareUrlDead,
+  shareScopeLabel,
   useCreateShareLink,
   useShareLinks,
   useTimeline,
@@ -50,10 +51,6 @@ const SCOPE_OPTIONS: { scope: ShareScope; label: string }[] = [
   { scope: 'medicines', label: 'Medicines' },
   { scope: 'adherence', label: 'Adherence' },
 ];
-
-function shareScopeLabel(scope: ShareScope): string {
-  return SCOPE_OPTIONS.find((o) => o.scope === scope)?.label ?? scope;
-}
 
 function filterLabel(f: (typeof FILTERS)[number]): string {
   switch (f) {
@@ -131,12 +128,9 @@ export default function TimelineScreen() {
   const [filter, setFilter] = useState<'all' | TimelineKind>('all');
   const [shareOpen, setShareOpen] = useState(false);
   const [durationHours, setDurationHours] = useState<number>(24);
-  const [selectedScopes, setSelectedScopes] = useState<ShareScope[]>([
-    'labs',
-    'vitals',
-    'medicines',
-    'adherence',
-  ]);
+  // Opt-in (#239 review): a fresh link shares the basic timeline only; the patient
+  // switches on each record section they want the doctor to see.
+  const [selectedScopes, setSelectedScopes] = useState<ShareScope[]>([]);
   const [created, setCreated] = useState<{
     url: string;
     hours: number;
@@ -427,7 +421,7 @@ const styles = StyleSheet.create({
   shareBtnRow: { flexDirection: 'row', gap: T.space.sm },
   filterRow: { gap: T.space.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
-  shareGroupLabel: { fontWeight: '700', textTransform: 'uppercase', marginTop: T.space.sm },
+  shareGroupLabel: { fontWeight: '700', marginTop: T.space.sm },
   scopeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
