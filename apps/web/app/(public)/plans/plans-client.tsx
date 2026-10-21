@@ -1,0 +1,78 @@
+"use client";
+
+// The plans themselves (#305): Free and Family side by side, read from the plan data
+// (plans.features via useCurrentPlan) — no number is typed into this page. Nothing is charged
+// yet and no date is promised anywhere; the waitlist is how interest is measured first.
+import React, { useEffect } from "react";
+import { track, useCurrentPlan, type Plan } from "@vyana/shared";
+import { Card, Pill, SkeletonLine } from "@/components/ui";
+import { Check } from "lucide-react";
+import { WaitlistForm } from "./waitlist-form";
+
+function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
+  return (
+    <Card className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-[20px] font-semibold tracking-tight text-label">{plan.name}</h2>
+        {current && <Pill tone="accent">Your plan</Pill>}
+      </div>
+      <ul className="space-y-2.5">
+        {plan.features.map((f) => (
+          <li key={f} className="flex items-start gap-2 text-[15px] text-label-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden="true" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+export function PlansClient() {
+  const { data, isLoading } = useCurrentPlan();
+
+  useEffect(() => {
+    track("plan_viewed");
+  }, []);
+
+  const plans = data?.plans ?? [];
+  const family = plans.find((p) => p.slug === "family");
+
+  return (
+    <div className="space-y-6">
+      {isLoading || plans.length === 0 ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Loading plans">
+          {[0, 1].map((i) => (
+            <Card key={i} className="space-y-3">
+              <SkeletonLine className="h-6 w-1/3" />
+              <SkeletonLine className="h-4 w-full" />
+              <SkeletonLine className="h-4 w-5/6" />
+              <SkeletonLine className="h-4 w-2/3" />
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {plans.map((p) => (
+            <PlanCard key={p.slug} plan={p} current={data?.current_slug === p.slug} />
+          ))}
+        </div>
+      )}
+
+      <p className="text-[15px] text-label-2">
+        Nothing is charged yet. Family is a plan we are preparing; if enough
+        families ask for it, we will build it. Joining the list is free and
+        promises nothing but one email.
+      </p>
+
+      {family && (
+        <Card className="mx-auto w-full max-w-xl space-y-4">
+          <h2 className="text-[17px] font-semibold text-label">
+            Tell me when Family opens
+          </h2>
+          <WaitlistForm />
+        </Card>
+      )}
+    </div>
+  );
+}

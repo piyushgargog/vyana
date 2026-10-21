@@ -1,0 +1,33 @@
+import React from "react";
+import type { Metadata } from "next";
+import { PublicHeader } from "@/components/public-header";
+import { LargeTitle, SiteFooter } from "@/components/ui";
+import { PlansClient } from "./plans-client";
+
+export const metadata: Metadata = {
+  title: "Plans · Vyana",
+  description:
+    "Vyana is free. See what Free includes and what the Family plan will add, and join the waitlist to hear when Family opens. Nothing is charged yet.",
+};
+
+export default function PlansPage() {
+  return (
+    <div className="flex min-h-screen flex-col bg-canvas text-label">
+      <PublicHeader />
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+        <div className="mb-8">
+          <LargeTitle
+            eyebrow="Plans"
+            title="Free today. Family when families ask for it."
+            subtitle="Vyana is free to use. A Family plan is being prepared for households who look after each other — join the waitlist and we will email you if it opens."
+          />
+        </div>
+
+        <PlansClient />
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}

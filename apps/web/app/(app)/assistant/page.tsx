@@ -9,9 +9,10 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useApi, useChatMessages, useChatSessions, useRefreshChatHistory } from "@vyana/shared";
+import { track, useApi, useChatMessages, useChatSessions, useMyAiUsageToday, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
+  Card,
   EmptyState,
   ErrorState,
   Field,
@@ -92,6 +93,26 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const isStreaming = status === "submitted" || status === "streaming";
 
+  // "AI uses left today" (#305): the count comes from useMyAiUsageToday and the plan limit.
+  const { data: aiUsage } = useMyAiUsageToday();
+  const limitReached = aiUsage !== undefined && aiUsage.used >= aiUsage.limit;
+  const limitTrackedRef = useRef(false);
+  useEffect(() => {
+    if (limitReached && !limitTrackedRef.current) {
+      limitTrackedRef.current = true;
+      track("limit_reached");
+    }
+  }, [limitReached]);
+  const resetText = aiUsage
+    ? new Date(aiUsage.resets_at).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "Asia/Kolkata",
+      })
+    : "";
+
   const newChat = useCallback(() => {
     hydratedSessionRef.current = "new";
     setSessionId(undefined);
@@ -130,9 +151,17 @@ export default function AssistantPage() {
         title="Ask Vyana"
         subtitle="Answers are for information only. Vyana never diagnoses and never prescribes medication."
         actions={
-          <Button variant="secondary" size="sm" onClick={newChat}>
-            New chat
-          </Button>
+          <div className="flex items-center gap-2">
+            {aiUsage && (
+              <Pill tone={limitReached ? "warn" : "neutral"}>
+                AI uses left today: {Math.max(0, aiUsage.limit - aiUsage.used)} of{" "}
+                {aiUsage.limit}
+              </Pill>
+            )}
+            <Button variant="secondary" size="sm" onClick={newChat}>
+              New chat
+            </Button>
+          </div>
         }
       />
 
@@ -173,6 +202,17 @@ export default function AssistantPage() {
         </>
       )}
 
+      {limitReached ? (
+        <Card role="status">
+          <p className="text-[15px] font-medium text-label">
+            You have used today&apos;s AI answers.
+          </p>
+          <p className="mt-1 text-[15px] text-label-2">
+            They come back at {resetText}. Your medicines, reports and records
+            are all still here — only the AI answers pause.
+          </p>
+        </Card>
+      ) : (
       <form onSubmit={handleSubmit} className="sticky bottom-0 bg-canvas pt-3">
         <div className="flex items-end gap-2">
           <div className="min-w-0 flex-1">
@@ -204,6 +244,7 @@ export default function AssistantPage() {
           </Button>
         </div>
       </form>
+      )}
     </div>
   );
 }
