@@ -30,3 +30,4 @@ export type DbChatMessage = Tables<"chat_messages">;
 export type DbEmergencyRequest = Tables<"emergency_requests">;
 export type DbPriceQuote = Tables<"price_quotes">;
 export type DbPushToken = Tables<"push_tokens">;
+export type DbBloodRequest = Tables<"blood_requests">;

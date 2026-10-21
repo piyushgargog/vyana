@@ -14,8 +14,9 @@ export function memoryDb(seed: Record<string, Row[]>) {
   const client = {
     from(name: string) {
       const filters: ((r: Row) => boolean)[] = [];
-      let op: "select" | "delete" | "upsert" = "select";
+      let op: "select" | "delete" | "upsert" | "update" = "select";
       let upserts: Row[] = [];
+      let updates: Row = {};
       let ignoreDuplicates = false;
       let sortBy: { column: string; ascending: boolean } | null = null;
       let max = Infinity;
@@ -28,6 +29,11 @@ export function memoryDb(seed: Record<string, Row[]>) {
           const gone = new Set(table(name).filter((r) => filters.every((f) => f(r))));
           tables[name] = table(name).filter((r) => !gone.has(r));
           return { data: null, error: null };
+        }
+        if (op === "update") {
+          const matched = table(name).filter((r) => filters.every((f) => f(r)));
+          for (const row of matched) Object.assign(row, updates);
+          return { data: matched.map((r) => ({ ...r })), error: null };
         }
         if (op === "upsert") {
           const inserted: Row[] = [];
@@ -60,6 +66,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
         limit: (n: number) => ((max = n), chain),
         range: (from: number, to: number) => ((window = [from, to]), chain),
         delete: () => ((op = "delete"), chain),
+        update: (values: Row) => ((op = "update"), (updates = values), chain),
         upsert: (rows: Row[], opts: { ignoreDuplicates?: boolean }) => ((op = "upsert"), (upserts = rows), (ignoreDuplicates = !!opts.ignoreDuplicates), chain),
         maybeSingle: async () => {
           const res = run();
@@ -68,6 +75,19 @@ export function memoryDb(seed: Record<string, Row[]>) {
         then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => resolve(run() as { data: Row[] | null; error: null }),
       };
       return chain;
+    },
+    // The one stored function the data routes call: bump_share_open (migration 0014) counts an
+    // open of a live link — the same rule is applied to the row here (not revoked, not expired).
+    rpc(fn: string, args: Row) {
+      requests.push({ table: fn, op: "rpc" });
+      if (fn === "bump_share_open") {
+        const row = table("share_links").find((r) => r.token === args.p_token);
+        if (row && !row.revoked && time(row.expires_at) > Date.now()) {
+          row.open_count = (typeof row.open_count === "number" ? row.open_count : 0) + 1;
+          row.last_opened_at = new Date().toISOString();
+        }
+      }
+      return Promise.resolve({ data: null, error: null });
     },
   };
   return { sb: client as unknown as SupabaseClient, tables, requests, table };

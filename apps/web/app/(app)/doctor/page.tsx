@@ -18,7 +18,10 @@ export default function DoctorQueuePage() {
   const { data: profile } = useMyProfile();
   const { data: doctorProfile, isLoading: doctorLoading } = useMyDoctorProfile();
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // The queue day is the DOCTOR's local day. toISOString() is UTC, which in India is
+  // still yesterday until 05:30 — the date defaulted to yesterday every morning (#225).
+  const nowLocal = new Date();
+  const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [statusFilter, setStatusFilter] = useState<"all" | "requested" | "confirmed" | "completed">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,6 +135,7 @@ export default function DoctorQueuePage() {
             <input
               id="queue-date"
               type="date"
+              aria-label="Queue date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 shadow-sm focus:border-teal-600 focus:bg-white focus:outline-none"
