@@ -567,11 +567,11 @@ function DoctorPrescribeContent({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {it.layer && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
                           Layer: {it.layer}
                         </span>
                       )}
-                      <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-white/80">
+                      <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-white/80">
                         {it.severity}
                       </span>
                     </div>
