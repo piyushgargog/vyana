@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- README "Screens" section with the home page at desktop (1366 px) and phone (390 px) sizes in `docs/images/`, plus `docs/images/capture-screens.mjs` — one command that captures the remaining app screens (Today, Ask Vyana, scan result, care plan, interactions, blood, SOS) at both sizes once it is given the demo patient's login, and the checklist every image must pass (demo data only, no keys or server addresses, under 300 KB).
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
 
 ### Changed
