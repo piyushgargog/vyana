@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Building2,
@@ -38,9 +38,23 @@ import {
 export function AppointmentBookForm() {
   const { showToast } = useVyanaWeb();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const initialHospitalId = searchParams.get("hospitalId") ?? "";
   const initialDepartment = searchParams.get("department") ?? "";
+  const initialDepartmentId = searchParams.get("departmentId") ?? "";
+
+  // The hospital and department picks live in the URL (#225): a reload — or a shared
+  // link — restores both, instead of keeping the hospital and losing the department.
+  const persistSelection = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   // 1. Hospitals query
   const {
@@ -70,14 +84,19 @@ export function AppointmentBookForm() {
     [hospitalWithDepts]
   );
 
-  // Auto-match department if routed with `?department=...` query param (e.g. from triage)
+  // Auto-match department if routed with `?departmentId=...` (a saved/shared link) or
+  // `?department=...` by name (e.g. from triage). The id wins when both are present.
   const matchedDeptId = useMemo(() => {
-    if (!initialDepartment || departments.length === 0) return "";
+    if (departments.length === 0) return "";
+    if (initialDepartmentId && departments.some((d) => d.id === initialDepartmentId)) {
+      return initialDepartmentId;
+    }
+    if (!initialDepartment) return "";
     const match = departments.find(
       (d) => d.name.toLowerCase() === initialDepartment.toLowerCase()
     );
     return match?.id || "";
-  }, [initialDepartment, departments]);
+  }, [initialDepartment, initialDepartmentId, departments]);
 
   const [userDeptId, setUserDeptId] = useState<string>("");
   const selectedDeptId = userDeptId || matchedDeptId || departments[0]?.id || "";
@@ -361,6 +380,7 @@ export function AppointmentBookForm() {
                       onClick={() => {
                         setUserHospitalId(h.id);
                         setUserDeptId(""); // Reset user department selection on hospital change
+                        persistSelection({ hospitalId: h.id, departmentId: null, department: null });
                       }}
                       className={cn(
                         "flex w-full min-h-[56px] items-center justify-between rounded-row border p-4 text-left transition-all active:scale-[0.99]",
@@ -412,13 +432,27 @@ export function AppointmentBookForm() {
             <Card className="border border-separator bg-surface">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Pill tone="accent">Live OPD info</Pill>
-                  {opdInfo?.cached && <Pill tone="neutral">Cached</Pill>}
+                  {/* A saved copy is not "live" (#225): say which it is, and when it was saved. */}
+                  <Pill tone="accent">{opdInfo?.cached ? "OPD info" : "Live OPD info"}</Pill>
+                  {opdInfo?.cached && <Pill tone="neutral">Saved copy</Pill>}
                 </div>
                 <span className="text-[15px] text-label-3">
                   Verified OPD registration timings
                 </span>
               </div>
+              {opdInfo?.cached && (
+                <p className="mb-3 text-[13px] text-label-3">
+                  These timings were saved on{" "}
+                  {new Date(opdInfo.fetched_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "Asia/Kolkata",
+                  })}{" "}
+                  and can change — the token availability in Step 3 is counted live for the
+                  date you pick.
+                </p>
+              )}
 
               {infoMutation.isPending ? (
                 <div className="space-y-2 py-1">
@@ -494,7 +528,10 @@ export function AppointmentBookForm() {
                       role="radio"
                       aria-checked={isSelected}
                       aria-label={`Select department ${dept.name}`}
-                      onClick={() => setUserDeptId(dept.id)}
+                      onClick={() => {
+                        setUserDeptId(dept.id);
+                        persistSelection({ departmentId: dept.id, department: null });
+                      }}
                       className={cn(
                         "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-[15px] font-medium transition-all active:scale-[0.97]",
                         isSelected
@@ -565,6 +602,7 @@ export function AppointmentBookForm() {
               id="appointment-date-input"
               label="Custom appointment date"
               type="date"
+              aria-label="Appointment date"
               min={dateDefaults.today}
               value={appointmentDate}
               onChange={(e) => setAppointmentDate(e.target.value)}

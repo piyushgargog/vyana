@@ -634,17 +634,33 @@ export default function PatientDashboardPage() {
                   >
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-label">{plan.condition}</h3>
-                      <Pill tone="ok" className="uppercase text-[15px]">
-                        {cp.status}
+                      {/* Human label, never the raw status enum (#225: "PATIENT_GENERATED"). */}
+                      <Pill tone={cp.status === "approved" ? "ok" : "neutral"}>
+                        {cp.status === "approved"
+                          ? "Approved"
+                          : cp.status === "patient_generated"
+                            ? "Patient added"
+                            : "Draft"}
                       </Pill>
                     </div>
-                    <p className="text-[15px] text-label-2">{plan.summary}</p>
+                    {/* Two plans can share a condition; the start date tells them apart. */}
+                    <p className="text-[13px] text-label-3">
+                      Started{" "}
+                      {new Date(cp.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        timeZone: "Asia/Kolkata",
+                      })}
+                      {cp.reviewed_by ? " · Reviewed by a doctor" : ""}
+                    </p>
+                    <p className="line-clamp-3 text-[15px] text-label-2">{plan.summary}</p>
                     {plan.do && plan.do.length > 0 ? (
                       <div className="rounded-lg bg-surface p-3 text-[15px] text-label-2 space-y-1">
                         <span className="font-semibold text-label block">Key recommendations:</span>
                         <ul className="list-disc pl-4 space-y-0.5 text-[15px] text-label-2">
                           {plan.do.slice(0, 2).map((item, i) => (
-                            <li key={i}>{item}</li>
+                            <li key={i} className="line-clamp-2">{item}</li>
                           ))}
                         </ul>
                       </div>
