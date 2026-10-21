@@ -1319,8 +1319,11 @@ export type Database = {
           created_at: string
           expires_at: string
           kind: string
+          last_opened_at: string | null
+          open_count: number
           patient_id: string
           revoked: boolean
+          scopes: string[]
           token: string
         }
         ComputedFields: never
@@ -1328,16 +1331,22 @@ export type Database = {
           created_at?: string
           expires_at: string
           kind: string
+          last_opened_at?: string | null
+          open_count?: number
           patient_id: string
           revoked?: boolean
+          scopes?: string[]
           token?: string
         }
         Update: {
           created_at?: string
           expires_at?: string
           kind?: string
+          last_opened_at?: string | null
+          open_count?: number
           patient_id?: string
           revoked?: boolean
+          scopes?: string[]
           token?: string
         }
         Relationships: [

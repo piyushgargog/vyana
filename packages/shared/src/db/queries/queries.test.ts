@@ -437,6 +437,19 @@ describe("care plans, caregivers, sharing", () => {
     expect(f.argsOf("select")).toEqual(["token, expires_at"]);
   });
 
+  it("creates a share link with scopes, and the scopes are stored with it", async () => {
+    const f = fakeSupabase({ responses: { share_links: [ok({ token: "tok123", expires_at: "2026-10-13T00:00:00.000Z" })] } });
+    await createShareLink(f.sb, "timeline", 24, "https://vyana.app", ["labs", "adherence"]);
+    const [row] = f.argsOf("insert") as [{ scopes: string[] }];
+    expect(row.scopes).toEqual(["labs", "adherence"]);
+  });
+
+  it("refuses a scope outside the list, before asking the database", async () => {
+    const f = fakeSupabase();
+    await expect(createShareLink(f.sb, "timeline", 24, "https://vyana.app", ["labs", "everything"] as never)).rejects.toMatchObject({ code: "invalid_scopes" });
+    expect(f.argsOf("insert")).toEqual([]);
+  });
+
   it("refuses a share link of no time, of a negative or odd time, or of more than 30 days, before asking the database", async () => {
     const f = fakeSupabase({ responses: { share_links: [ok({ token: "t", expires_at: "x" })] } });
     for (const hours of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 30 * 24 + 1]) {

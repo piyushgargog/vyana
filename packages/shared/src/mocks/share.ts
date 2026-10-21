@@ -21,5 +21,6 @@ export const shareMock: ShareRes = {
     { date: "2026-09-28", kind: "appointment", title: "General Medicine, token 14", summary: null },
     { date: "2022-01-15", kind: "condition", title: "Type 2 Diabetes", summary: null },
   ],
+  memory: null,
   expires_at: "2026-10-13T09:00:00.000Z",
 };

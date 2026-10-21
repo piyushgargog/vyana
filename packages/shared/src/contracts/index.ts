@@ -300,6 +300,47 @@ export const SharedProfile = z.object({
   })),
   emergency_contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
 });
+export const ShareScope = z.enum(["labs", "vitals", "medicines", "adherence"]);
+export const ShareMemory = z.object({
+  labs: z.array(z.object({
+    test_name: z.string(),
+    unit: z.string().nullable(),
+    points: z.array(z.object({
+      date: isoDate,
+      value: z.number().nullable(),
+      value_text: z.string().nullable(),
+      flag: z.enum(["low", "normal", "high", "unknown"]),
+      ref_low: z.number().nullable(),
+      ref_high: z.number().nullable(),
+    })),
+  })).nullable(),                                     // only with the "labs" scope
+  vitals: z.array(z.object({
+    type: z.string(),
+    unit: z.string(),
+    points: z.array(z.object({
+      date: isoDate,
+      value: z.number(),
+      value2: z.number().nullable(),
+    })),
+  })).nullable(),                                     // only with the "vitals" scope
+  medicines: z.array(z.object({
+    name: z.string(),
+    strength: z.string().nullable(),
+    dose: z.string().nullable(),
+    frequency: z.string(),
+    from: isoDate,
+    to: isoDate.nullable(),
+  })).nullable(),                                     // only with the "medicines" scope
+  adherence: z.object({
+    days: z.array(z.object({
+      date: isoDate,
+      taken: z.number().int(),
+      missed: z.number().int(),
+      skipped: z.number().int(),
+    })),
+    percent: z.number().int().nullable(),
+  }).nullable(),                                      // only with the "adherence" scope
+});
 export const ShareRes = z.object({
   kind: z.enum(["medical_id","timeline"]),
   profile: SharedProfile,
@@ -309,6 +350,7 @@ export const ShareRes = z.object({
     title: z.string(),
     summary: z.string().nullable(),
   })).nullable(),                                     // only for kind = "timeline"
+  memory: ShareMemory.nullable(),                     // only for a link created with scopes (issue #237)
   expires_at: z.string(),
 });
 
@@ -363,6 +405,8 @@ export type HospitalInfoRes = z.infer<typeof HospitalInfoRes>;
 export type PmjayHospitalsReq = z.infer<typeof PmjayHospitalsReq>;
 export type PmjayHospitalsRes = z.infer<typeof PmjayHospitalsRes>;
 export type SharedProfile = z.infer<typeof SharedProfile>;
+export type ShareScope = z.infer<typeof ShareScope>;
+export type ShareMemory = z.infer<typeof ShareMemory>;
 export type ShareRes = z.infer<typeof ShareRes>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;

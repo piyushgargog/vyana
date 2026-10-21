@@ -5,6 +5,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- Health Memory Graph data (issue #237): a share link can carry scopes (labs, vitals, medicines, adherence); the shared record then returns a `memory` with only those sections (labs of the last 24 months capped at 24 tests × 24 points, vitals of the last 12 months, medicines over time, adherence of the last 30 days), and every open of a link is counted for the patient (`open_count`, `last_opened_at`, written by the server only). Links without scopes behave exactly as before. The graph page is #238 and the phone side is #239.
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
 
 ### Removed

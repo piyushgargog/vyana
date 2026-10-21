@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(18);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'a@vyana.test', '{"full_name":"Patient A"}'),
@@ -55,6 +55,33 @@ select lives_ok(
 select public.tap_login('10000000-0000-0000-0000-000000000002');
 select is(
   (select count(*)::int from public.share_links), 0, 'another patient sees none of those links');
+
+-- The Health Memory Graph columns (0014, issue #237).
+select public.tap_login('10000000-0000-0000-0000-000000000001');
+select lives_ok(
+  $$ insert into public.share_links (patient_id, kind, expires_at, scopes)
+     values ('10000000-0000-0000-0000-000000000001', 'timeline', now() + interval '5 days', array['labs', 'adherence']) $$,
+  'a link can be created with scopes');
+select is(
+  (select scopes::text || '|' || open_count::text || '|' || coalesce(last_opened_at::text, 'null')
+   from public.share_links where expires_at > now() + interval '4 days' and expires_at < now() + interval '6 days'),
+  '{labs,adherence}|0|null', 'and the scopes are stored, unopened, with no open time');
+select is(
+  (select scopes::text || '|' || open_count::text || '|' || coalesce(last_opened_at::text, 'null')
+   from public.share_links where kind = 'medical_id' and expires_at > now() and expires_at < now() + interval '2 days 1 hour'
+   order by created_at limit 1),
+  '{}|0|null', 'a link without scopes starts with none, unopened (the old behaviour)');
+select throws_ok(
+  $$ insert into public.share_links (patient_id, kind, expires_at, scopes)
+     values ('10000000-0000-0000-0000-000000000001', 'timeline', now() + interval '5 days', array['everything']) $$,
+  '23514', null, 'a scope outside the list is refused');
+select throws_ok(
+  $$ insert into public.share_links (patient_id, kind, expires_at, open_count)
+     values ('10000000-0000-0000-0000-000000000001', 'timeline', now() + interval '5 days', 9) $$,
+  '42501', null, 'a patient cannot set the opened-count when creating a link');
+select throws_ok(
+  $$ update public.share_links set open_count = 99 where kind = 'timeline' $$,
+  '42501', null, 'nor change it later: the counters are the server''s');
 
 reset role;
 select is(
