@@ -287,6 +287,17 @@ describe("runMissedDoseCheck", () => {
     expect(await runMissedDoseCheck(db.sb, send, ist("2026-10-12 10:45"))).toEqual({ checked: 1, alerts_sent: 1 });
   });
 
+  it("does not count an alert nobody received: when every ticket failed the dose is given back and tried again", async () => {
+    const db = world();
+    const refused = vi.fn(async (): Promise<PushResult> => ({ sent: 0, failed: 1, invalidTokens: [] }));
+    expect(await runMissedDoseCheck(db.sb, refused, now)).toEqual({ checked: 1, alerts_sent: 0 });
+    expect(db.table("missed_dose_alerts")).toHaveLength(0);
+
+    const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    expect(await runMissedDoseCheck(db.sb, send, ist("2026-10-12 10:45"))).toEqual({ checked: 1, alerts_sent: 1 });
+    expect(db.table("missed_dose_alerts")).toHaveLength(1);
+  });
+
   it("deletes the tokens that the push service says are dead, and keeps the alert", async () => {
     const db = world({
       push_tokens: [

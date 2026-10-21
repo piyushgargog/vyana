@@ -29,6 +29,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 
 ### Fixed
+- A missed-dose alert that the push service delivered to nobody is no longer counted as sent: the dose is given back and the next run tries again (before, every failed ticket left the alert marked as done and the caregiver was never told).
 - The phone's share link list no longer fails on a link that has no scopes or open count yet (a database that is a step behind the app).
 - Booking flow (issue #223): the hospital list could come back empty on the first visit after signing in and then stay empty until a full reload. The hospitals and departments tables are readable by signed-in users only, so a read that reached the database before the browser client had attached the user's token looked exactly like "no hospitals" — a success with no rows, which the query cache kept. The hospital hooks now wait for the client's own session before reading, and the empty states on the booking page offer a retry instead of a dead end.
 - **Assistant markdown formatting (QA #221):** Chat answers on `/assistant` now render formatted Markdown (bold, italic, inline code, headings, bulleted/numbered lists, and tables) instead of showing raw Markdown syntax.
