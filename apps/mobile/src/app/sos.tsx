@@ -113,7 +113,7 @@ export default function MobileSosScreen() {
           note: 'Emergency SOS triggered from mobile app',
         });
         setRequestId(res.request_id);
-        showToast('Emergency SOS dispatched', 'success');
+        showToast('SOS request saved. Call 108 now.', 'success');
       } catch (err) {
         showToast(
           err instanceof Error ? err.message : 'Could not reach SOS dispatch',
@@ -167,8 +167,6 @@ export default function MobileSosScreen() {
 
   const activeStatus =
     emergencyRequest?.status ?? sosMutation.data?.status ?? 'requested';
-  const etaMinutes =
-    emergencyRequest?.eta_minutes ?? sosMutation.data?.eta_minutes ?? 11;
   const hospitals =
     sosMutation.data?.hospitals ?? nearbyMutation.data?.hospitals ?? [];
 
@@ -271,7 +269,11 @@ export default function MobileSosScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Dial 108 Ambulance"
-              onPress={() => Linking.openURL(`tel:${EMERGENCY.ambulance}`)}
+              onPress={() =>
+                Linking.openURL(`tel:${EMERGENCY.ambulance}`).catch(() =>
+                  showToast('Could not open the dialer. Dial 108 yourself.', 'error')
+                )
+              }
               style={[styles.dialBtn, styles.dialBtn108]}
             >
               <Text variant="largeTitle" tone="white" style={styles.dialNumber}>
@@ -285,7 +287,11 @@ export default function MobileSosScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Dial 112 National Emergency"
-              onPress={() => Linking.openURL(`tel:${EMERGENCY.all}`)}
+              onPress={() =>
+                Linking.openURL(`tel:${EMERGENCY.all}`).catch(() =>
+                  showToast('Could not open the dialer. Dial 112 yourself.', 'error')
+                )
+              }
               style={[styles.dialBtn, styles.dialBtn112]}
             >
               <Text variant="largeTitle" tone="white" style={styles.dialNumber}>
@@ -303,7 +309,7 @@ export default function MobileSosScreen() {
               <View style={styles.dispatchHeader}>
                 <View style={styles.livePulse} />
                 <Text variant="headline" style={styles.dispatchTitle}>
-                  Ambulance Dispatch Status
+                  Your SOS request
                 </Text>
                 <Pill text="SIMULATED" tone="neutral" />
               </View>
@@ -313,10 +319,10 @@ export default function MobileSosScreen() {
                   {activeStatus.toUpperCase()}
                 </Text>
               </Text>
-              <Text variant="headline">Estimated Arrival: ~{etaMinutes} minutes</Text>
+              <Text variant="headline">No ambulance is sent by this app. Call 108 now.</Text>
               <Text variant="footnote" tone="tertiary" style={styles.italic}>
-                * Labelled simulated ambulance tracking for demonstration
-                purposes.
+                * The status above is a demonstration. Vyana saves your request and shows nearby hospitals; it does not
+                send or track an ambulance.
               </Text>
             </Card>
           )}

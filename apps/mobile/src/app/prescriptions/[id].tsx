@@ -326,9 +326,11 @@ export default function PrescriptionDetailScreen() {
                     : styles.refillOkText,
                 ]}
               >
-                {refill.needsRefillSoon
-                  ? `⚠ Refill Due: ~${refill.daysLeft} days remaining`
-                  : `Refill: ~${refill.daysLeft} days remaining`}
+                {refill.daysLeft == null
+                  ? 'Refill: days left not known'
+                  : refill.needsRefillSoon
+                    ? `⚠ Refill Due: ~${refill.daysLeft} days remaining`
+                    : `Refill: ~${refill.daysLeft} days remaining`}
               </Text>
               <Pressable
                 accessibilityRole="button"
