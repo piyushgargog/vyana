@@ -49,7 +49,12 @@ export default function AssistantPage() {
         fetch: async (input, init) => {
           const res = await fetch(input, init);
           const next = res.headers.get("x-session-id");
-          if (next && next !== sessionId) setSessionId(next);
+          if (next && next !== sessionId) {
+            // The live messages are newer than the saved ones (the reply is saved when the stream ends), so a new
+            // session must not be hydrated from the database over them.
+            hydratedSessionRef.current = next;
+            setSessionId(next);
+          }
           return res;
         },
       }),
