@@ -23,14 +23,6 @@ export { FADE_MS, FLAG, SHOW_MS, WELCOME_STRINGS };
 /** Shown once per app launch, not every time the root layout renders again. */
 let shownThisLaunch = false;
 
-export function resetShownThisLaunchForTest() {
-  shownThisLaunch = false;
-}
-
-export function hasShownThisLaunch() {
-  return shownThisLaunch;
-}
-
 /**
  * The national flag, drawn with views (no emoji, no image). These are the flag's official colours, so they are
  * not design tokens: saffron, white, green and the navy blue of the Ashoka Chakra with its 24 spokes.
