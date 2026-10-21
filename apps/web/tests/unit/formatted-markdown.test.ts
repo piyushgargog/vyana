@@ -130,4 +130,58 @@ Follow these steps.
     expect(children[0].props.role).toBe("heading");
     expect(children[1].type).toBe("p");
   });
+
+  it("handles empty or whitespace-only markdown gracefully", () => {
+    for (const emptyText of ["", "   ", "\n\n", " \t \n \r "]) {
+      const element = FormattedMarkdown({ text: emptyText });
+      expect(React.isValidElement(element)).toBe(true);
+      expect(element.props.children).toHaveLength(0);
+    }
+  });
+
+  it("handles malformed markdown without crashing", () => {
+    // Malformed table without delimiter row falls back to paragraph
+    const badTable = "| Column 1 | Column 2 |\nNot a delimiter\n| Row 1 | Row 2 |";
+    const elTable = FormattedMarkdown({ text: badTable });
+    expect(React.isValidElement(elTable)).toBe(true);
+    expect(JSON.stringify(elTable)).not.toContain("<table");
+
+    // Uneven cells in table rows
+    const unevenTable = `
+| Test | Normal Range | Notes |
+| --- | --- | --- |
+| HbA1c | < 5.7% |
+| Fasting Glucose | 70-99 mg/dL | Fasting 8-12h required | Normal |
+`.trim();
+    const elUneven = FormattedMarkdown({ text: unevenTable });
+    expect(React.isValidElement(elUneven)).toBe(true);
+    expect(JSON.stringify(elUneven)).toContain('"type":"table"');
+
+    // Incomplete or trailing markdown tokens
+    const halfTokens = "# \n**\n__\n`\n* \n- ";
+    const elTokens = FormattedMarkdown({ text: halfTokens });
+    expect(React.isValidElement(elTokens)).toBe(true);
+  });
+
+  it("renders formatting nested within list items and tables", () => {
+    const richMd = `
+| Nutrient | **Daily Goal** |
+| --- | --- |
+| Protein | \`60g\` |
+
+* Focus on **complex carbohydrates**
+* Avoid \`trans-fats\` and *added sugars*
+`.trim();
+
+    const element = FormattedMarkdown({ text: richMd });
+    const children = element.props.children;
+    expect(children).toHaveLength(2); // Table and List
+    expect(children[0].props.children.type).toBe("table");
+    expect(children[1].type).toBe("ul");
+
+    const json = JSON.stringify(element);
+    expect(json).toContain('"type":"strong"');
+    expect(json).toContain('"type":"code"');
+    expect(json).toContain('"type":"em"');
+  });
 });
