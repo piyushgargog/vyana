@@ -190,9 +190,6 @@ export default function PrivacyPolicyPage() {
                     <li>
                       <strong>Resend:</strong> account emails.
                     </li>
-                    <li>
-                      <strong>TinyFish:</strong> searches public web pages only (pharmacies, hospitals, the NMC register) and never receives your health data.
-                    </li>
                   </ul>
                 </div>
               </section>

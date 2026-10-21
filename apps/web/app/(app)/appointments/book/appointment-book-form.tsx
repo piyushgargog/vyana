@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -12,7 +12,6 @@ import {
 import {
   useBookAppointment,
   useHospital,
-  useHospitalInfo,
   useHospitals,
   useTokensLeft,
   type DbAppointment,
@@ -104,20 +103,7 @@ export function AppointmentBookForm() {
     [departments, selectedDeptId]
   );
 
-  // 3. Live OPD timings lookup via TinyFish (useHospitalInfo)
-  const infoMutation = useHospitalInfo();
-  const lastFetchedHospitalRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (selectedHospitalId && lastFetchedHospitalRef.current !== selectedHospitalId) {
-      lastFetchedHospitalRef.current = selectedHospitalId;
-      infoMutation.mutate({ hospital_id: selectedHospitalId });
-    }
-  }, [selectedHospitalId, infoMutation]);
-
-  const opdInfo = infoMutation.data;
-
-  // 4. Appointment date state
+  // 3. Appointment date state
   const [dateDefaults] = useState(() => {
     const iso = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -431,62 +417,36 @@ export function AppointmentBookForm() {
             )}
           </Card>
 
-          {/* OPD Timings (Live lookup via TinyFish) */}
-          {selectedHospitalId && (
+          {/* The hospital's saved record (W3): no live lookup any more. */}
+          {selectedHospital && (
             <Card className="border border-separator bg-surface">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {/* A saved copy is not "live" (#225): say which it is, and when it was saved. */}
-                  <Pill tone="accent">{opdInfo?.cached ? "OPD info" : "Live OPD info"}</Pill>
-                  {opdInfo?.cached && <Pill tone="neutral">Saved copy</Pill>}
-                </div>
-                <span className="text-[15px] text-label-3">
-                  Verified OPD registration timings
-                </span>
-              </div>
-              {opdInfo?.cached && (
-                <p className="mb-3 text-[13px] text-label-3">
-                  These timings were saved on{" "}
-                  {new Date(opdInfo.fetched_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    timeZone: "Asia/Kolkata",
-                  })}{" "}
-                  and can change — the token availability in Step 3 is counted live for the
-                  date you pick.
+              <CardHeader title="Hospital" />
+              <p className="text-[17px] font-semibold text-label">
+                {selectedHospital.name}
+              </p>
+              <p className="mt-1 text-[15px] text-label-2">
+                {[selectedHospital.address, selectedHospital.city]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+              {selectedHospital.phone ? (
+                <p className="mt-1 text-[15px] text-label-2">
+                  Phone: {selectedHospital.phone}
                 </p>
-              )}
-
-              {infoMutation.isPending ? (
-                <div className="space-y-2 py-1">
-                  <SkeletonLine className="h-4 w-3/4" />
-                  <SkeletonLine className="h-4 w-1/2" />
-                </div>
-              ) : opdInfo && opdInfo.opd.length > 0 ? (
-                <div className="space-y-1.5 divide-y divide-separator/50 text-[15px]">
-                  {opdInfo.opd.map((slot, idx) => (
-                    <div
-                      key={idx}
-                      className="flex flex-wrap items-baseline justify-between gap-2 pt-1.5 first:pt-0"
-                    >
-                      <span className="font-semibold text-label">
-                        {slot.department}
-                      </span>
-                      <span className="text-label-2">
-                        {slot.days} ({slot.timings})
-                      </span>
-                    </div>
-                  ))}
-                  {opdInfo.notes && (
-                    <p className="pt-2 text-[15px] text-label-3">
-                      Note: {opdInfo.notes}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[15px] text-label-3">Not found</p>
-              )}
+              ) : null}
+              {selectedHospital.website ? (
+                <ButtonLink
+                  href={selectedHospital.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="secondary"
+                  size="md"
+                  className="mt-3 min-h-[44px]"
+                  aria-label={`Open the website of ${selectedHospital.name}`}
+                >
+                  Hospital website
+                </ButtonLink>
+              ) : null}
             </Card>
           )}
 
