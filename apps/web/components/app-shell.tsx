@@ -12,7 +12,7 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
 import { BrandMark, cn, SegmentedNav, SiteFooter } from "@/components/ui";
-import { BadgeCheck, CalendarCheck, FlaskConical, House, LogOut, Pill, ShieldCheck, ShoppingBasket, Stethoscope, UserRound, Users } from "lucide-react";
+import { BadgeCheck, CalendarDays, FlaskConical, House, LogOut, MessageCircleQuestion, Pill, ShieldCheck, ShoppingBasket, Stethoscope, UserRound, Users } from "lucide-react";
 
 function AppShellContent({
   children,
@@ -127,12 +127,14 @@ function AppShellContent({
             { href: "/consent", label: "Privacy", icon: ShieldCheck },
           ]
         : [
+            // The first five are also the phone's tab bar: keep the most used ones there. Privacy is on the dashboard and in the footer.
             { href: "/dashboard", label: "Dashboard", icon: House },
+            { href: "/assistant", label: "Ask Vyana", icon: MessageCircleQuestion },
             { href: "/prescriptions/scan", label: "Prescriptions", icon: Pill },
-            { href: "/reports/upload", label: "Lab reports", icon: FlaskConical },
             { href: "/basket", label: "Medicine prices", icon: ShoppingBasket },
-            { href: "/onboarding", label: "Health profile", icon: CalendarCheck },
-            { href: "/consent", label: "Privacy", icon: ShieldCheck },
+            { href: "/appointments", label: "Appointments", icon: CalendarDays },
+            { href: "/reports/upload", label: "Lab reports", icon: FlaskConical },
+            { href: "/onboarding", label: "Health profile", icon: UserRound },
           ];
 
   const isActive = (href: string) => {
@@ -189,7 +191,7 @@ function AppShellContent({
 
       {/* Phone: a floating glass tab bar, like iOS 26. */}
       <nav aria-label="Workspace" data-tabbar className="glass fixed inset-x-4 bottom-4 z-30 flex items-center justify-around rounded-full px-2 py-1.5 md:hidden">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <Link
