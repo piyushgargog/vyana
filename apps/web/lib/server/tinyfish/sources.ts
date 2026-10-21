@@ -99,19 +99,3 @@ export const LABS: readonly LabSource[] = [
   { source: "thyrocare", name: "Thyrocare", domain: "thyrocare.com", homeUrl: "https://www.thyrocare.com/" },
   { source: "1mg_labs", name: "Tata 1mg Labs", domain: "1mg.com", homeUrl: "https://www.1mg.com/labs" },
 ];
-
-/** RapidBlood (v1.1.0): the public stock page of e-RaktKosh (NHM / C-DAC). Probed 21 Oct 2026: no login, no CAPTCHA, rows carry units and an "updated" time. */
-export const BLOOD_SOURCE = { name: "e-RaktKosh", domain: "mohfw.gov.in", startUrl: "https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/stockAvailability.cnt" } as const;
-
-/** Cities next to a big city, searched as well (an attendant will travel). Only pairs that are certainly adjacent. */
-const NEARBY_CITIES: Record<string, string[]> = {
-  delhi: ["Gurugram", "Noida", "Ghaziabad"],
-  "new delhi": ["Gurugram", "Noida", "Ghaziabad"],
-  mumbai: ["Thane", "Navi Mumbai"],
-  kolkata: ["Howrah"],
-  pune: ["Pimpri-Chinchwad"],
-  hyderabad: ["Secunderabad"],
-};
-
-/** The searched city first, then up to three nearby cities: one agent each. */
-export const bloodAreas = (city: string): string[] => [city, ...(NEARBY_CITIES[city.trim().toLowerCase()] ?? [])].slice(0, 4);
