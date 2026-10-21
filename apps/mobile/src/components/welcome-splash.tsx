@@ -10,10 +10,15 @@ import {
 } from 'react-native';
 import { Text } from '@/components/ui';
 import { T } from '@/constants/theme';
+import {
+  FADE_MS,
+  FLAG,
+  getFlagDimensions,
+  SHOW_MS,
+  WELCOME_STRINGS,
+} from './welcome-splash.constants';
 
-/** How long the welcome screen stays, and how long it takes to fade away. */
-export const SHOW_MS = 3000;
-export const FADE_MS = 350;
+export { FADE_MS, FLAG, SHOW_MS, WELCOME_STRINGS };
 
 /** Shown once per app launch, not every time the root layout renders again. */
 let shownThisLaunch = false;
@@ -30,12 +35,8 @@ export function hasShownThisLaunch() {
  * The national flag, drawn with views (no emoji, no image). These are the flag's official colours, so they are
  * not design tokens: saffron, white, green and the navy blue of the Ashoka Chakra with its 24 spokes.
  */
-export const FLAG = { saffron: '#FF9933', white: '#FFFFFF', green: '#138808', chakra: '#000080' } as const;
-
 export function IndiaFlag({ width = 32 }: { width?: number }) {
-  const height = Math.round((width * 2) / 3);
-  const stripe = height / 3;
-  const chakra = Math.round(stripe * 0.85);
+  const { height, stripe, chakra, spokes, chakraCenter } = getFlagDimensions(width);
   return (
     <View
       accessible
@@ -54,20 +55,20 @@ export function IndiaFlag({ width = 32 }: { width?: number }) {
             width: chakra,
             height: chakra,
             borderRadius: chakra / 2,
-            top: (height - chakra) / 2,
-            left: (width - chakra) / 2,
+            top: chakraCenter.top,
+            left: chakraCenter.left,
           },
         ]}
       >
-        {Array.from({ length: 12 }, (_, i) => (
+        {spokes.map((deg) => (
           <View
-            key={i}
+            key={deg}
             style={{
               position: 'absolute',
               width: StyleSheet.hairlineWidth * 2,
               height: chakra,
               backgroundColor: FLAG.chakra,
-              transform: [{ rotate: `${i * 15}deg` }],
+              transform: [{ rotate: `${deg}deg` }],
             }}
           />
         ))}
@@ -150,7 +151,7 @@ export function WelcomeSplash() {
     <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Vyana. Your health, in one calm place. Made with love in India. Tap anywhere to skip."
+        accessibilityLabel={WELCOME_STRINGS.accessibilityLabel}
         onPress={close}
         style={styles.fill}
       >
@@ -178,17 +179,17 @@ export function WelcomeSplash() {
             </View>
 
             <Text variant="largeTitle" style={styles.name}>
-              Vyana
+              {WELCOME_STRINGS.title}
             </Text>
 
             <Text variant="body" tone="secondary" style={styles.tagline}>
-              Your health, in one calm place.
+              {WELCOME_STRINGS.tagline}
             </Text>
 
             {/* Subtle interactive affordance */}
             <View style={styles.skipBadge}>
               <Text variant="caption" tone="secondary" style={styles.skipText}>
-                Tap anywhere to skip
+                {WELCOME_STRINGS.tapToSkip}
               </Text>
             </View>
           </Animated.View>
@@ -199,7 +200,7 @@ export function WelcomeSplash() {
           <View style={styles.footerPill}>
             <IndiaFlag width={26} />
             <Text variant="subhead" tone="secondary" style={styles.footerText}>
-              Made with love in India
+              {WELCOME_STRINGS.madeInIndia}
             </Text>
           </View>
         </Animated.View>
