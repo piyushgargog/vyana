@@ -378,6 +378,29 @@ export default function MobileSosScreen() {
         />
       </Pressable>
 
+      {/* Find blood (RapidBlood, issue #236): bank search + request tracker */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Find blood banks and track a blood request"
+        onPress={() => router.push('/blood')}
+        style={styles.bloodCard}
+      >
+        <IconTile ios="drop.fill" android="water_drop" color="red" />
+        <View style={styles.medicalIdText}>
+          <Text variant="headline">Find blood</Text>
+          <Text variant="footnote" tone="secondary">
+            Blood banks that list stock for your group, and a tracker for the
+            request
+          </Text>
+        </View>
+        <Symbol
+          ios="chevron.right"
+          android="chevron_right"
+          size={18}
+          color={T.color.label3}
+        />
+      </Pressable>
+
       {/* Send GPS SMS to Emergency Contacts */}
       <ListGroup
         header="Emergency Contacts & GPS SMS"
@@ -615,6 +638,17 @@ const styles = StyleSheet.create({
     ...T.shadow.accent,
   },
   medicalIdText: { flex: 1, gap: 2 },
+  bloodCard: {
+    backgroundColor: T.color.surface,
+    borderWidth: 1,
+    borderColor: T.color.separator,
+    borderRadius: T.radius.card,
+    borderCurve: 'continuous',
+    padding: T.space.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.space.md,
+  },
   smsBtn: { minHeight: 44 },
   actionBtn: { minHeight: 44 },
   smallBtn: { minHeight: 44 },

@@ -201,6 +201,12 @@ export default function MobileProfileTab() {
           onPress={() => router.push('/medical-id')}
         />
         <ListRow
+          icon={<IconTile ios="drop.fill" android="water_drop" color="red" />}
+          title="Find blood"
+          subtitle="Blood banks that list stock, and your requests"
+          onPress={() => router.push('/blood')}
+        />
+        <ListRow
           icon={<IconTile ios="person.2.fill" android="group" color="green" />}
           title="Caregiver circle"
           subtitle="People who can help with your care"

@@ -96,6 +96,12 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="blood"
+          options={{
+            title: 'Find Blood · Vyana',
+          }}
+        />
+        <Stack.Screen
           name="triage"
           options={{
             title: 'Symptom Triage',
