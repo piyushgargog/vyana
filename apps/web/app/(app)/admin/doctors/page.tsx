@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  useHospitalInfo,
   useHospitals,
   useMyProfile,
   type DbDoctor,
@@ -11,6 +10,7 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import {
   Button,
+  ButtonLink,
   Card,
   CardHeader,
   EmptyState,
@@ -19,9 +19,25 @@ import {
   Pill,
   Sheet,
   SkeletonLine,
+  TextAreaField,
   cn,
 } from "@/components/ui";
-import { Loader2, Search } from "lucide-react";
+import { ExternalLink, Search } from "lucide-react";
+
+/** Where the admin checks a registration by hand: the public Indian Medical Register. */
+const NMC_REGISTER_URL =
+  "https://www.nmc.org.in/information-desk/indian-medical-register/";
+
+/** The badge words (W3): a doctor is checked by an admin, on a date — or not checked yet. */
+function doctorStatusText(doc: DbDoctor): string {
+  if (doc.verification_status === "verified") {
+    return doc.verified_at
+      ? `Checked by Vyana admin on ${doc.verified_at.slice(0, 10)}`
+      : "Checked by Vyana admin";
+  }
+  if (doc.verification_status === "failed") return "Not approved";
+  return "Not checked yet";
+}
 
 interface DoctorWithRelations extends DbDoctor {
   profile: { full_name: string | null } | null;
@@ -84,34 +100,78 @@ export default function AdminDoctorsPage() {
     data: hospitals,
     isLoading: hospitalsLoading,
     error: hospitalsError,
-    refetch: refetchHospitals,
   } = useHospitals();
 
-  // Mutation to verify hospital OPD info via TinyFish
-  const hospitalInfoMutation = useHospitalInfo();
-  const [verifyingHospitalId, setVerifyingHospitalId] = useState<string | null>(null);
+  // The manual doctor check (W3): the admin opens the register, compares the entry by hand,
+  // then records what they found. The server side of POST /api/doctors/verify for an admin
+  // entry lands in PR S; until then the form posts the fields below and shows the answer.
+  const [checkDoctor, setCheckDoctor] = useState<DoctorWithRelations | null>(null);
+  const [checkRegNo, setCheckRegNo] = useState("");
+  const [checkCouncil, setCheckCouncil] = useState("");
+  const [checkYear, setCheckYear] = useState("");
+  const [checkNote, setCheckNote] = useState("");
+  const [checkBusy, setCheckBusy] = useState(false);
 
-  // Trigger TinyFish Hospital OPD verification
-  const handleVerifyHospitalOpd = async (hospitalId: string) => {
+  const openCheck = (doc: DoctorWithRelations) => {
+    setCheckDoctor(doc);
+    setCheckRegNo(doc.reg_no);
+    setCheckCouncil(doc.state_council);
+    setCheckYear(doc.year_of_registration ? String(doc.year_of_registration) : "");
+    setCheckNote("");
+  };
+
+  const submitCheck = async (decision: "approve" | "reject") => {
+    if (!checkDoctor || checkBusy) return;
+    if (!checkRegNo.trim() || !checkCouncil.trim()) {
+      showToast("Enter the registration number and the state council as found", "warning");
+      return;
+    }
+    setCheckBusy(true);
     try {
-      setVerifyingHospitalId(hospitalId);
-      await hospitalInfoMutation.mutateAsync({
-        hospital_id: hospitalId,
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await fetch("/api/doctors/verify", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          doctor_id: checkDoctor.id,
+          decision,
+          reg_no: checkRegNo.trim(),
+          state_council: checkCouncil.trim(),
+          year: checkYear.trim() ? Number(checkYear.trim()) : null,
+          note: checkNote.trim(),
+        }),
       });
+      if (!res.ok) throw new Error(`The server answered ${res.status}`);
+      const now = new Date().toISOString();
+      setDoctors((prev) =>
+        prev.map((d) =>
+          d.id === checkDoctor.id
+            ? {
+                ...d,
+                verification_status: decision === "approve" ? "verified" : "failed",
+                verified_at: now,
+              }
+            : d
+        )
+      );
       showToast(
-        "Hospital OPD timings verified and updated via TinyFish.",
+        decision === "approve"
+          ? "Doctor approved — checked by hand against the register"
+          : "Doctor rejected — the register entry did not match",
         "success"
       );
-      await refetchHospitals();
+      setCheckDoctor(null);
     } catch (err) {
       showToast(
-        err instanceof Error
-          ? err.message
-          : "Could not fetch verified hospital OPD timings",
+        err instanceof Error ? err.message : "Could not save the check",
         "error"
       );
     } finally {
-      setVerifyingHospitalId(null);
+      setCheckBusy(false);
     }
   };
 
@@ -137,7 +197,7 @@ export default function AdminDoctorsPage() {
       <LargeTitle
         eyebrow="Administration"
         title="Doctors & Hospitals Registry"
-        subtitle="Administrative oversight of verified medical practitioners and verified hospital OPD timings."
+        subtitle="Administrative oversight of medical practitioners and the hospital records Vyana keeps. Doctor registration is checked by hand against the NMC register."
         actions={
           <Pill tone="neutral">
             Admin: {myProfile?.full_name || "Administrator"}
@@ -169,7 +229,7 @@ export default function AdminDoctorsPage() {
               : "text-label-2 hover:text-label"
           )}
         >
-          Hospital OPD Timings ({hospitals?.length ?? 0})
+          Hospitals ({hospitals?.length ?? 0})
         </button>
       </div>
 
@@ -274,11 +334,18 @@ export default function AdminDoctorsPage() {
                           <Pill
                             tone={isVerified ? "ok" : isFailed ? "danger" : "warn"}
                           >
-                            {doc.verification_status}
+                            {doctorStatusText(doc)}
                           </Pill>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openCheck(doc)}
+                            >
+                              Check by hand
+                            </Button>
                             {doc.verification_json && (
                               <Button
                                 variant="secondary"
@@ -300,20 +367,15 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
-      {/* TAB 2: HOSPITALS & VERIFIED OPD HOURS */}
+      {/* TAB 2: HOSPITALS & SAVED OPD HOURS */}
       {activeTab === "hospitals" && (
         <div className="space-y-4">
           <Card>
-            <CardHeader
-              title="Hospital OPD Operating Hours & Verification"
-              trailing={
-                <span className="text-[13px] text-label-3">
-                  Autonomous Web Query
-                </span>
-              }
-            />
+            <CardHeader title="Hospitals & saved OPD hours" />
             <p className="text-[15px] text-label-2">
-              Verified hospital hours sourced directly via TinyFish autonomous web agents.
+              The hospital records and OPD hours Vyana has saved. Nothing here
+              is fetched live; the team updates a record by hand when it
+              changes.
             </p>
           </Card>
 
@@ -347,8 +409,7 @@ export default function AdminDoctorsPage() {
                   : Array.isArray(opdInfo)
                     ? (opdInfo as Array<{ department?: string; days?: string; timings?: string }>)
                     : [];
-                const isVerifying = verifyingHospitalId === hosp.id;
-                const isVerified = opdList.length > 0;
+                const hasOpd = opdList.length > 0;
 
                 return (
                   <Card key={hosp.id} className="space-y-4">
@@ -358,8 +419,8 @@ export default function AdminDoctorsPage() {
                           <h3 className="text-[17px] font-semibold text-label">
                             {hosp.name}
                           </h3>
-                          <Pill tone={isVerified ? "ok" : "warn"}>
-                            {isVerified ? "Verified OPD Hours" : "Unverified / Pending"}
+                          <Pill tone={hasOpd ? "neutral" : "warn"}>
+                            {hasOpd ? "OPD hours saved" : "No OPD hours saved"}
                           </Pill>
                           {hosp.ors_enabled && (
                             <Pill tone="accent">ORS Enabled</Pill>
@@ -370,29 +431,13 @@ export default function AdminDoctorsPage() {
                           {hosp.phone ? ` · Phone: ${hosp.phone}` : ""}
                         </p>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={isVerifying}
-                          onClick={() => handleVerifyHospitalOpd(hosp.id)}
-                          icon={
-                            isVerifying ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                            ) : undefined
-                          }
-                        >
-                          {isVerifying ? "Verifying with TinyFish…" : "Refresh / Verify OPD"}
-                        </Button>
-                      </div>
                     </div>
 
-                    {/* Verified OPD Timings Details */}
+                    {/* Saved OPD timings */}
                     {opdList.length > 0 ? (
                       <div>
                         <span className="block text-[13px] font-semibold text-label mb-2">
-                          Verified Department OPD Schedules:
+                          Saved department OPD schedules:
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           {opdList.map((entry: { department?: string; days?: string; timings?: string }, i: number) => (
@@ -415,13 +460,13 @@ export default function AdminDoctorsPage() {
 
                         {hosp.opd_info_fetched_at && (
                           <p className="mt-2 text-[12px] text-label-3">
-                            Last verified on: {hosp.opd_info_fetched_at.slice(0, 16).replace("T", " ")}
+                            Saved on: {hosp.opd_info_fetched_at.slice(0, 16).replace("T", " ")}
                           </p>
                         )}
                       </div>
                     ) : (
                       <div className="rounded-row bg-warn-soft p-3 text-[13px] text-warn">
-                        No verified OPD hours on record for this hospital yet. Click &quot;Refresh / Verify OPD&quot; to query the official hospital directory via TinyFish.
+                        No OPD hours saved for this hospital yet.
                       </div>
                     )}
                   </Card>
@@ -432,11 +477,95 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
+      {/* Manual doctor check */}
+      <Sheet
+        open={Boolean(checkDoctor)}
+        onClose={() => setCheckDoctor(null)}
+        title={`Check by hand — ${checkDoctor?.profile?.full_name || "Doctor"}`}
+        footer={
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              disabled={checkBusy}
+              onClick={() => submitCheck("approve")}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="destructive"
+              size="md"
+              className="w-full"
+              disabled={checkBusy}
+              onClick={() => submitCheck("reject")}
+            >
+              Reject
+            </Button>
+          </div>
+        }
+      >
+        {checkDoctor && (
+          <div className="space-y-4">
+            <p className="text-[15px] text-label-2">
+              Open the register, find the entry for{" "}
+              <strong className="text-label">{checkDoctor.profile?.full_name || "this doctor"}</strong>,
+              and type what it says. The doctor claimed: Reg No{" "}
+              <strong className="text-label">{checkDoctor.reg_no}</strong> ·{" "}
+              {checkDoctor.state_council}
+              {checkDoctor.year_of_registration
+                ? ` · ${checkDoctor.year_of_registration}`
+                : ""}
+              .
+            </p>
+            <ButtonLink
+              href={NMC_REGISTER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="secondary"
+              size="md"
+              className="min-h-[44px] w-full"
+              icon={<ExternalLink className="h-4 w-4" aria-hidden="true" />}
+            >
+              Open the NMC register
+            </ButtonLink>
+            <Field
+              id="check-reg-no"
+              label="Registration number, as found"
+              value={checkRegNo}
+              onChange={(e) => setCheckRegNo(e.target.value)}
+              required
+            />
+            <Field
+              id="check-council"
+              label="State council, as found"
+              value={checkCouncil}
+              onChange={(e) => setCheckCouncil(e.target.value)}
+              required
+            />
+            <Field
+              id="check-year"
+              label="Year of registration, as found"
+              type="number"
+              value={checkYear}
+              onChange={(e) => setCheckYear(e.target.value)}
+            />
+            <TextAreaField
+              id="check-note"
+              label="Note (optional)"
+              value={checkNote}
+              onChange={(e) => setCheckNote(e.target.value)}
+              placeholder="What the register showed, in a line"
+            />
+          </div>
+        )}
+      </Sheet>
+
       {/* Verification Evidence Inspector Sheet */}
       <Sheet
         open={Boolean(selectedDoctorForJson)}
         onClose={() => setSelectedDoctorForJson(null)}
-        title={`NMC Verification Evidence — ${selectedDoctorForJson?.profile?.full_name || "Doctor"}`}
+        title={`Check record — ${selectedDoctorForJson?.profile?.full_name || "Doctor"}`}
         footer={
           <div className="flex justify-end">
             <Button
@@ -458,7 +587,7 @@ export default function AdminDoctorsPage() {
 
             <div>
               <span className="block text-[13px] font-semibold text-label mb-1.5">
-                Server Registry Evidence Log (`verification_json`):
+                Record of the check (`verification_json`):
               </span>
               <pre className="max-h-72 overflow-y-auto rounded-row bg-fill p-3 text-[12px] font-mono text-label">
                 {JSON.stringify(selectedDoctorForJson.verification_json, null, 2)}

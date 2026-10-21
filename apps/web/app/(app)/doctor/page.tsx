@@ -109,14 +109,17 @@ export default function DoctorQueuePage() {
               </h1>
               {doctorProfile?.verification_status === "verified" ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200">
-                  <span className="h-2 w-2 rounded-full bg-emerald-600" /> Verified Doctor
+                  <span className="h-2 w-2 rounded-full bg-emerald-600" /> Checked by Vyana admin
+                  {doctorProfile?.verified_at
+                    ? ` on ${doctorProfile.verified_at.slice(0, 10)}`
+                    : ""}
                 </span>
               ) : (
                 <Link
                   href="/doctor/verify"
                   className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200 hover:bg-amber-100"
                 >
-                  <span className="h-2 w-2 rounded-full bg-amber-600" /> NMC Verify Pending
+                  <span className="h-2 w-2 rounded-full bg-amber-600" /> Not checked yet
                 </Link>
               )}
             </div>

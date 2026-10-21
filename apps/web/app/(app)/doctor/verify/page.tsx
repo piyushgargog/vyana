@@ -171,18 +171,18 @@ export default function DoctorVerifyPage() {
               </span>
               <div>
                 <h3 className="text-[17px] font-semibold text-label">
-                  Verified Registered Medical Practitioner
+                  Checked by Vyana admin
                 </h3>
                 <p className="text-[13px] text-label-2">
                   Reg No: <strong className="text-label">{doctorProfile?.reg_no}</strong> ·{" "}
                   {doctorProfile?.state_council}
                   {doctorProfile?.verified_at &&
-                    ` (Verified on ${doctorProfile.verified_at.slice(0, 10)})`}
+                    ` (Checked by Vyana admin on ${doctorProfile.verified_at.slice(0, 10)})`}
                 </p>
               </div>
             </div>
             <Pill tone="ok" className="self-start sm:self-auto">
-              Verified
+              Checked
             </Pill>
           </div>
         ) : isFailed ? (
@@ -191,11 +191,11 @@ export default function DoctorVerifyPage() {
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-danger-text shrink-0" aria-hidden="true" />
                 <h3 className="text-[17px] font-semibold text-danger-text">
-                  Verification Unsuccessful
+                  Registration not confirmed
                 </h3>
               </div>
               <p className="text-[13px] text-label-2">
-                The National Medical Commission registry did not confirm credentials matching this registration number.
+                The admin check against the register did not confirm credentials matching this registration number.
               </p>
               {doctorProfile?.verification_json && (
                 <pre className="mt-3 max-h-48 overflow-x-auto rounded-row bg-fill p-3 text-[11px] font-mono text-label">
@@ -204,7 +204,7 @@ export default function DoctorVerifyPage() {
               )}
             </div>
             <Pill tone="danger" className="self-start sm:self-auto">
-              Failed
+              Not approved
             </Pill>
           </div>
         ) : (
@@ -213,15 +213,15 @@ export default function DoctorVerifyPage() {
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-warn shrink-0" aria-hidden="true" />
                 <h3 className="text-[17px] font-semibold text-warn">
-                  Verification Pending
+                  Not checked yet
                 </h3>
               </div>
               <p className="mt-1 text-[13px] text-label-2">
-                Your medical registration has not been verified yet. Run the automated check below to verify with the national register.
+                Your medical registration has not been checked yet. An admin checks it by hand against the register — the details you submit below are what they compare.
               </p>
             </div>
             <Pill tone="warn" className="self-start sm:self-auto">
-              Pending
+              Not checked yet
             </Pill>
           </div>
         )}
