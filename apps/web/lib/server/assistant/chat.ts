@@ -67,7 +67,7 @@ export function historyFrom(messages: ChatBody["messages"]): Turn[] {
   return fitHistory(turns);
 }
 
-/** The newest turns that fit `HISTORY_CHARS` (the last question is always kept), starting with a user turn. */
+/** The newest turns that fit `HISTORY_CHARS` (the last question is always kept); a history that had to be cut starts with a user turn again. */
 export function fitHistory(turns: Turn[]): Turn[] {
   let total = 0;
   const kept: Turn[] = [];
@@ -76,7 +76,7 @@ export function fitHistory(turns: Turn[]): Turn[] {
     if (kept.length > 0 && total > HISTORY_CHARS) break;
     kept.unshift(turns[i]);
   }
-  while (kept.length > 1 && kept[0].role !== "user") kept.shift();
+  if (kept.length < turns.length) while (kept.length > 1 && kept[0].role !== "user") kept.shift(); // only a cut history needs a new start
   return kept;
 }
 
