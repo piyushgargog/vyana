@@ -41,7 +41,7 @@ jobs:
       - name: Start web and take screenshots
         run: |
           pnpm --filter @vyana/web start &
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl --silent --fail http://localhost:3000/ > /dev/null; then break; fi
             sleep 2
           done
