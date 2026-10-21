@@ -18,8 +18,8 @@ export default function ConsentPage() {
   const { data: profile } = useMyProfile();
   const grantConsentMutation = useAcceptConsent();
 
-  const [checkedPurpose, setCheckedPurpose] = useState(true);
-  const [checkedAiNotice, setCheckedAiNotice] = useState(true);
+  const [checkedPurpose, setCheckedPurpose] = useState(false);
+  const [checkedAiNotice, setCheckedAiNotice] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const alreadyConsented = Boolean(consentRecord);

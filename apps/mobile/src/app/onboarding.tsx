@@ -66,7 +66,7 @@ export default function MobileOnboardingScreen() {
   const fullName = fullNameOverride ?? profile?.full_name ?? '';
   const phone = phoneOverride ?? profile?.phone ?? '';
   const dob = dobOverride ?? profile?.dob ?? '';
-  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? 'B+';
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? '';
   const city = cityOverride ?? profile?.city ?? '';
   const preferredLang =
     preferredLangOverride ?? profile?.preferred_language ?? 'en';
