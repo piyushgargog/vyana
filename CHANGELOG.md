@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- A care plan no longer fails with a server error when the first model rejects its long answer (Groq `400 json_validate_failed`): the next model in the pool is tried. Every error that stops the model pool is now logged with its status and code.
+
 ## [1.1.0] - 2026-10-22
 
 ### Added
