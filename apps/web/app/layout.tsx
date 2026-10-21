@@ -1,7 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { KeyboardGuard } from "@/components/keyboard-guard";
 import { WebAppProviders } from "@/components/providers";
 
+/** `resizes-content`: the page shrinks when the phone keyboard opens, so a field at the bottom is never hidden under it. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://vyanahealth.app"),
@@ -44,6 +51,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-canvas text-label">
         <WebAppProviders>{children}</WebAppProviders>
+        <KeyboardGuard />
       </body>
     </html>
   );
