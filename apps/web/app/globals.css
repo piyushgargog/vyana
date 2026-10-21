@@ -92,3 +92,15 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* The floating tab bar would sit on top of the phone keyboard; KeyboardGuard sets this while the keyboard is open. */
+html[data-keyboard="open"] [data-tabbar] {
+  display: none;
+}
+
+/* A field scrolled into view keeps some room above and below it. */
+input,
+textarea,
+select {
+  scroll-margin-block: 96px;
+}

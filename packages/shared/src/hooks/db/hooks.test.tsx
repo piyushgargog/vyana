@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeResult } from "../../db/queries/fakeSupabase";
 import { AppProviders } from "../../providers/AppProviders";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useBookAppointment, useCarePlans, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useMeals, useMyAppointments, useMyProfile } from "./index";
+import { useBookAppointment, useCarePlans, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useHospitals, useMeals, useMyAppointments, useMyProfile } from "./index";
 
 // jsdom starts slowly on a busy machine (CI, a laptop running the whole suite): be patient, not flaky
 configure({ asyncUtilTimeout: 8000 });
@@ -81,6 +81,35 @@ describe("DB hooks", () => {
     const roots = spy.mock.calls.map((c) => (c[0]?.queryKey as string[])[0]);
     expect(roots).toContain(QUERY_ROOTS.appointments);
     expect(roots).toContain("timeline");
+  });
+});
+
+describe("hospital list (#223)", () => {
+  it("waits for the client's own session before reading the hospitals, so a just-signed-in read cannot come back empty", async () => {
+    const fake = fakeSupabase({ responses: { hospitals: [ok([{ id: "h1", name: "AIIMS" }])] } });
+    // The provider learns the session at once (first call). The client's next session load —
+    // the one the hospitals read waits for — is held back, as it is while the browser client
+    // is still settling right after sign-in.
+    let sessionLoads = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const auth = fake.sb.auth as unknown as { getSession: () => Promise<unknown> };
+    const immediate = { data: { session: { user: { id: "user-1" } } }, error: null };
+    auth.getSession = async () => {
+      sessionLoads += 1;
+      if (sessionLoads > 1) await gate;
+      return immediate;
+    };
+    const { wrapper } = setup(fake);
+    const { result } = renderHook(() => useHospitals(), { wrapper });
+
+    // The hook is enabled (the provider has a user) but the hospitals table is not read yet.
+    await waitFor(() => expect(sessionLoads).toBeGreaterThan(1));
+    await act(async () => {});
+    expect(fake.calls.filter((c) => c.name === "from" && c.args[0] === "hospitals")).toHaveLength(0);
+
+    release();
+    await waitFor(() => expect(result.current.data?.map((h) => h.name)).toEqual(["AIIMS"]));
   });
 });
 

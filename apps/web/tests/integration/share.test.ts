@@ -91,6 +91,7 @@ describe("GET /api/share/[token]", () => {
         emergency_contacts: [{ name: "Sunita Sharma", phone: "+91 00000 00006" }],
       },
       timeline: null,
+      memory: null,
       expires_at: "2026-10-14T06:00:00.000Z",
     });
   });

@@ -1,6 +1,7 @@
 // Fixture responses for every API route, used when the client runs with useMocks.
 export { mockAiMeta } from "./ai-meta";
 export { labsCompareMock, labsJobRunningMock } from "./labs-compare";
+export { bloodSearchMock, bloodJobRunningMock } from "./blood";
 export { emergencyNearbyMock, mockHospitals } from "./emergency-nearby";
 export { emergencySosMock } from "./emergency-sos";
 export { doctorsVerifyMock } from "./doctors-verify";
@@ -13,4 +14,4 @@ export { interactionsMock } from "./interactions";
 export { triageMock, triageEmergencyMock, TRIAGE_DISCLAIMER } from "./triage";
 export { hospitalInfoMock } from "./hospital-info";
 export { pmjayHospitalsMock } from "./pmjay-hospitals";
-export { shareMock } from "./share";
+export { shareMock, shareMemoryMock } from "./share";

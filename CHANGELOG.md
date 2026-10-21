@@ -4,8 +4,13 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- Booking flow (issue #223): the hospital list could come back empty on the first visit after signing in and then stay empty until a full reload. The hospitals and departments tables are readable by signed-in users only, so a read that reached the database before the browser client had attached the user's token looked exactly like "no hospitals" — a success with no rows, which the query cache kept. The hospital hooks now wait for the client's own session before reading, and the empty states on the booking page offer a retry instead of a dead end.
+
 ### Added
 - The website has a "Download for Android" button (and an "Android app" link in the menu). `/download/android` sends the visitor to the .apk of the latest GitHub release.
+- New API shapes for v1.1.0, with fictional mocks and hooks, before the screens exist: `POST /api/blood/search` and `GET /api/blood/search/{job_id}` (blood bank search job; `useSearchBlood`, `useBloodJob`) and `memory` on `GET /api/share/{token}` (the sections a Health Memory Graph link contains; `null` for a link without scopes). The routes answer 404 until the server work lands.
+- RapidBlood server: `POST /api/blood/search` starts one web agent per area (your city and up to three nearby cities) on the public e-RaktKosh stock page; `GET /api/blood/search/{job_id}` returns the banks. A row counts as verified only when the copied row text holds the bank name and the unit count; results are cached for 15 minutes. The screens follow.
 
 ### Removed
 - Medicine quality alerts (CDSCO): the alerts screen, `POST /api/alerts/check`, the TinyFish Monitor webhook and the `monitor:create` script. The `drug_alerts` and `tinyfish_monitors` tables stay in the database, unused.
@@ -17,10 +22,14 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 
 ### Fixed
+- A long chat with the assistant no longer fails with "Something went wrong": the history sent to the model is cut to the newest turns that fit the provider's size limit (the last question is always kept).
+- The assistant's first answer in a new chat now stays on screen. It used to vanish when the stream ended (the page reloaded the saved chat, which did not have the answer yet) and only came back after a reload.
 - **Text fixes from QA:** the doctor header no longer shows a doubled "Dr. Dr." when the stored name already has the title; basket prices always show two decimals (₹163.40, not ₹163.4); the onboarding emergency-contact relationship field no longer comes prefilled; the "Account Role" badge reads "Account Role: Patient" instead of the all-caps constant style.
 - The emergency Medical ID QR is now plain readable text (name, blood group, allergies, medicines, one emergency contact) that any phone camera shows without internet. It used to be base64 text that only looked like gibberish, and its link needed internet. A long medicine list is cut with a "+N more" note. The QR has square corners and error level M so it scans on Android.
 - "Revoke" on a share link now visibly works: turned-off and expired links leave the "Active share links" list and the Medical ID and Timeline screens, the app confirms it, and a revoke that changes no row is an error instead of a silent "ok".
 - Signing out on one device no longer signs you out everywhere (web and Android; the Android fix ships with the next APK).
+- The on-screen keyboard no longer covers the field you type in: on the website the page resizes with the keyboard, scrolls the field into view and hides the floating tab bar while you type; in the Android app every scrolling screen scrolls the focused field above the keyboard.
+- The AI pool skips a dead, revoked or out-of-credit key (401, 402, 403, 408) and tries the next key, model or provider instead of failing the whole request.
 - Android app: the keyboard no longer covers the text field; "Ask Vyana" and "Me" no longer show a second title and a gap under the header; notifications use the Vyana mark as the small icon.
 - Public pages meet the AA colour-contrast limit; CI is green again (contrast, slow E2E waits, a secret-scan false positive).
 
