@@ -58,7 +58,7 @@ export function QrCodeSvg({
 export interface TrendPoint {
   date: string;
   value: number;
-  flag?: "low" | "normal" | "high" | null;
+  flag?: "low" | "normal" | "high" | "unknown" | null;
 }
 
 export function TrendChartSvg({
@@ -67,12 +67,19 @@ export function TrendChartSvg({
   points,
   refLow,
   refHigh,
+  points2,
+  seriesLabel,
+  series2Label,
 }: {
   title: string;
   unit: string;
   points: TrendPoint[];
   refLow?: number | null;
   refHigh?: number | null;
+  /** A second series on the same axes (e.g. the diastolic line of a blood pressure chart). A null entry is a gap: that reading has no second value, so the line breaks there instead of sliding to the wrong date. */
+  points2?: (TrendPoint | null)[];
+  seriesLabel?: string;
+  series2Label?: string;
 }) {
   if (points.length === 0) {
     return (
@@ -85,6 +92,7 @@ export function TrendChartSvg({
   const values = points.map((p) => p.value);
   const allBounds = [
     ...values,
+    ...(points2 ?? []).flatMap((p) => (p ? [p.value] : [])),
     ...(typeof refLow === "number" ? [refLow] : []),
     ...(typeof refHigh === "number" ? [refHigh] : []),
   ];
@@ -121,7 +129,7 @@ export function TrendChartSvg({
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
           <h4 className="text-sm font-semibold text-slate-900">
-            {title} Trend ({unit})
+            {title} Trend{unit ? ` (${unit})` : ""}
           </h4>
           {typeof refLow === "number" && typeof refHigh === "number" && (
             <p className="text-xs text-slate-500">
@@ -129,13 +137,28 @@ export function TrendChartSvg({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          {points2 && points2.length > 0 && (
+            <>
+              <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
+                <span className="h-0.5 w-4 rounded bg-teal-600" /> {seriesLabel ?? "First reading"}
+              </span>
+              <span className="inline-flex items-center gap-1 text-blue-700 font-medium">
+                <span className="h-0.5 w-4 rounded bg-blue-600" /> {series2Label ?? "Second reading"}
+              </span>
+            </>
+          )}
           <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
             <span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> Normal
           </span>
           <span className="inline-flex items-center gap-1 text-red-700 font-medium">
             <span className="h-2.5 w-2.5 rounded-full bg-red-600" /> High / Low
           </span>
+          {[...points, ...(points2 ?? [])].some((p) => p?.flag === "unknown") && (
+            <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-500" /> Not flagged
+            </span>
+          )}
         </div>
       </div>
 
@@ -173,10 +196,55 @@ export function TrendChartSvg({
           points={polylinePoints}
         />
 
+        {points2 &&
+          (() => {
+            // Consecutive non-null runs become line segments; a lone point stays a dot.
+            const segments: { x: number; y: number }[][] = [];
+            let run: { x: number; y: number }[] = [];
+            points2.forEach((pt, idx) => {
+              if (pt) {
+                run.push({ x: toX(idx), y: toY(pt.value) });
+              } else if (run.length > 0) {
+                segments.push(run);
+                run = [];
+              }
+            });
+            if (run.length > 0) segments.push(run);
+            return segments
+              .filter((seg) => seg.length > 1)
+              .map((seg, i) => (
+                <polyline
+                  key={`s2-line-${i}`}
+                  fill="none"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  points={seg.map((p) => `${p.x},${p.y}`).join(" ")}
+                />
+              ));
+          })()}
+
+        {points2?.map((pt, idx) =>
+          pt ? (
+            <g key={`s2-${pt.date}-${idx}`}>
+              <circle
+                cx={toX(idx)}
+                cy={toY(pt.value)}
+                r={4}
+                fill="#2563eb"
+                stroke="#ffffff"
+                strokeWidth={1.5}
+              >
+                <title>{`${series2Label ?? "Second reading"}: ${pt.value} ${unit} on ${pt.date}`}</title>
+              </circle>
+            </g>
+          ) : null,
+        )}
+
         {points.map((pt, idx) => {
           const cx = toX(idx);
           const cy = toY(pt.value);
           const isAbnormal = pt.flag === "high" || pt.flag === "low";
+          const isUnknown = pt.flag === "unknown";
           const flagLabel =
             pt.flag === "high" ? " (High)" : pt.flag === "low" ? " (Low)" : "";
           return (
@@ -185,7 +253,7 @@ export function TrendChartSvg({
                 cx={cx}
                 cy={cy}
                 r={5}
-                fill={isAbnormal ? "#dc2626" : "#0d9488"}
+                fill={isAbnormal ? "#dc2626" : isUnknown ? "#64748b" : "#0d9488"}
                 stroke="#ffffff"
                 strokeWidth={1.5}
               />
@@ -195,7 +263,7 @@ export function TrendChartSvg({
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="600"
-                fill={isAbnormal ? "#b91c1c" : "#0f766e"}
+                fill={isAbnormal ? "#b91c1c" : isUnknown ? "#475569" : "#0f766e"}
               >
                 {pt.value}
                 {flagLabel}

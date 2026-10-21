@@ -104,3 +104,20 @@ textarea,
 select {
   scroll-margin-block: 96px;
 }
+
+/*
+ * Print (issue #238): the public share page is a clinical record a doctor may print
+ * or save as PDF. On paper it is the record only — white page, colours kept (the
+ * adherence squares and chart flags carry meaning), and a section never splits
+ * across a page break. The site chrome and the mini-nav are hidden in the page
+ * itself (print:hidden); this block covers what classes cannot.
+ */
+@media print {
+  .share-page {
+    background: #ffffff;
+  }
+  .share-page .share-section {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
