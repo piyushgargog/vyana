@@ -182,3 +182,9 @@ export function shareLinkSubtitle(
   );
   return parts.join(" · ");
 }
+
+/** A `tel:` link only for something that is a phone number: digits with an optional leading +. */
+export function telHref(phone: string | null): string | null {
+  const p = phone?.replace(/[\s().-]+/g, "") ?? "";
+  return /^\+?\d{6,15}$/.test(p) ? `tel:${p}` : null;
+}

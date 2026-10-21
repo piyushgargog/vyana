@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { relativeTime, shareLinkSubtitle } from "./ui-helpers";
+import { relativeTime, shareLinkSubtitle, telHref } from "./ui-helpers";
 
 const NOW = new Date("2026-10-21T12:00:00Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -68,5 +68,21 @@ describe("shareLinkSubtitle", () => {
   it("says nothing about scopes for a medical_id link", () => {
     const s = shareLinkSubtitle({ ...base, kind: "medical_id" }, NOW);
     expect(s).not.toContain("Includes");
+  });
+});
+
+describe("telHref", () => {
+  it("links a plain number, keeping a leading +", () => {
+    expect(telHref("98110 12345")).toBe("tel:9811012345");
+    expect(telHref("+91 98110-12345")).toBe("tel:+919811012345");
+    expect(telHref("(011) 4155.1234")).toBe("tel:01141551234");
+  });
+
+  it("refuses anything that is not a phone number", () => {
+    expect(telHref(null)).toBeNull();
+    expect(telHref("")).toBeNull();
+    expect(telHref("12345")).toBeNull();
+    expect(telHref("call the desk")).toBeNull();
+    expect(telHref("+91-98110-12345-67890")).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Linking,
   Pressable,
+  Share,
   StyleSheet,
   TextInput,
   View,
@@ -14,6 +15,7 @@ import {
   BloodGroup,
   buildBloodRequestMessage,
   relativeTime,
+  telHref,
   useBloodJob,
   useBloodRequests,
   useCreateBloodRequest,
@@ -85,6 +87,10 @@ function BankCard({ bank }: { bank: BloodBank }) {
   const units =
     bank.units === null ? 'Count not listed' : `${bank.units} ${bank.units === 1 ? 'unit' : 'units'} listed`;
   const fail = () => showToast('Could not open that', 'error');
+  // A Call or Message button exists only for something that is a phone number, and
+  // the source opens only over https (the check both apps share, from ui-helpers).
+  const tel = telHref(bank.phone);
+  const sourceOk = bank.source_url.startsWith('https://');
   return (
     <Card>
       <View style={styles.bankTop}>
@@ -109,36 +115,38 @@ function BankCard({ bank }: { bank: BloodBank }) {
         {relativeTime(bank.fetched_at)}
       </Text>
       <View style={styles.actionRow}>
-        {bank.phone ? (
+        {tel ? (
           <>
             <Button
               title="Call"
               variant="secondary"
-              size="sm"
+              size="md"
               label={`Call ${bank.name}`}
               icon={<Symbol ios="phone.fill" android="call" size={14} color={T.color.accentStrong} />}
-              onPress={() => openUrl(`tel:${bank.phone!.replace(/\s+/g, '')}`, fail)}
+              onPress={() => openUrl(tel, fail)}
             />
             <Button
               title="Message"
               variant="secondary"
-              size="sm"
+              size="md"
               label={`Message ${bank.name}`}
               icon={<Symbol ios="message.fill" android="sms" size={14} color={T.color.accentStrong} />}
-              onPress={() => openUrl(`sms:${bank.phone!.replace(/\s+/g, '')}`, fail)}
+              onPress={() => openUrl(`sms:${tel.slice(4)}`, fail)}
             />
           </>
         ) : null}
-        <Button
-          title="Source"
-          variant="secondary"
-          size="sm"
-          label={`Open the source page for ${bank.name}`}
-          icon={
-            <Symbol ios="arrow.up.right" android="open_in_new" size={14} color={T.color.accentStrong} />
-          }
-          onPress={() => openUrl(bank.source_url, fail)}
-        />
+        {sourceOk ? (
+          <Button
+            title="Source"
+            variant="secondary"
+            size="md"
+            label={`Open the source page for ${bank.name}`}
+            icon={
+              <Symbol ios="arrow.up.right" android="open_in_new" size={14} color={T.color.accentStrong} />
+            }
+            onPress={() => openUrl(bank.source_url, fail)}
+          />
+        ) : null}
       </View>
     </Card>
   );
@@ -158,6 +166,7 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
     }
   };
   const fail = () => showToast('Could not open that', 'error');
+  const contactTel = telHref(request.contact_phone);
 
   return (
     <Card>
@@ -198,21 +207,32 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
         You set every status yourself; nothing here changes by itself.
       </Text>
       <View style={styles.actionRow}>
-        <Button title="Copy message" variant="secondary" size="sm" label="Copy the request message" onPress={copy} />
+        <Button title="Copy message" variant="secondary" size="md" label="Copy the request message" onPress={copy} />
+        <Button
+          title="Share"
+          variant="secondary"
+          size="md"
+          label="Share the request message"
+          onPress={() => {
+            Share.share({ message }).catch(() => undefined);
+          }}
+        />
         <Button
           title="WhatsApp"
           variant="secondary"
-          size="sm"
+          size="md"
           label="Send the request message on WhatsApp"
           onPress={() => openUrl(`https://wa.me/?text=${encodeURIComponent(message)}`, fail)}
         />
-        <Button
-          title={`Call ${request.contact_name}`}
-          variant="secondary"
-          size="sm"
-          label={`Call ${request.contact_name}`}
-          onPress={() => openUrl(`tel:${request.contact_phone.replace(/\s+/g, '')}`, fail)}
-        />
+        {contactTel ? (
+          <Button
+            title={`Call ${request.contact_name}`}
+            variant="secondary"
+            size="md"
+            label={`Call ${request.contact_name}`}
+            onPress={() => openUrl(contactTel, fail)}
+          />
+        ) : null}
       </View>
     </Card>
   );
@@ -245,6 +265,8 @@ export default function BloodScreen() {
   const nameValue = contactName ?? profile?.full_name ?? '';
   const phoneValue = contactPhone ?? profile?.phone ?? '';
   const canStart =
+    BloodGroup.options.includes(groupValue as never) &&
+    cityValue.trim().length >= 2 &&
     unitsOk &&
     hospital.trim().length >= 2 &&
     nameValue.trim().length >= 1 &&
@@ -295,8 +317,8 @@ export default function BloodScreen() {
         <Button
           title="Done"
           variant="plain"
-          size="sm"
-          label="Back"
+          size="md"
+          label="Done, go back"
           onPress={() => router.back()}
           style={styles.doneBtn}
         />
@@ -312,7 +334,7 @@ export default function BloodScreen() {
         <Button
           title="Call 108"
           variant="destructive"
-          size="sm"
+          size="md"
           label="Call 108, the emergency number"
           icon={<Symbol ios="phone.fill" android="call" size={14} color={T.color.white} />}
           onPress={() => openUrl('tel:108', () => showToast('Could not open the dialer', 'error'))}
@@ -389,7 +411,7 @@ export default function BloodScreen() {
             <Text variant="footnote" tone="danger">
               The search did not start. Try again in a moment. In an emergency call 108.
             </Text>
-            <Button title="Retry" variant="plain" size="sm" label="Retry the search" onPress={() => search.reset()} />
+            <Button title="Retry" variant="plain" size="md" label="Retry the search" onPress={runSearch} />
           </View>
         ) : null}
       </Card>
@@ -403,7 +425,7 @@ export default function BloodScreen() {
                 <Text variant="footnote" tone="danger">
                   Could not read the results. Try again. In an emergency call 108.
                 </Text>
-                <Button title="Retry" variant="plain" size="sm" label="Retry reading the results" onPress={() => job.refetch()} />
+                <Button title="Retry" variant="plain" size="md" label="Retry reading the results" onPress={() => job.refetch()} />
               </View>
             ) : (
               <>
@@ -440,12 +462,32 @@ export default function BloodScreen() {
             ? result.banks.map((b) => <BankCard key={`${b.name}|${b.city}|${b.phone ?? ''}`} bank={b} />)
             : null}
           {result?.status === 'done' && result.banks.length === 0 ? (
-            <EmptyState
-              ios="drop.fill"
-              android="water_drop"
-              title="No blood bank listed for this search"
-              body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108."
-            />
+            result.sources.some((s) => s.status === 'ok' || s.status === 'not_found') ? (
+              <EmptyState
+                ios="drop.fill"
+                android="water_drop"
+                title="No blood bank listed for this search"
+                body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108."
+              />
+            ) : (
+              // No area answered at all: that says nothing about stock, so it is
+              // an unread page with a retry, never an empty result.
+              <Card>
+                <Text variant="headline">The source page could not be read</Text>
+                <Text variant="footnote" tone="secondary">
+                  That says nothing about stock. Try again, or call the hospital&apos;s own blood bank. In
+                  an emergency call 108.
+                </Text>
+                <Button
+                  title="Retry"
+                  variant="plain"
+                  size="md"
+                  label="Try the search again"
+                  onPress={runSearch}
+                  style={styles.retryBtn}
+                />
+              </Card>
+            )
           ) : null}
         </View>
       ) : null}
@@ -519,7 +561,7 @@ export default function BloodScreen() {
             <Text variant="footnote" tone="danger">
               Could not load your requests.
             </Text>
-            <Button title="Retry" variant="plain" size="sm" label="Retry loading your requests" onPress={() => requests.refetch()} />
+            <Button title="Retry" variant="plain" size="md" label="Retry loading your requests" onPress={() => requests.refetch()} />
           </Card>
         ) : requests.data && requests.data.length > 0 ? (
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
@@ -537,6 +579,7 @@ export default function BloodScreen() {
 
 const styles = StyleSheet.create({
   doneBtn: { minHeight: 44, justifyContent: 'center' },
+  retryBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   flex1: { flex: 1 },
   safetyCard: { borderWidth: 1, borderColor: T.color.dangerSoft },
   call108: { alignSelf: 'flex-start' },
