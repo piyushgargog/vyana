@@ -128,9 +128,9 @@ export function TrendChartSvg({
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
-          <h4 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-semibold text-slate-900">
             {title} Trend{unit ? ` (${unit})` : ""}
-          </h4>
+          </h3>
           {typeof refLow === "number" && typeof refHigh === "number" && (
             <p className="text-xs text-slate-500">
               Reference range: {refLow} – {refHigh} {unit} (shaded band)
@@ -148,12 +148,17 @@ export function TrendChartSvg({
               </span>
             </>
           )}
-          <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
-            <span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> Normal
-          </span>
-          <span className="inline-flex items-center gap-1 text-red-700 font-medium">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-600" /> High / Low
-          </span>
+          {/* The Normal / High / Low key only appears when the points carry a stored flag (vitals have none). */}
+          {[...points, ...(points2 ?? [])].some((p) => p?.flag) && (
+            <>
+              <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> Normal
+              </span>
+              <span className="inline-flex items-center gap-1 text-red-700 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-600" /> High / Low
+              </span>
+            </>
+          )}
           {[...points, ...(points2 ?? [])].some((p) => p?.flag === "unknown") && (
             <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
               <span className="h-2.5 w-2.5 rounded-full bg-slate-500" /> Not flagged
@@ -162,11 +167,12 @@ export function TrendChartSvg({
         </div>
       </div>
 
+      <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={`${title} trend chart over ${points.length} measurements`}
-        className="w-full h-44 overflow-visible"
+        className="h-44 w-full min-w-[520px] overflow-visible"
       >
         {bandTop !== null && bandBottom !== null && bandBottom >= bandTop && (
           <rect
@@ -281,6 +287,7 @@ export function TrendChartSvg({
           );
         })}
       </svg>
+      </div>
     </div>
   );
 }

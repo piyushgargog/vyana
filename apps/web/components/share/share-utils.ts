@@ -22,30 +22,17 @@ export function formatChartDate(isoDate: string): string {
 
 /** The India calendar date of a stored timestamp, "2026-10-08T08:00:00.000Z" -> "8 Oct". */
 export function formatChartDateTime(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso.slice(0, 10); // a bad stored value must not take the page down
   const parts = new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "numeric",
-  }).formatToParts(new Date(iso));
+  }).formatToParts(at);
   const day = Number(parts.find((p) => p.type === "day")?.value);
   const month = Number(parts.find((p) => p.type === "month")?.value);
   if (!day || !month || month < 1 || month > 12) return iso.slice(0, 10);
   return `${day} ${MONTHS[month - 1]}`;
-}
-
-/** "2026-10-08T08:00:00.000Z" -> "8 Oct 2026" (India date of the stored instant). */
-export function formatShareDateTime(iso: string): string {
-  const parts = new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  }).formatToParts(new Date(iso));
-  const day = Number(parts.find((p) => p.type === "day")?.value);
-  const month = Number(parts.find((p) => p.type === "month")?.value);
-  const year = Number(parts.find((p) => p.type === "year")?.value);
-  if (!day || !month || !year || month < 1 || month > 12) return iso.slice(0, 10);
-  return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
 /**
@@ -67,13 +54,14 @@ export function expiryCountdown(expiresAt: string, now: Date): { expired: boolea
 export type AdherenceDayState = "taken" | "missed" | "skipped" | "none";
 
 /**
- * One square of the adherence strip. A day with a missed dose reads as missed even if
- * other doses were taken — the strip must not paint a partly-kept day as fully kept.
+ * One square of the adherence strip. A day with a missed dose reads as missed, and a day with a skipped dose reads as
+ * skipped, even if other doses were taken: the strip never paints a partly-kept day as fully kept ("taken" means
+ * every logged dose of the day was taken).
  */
 export function adherenceDayState(day: { taken: number; missed: number; skipped: number }): AdherenceDayState {
   if (day.missed > 0) return "missed";
-  if (day.taken > 0) return "taken";
   if (day.skipped > 0) return "skipped";
+  if (day.taken > 0) return "taken";
   return "none";
 }
 
@@ -106,6 +94,7 @@ export function medicineScale(
     startMs = Math.min(startMs, dayMs(med.start));
     endMs = Math.max(endMs, dayMs(med.end ?? today));
   }
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null; // an invalid stored date: draw nothing, never NaN
   if (endMs <= startMs) endMs = startMs + 24 * 60 * 60 * 1000;
   return { startMs, endMs };
 }

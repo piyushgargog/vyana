@@ -11,8 +11,8 @@ const SQUARE_CLASS: Record<AdherenceDayState, string> = {
 
 /**
  * The adherence strip (issue #238): one square per day of the last 30 days —
- * green where every dose was taken, red where any dose was missed, amber where
- * doses were only skipped, grey where none were due — and the taken percentage
+ * green where every recorded dose was taken, red where any dose was missed, amber
+ * where a dose was skipped (and none missed), grey where none were recorded — and the taken percentage
  * the record itself carries. The squares never round a partly-kept day up.
  */
 export function ShareAdherence({ adherence }: { adherence: NonNullable<ShareMemory["adherence"]> }) {
@@ -25,19 +25,16 @@ export function ShareAdherence({ adherence }: { adherence: NonNullable<ShareMemo
         <CardHeader title="Medicine adherence (last 30 days)" />
 
         {days.length === 0 ? (
-          <p className="text-[14px] text-label-3 py-2">No doses were scheduled in this period.</p>
+          <p className="text-[14px] text-label-3 py-2">No dose records in this period.</p>
         ) : (
           <>
             <ul aria-label="Doses taken, day by day" className="flex flex-wrap gap-1.5 [print-color-adjust:exact]">
               {days.map((day) => {
                 const label = `${formatShareDate(day.date)}: ${day.taken} taken, ${day.missed} missed, ${day.skipped} skipped`;
                 return (
-                  <li
-                    key={day.date}
-                    title={label}
-                    aria-label={label}
-                    className={`h-6 w-6 rounded-md ${SQUARE_CLASS[adherenceDayState(day)]}`}
-                  />
+                  <li key={day.date} title={label} className={`h-6 w-6 rounded-md ${SQUARE_CLASS[adherenceDayState(day)]}`}>
+                    <span className="sr-only">{label}</span>
+                  </li>
                 );
               })}
             </ul>
@@ -50,10 +47,10 @@ export function ShareAdherence({ adherence }: { adherence: NonNullable<ShareMemo
                 <span className="h-2.5 w-2.5 rounded bg-danger" /> A dose missed
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded bg-warn" /> Skipped
+                <span className="h-2.5 w-2.5 rounded bg-warn" /> A dose skipped
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded bg-fill-strong" /> None due
+                <span className="h-2.5 w-2.5 rounded bg-fill-strong" /> No dose recorded
               </span>
             </div>
 

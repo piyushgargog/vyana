@@ -75,8 +75,8 @@ function PublicShareRecordContent({
   // The mini-nav lists only the sections this record actually has.
   const sections: ShareSectionLink[] = [{ id: "overview", label: "Overview" }];
   if (timeline && timeline.length > 0) sections.push({ id: "timeline", label: "Timeline" });
-  if (memory?.labs && memory.labs.length > 0) sections.push({ id: "labs", label: "Labs" });
-  if (memory?.vitals && memory.vitals.length > 0) sections.push({ id: "vitals", label: "Vitals" });
+  if (memory?.labs?.some((t) => t.points.length > 0)) sections.push({ id: "labs", label: "Labs" });
+  if (memory?.vitals?.some((v) => v.points.length > 0)) sections.push({ id: "vitals", label: "Vitals" });
   if (memory?.medicines && memory.medicines.length > 0)
     sections.push({ id: "medicines", label: "Medicines" });
   if (memory?.adherence) sections.push({ id: "adherence", label: "Adherence" });

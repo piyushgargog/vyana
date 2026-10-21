@@ -6,6 +6,7 @@ import {
   expiryCountdown,
   flagText,
   formatChartDate,
+  formatChartDateTime,
   formatShareDate,
   medicineScale,
   vitalTitle,
@@ -68,12 +69,21 @@ describe("adherence", () => {
     expect(adherenceDayState({ taken: 3, missed: 0, skipped: 0 })).toBe("taken");
     expect(adherenceDayState({ taken: 0, missed: 0, skipped: 2 })).toBe("skipped");
     expect(adherenceDayState({ taken: 0, missed: 0, skipped: 0 })).toBe("none");
+    // a day with a skipped dose is not "all taken" (review of #262)
+    expect(adherenceDayState({ taken: 1, missed: 0, skipped: 2 })).toBe("skipped");
   });
 
   it("totals are plain sums of the mock's days", () => {
     const days = memory.adherence?.days ?? [];
     expect(adherenceTotals(days)).toEqual({ taken: 8, missed: 1, skipped: 0 });
     expect(memory.adherence?.percent_taken).toBe(89);
+  });
+});
+
+describe("invalid stored values", () => {
+  it("never throws or returns NaN for a bad date", () => {
+    expect(formatChartDateTime("not a date")).toBe("not a date");
+    expect(medicineScale([{ start: "2026-13-45", end: null }], "2026-10-21")).toBeNull();
   });
 });
 

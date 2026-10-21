@@ -25,8 +25,9 @@ export function ShareHeaderCard({ record }: { record: ShareRes }) {
 
           <p className="text-[13px] text-label-3">
             Link valid until{" "}
-            {expiresDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })},{" "}
-            {expiresDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            {Number.isNaN(expiresDate.getTime())
+              ? "the date on the link"
+              : `${expiresDate.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}, ${expiresDate.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })}`}
           </p>
 
           <div className="flex flex-wrap items-center gap-3 text-[14px] text-label-2">

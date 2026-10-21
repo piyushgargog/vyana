@@ -33,10 +33,10 @@ export function ShareLabTrends({ labs }: { labs: NonNullable<ShareMemory["labs"]
                 />
               ) : (
                 <div className="rounded-xl border border-separator bg-fill/40 p-4">
-                  <h4 className="text-sm font-semibold text-label">
+                  <h3 className="text-sm font-semibold text-label">
                     {test.test_name}
                     {unit ? ` (${unit})` : ""}
-                  </h4>
+                  </h3>
                   <p className="text-[13px] text-label-2">Only one measurement in this period.</p>
                 </div>
               )}

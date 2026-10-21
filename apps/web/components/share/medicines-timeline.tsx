@@ -36,13 +36,14 @@ export function ShareMedicinesTimeline({ medicines }: { medicines: NonNullable<S
     <section id="medicines" className="scroll-mt-24">
       <Card className="share-section space-y-3">
         <CardHeader title="Medicines over time" />
+        <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           role="img"
           aria-label={`Medicine courses over time for ${meds.length} medicines, from ${formatShareDate(
             new Date(scale.startMs).toISOString().slice(0, 10),
           )} to ${formatShareDate(new Date(scale.endMs).toISOString().slice(0, 10))}`}
-          className="w-full [print-color-adjust:exact]"
+          className="w-full min-w-[640px] [print-color-adjust:exact]"
         >
           {yearTicks.map((t) => (
             <g key={t.year}>
@@ -96,6 +97,15 @@ export function ShareMedicinesTimeline({ medicines }: { medicines: NonNullable<S
             );
           })}
         </svg>
+        </div>
+        <ul className="sr-only">
+          {meds.map((med, i) => (
+            <li key={`${med.name}-${med.start}-${i}`}>
+              {med.name}
+              {med.strength ? ` ${med.strength}` : ""}, from {formatShareDate(med.start)} {med.end ? `to ${formatShareDate(med.end)}` : "and still listed"}
+            </li>
+          ))}
+        </ul>
       </Card>
     </section>
   );
