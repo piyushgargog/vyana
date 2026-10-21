@@ -2,20 +2,18 @@
 // The RapidBlood tracker (issue #235): the requests a patient is following, newest first.
 // Owner: Vaibhav Parmar
 
+import type { BloodComponent, BloodGroup, BloodRequestStatus } from "../../contracts";
 import type { DbBloodRequest } from "../types";
 import { DbError, requireUserId, unwrap, type Sb } from "./helpers";
 
-/** The words of the v1.1 contracts (#233): the groups a request can ask for. */
-export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
-export type BloodGroup = (typeof BLOOD_GROUPS)[number];
+/** The groups a request can ask for — the words of the v1.1 contracts (#246), typed from them so there is one source. */
+export const BLOOD_GROUPS: readonly BloodGroup[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-/** The components of the v1.1 contracts (#233). */
-export const BLOOD_COMPONENTS = ["whole_blood", "red_cells", "platelets", "plasma"] as const;
-export type BloodComponent = (typeof BLOOD_COMPONENTS)[number];
+/** The components of the v1.1 contracts (#246). */
+export const BLOOD_COMPONENTS: readonly BloodComponent[] = ["whole_blood", "red_cells", "platelets", "plasma"];
 
 /** Where a request stands, in the order it usually moves. `cancelled` can come from any step. */
-export const BLOOD_REQUEST_STATUSES = ["searching", "contacted", "confirmed", "arranged", "received", "cancelled"] as const;
-export type BloodRequestStatus = (typeof BLOOD_REQUEST_STATUSES)[number];
+export const BLOOD_REQUEST_STATUSES: readonly BloodRequestStatus[] = ["searching", "contacted", "confirmed", "arranged", "received", "cancelled"];
 
 /** A request is for at most this many units (the same cap as the table's check, migration 0013). */
 export const BLOOD_REQUEST_MAX_UNITS = 10;

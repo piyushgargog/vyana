@@ -2968,6 +2968,6 @@ values ('00000000-0000-0000-0000-000000000206', 'timeline', now() + interval '29
 delete from public.blood_requests where patient_id in ('00000000-0000-0000-0000-000000000207', '00000000-0000-0000-0000-000000000213');
 insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone, status, created_at, updated_at)
 values
-  ('00000000-0000-0000-0000-000000000207', 'B-', 'red_cells', 2, 'Max Hospital', 'Ghaziabad', 'Rukhsana Khan', '+91 00000 00411', 'searching', now() - interval '1 day', now() - interval '1 day'),
-  ('00000000-0000-0000-0000-000000000207', 'B-', 'red_cells', 2, 'Max Hospital', 'Ghaziabad', 'Rukhsana Khan', '+91 00000 00411', 'received', now() - interval '21 days', now() - interval '20 days'),
-  ('00000000-0000-0000-0000-000000000213', 'A-', 'red_cells', 1, 'Fortis Hospital', 'Noida', 'Imran Sheikh', '+91 00000 00412', 'contacted', now() - interval '2 days', now() - interval '1 day');
+  ('00000000-0000-0000-0000-000000000207', 'B-', 'red_cells', 2, 'Demo City Hospital', 'Ghaziabad', 'Rukhsana Khan', '+91 00000 00411', 'searching', now() - interval '1 day', now() - interval '1 day'),
+  ('00000000-0000-0000-0000-000000000207', 'B-', 'red_cells', 2, 'Demo City Hospital', 'Ghaziabad', 'Rukhsana Khan', '+91 00000 00411', 'received', now() - interval '21 days', now() - interval '20 days'),
+  ('00000000-0000-0000-0000-000000000213', 'A-', 'red_cells', 1, 'Demo General Hospital', 'Noida', 'Imran Sheikh', '+91 00000 00412', 'contacted', now() - interval '2 days', now() - interval '1 day');

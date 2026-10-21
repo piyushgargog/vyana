@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(119);
+select plan(124);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures (as the table owner). Everything is rolled back at the end.
@@ -527,6 +527,26 @@ select throws_ok(
   $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
      values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 11, 'Test Hospital', 'Delhi', 'Kin A', '+91 00000 00011') $$,
   '23514', null, 'a request is for at most 10 units');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'X', 'Delhi', 'Kin A', '+91 00000 00011') $$,
+  '23514', null, 'a hospital name under 2 characters is refused (the contract minimum)');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'X', 'Kin A', '+91 00000 00011') $$,
+  '23514', null, 'a city under 2 characters is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', ' ', '+91 00000 00011') $$,
+  '23514', null, 'a blank contact name is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', 'Kin A', '1234') $$,
+  '23514', null, 'a contact phone under 5 characters is refused');
+select throws_ok(
+  $$ insert into public.blood_requests (patient_id, blood_group, component, units, hospital_name, city, contact_name, contact_phone, note)
+     values ('10000000-0000-0000-0000-000000000001', 'B-', 'red_cells', 1, 'Test Hospital', 'Delhi', 'Kin A', '+91 00000 00011', repeat('x', 501)) $$,
+  '23514', null, 'a note over 500 characters is refused (the contract maximum)');
 
 select public.tap_login('10000000-0000-0000-0000-000000000002');
 select is((select count(*)::int from public.blood_requests), 0, 'another patient sees none of them');

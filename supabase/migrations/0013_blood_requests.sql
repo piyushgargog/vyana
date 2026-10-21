@@ -18,13 +18,15 @@ create table public.blood_requests (
   blood_group text not null check (blood_group in ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
   component text not null check (component in ('whole_blood', 'red_cells', 'platelets', 'plasma')),
   units int not null check (units between 1 and 10),
-  hospital_name text not null,
-  city text not null,
-  contact_name text not null,
-  contact_phone text not null,
+  -- The same field rules as the BloodRequest contract (#246), so a row the contract would
+  -- refuse on read can never be stored in the first place.
+  hospital_name text not null check (char_length(btrim(hospital_name)) >= 2),
+  city text not null check (char_length(btrim(city)) >= 2),
+  contact_name text not null check (char_length(btrim(contact_name)) >= 1),
+  contact_phone text not null check (char_length(btrim(contact_phone)) >= 5),
   status text not null default 'searching'
     check (status in ('searching', 'contacted', 'confirmed', 'arranged', 'received', 'cancelled')),
-  note text,
+  note text check (note is null or char_length(note) <= 500),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
