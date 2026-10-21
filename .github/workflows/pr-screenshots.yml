@@ -1,0 +1,62 @@
+name: PR screenshots
+
+# Issue #133 (P26): on pull requests labelled `frontend`, screenshot the public
+# pages at phone (390 px) and desktop (1366 px) widths with Playwright and
+# upload them as an artifact, so reviewers can see the change without running it.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    name: Public pages at 390 px and 1366 px
+    if: contains(github.event.pull_request.labels.*.name, 'frontend')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Mock env: only public pages are rendered, no real backend is contacted.
+      NEXT_PUBLIC_SUPABASE_URL: https://mock.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key
+      NEXT_PUBLIC_USE_MOCKS: "true"
+      TINYFISH_MOCK: "1"
+      LLM_MOCK: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build web
+        run: pnpm --filter @vyana/web build
+      - name: Start web and take screenshots
+        run: |
+          pnpm --filter @vyana/web start &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://localhost:3000/ > /dev/null; then break; fi
+            sleep 2
+          done
+          mkdir -p pr-screenshots
+          pnpm exec playwright screenshot --viewport-size=390,844 --full-page --wait-for-timeout=2000 http://localhost:3000/ pr-screenshots/home-390.png
+          pnpm exec playwright screenshot --viewport-size=1366,900 --full-page --wait-for-timeout=2000 http://localhost:3000/ pr-screenshots/home-1366.png
+          pnpm exec playwright screenshot --viewport-size=390,844 --full-page --wait-for-timeout=2000 http://localhost:3000/login pr-screenshots/login-390.png
+          pnpm exec playwright screenshot --viewport-size=1366,900 --full-page --wait-for-timeout=2000 http://localhost:3000/login pr-screenshots/login-1366.png
+          pnpm exec playwright screenshot --viewport-size=390,844 --full-page --wait-for-timeout=2000 http://localhost:3000/privacy pr-screenshots/privacy-390.png
+          pnpm exec playwright screenshot --viewport-size=1366,900 --full-page --wait-for-timeout=2000 http://localhost:3000/privacy pr-screenshots/privacy-1366.png
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pr-screenshots
+          path: pr-screenshots/
+          retention-days: 14
+          if-no-files-found: warn
