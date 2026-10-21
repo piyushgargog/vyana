@@ -94,7 +94,7 @@ Dockerfile · docker-compose.yml · Caddyfile    deployment
 
 ## Getting started
 
-Requirements: Node.js ≥ 20.19 (see [`.nvmrc`](.nvmrc)) and pnpm (`npm i -g pnpm`).
+Requirements: Node.js 24 (see [`.nvmrc`](.nvmrc)) and pnpm (`npm i -g pnpm`).
 
 ```bash
 git clone https://github.com/piyushgargog/vyana.git
