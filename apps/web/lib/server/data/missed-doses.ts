@@ -237,5 +237,13 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   if (pushed.invalidTokens.length > 0) {
     await sb.from("push_tokens").delete().in("token", pushed.invalidTokens);
   }
+  if (pushed.sent === 0) {
+    // The push service answered but delivered nothing (every ticket failed or every token was dead): no caregiver was
+    // told. Give the doses back so the next run tries again instead of counting a silent failure as an alert.
+    for (const m of claimed) {
+      await sb.from("missed_dose_alerts").delete().eq("item_id", m.item_id).eq("scheduled_for", m.due.toISOString());
+    }
+    return { checked, alerts_sent: 0 };
+  }
   return { checked, alerts_sent: claimed.length };
 }
