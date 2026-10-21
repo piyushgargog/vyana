@@ -11,6 +11,7 @@ import {
   toolActivityLabel,
   type AssistantMessage,
 } from "./chat-helpers";
+import { FormattedMarkdown } from "./formatted-markdown";
 
 /**
  * One chat bubble. `memo` keeps a streaming reply from re-rendering the bubbles before it.
@@ -57,7 +58,7 @@ export const ChatBubble = memo(function ChatBubble({ message }: { message: Assis
       )}
 
       {text.length > 0 && (
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-label">{stripMarkdownLinks(text)}</p>
+        <FormattedMarkdown text={stripMarkdownLinks(text)} />
       )}
 
       {emergency && (

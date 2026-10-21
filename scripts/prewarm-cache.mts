@@ -27,8 +27,8 @@ try {
 /** The demo patient's prescription (seed: patient@vyana.test). Change it here if the demo script changes. */
 const DEMO_PRESCRIPTION = [
   { medicine: "Metformin", strength: "500 mg" },
-  { medicine: "Telma", strength: "40 mg" },
-  { medicine: "Dolo", strength: "650 mg" },
+  { medicine: "Telma (Telmisartan)", strength: "40 mg" },
+  { medicine: "Dolo (Paracetamol)", strength: "650 mg" },
 ];
 const DEMO_CONDITIONS = ["Type 2 Diabetes", "Hypertension"];
 
