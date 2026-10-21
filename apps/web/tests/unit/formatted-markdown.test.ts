@@ -36,6 +36,43 @@ describe("renderInlineMarkdown", () => {
   });
 });
 
+describe("renderInlineMarkdown: safety and half-written text", () => {
+  it("keeps HTML and image syntax as plain text, never as elements", () => {
+    for (const text of ["<script>alert(1)</script>", '<img src=x onerror="alert(1)">', "![x](https://evil.example/a.png)"]) {
+      const res = renderInlineMarkdown(text);
+      expect(res.every((n) => typeof n === "string")).toBe(true);
+      expect(res.join("")).toBe(text);
+    }
+  });
+
+  it("an unclosed marker stays as typed and does not swallow the rest", () => {
+    expect(renderInlineMarkdown("Take **care and rest")).toEqual(["Take **care and rest"]);
+    expect(renderInlineMarkdown("Use `code and more")).toEqual(["Use `code and more"]);
+  });
+
+  it("does not italicise snake_case_names or a multiplication", () => {
+    expect(renderInlineMarkdown("the snake_case_var is plain")).toEqual(["the snake_case_var is plain"]);
+    expect(renderInlineMarkdown("2 * 3 * 4 = 24")).toEqual(["2 * 3 * 4 = 24"]);
+  });
+
+  it("scans long input in linear time", () => {
+    const t = Date.now();
+    renderInlineMarkdown("*a ".repeat(20_000));
+    renderInlineMarkdown("_x ".repeat(20_000));
+    expect(Date.now() - t).toBeLessThan(1500);
+  });
+});
+
+describe("FormattedMarkdown headings", () => {
+  it("never becomes an h1, and a heading line with a long run of spaces is fast", () => {
+    const t = Date.now();
+    const el = FormattedMarkdown({ text: `# Title\n\n#${" ".repeat(20_000)}\r` } as never);
+    expect(Date.now() - t).toBeLessThan(1500);
+    expect(JSON.stringify(el)).toContain('"aria-level":2');
+    expect(JSON.stringify(el)).not.toContain("<h1");
+  });
+});
+
 describe("FormattedMarkdown", () => {
   it("renders a markdown table with header and rows", () => {
     const tableMd = `

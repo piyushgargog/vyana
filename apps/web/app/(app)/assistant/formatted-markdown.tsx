@@ -11,7 +11,8 @@ import { cn } from "@/components/ui";
  */
 export function renderInlineMarkdown(text: string): ReactNode[] {
   const elements: ReactNode[] = [];
-  const tokenRegex = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g;
+  // Single * and _ only count as italic at a word edge and with text right after the opener: snake_case_name and "2 * 3 * 4" stay as typed.
+  const tokenRegex = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|(?<![\w*])\*[^*\s][^*]*\*(?![\w*])|(?<![\w_])_[^_\s][^_]*_(?![\w_]))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -107,7 +108,7 @@ export function FormattedMarkdown({
     }
 
     // 2. Headings (#, ##, ###)
-    const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    const headingMatch = trimmed.match(/^(#{1,4})\s+(\S.*)$/); // \S after the spaces: no overlap with \s+, so no slow backtracking
     if (headingMatch) {
       const level = headingMatch[1].length;
       const title = headingMatch[2];
@@ -118,7 +119,7 @@ export function FormattedMarkdown({
           ? "text-[17px] font-semibold text-label mt-3 mb-1"
           : "text-[15px] font-semibold text-label mt-2.5 mb-1";
       blocks.push(
-        <div key={`h-${i}`} className={headingClass} role="heading" aria-level={Math.min(level + 2, 6)}>
+        <div key={`h-${i}`} className={headingClass} role="heading" aria-level={Math.min(level + 1, 6)}>
           {renderInlineMarkdown(title)}
         </div>
       );
