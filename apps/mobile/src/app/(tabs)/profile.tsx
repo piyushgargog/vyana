@@ -14,6 +14,7 @@ import {
   useRevokeShareLink,
   useShareLinks,
   useUpdateProfile,
+  type DbShareLink,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
@@ -30,6 +31,44 @@ import {
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+
+const SCOPE_LABELS: Record<string, string> = {
+  labs: 'Labs',
+  vitals: 'Vitals',
+  medicines: 'Medicines',
+  adherence: 'Adherence',
+};
+
+/** "just now", "5 min ago", "3 h ago", "2 d ago", then a plain date (#239). */
+function relativeTime(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+/** What an active share link covers and how it has been used (#239). */
+function shareLinkSubtitle(link: DbShareLink): string {
+  const parts: string[] = [];
+  if (link.kind === 'timeline') {
+    parts.push(
+      link.scopes.length > 0
+        ? `Includes ${link.scopes.map((s) => SCOPE_LABELS[s] ?? s).join(', ')}`
+        : 'No summary sections'
+    );
+  }
+  parts.push(`Expires ${new Date(link.expires_at).toLocaleString()}`);
+  parts.push(
+    link.open_count > 0
+      ? `Opened ${link.open_count} ${link.open_count === 1 ? 'time' : 'times'}${link.last_opened_at ? `, last ${relativeTime(link.last_opened_at)}` : ''}`
+      : 'Not opened yet'
+  );
+  return parts.join(' · ');
+}
 
 export default function MobileProfileTab() {
   const router = useRouter();
@@ -334,8 +373,8 @@ export default function MobileProfileTab() {
             <ListRow
               key={link.token}
               icon={<IconTile ios="link" android="link" color="indigo" />}
-              title={`${link.kind} · ${link.token.slice(0, 8)}…`}
-              subtitle={`Expires ${new Date(link.expires_at).toLocaleString()}`}
+              title={`${link.kind === 'medical_id' ? 'Medical ID' : 'Timeline'} · ${link.token.slice(0, 8)}…`}
+              subtitle={shareLinkSubtitle(link)}
               trailing={
                 <Pressable
                   accessibilityRole="button"

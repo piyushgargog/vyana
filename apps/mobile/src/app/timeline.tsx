@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import {
   isShareUrlDead,
   useCreateShareLink,
   useShareLinks,
   useTimeline,
+  type ShareScope,
   type TimelineEntry,
   type TimelineKind,
 } from '@vyana/shared';
@@ -33,6 +35,25 @@ import { MobileDisclaimerFooter, MobileQrGrid } from '@/components/ui-primitives
 import { T } from '@/constants/theme';
 
 const FILTERS = ['all', 'prescription', 'report', 'appointment', 'condition'] as const;
+
+/** How long a share link can last (#239). */
+const DURATIONS = [
+  { hours: 24, label: '24 hours' },
+  { hours: 168, label: '7 days' },
+  { hours: 720, label: '30 days' },
+] as const;
+
+/** The record sections a scoped link can include — the Health Memory Graph scopes (#237). */
+const SCOPE_OPTIONS: { scope: ShareScope; label: string }[] = [
+  { scope: 'labs', label: 'Labs' },
+  { scope: 'vitals', label: 'Vitals' },
+  { scope: 'medicines', label: 'Medicines' },
+  { scope: 'adherence', label: 'Adherence' },
+];
+
+function shareScopeLabel(scope: ShareScope): string {
+  return SCOPE_OPTIONS.find((o) => o.scope === scope)?.label ?? scope;
+}
 
 function filterLabel(f: (typeof FILTERS)[number]): string {
   switch (f) {
@@ -109,10 +130,31 @@ export default function TimelineScreen() {
 
   const [filter, setFilter] = useState<'all' | TimelineKind>('all');
   const [shareOpen, setShareOpen] = useState(false);
-  const [createdUrl, setShareUrl] = useState<string | null>(null);
+  const [durationHours, setDurationHours] = useState<number>(24);
+  const [selectedScopes, setSelectedScopes] = useState<ShareScope[]>([
+    'labs',
+    'vitals',
+    'medicines',
+    'adherence',
+  ]);
+  const [created, setCreated] = useState<{
+    url: string;
+    hours: number;
+    scopes: ShareScope[];
+  } | null>(null);
   const { data: shareLinks = [] } = useShareLinks();
   // A link turned off (or expired) in Profile must not keep showing here as active.
-  const shareUrl = createdUrl && !isShareUrlDead(shareLinks, createdUrl) ? createdUrl : null;
+  const shareUrl = created && !isShareUrlDead(shareLinks, created.url) ? created.url : null;
+
+  const durationLabel =
+    DURATIONS.find((d) => d.hours === durationHours)?.label ?? '24 hours';
+  const createdDurationLabel =
+    DURATIONS.find((d) => d.hours === created?.hours)?.label ?? '24 hours';
+
+  const toggleScope = (scope: ShareScope) =>
+    setSelectedScopes((prev) =>
+      prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]
+    );
 
   const filteredEntries = timeline.filter((e) =>
     filter === 'all' ? true : e.kind === filter
@@ -122,12 +164,13 @@ export default function TimelineScreen() {
     try {
       const res = await createShareMutation.mutateAsync({
         kind: 'timeline',
-        ttl_hours: 24,
+        ttl_hours: durationHours,
+        scopes: selectedScopes,
       });
       const fullUrl = res.url || `${baseUrl}/share/${res.token}`;
-      setShareUrl(fullUrl);
+      setCreated({ url: fullUrl, hours: durationHours, scopes: selectedScopes });
       setShareOpen(true);
-      showToast('24-hour doctor share link created', 'success');
+      showToast(`${durationLabel} doctor share link created`, 'success');
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : 'Could not create share link',
@@ -136,9 +179,14 @@ export default function TimelineScreen() {
     }
   };
 
-  const handleCopyShare = () => {
+  const handleCopyShare = async () => {
     if (!shareUrl) return;
-    showToast('Link copied for your doctor', 'info');
+    try {
+      await Clipboard.setStringAsync(shareUrl);
+      showToast('Link copied for your doctor', 'success');
+    } catch {
+      showToast('Could not copy the link', 'error');
+    }
   };
 
   const handleOpenShare = () => {
@@ -187,11 +235,66 @@ export default function TimelineScreen() {
             <Card>
               <CardHeader title="Share with doctor" />
               <Text variant="subhead" tone="secondary">
-                Create an expiring 24-hour link and QR code for a doctor to
-                review your full history.
+                Create an expiring link and QR code for a doctor. Choose how long
+                it lasts and which parts of your record it includes.
               </Text>
+              <Text variant="footnote" tone="tertiary" style={styles.shareGroupLabel}>
+                Link lasts
+              </Text>
+              <View style={styles.chipRow}>
+                {DURATIONS.map((d) => {
+                  const isSelected = durationHours === d.hours;
+                  return (
+                    <Pressable
+                      key={d.hours}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Link lasts ${d.label}`}
+                      accessibilityState={{ selected: isSelected }}
+                      onPress={() => setDurationHours(d.hours)}
+                      style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                    >
+                      <Text
+                        variant="footnote"
+                        tone={isSelected ? 'white' : 'secondary'}
+                        style={styles.filterChipText}
+                      >
+                        {d.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text variant="footnote" tone="tertiary" style={styles.shareGroupLabel}>
+                Include in the shared record
+              </Text>
+              <View>
+                {SCOPE_OPTIONS.map((o) => {
+                  const isOn = selectedScopes.includes(o.scope);
+                  return (
+                    <Pressable
+                      key={o.scope}
+                      accessibilityRole="switch"
+                      accessibilityLabel={`Include ${o.label}`}
+                      accessibilityState={{ checked: isOn }}
+                      onPress={() => toggleScope(o.scope)}
+                      style={styles.scopeRow}
+                    >
+                      <Text variant="subhead">{o.label}</Text>
+                      <Text variant="footnote" tone={isOn ? 'accent' : 'tertiary'} style={styles.filterChipText}>
+                        {isOn ? 'Included' : 'Off'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {selectedScopes.length === 0 ? (
+                <Text variant="footnote" tone="tertiary">
+                  With nothing selected, the link shows your basic timeline without
+                  the summary sections.
+                </Text>
+              ) : null}
               <Button
-                title={createShareMutation.isPending ? 'Generating…' : 'Share for 24 hours'}
+                title={createShareMutation.isPending ? 'Generating…' : `Share for ${durationLabel}`}
                 onPress={handleGenerateShare}
                 loading={createShareMutation.isPending}
                 disabled={createShareMutation.isPending}
@@ -213,7 +316,12 @@ export default function TimelineScreen() {
                     <Symbol ios="xmark" android="close" size={18} color={T.color.label2} label="Dismiss share view" />
                   </Pressable>
                 </View>
-                <Pill text="Expires in 24 hours" tone="warn" />
+                <Pill text={`Expires in ${createdDurationLabel}`} tone="warn" />
+                <Text variant="footnote" tone="secondary">
+                  {created && created.scopes.length > 0
+                    ? `Includes: ${created.scopes.map(shareScopeLabel).join(' · ')}`
+                    : 'Basic timeline — no summary sections included.'}
+                </Text>
                 <View style={styles.qrCenter}>
                   <MobileQrGrid
                     data={shareUrl}
@@ -318,6 +426,15 @@ const styles = StyleSheet.create({
   qrCenter: { alignItems: 'center' },
   shareBtnRow: { flexDirection: 'row', gap: T.space.sm },
   filterRow: { gap: T.space.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
+  shareGroupLabel: { fontWeight: '700', textTransform: 'uppercase', marginTop: T.space.sm },
+  scopeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: T.space.xs,
+  },
   filterChip: {
     backgroundColor: T.color.surface,
     borderWidth: 1,
