@@ -40,6 +40,13 @@ export default function AssistantPage() {
   const { data: savedMessages, isLoading: historyLoading } =
     useChatMessages(sessionId);
 
+  // The live messages are newer than the saved ones (the reply is saved when the stream ends), so a session created by
+  // this chat must not be hydrated from the database over them.
+  const adoptSession = useCallback((id: string) => {
+    hydratedSessionRef.current = id;
+    setSessionId(id);
+  }, []);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AssistantMessage>({
@@ -49,16 +56,11 @@ export default function AssistantPage() {
         fetch: async (input, init) => {
           const res = await fetch(input, init);
           const next = res.headers.get("x-session-id");
-          if (next && next !== sessionId) {
-            // The live messages are newer than the saved ones (the reply is saved when the stream ends), so a new
-            // session must not be hydrated from the database over them.
-            hydratedSessionRef.current = next;
-            setSessionId(next);
-          }
+          if (next && next !== sessionId) adoptSession(next);
           return res;
         },
       }),
-    [api, sessionId]
+    [api, sessionId, adoptSession]
   );
 
   const { messages, setMessages, sendMessage, status, error, clearError } =
