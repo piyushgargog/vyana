@@ -88,6 +88,7 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "medicines/interactions": "ai_other",
   "prescriptions/basket": "agent",
   "labs/compare": "agent",
+  "blood/search": "agent",
   "doctors/verify": "agent",
   "hospitals/info": "agent",
   "schemes/pmjay-hospitals": "agent",

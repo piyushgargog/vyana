@@ -96,6 +96,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
       emergency_contacts: contacts.map((c) => ({ name: c.name, phone: c.phone })),
     },
     timeline: null,
+    memory: null, // filled by the Memory Graph data work (M1)
     expires_at: new Date(row.expires_at).toISOString(),
   };
 
