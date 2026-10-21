@@ -100,6 +100,22 @@ function TestTrend({
   );
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidUuid(id: unknown): boolean {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
+
+export function isInvalidUuidError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.toLowerCase().includes("invalid input syntax for type uuid") ||
+    msg.includes("22P02")
+  );
+}
+
 export default function LabReportDetailPage({
   params,
 }: {
@@ -107,7 +123,37 @@ export default function LabReportDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { data: report, isLoading, isError, error, refetch } = useLabReport(id);
+  const validUuid = isValidUuid(id);
+  const { data: report, isLoading, isError, error, refetch } = useLabReport(
+    validUuid ? id : undefined
+  );
+
+  if (!validUuid) {
+    return (
+      <div className="space-y-6">
+        <LargeTitle
+          eyebrow="Lab reports"
+          title="Lab report"
+          actions={
+            <Button variant="secondary" onClick={() => router.back()}>
+              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              Back
+            </Button>
+          }
+        />
+        <EmptyState
+          icon={<FileWarning aria-hidden="true" />}
+          title="Report not found"
+          body="This report may have been deleted, or the link is wrong."
+          action={
+            <Button variant="secondary" onClick={() => router.back()}>
+              Go back
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -133,6 +179,33 @@ export default function LabReportDetailPage({
   }
 
   if (isError) {
+    if (isInvalidUuidError(error)) {
+      return (
+        <div className="space-y-6">
+          <LargeTitle
+            eyebrow="Lab reports"
+            title="Lab report"
+            actions={
+              <Button variant="secondary" onClick={() => router.back()}>
+                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                Back
+              </Button>
+            }
+          />
+          <EmptyState
+            icon={<FileWarning aria-hidden="true" />}
+            title="Report not found"
+            body="This report may have been deleted, or the link is wrong."
+            action={
+              <Button variant="secondary" onClick={() => router.back()}>
+                Go back
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <LargeTitle
@@ -151,9 +224,7 @@ export default function LabReportDetailPage({
               Could not load this report
             </p>
             <p className="text-[15px] text-label-2">
-              {error instanceof Error
-                ? error.message
-                : "Something went wrong. Please try again."}
+              Something went wrong while loading this report. Please try again.
             </p>
             <Button variant="secondary" onClick={() => refetch()}>
               Try again

@@ -11,6 +11,7 @@ import {
   useExportMyData,
   useMyProfile,
   isShareLinkActive,
+  shareLinkSubtitle,
   useRevokeShareLink,
   useShareLinks,
   useUpdateProfile,
@@ -25,6 +26,7 @@ import {
   ListRow,
   Screen,
   Sheet,
+  SosPill,
   Symbol,
   Text,
 } from '@/components/ui';
@@ -186,7 +188,10 @@ export default function MobileProfileTab() {
   };
 
   return (
-    <Screen inset={false}>
+    <Screen
+      title="Me"
+      trailing={<SosPill />}
+    >
       {/* Quick links */}
       <ListGroup header="Quick links">
         <ListRow
@@ -334,8 +339,8 @@ export default function MobileProfileTab() {
             <ListRow
               key={link.token}
               icon={<IconTile ios="link" android="link" color="indigo" />}
-              title={`${link.kind} · ${link.token.slice(0, 8)}…`}
-              subtitle={`Expires ${new Date(link.expires_at).toLocaleString()}`}
+              title={`${link.kind === 'medical_id' ? 'Medical ID' : 'Timeline'} · ${link.token.slice(0, 8)}…`}
+              subtitle={shareLinkSubtitle(link)}
               trailing={
                 <Pressable
                   accessibilityRole="button"
