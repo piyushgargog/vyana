@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
+
 ### Fixed
 - Chat history stays in step between the phone and the web: a chat started on one device is listed on the other when the assistant opens (the history is no longer kept for 5 minutes without a check), the saved chat is read again after every reply, and on the phone the first reply of a new chat no longer disappears (the guard the web already had).
 - A care plan no longer fails with a server error when the first model rejects its long answer (Groq `400 json_validate_failed`): the next model in the pool is tried. Every error that stops the model pool is now logged with its status and code.
