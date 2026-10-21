@@ -15,4 +15,6 @@ export const QUERY_ROOTS = {
   shareLinks: "share-links",
   sharedRecord: "shared-record",
   basketJob: "basket-job",
+  plans: "plans",
+  aiUsage: "ai-usage",
 } as const;

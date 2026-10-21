@@ -3,6 +3,7 @@
 import type { ZodType } from "zod";
 
 import {
+  AiUsageTodayRes,
   ApiErrorBody,
   BasketCompareReq,
   BasketCompareRes,
@@ -20,11 +21,14 @@ import {
   HospitalInfoRes,
   InteractionsReq,
   InteractionsRes,
+  JoinWaitlistReq,
+  JoinWaitlistRes,
   LabsCompareReq,
   LabsCompareRes,
   MedicinesCompareReq,
   MeExportRes,
   OkRes,
+  PlansRes,
   PmjayHospitalsReq,
   PmjayHospitalsRes,
   PrescriptionExtractReq,
@@ -87,6 +91,10 @@ export type ApiClient = {
   hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
   schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
+  /** Plans, the Family waitlist and today's AI usage (#305, provisional contract). */
+  plans: { current(): Promise<PlansRes> };
+  waitlist: { join(body: JoinWaitlistReq): Promise<JoinWaitlistRes> };
+  aiUsage: { today(): Promise<AiUsageTodayRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
   reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes>; correctValue(body: LabValueCorrectReq): Promise<LabValueCorrectRes> };
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
@@ -241,6 +249,28 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, mocks.hospitalInfoMock) },
     schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
+    plans: {
+      current: () =>
+        request({ method: "GET", path: "/api/plans/me", resSchema: PlansRes, mock: mocks.plansMock }),
+    },
+    waitlist: {
+      // Mock mode uses the store so "already on the list" works within the session.
+      join: async (body) => {
+        const req = JoinWaitlistReq.safeParse(body);
+        if (!req.success) {
+          throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
+        }
+        if (opts.useMocks) {
+          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
+          return JoinWaitlistRes.parse(mocks.joinWaitlistMock(req.data));
+        }
+        return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, mocks.joinWaitlistMock(req.data));
+      },
+    },
+    aiUsage: {
+      today: () =>
+        request({ method: "GET", path: "/api/ai/usage-today", resSchema: AiUsageTodayRes, mock: mocks.aiUsageTodayMock }),
+    },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
     reports: {
       analyze: (body) => post("/api/reports/analyze", ReportAnalyzeReq, ReportAnalyzeRes, body, mocks.reportsAnalyzeMock),
