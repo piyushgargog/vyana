@@ -26,3 +26,23 @@ alter table public.share_links
 
 -- Creating a link may set its scopes, nothing more: the counters stay server-only.
 grant insert (scopes) on public.share_links to authenticated;
+
+-- Counting an open is one atomic statement, so two opens at the same moment both count (a
+-- read-add-write in the app would lose one of them). Only a live link counts — not revoked and
+-- not expired, the same conditions the page itself checks. The server (service role) is the
+-- only caller: no signed-in user may run it, or a patient could inflate the count of their
+-- own link around the column grants.
+create or replace function public.bump_share_open(p_token text)
+returns void
+language sql
+volatile
+security definer
+set search_path = public
+as $$
+  update public.share_links
+  set open_count = open_count + 1, last_opened_at = now()
+  where token = p_token and not revoked and expires_at > now();
+$$;
+
+revoke execute on function public.bump_share_open(text) from public, anon, authenticated;
+grant execute on function public.bump_share_open(text) to service_role;

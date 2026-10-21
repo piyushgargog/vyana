@@ -2,7 +2,8 @@
 // The Health Memory Graph of a shared record (issue #237): the long view behind a share link —
 // lab trends, vital lines, medicines over time and the last 30 days of doses. Pure functions:
 // the server fetches the rows (capped, only for the scopes that are on) and passes `today`
-// (the day in India) in, so every boundary below can be tested without a clock.
+// (the day in India) in, so every boundary below can be tested without a clock. The shape built
+// here is the contracts' `ShareMemory` (#246): a scope that is off leaves its key out entirely.
 // Owner: Vaibhav Parmar
 
 import type { ShareMemory, ShareScope } from "../contracts";
@@ -26,7 +27,6 @@ export const MEMORY_ADHERENCE_DAYS = 30;
 export interface MemoryLabValue {
   test_name: string;
   value: number | null;
-  value_text: string | null;
   unit: string | null;
   flag: string;
   ref_low: number | null;
@@ -37,9 +37,9 @@ export interface MemoryLabValue {
 /** One reading as the server read it (a row of `vitals`). */
 export interface MemoryVital {
   type: string;
-  value: number;
+  value: number | null;
   value2: number | null;
-  unit: string;
+  unit: string | null;
   measured_at: string;
 }
 
@@ -49,6 +49,8 @@ export interface MemoryMedicineItem {
   strength: string | null;
   dose: string | null;
   frequency: string;
+  /** The day the medicine was started, when the prescription says; `created_at` is only the fallback. */
+  start_date: string | null;
   created_at: string;
   end_date: string | null;
 }
@@ -69,50 +71,10 @@ export interface MemorySources {
 /** A lab flag as the shared page colours it; anything the database holds outside these reads as "unknown". */
 export type MemoryLabFlag = "low" | "normal" | "high" | "unknown";
 
-export interface MemoryLabPoint {
-  date: string;
-  value: number | null;
-  value_text: string | null;
-  flag: MemoryLabFlag;
-  ref_low: number | null;
-  ref_high: number | null;
-}
-export interface MemoryLabTest {
-  test_name: string;
-  unit: string | null;
-  points: MemoryLabPoint[];
-}
-export interface MemoryVitalPoint {
-  date: string;
-  value: number;
-  value2: number | null;
-}
-export interface MemoryVitalSeries {
-  type: string;
-  unit: string;
-  points: MemoryVitalPoint[];
-}
-export interface MemoryMedicine {
-  name: string;
-  strength: string | null;
-  dose: string | null;
-  frequency: string;
-  /** The day the medicine was added (in India); `to` is its last day, or null while it runs. */
-  from: string;
-  to: string | null;
-}
-export interface MemoryAdherenceDay {
-  date: string;
-  taken: number;
-  missed: number;
-  skipped: number;
-}
-export interface MemoryAdherence {
-  /** Every day of the window, oldest first — a day with no doses logged reads as zeroes. */
-  days: MemoryAdherenceDay[];
-  /** Taken of all the doses that were logged in the window (taken + missed + skipped), or null when none were. */
-  percent: number | null;
-}
+type LabTest = NonNullable<ShareMemory["labs"]>[number];
+type VitalSeries = NonNullable<ShareMemory["vitals"]>[number];
+type Medicine = NonNullable<ShareMemory["medicines"]>[number];
+type Adherence = NonNullable<ShareMemory["adherence"]>;
 
 /** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
 function monthsAgo(date: string, months: number): string {
@@ -126,28 +88,34 @@ function istDateOf(timestamp: string): string {
   return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/** A flag from the database as a `MemoryLabFlag` (the column's check already holds it to these four). */
+/** A flag from the database as the contract holds it (the column's check already holds it to these four). */
 function labFlag(flag: string): MemoryLabFlag {
   return flag === "low" || flag === "normal" || flag === "high" ? flag : "unknown";
 }
 
-function buildLabs(values: MemoryLabValue[], today: string): MemoryLabTest[] {
+function buildLabs(values: MemoryLabValue[], today: string): LabTest[] {
   const cutoff = monthsAgo(today, MEMORY_LAB_MONTHS);
   const byTest = new Map<string, MemoryLabValue[]>();
   for (const v of values) {
-    if (!v.measured_on || v.measured_on < cutoff) continue;
+    // A point with no number cannot be drawn on the graph, so it is left out (contract #246).
+    if (!v.measured_on || v.measured_on < cutoff || v.value === null) continue;
     const list = byTest.get(v.test_name) ?? [];
     list.push(v);
     byTest.set(v.test_name, list);
   }
-  const tests: MemoryLabTest[] = [];
+  const tests: LabTest[] = [];
   for (const [test_name, rows] of byTest) {
     const sorted = [...rows].sort((a, b) => (a.measured_on! < b.measured_on! ? -1 : a.measured_on! > b.measured_on! ? 1 : 0));
     const kept = sorted.slice(-MEMORY_LAB_POINTS);
+    // The reference range belongs to the test, not to a point: the latest reading that
+    // carries one speaks for the test.
+    const newestFirst = [...sorted].reverse();
     tests.push({
       test_name,
-      unit: [...kept].reverse().find((r) => r.unit)?.unit ?? null,
-      points: kept.map((r) => ({ date: r.measured_on!, value: r.value, value_text: r.value_text, flag: labFlag(r.flag), ref_low: r.ref_low, ref_high: r.ref_high })),
+      unit: newestFirst.find((r) => r.unit)?.unit ?? null,
+      ref_low: newestFirst.find((r) => r.ref_low !== null)?.ref_low ?? null,
+      ref_high: newestFirst.find((r) => r.ref_high !== null)?.ref_high ?? null,
+      points: kept.map((r) => ({ date: r.measured_on!, value: r.value!, flag: labFlag(r.flag) })),
     });
   }
   // The tests measured most recently come first; the cap drops the stalest ones.
@@ -155,43 +123,52 @@ function buildLabs(values: MemoryLabValue[], today: string): MemoryLabTest[] {
   return tests.slice(0, MEMORY_LAB_TESTS);
 }
 
-function buildVitals(vitals: MemoryVital[], today: string): MemoryVitalSeries[] {
+function buildVitals(vitals: MemoryVital[], today: string): VitalSeries[] {
   const cutoff = monthsAgo(today, MEMORY_VITAL_MONTHS);
   const byType = new Map<string, MemoryVital[]>();
   for (const v of vitals) {
-    if (istDateOf(v.measured_at) < cutoff) continue;
+    if (v.value === null || istDateOf(v.measured_at) < cutoff) continue;
     const list = byType.get(v.type) ?? [];
     list.push(v);
     byType.set(v.type, list);
   }
-  const series: MemoryVitalSeries[] = [];
+  const series: VitalSeries[] = [];
   for (const [type, rows] of byType) {
     const sorted = [...rows].sort((a, b) => (a.measured_at < b.measured_at ? -1 : a.measured_at > b.measured_at ? 1 : 0));
     series.push({
       type,
-      unit: sorted[sorted.length - 1].unit,
-      points: sorted.map((r) => ({ date: istDateOf(r.measured_at), value: r.value, value2: r.value2 })),
+      unit: [...sorted].reverse().find((r) => r.unit)?.unit ?? null,
+      points: sorted.map((r) => ({ at: r.measured_at, value: r.value!, value2: r.value2 })),
     });
   }
-  series.sort((a, b) => (a.points[a.points.length - 1].date < b.points[b.points.length - 1].date ? 1 : -1));
+  series.sort((a, b) => (a.points[a.points.length - 1].at < b.points[b.points.length - 1].at ? 1 : -1));
   return series;
 }
 
-function buildMedicines(items: MemoryMedicineItem[], today: string): MemoryMedicine[] {
+function buildMedicines(items: MemoryMedicineItem[], today: string): Medicine[] {
   // Current medicines, and ones that ended inside the vitals window, so the bars cover the
   // same stretch as the lines; anything older is history the timeline already tells.
   const cutoff = monthsAgo(today, MEMORY_VITAL_MONTHS);
   return items
     .filter((i) => !i.end_date || i.end_date >= cutoff)
-    .map((i) => ({ name: i.medicine_name, strength: i.strength, dose: i.dose, frequency: i.frequency, from: istDateOf(i.created_at), to: i.end_date }))
-    .sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : a.name < b.name ? -1 : 1));
+    .map((i) => ({
+      name: i.medicine_name,
+      strength: i.strength,
+      dose: i.dose,
+      frequency: i.frequency,
+      // The day the medicine started is what the prescription says (start_date); the day the
+      // row was typed in is only the fallback, or a medicine taken for years would look new.
+      start: i.start_date ?? istDateOf(i.created_at),
+      end: i.end_date,
+    }))
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.name < b.name ? -1 : 1));
 }
 
-function buildAdherence(logs: MemoryDoseLog[], today: string): MemoryAdherence {
-  const days: MemoryAdherenceDay[] = [];
-  const byDate = new Map<string, MemoryAdherenceDay>();
+function buildAdherence(logs: MemoryDoseLog[], today: string): Adherence {
+  const days: Adherence["days"] = [];
+  const byDate = new Map<string, Adherence["days"][number]>();
   for (let back = MEMORY_ADHERENCE_DAYS - 1; back >= 0; back--) {
-    const day: MemoryAdherenceDay = { date: addDays(today, -back), taken: 0, missed: 0, skipped: 0 };
+    const day = { date: addDays(today, -back), taken: 0, missed: 0, skipped: 0 };
     days.push(day);
     byDate.set(day.date, day);
   }
@@ -206,21 +183,21 @@ function buildAdherence(logs: MemoryDoseLog[], today: string): MemoryAdherence {
       if (log.status === "taken") taken++;
     }
   }
-  return { days, percent: logged === 0 ? null : Math.round((taken / logged) * 100) };
+  return { days, percent_taken: logged === 0 ? null : Math.round((taken / logged) * 100) };
 }
 
 /**
- * Builds the memory of a shared record from its sources. A scope that is off gives a null
- * section, so nothing of it reaches the page; a scope that is on gives its section, capped as
- * above (labs: the last 24 months, at most 24 tests of at most 24 points; vitals: the last
- * 12 months; adherence: the last 30 days, counted by the day in India).
+ * Builds the memory of a shared record from its sources. Only the sections whose scope is on
+ * are present in the result (the contract's shape), capped as above (labs: the last 24 months,
+ * at most 24 tests of at most 24 points; vitals: the last 12 months; adherence: the last
+ * 30 days, counted by the day in India).
  */
 export function buildMemory(sources: MemorySources, scopes: readonly ShareScope[], today: string): ShareMemory {
   const on = new Set(scopes);
-  return {
-    labs: on.has("labs") ? buildLabs(sources.labs, today) : null,
-    vitals: on.has("vitals") ? buildVitals(sources.vitals, today) : null,
-    medicines: on.has("medicines") ? buildMedicines(sources.medicines, today) : null,
-    adherence: on.has("adherence") ? buildAdherence(sources.adherence, today) : null,
-  };
+  const memory: ShareMemory = {};
+  if (on.has("labs")) memory.labs = buildLabs(sources.labs, today);
+  if (on.has("vitals")) memory.vitals = buildVitals(sources.vitals, today);
+  if (on.has("medicines")) memory.medicines = buildMedicines(sources.medicines, today);
+  if (on.has("adherence")) memory.adherence = buildAdherence(sources.adherence, today);
+  return memory;
 }

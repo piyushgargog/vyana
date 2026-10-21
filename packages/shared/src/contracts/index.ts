@@ -89,6 +89,50 @@ export const LabsCompareRes = z.object({            // CONTRACT CHANGED 13 Oct (
   cached: z.boolean(),
 });
 
+// ---------- POST /api/blood/search · GET /api/blood/search/{job_id} ----------  (RapidBlood, v1.1.0)
+// A job like the basket and the labs: POST starts it, poll GET while `status` is "running". Words in the UI are "listed",
+// never "available": a row is what a public source page showed at `fetched_at`.
+export const BloodGroup = z.enum(["A+","A-","B+","B-","AB+","AB-","O+","O-"]);
+export const BloodComponent = z.enum(["whole_blood","red_cells","platelets","plasma"]);
+export const BloodSearchReq = z.object({ blood_group: BloodGroup, component: BloodComponent, city: z.string().min(2).max(60) });
+export const BloodBank = z.object({
+  name: z.string(),
+  address: z.string().nullable(),
+  city: z.string(),
+  phone: z.string().nullable(),
+  units: z.number().int().min(0).nullable(),          // null when the source lists the bank but no stock number (plan B)
+  component: z.string(),                              // as the source page names it
+  source_url: z.string(),
+  fetched_at: z.string(),                             // ISO datetime
+  last_updated_text: z.string().nullable(),           // "updated" text copied from the source page
+  verified: z.boolean(),                              // name and units were found on the fetched source page
+});
+export const BloodSearchSource = z.object({ area: z.string(), status: z.enum(["pending","ok","not_found","timeout","error"]) });
+export const BloodSearchRes = z.object({
+  job_id: z.string().min(1),
+  query: z.string(), area: z.string(),
+  banks: z.array(BloodBank),                          // verified first, then listed-only
+  sources: z.array(BloodSearchSource),
+  status: z.enum(["running","done"]),
+  cached: z.boolean(),
+});
+// The request tracker (table blood_requests, owner-only). The patient sets every status; nothing changes it automatically.
+export const BloodRequestStatus = z.enum(["searching","contacted","confirmed","arranged","received","cancelled"]);
+export const BloodRequest = z.object({
+  id: z.guid(),
+  blood_group: BloodGroup,
+  component: BloodComponent,
+  units: z.number().int().min(1).max(10),
+  hospital_name: z.string().min(2),
+  city: z.string().min(2),
+  contact_name: z.string().min(1),
+  contact_phone: z.string().min(5),
+  status: BloodRequestStatus,
+  note: z.string().max(500).nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
 // ---------- POST /api/emergency/nearby ----------
 const Lat = z.number().min(-90).max(90);
 const Lng = z.number().min(-180).max(180);
@@ -300,46 +344,27 @@ export const SharedProfile = z.object({
   })),
   emergency_contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
 });
-export const ShareScope = z.enum(["labs", "vitals", "medicines", "adherence"]);
+// Health Memory Graph (v1.1.0): what the patient chose to put in the link. Only the sections whose scope is on are
+// present; every number is a stored row (flags are the stored, code-computed ones), there is no AI text.
+export const ShareScope = z.enum(["labs","vitals","medicines","adherence"]);
 export const ShareMemory = z.object({
-  labs: z.array(z.object({
-    test_name: z.string(),
-    unit: z.string().nullable(),
-    points: z.array(z.object({
-      date: isoDate,
-      value: z.number().nullable(),
-      value_text: z.string().nullable(),
-      flag: z.enum(["low", "normal", "high", "unknown"]),
-      ref_low: z.number().nullable(),
-      ref_high: z.number().nullable(),
-    })),
-  })).nullable(),                                     // only with the "labs" scope
-  vitals: z.array(z.object({
-    type: z.string(),
-    unit: z.string(),
-    points: z.array(z.object({
-      date: isoDate,
-      value: z.number(),
-      value2: z.number().nullable(),
-    })),
-  })).nullable(),                                     // only with the "vitals" scope
+  labs: z.array(z.object({                            // max 24 tests, 24 points each, last 24 months
+    test_name: z.string(), unit: z.string().nullable(),
+    ref_low: z.number().nullable(), ref_high: z.number().nullable(),
+    points: z.array(z.object({ date: isoDate, value: z.number(), flag: z.enum(["low","normal","high","unknown"]) })),
+  })).optional(),
+  vitals: z.array(z.object({                          // last 12 months; value2 = the second number (diastolic)
+    type: z.string(), unit: z.string().nullable(),
+    points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable() })),
+  })).optional(),
   medicines: z.array(z.object({
-    name: z.string(),
-    strength: z.string().nullable(),
-    dose: z.string().nullable(),
-    frequency: z.string(),
-    from: isoDate,
-    to: isoDate.nullable(),
-  })).nullable(),                                     // only with the "medicines" scope
-  adherence: z.object({
-    days: z.array(z.object({
-      date: isoDate,
-      taken: z.number().int(),
-      missed: z.number().int(),
-      skipped: z.number().int(),
-    })),
-    percent: z.number().int().nullable(),
-  }).nullable(),                                      // only with the "adherence" scope
+    name: z.string(), strength: z.string().nullable(), dose: z.string().nullable(), frequency: z.string(),
+    start: isoDate, end: isoDate.nullable(),
+  })).optional(),
+  adherence: z.object({                               // last 30 days, India dates
+    days: z.array(z.object({ date: isoDate, taken: z.number().int(), missed: z.number().int(), skipped: z.number().int() })),
+    percent_taken: z.number().min(0).max(100).nullable(),
+  }).optional(),
 });
 export const ShareRes = z.object({
   kind: z.enum(["medical_id","timeline"]),
@@ -350,7 +375,7 @@ export const ShareRes = z.object({
     title: z.string(),
     summary: z.string().nullable(),
   })).nullable(),                                     // only for kind = "timeline"
-  memory: ShareMemory.nullable(),                     // only for a link created with scopes (issue #237)
+  memory: ShareMemory.nullable(),                     // CONTRACT CHANGED 21 Oct (v1.1.0): null for a link without scopes (the old flat page)
   expires_at: z.string(),
 });
 
@@ -372,6 +397,14 @@ export type SourceLink = z.infer<typeof SourceLink>;
 export type MedicinesCompareReq = z.infer<typeof MedicinesCompareReq>;
 export type LabsCompareReq = z.infer<typeof LabsCompareReq>;
 export type LabsCompareRes = z.infer<typeof LabsCompareRes>;
+export type BloodGroup = z.infer<typeof BloodGroup>;
+export type BloodComponent = z.infer<typeof BloodComponent>;
+export type BloodSearchReq = z.infer<typeof BloodSearchReq>;
+export type BloodBank = z.infer<typeof BloodBank>;
+export type BloodSearchSource = z.infer<typeof BloodSearchSource>;
+export type BloodSearchRes = z.infer<typeof BloodSearchRes>;
+export type BloodRequestStatus = z.infer<typeof BloodRequestStatus>;
+export type BloodRequest = z.infer<typeof BloodRequest>;
 export type EmergencyNearbyReq = z.infer<typeof EmergencyNearbyReq>;
 export type EmergencyNearbyRes = z.infer<typeof EmergencyNearbyRes>;
 export type EmergencySosReq = z.infer<typeof EmergencySosReq>;

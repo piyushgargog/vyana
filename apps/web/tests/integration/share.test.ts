@@ -13,6 +13,7 @@ const T_EXPIRED = hex("c");
 const T_REVOKED = hex("d");
 const T_EDGE = hex("e");
 const T_SCOPED = "9".repeat(48);
+const T_MEDICAL_SCOPED = "8".repeat(48);
 
 let db: ReturnType<typeof memoryDb>;
 vi.mock("@/lib/server/supabase-admin", () => ({
@@ -34,6 +35,7 @@ function world(): Record<string, Row[]> {
       { token: T_REVOKED, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-20T00:00:00Z", revoked: true },
       { token: T_EDGE, patient_id: PATIENT, kind: "medical_id", expires_at: NOW.toISOString(), revoked: false },
       { token: T_SCOPED, patient_id: PATIENT, kind: "timeline", expires_at: "2026-10-14T06:00:00Z", revoked: false, scopes: ["labs", "adherence"], open_count: 2, last_opened_at: null },
+      { token: T_MEDICAL_SCOPED, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-14T06:00:00Z", revoked: false, scopes: ["labs"], open_count: 0, last_opened_at: null },
     ],
     profiles: [
       { id: PATIENT, full_name: "Aryan Sharma", dob: "1990-05-15", blood_group: "O+", allergies: ["Penicillin"], phone: "+91 00000 00001" },
@@ -217,20 +219,30 @@ describe("GET /api/share/[token] with scopes (the Health Memory Graph, #237)", (
       {
         test_name: "HbA1c",
         unit: "%",
+        ref_low: 4.0,
+        ref_high: 5.6,
         points: [
-          { date: "2026-07-06", value: 6.8, value_text: null, flag: "normal", ref_low: 4.0, ref_high: 5.6 },
-          { date: "2026-10-06", value: 7.4, value_text: null, flag: "high", ref_low: 4.0, ref_high: 5.6 },
+          { date: "2026-07-06", value: 6.8, flag: "normal" },
+          { date: "2026-10-06", value: 7.4, flag: "high" },
         ],
       },
     ]);
     expect(body.memory?.adherence?.days).toHaveLength(30);
     expect(body.memory?.adherence?.days[29]).toEqual({ date: "2026-10-13", taken: 1, missed: 0, skipped: 0 });
     expect(body.memory?.adherence?.days[28]).toEqual({ date: "2026-10-12", taken: 0, missed: 1, skipped: 0 });
-    expect(body.memory?.adherence?.percent).toBe(50);
-    // The vitals and medicines rows exist, but those scopes are off: nothing of them is read out.
-    expect(body.memory?.vitals).toBeNull();
-    expect(body.memory?.medicines).toBeNull();
+    expect(body.memory?.adherence?.percent_taken).toBe(50);
+    // The vitals and medicines rows exist, but those scopes are off: their keys are not there at all.
+    expect(body.memory?.vitals).toBeUndefined();
+    expect(body.memory?.medicines).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain("SecretTest");
+  });
+
+  it("never puts the memory on a medical ID link, even one created with scopes", async () => {
+    const res = await get(T_MEDICAL_SCOPED);
+    expect(res.status).toBe(200);
+    const body = ShareRes.parse(await res.json());
+    expect(body.kind).toBe("medical_id");
+    expect(body.memory).toBeNull();
   });
 
   it("counts the open on the link, with the time", async () => {

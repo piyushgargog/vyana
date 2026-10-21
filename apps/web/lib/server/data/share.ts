@@ -26,8 +26,7 @@ const GONE = "This link has expired or was turned off.";
 const TIMELINE_ROWS = 100;
 const TIMELINE_ENTRIES = 100;
 
-/** The caps of the memory queries (#237): the lab cap is the graph's own (24 tests x 24 points). */
-const MEMORY_LAB_ROWS = MEMORY_LAB_TESTS * MEMORY_LAB_POINTS;
+/** The caps of the memory fetches (#237): per lab test the graph's own point cap; the vital and dose fetches are generous bounds the pure builder then windows. */
 const MEMORY_VITAL_ROWS = 1000;
 const MEMORY_DOSE_ROWS = 1000;
 
@@ -51,7 +50,6 @@ interface LinkRow {
   expires_at: string;
   revoked: boolean;
   scopes: string[] | null;
-  open_count: number | null;
 }
 
 /** Runs a query and returns its rows typed as `T` (the service client has no table types, so an embedded `hospitals(name)` is checked by the tests). */
@@ -70,8 +68,9 @@ async function rows<T>(query: PromiseLike<{ data: unknown; error: unknown }>): P
  * - `timeline`: the same basics for context, but no emergency contacts (a doctor does not need them), and the
  *   merged history of prescriptions, reports, appointments and conditions, newest first.
  *
- * A link created with scopes (#237) also returns its Health Memory Graph: only the sections named
- * in the scopes are read (capped parallel queries) and built, the rest stay null. Every successful
+ * A timeline link created with scopes (#237) also returns its Health Memory Graph: only the sections named
+ * in the scopes are read (capped parallel queries) and built, the rest stay out. A medical ID
+ * link never carries it. Every successful
  * open is counted on the link (`open_count`, `last_opened_at`) so the patient can see it was used;
  * a failure of that write never breaks the page, and nothing about the viewer is stored.
  *
@@ -82,7 +81,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
 
   const { data: link, error: linkError } = await sb
     .from("share_links")
-    .select("patient_id, kind, expires_at, revoked, scopes, open_count")
+    .select("patient_id, kind, expires_at, revoked, scopes")
     .eq("token", token)
     .maybeSingle();
   if (linkError) throw linkError;
@@ -98,8 +97,8 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
       sb.from("profiles").select("full_name, dob, blood_group, allergies").eq("id", patient),
     ),
     rows<{ name: string }>(sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at")),
-    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; end_date: string | null; created_at: string }>(
-      sb.from("prescription_items").select("medicine_name, strength, dose, frequency, end_date, created_at").eq("patient_id", patient).eq("active", true).order("created_at"),
+    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
+      sb.from("prescription_items").select("medicine_name, strength, dose, frequency, start_date, end_date, created_at").eq("patient_id", patient).eq("active", true).order("created_at"),
     ),
     row.kind === "medical_id"
       ? rows<{ name: string; phone: string }>(sb.from("emergency_contacts").select("name, phone").eq("patient_id", patient).order("created_at"))
@@ -150,43 +149,73 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
       .map((e) => ({ date: e.date, kind: e.kind, title: e.title, summary: e.subtitle }));
   }
 
-  if (scopes.length > 0) {
+  // The memory belongs to the timeline record only: a medical ID link is the emergency card a
+  // first responder reads, and it never carries the long view, whatever scopes it was given.
+  if (row.kind === "timeline" && scopes.length > 0) {
     // Only the scopes that are on are read, in parallel, each capped; buildMemory applies the
     // windows (labs 24 months, vitals 12, adherence 30 days). The medicines are the active items
     // already read for the profile, so that scope needs no query of its own.
     const doseWindowStart = new Date(new Date(`${today}T00:00:00+05:30`).getTime() - 29 * 24 * 60 * 60 * 1000).toISOString();
     const [labs, vitals, doseLogs] = await Promise.all([
-      scopes.includes("labs")
-        ? rows<MemoryLabValue>(
-            sb
-              .from("lab_values")
-              .select("test_name, value, value_text, unit, flag, ref_low, ref_high, measured_on")
-              .eq("patient_id", patient)
-              .order("measured_on", { ascending: false })
-              .limit(MEMORY_LAB_ROWS),
-          )
-        : Promise.resolve([] as MemoryLabValue[]),
+      scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
       scopes.includes("vitals")
         ? rows<MemoryVital>(
             sb.from("vitals").select("type, value, value2, unit, measured_at").eq("patient_id", patient).order("measured_at", { ascending: false }).limit(MEMORY_VITAL_ROWS),
           )
         : Promise.resolve([] as MemoryVital[]),
       scopes.includes("adherence")
-        ? rows<MemoryDoseLog>(sb.from("dose_logs").select("scheduled_for, status").eq("patient_id", patient).gte("scheduled_for", doseWindowStart).limit(MEMORY_DOSE_ROWS))
+        ? rows<MemoryDoseLog>(
+            sb
+              .from("dose_logs")
+              .select("scheduled_for, status")
+              .eq("patient_id", patient)
+              .gte("scheduled_for", doseWindowStart)
+              .order("scheduled_for", { ascending: false })
+              .limit(MEMORY_DOSE_ROWS),
+          )
         : Promise.resolve([] as MemoryDoseLog[]),
     ]);
     res.memory = buildMemory({ labs, vitals, medicines: items, adherence: doseLogs }, scopes, today);
   }
 
-  // A successful open counts for the patient ("Opened N times"). Best effort only: the count is
-  // a courtesy, so a failed write — or a client that cannot write — never breaks the page.
+  // A successful open counts for the patient ("Opened N times"). The bump is one atomic
+  // statement in the database (0014), so two opens at the same moment both count. Best effort
+  // only: the count is a courtesy, so a failed write never breaks the page.
   try {
-    await sb
-      .from("share_links")
-      .update({ open_count: (row.open_count ?? 0) + 1, last_opened_at: now.toISOString() })
-      .eq("token", token);
+    await sb.rpc("bump_share_open", { p_token: token });
   } catch {
     // ignored on purpose, see above
   }
   return res;
+}
+
+/**
+ * The lab rows of the memory, fetched per test: first the tests the patient measured most
+ * recently (at most the graph's test cap), then each test's newest points (at most the point
+ * cap). One shared newest-first fetch would let a single frequent test (a diabetic's glucose)
+ * fill the whole cap and starve every other test out of the graph.
+ */
+async function fetchLabs(sb: SupabaseClient, patient: string): Promise<MemoryLabValue[]> {
+  const recent = await rows<{ test_name: string }>(
+    sb.from("lab_values").select("test_name").eq("patient_id", patient).order("measured_on", { ascending: false }).limit(MEMORY_VITAL_ROWS),
+  );
+  const names: string[] = [];
+  for (const r of recent) {
+    if (!names.includes(r.test_name)) names.push(r.test_name);
+    if (names.length === MEMORY_LAB_TESTS) break;
+  }
+  const perTest = await Promise.all(
+    names.map((name) =>
+      rows<MemoryLabValue>(
+        sb
+          .from("lab_values")
+          .select("test_name, value, unit, flag, ref_low, ref_high, measured_on")
+          .eq("patient_id", patient)
+          .eq("test_name", name)
+          .order("measured_on", { ascending: false })
+          .limit(MEMORY_LAB_POINTS),
+      ),
+    ),
+  );
+  return perTest.flat();
 }

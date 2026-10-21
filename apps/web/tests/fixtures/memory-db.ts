@@ -76,6 +76,19 @@ export function memoryDb(seed: Record<string, Row[]>) {
       };
       return chain;
     },
+    // The one stored function the data routes call: bump_share_open (migration 0014) counts an
+    // open of a live link — the same rule is applied to the row here (not revoked, not expired).
+    rpc(fn: string, args: Row) {
+      requests.push({ table: fn, op: "rpc" });
+      if (fn === "bump_share_open") {
+        const row = table("share_links").find((r) => r.token === args.p_token);
+        if (row && !row.revoked && time(row.expires_at) > Date.now()) {
+          row.open_count = (typeof row.open_count === "number" ? row.open_count : 0) + 1;
+          row.last_opened_at = new Date().toISOString();
+        }
+      }
+      return Promise.resolve({ data: null, error: null });
+    },
   };
   return { sb: client as unknown as SupabaseClient, tables, requests, table };
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/constants/theme';
 import { Text } from './text';
@@ -55,15 +56,18 @@ export function Screen({
     );
   }
   return (
-    <ScrollView
+    // Scrolls the focused field above the keyboard, also in a long form
+    <KeyboardAwareScrollView
       style={styles.screen}
+      bottomOffset={T.space.xl}
+      keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingTop: top, paddingBottom: insets.bottom + 110 }]}
       refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={T.color.accent} /> : undefined}
     >
       {header}
       {children}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
