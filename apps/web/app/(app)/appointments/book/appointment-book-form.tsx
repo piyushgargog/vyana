@@ -361,6 +361,11 @@ export function AppointmentBookForm() {
                 icon={<Building2 className="h-6 w-6" aria-hidden="true" />}
                 title="No affiliated hospitals available"
                 body="There are no hospitals registered for OPD token booking at this time."
+                action={
+                  <Button variant="secondary" size="sm" onClick={() => refetchHospitals()}>
+                    Try again
+                  </Button>
+                }
               />
             ) : (
               <div
@@ -512,6 +517,11 @@ export function AppointmentBookForm() {
               <EmptyState
                 title="No departments listed"
                 body="No OPD departments are currently registered for this hospital."
+                action={
+                  <Button variant="secondary" size="sm" onClick={() => refetchHospital()}>
+                    Try again
+                  </Button>
+                }
               />
             ) : (
               <div
