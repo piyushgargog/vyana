@@ -32,6 +32,7 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 | ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions, a symptom check that points you to the right department or to 108 |
 | 🔎 | **More from the live web** | Lab test price comparison and Ayushman Bharat (PM-JAY) hospitals near you |
 | 🩸 | **RapidBlood** | Look up blood stock by blood group and component in your city and nearby cities, from the public e-RaktKosh stock page. Vyana lists the blood banks it finds and tracks your blood requests; you call the bank to confirm |
+| 🧠 | **Health Memory Graph** | Share a timeline link for 24 hours, 7 days or 30 days with only the parts you pick: labs, vitals, medicines or adherence. The doctor sees lab trends, vitals, medicines over time and a 30 day adherence strip, all drawn from your stored records, with no AI-written text; you see how many times the link was opened |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
 ## Screenshots
