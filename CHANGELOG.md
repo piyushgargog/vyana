@@ -8,6 +8,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
 
 ### Changed
+- RapidBlood screens match the faster search: the per-area progress and the "2 to 3 minutes" text are gone from the web `/blood` page and the phone's blood screen — a short skeleton shows while the source page is read (about a second now). Bank rows are sorted by units listed, then by the freshest read (`sortBloodBanks` in `@vyana/shared`), each row shows the update written on the source row and a "Call to confirm" line. When a search finds nothing or cannot be read, the card offers "Open e-RaktKosh" and "Share this request" on WhatsApp or by SMS; the same WhatsApp and SMS buttons now sit on every request card on web and phone (the phone's native Share button is gone).
 - RapidBlood reads the stock directly from the public e-RaktKosh service instead of a web agent: results come in about a second (before: 2 to 3 minutes), the city is matched to a district of the source (Gurugram and Noida work too), rows with several blood groups in one cell or without a count are not shown, answers are cached for 15 minutes and requests carry an identifying User-Agent. The wording stays: "listed", call to confirm. Blood search has its own rate-limit bucket (20 per 10 minutes).
 
 ### Fixed

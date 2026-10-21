@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Pressable,
-  Share,
   StyleSheet,
   TextInput,
   View,
@@ -13,8 +11,11 @@ import * as Clipboard from 'expo-clipboard';
 import {
   BLOOD_REQUEST_STATUSES,
   BloodGroup,
+  E_RAKTKOSH_URL,
   buildBloodRequestMessage,
   relativeTime,
+  smsShareUrl,
+  sortBloodBanks,
   telHref,
   useBloodJob,
   useBloodRequests,
@@ -22,19 +23,19 @@ import {
   useMyProfile,
   useSearchBlood,
   useUpdateBloodRequest,
+  whatsappShareUrl,
   type BloodBank,
   type BloodComponent,
   type BloodRequestStatus,
   type DbBloodRequest,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { MobileSkeletonCard } from '@/components/ui-primitives';
 import {
   Button,
   Card,
   CardHeader,
   EmptyState,
-  ListGroup,
-  ListRow,
   Pill,
   Screen,
   Symbol,
@@ -68,15 +69,39 @@ const STATUS_LABEL: Record<BloodRequestStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const AREA_STATUS: Record<string, { label: string; tone: 'neutral' | 'ok' | 'warn' | 'danger' }> = {
-  pending: { label: 'Reading the page…', tone: 'neutral' },
-  ok: { label: 'Done', tone: 'ok' },
-  not_found: { label: 'Nothing listed', tone: 'neutral' },
-  timeout: { label: 'Took too long', tone: 'warn' },
-  error: { label: 'Could not read', tone: 'warn' },
-};
-
 const componentWords = (c: string) => COMPONENTS.find((x) => x.value === c)?.label ?? c;
+
+/** When a search finds nothing or cannot be read: the public stock page itself, and a way to share the request. */
+function SearchFallback({ message }: { message: string }) {
+  const { showToast } = useVyanaMobile();
+  const fail = () => showToast('Could not open that', 'error');
+  return (
+    <View style={styles.actionRow}>
+      <Button
+        title="Open e-RaktKosh"
+        variant="secondary"
+        size="md"
+        label="Open e-RaktKosh, the public blood stock page"
+        icon={<Symbol ios="arrow.up.right" android="open_in_new" size={14} color={T.color.accentStrong} />}
+        onPress={() => openUrl(E_RAKTKOSH_URL, fail)}
+      />
+      <Button
+        title="Share on WhatsApp"
+        variant="secondary"
+        size="md"
+        label="Share this request on WhatsApp"
+        onPress={() => openUrl(whatsappShareUrl(message), fail)}
+      />
+      <Button
+        title="Share by SMS"
+        variant="secondary"
+        size="md"
+        label="Share this request by SMS"
+        onPress={() => openUrl(smsShareUrl(message), fail)}
+      />
+    </View>
+  );
+}
 
 function openUrl(url: string, onFail: () => void) {
   Linking.openURL(url).catch(onFail);
@@ -111,8 +136,12 @@ function BankCard({ bank }: { bank: BloodBank }) {
         {units} · {bank.component}
       </Text>
       <Text variant="footnote" tone="tertiary">
-        {bank.last_updated_text ? `Source says: ${bank.last_updated_text}. ` : ''}Read{' '}
-        {relativeTime(bank.fetched_at)}
+        {bank.last_updated_text
+          ? `Updated ${bank.last_updated_text}`
+          : `Read ${relativeTime(bank.fetched_at)}`}
+      </Text>
+      <Text variant="footnote" tone="secondary" style={styles.strong}>
+        Call to confirm
       </Text>
       <View style={styles.actionRow}>
         {tel ? (
@@ -209,20 +238,18 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
       <View style={styles.actionRow}>
         <Button title="Copy message" variant="secondary" size="md" label="Copy the request message" onPress={copy} />
         <Button
-          title="Share"
-          variant="secondary"
-          size="md"
-          label="Share the request message"
-          onPress={() => {
-            Share.share({ message }).catch(() => undefined);
-          }}
-        />
-        <Button
           title="WhatsApp"
           variant="secondary"
           size="md"
           label="Send the request message on WhatsApp"
-          onPress={() => openUrl(`https://wa.me/?text=${encodeURIComponent(message)}`, fail)}
+          onPress={() => openUrl(whatsappShareUrl(message), fail)}
+        />
+        <Button
+          title="SMS"
+          variant="secondary"
+          size="md"
+          label="Send the request message by SMS"
+          onPress={() => openUrl(smsShareUrl(message), fail)}
         />
         {contactTel ? (
           <Button
@@ -308,6 +335,18 @@ export default function BloodScreen() {
 
   const result = job.data;
   const running = Boolean(jobId) && (job.isLoading || result?.status === 'running');
+  const banks = result ? sortBloodBanks(result.banks) : [];
+  // The request this search belongs to, for the empty and failed states: the search fields
+  // plus the request form below, so the message says only what the patient typed.
+  const shareMessage = buildBloodRequestMessage({
+    blood_group: groupValue,
+    component,
+    units: unitsOk ? unitsNumber : 1,
+    hospital_name: hospital.trim(),
+    city: cityValue.trim(),
+    contact_name: nameValue.trim(),
+    contact_phone: phoneValue.trim(),
+  });
 
   return (
     <Screen
@@ -426,49 +465,27 @@ export default function BloodScreen() {
                   Could not read the results. Try again. In an emergency call 108.
                 </Text>
                 <Button title="Retry" variant="plain" size="md" label="Retry reading the results" onPress={() => job.refetch()} />
+                <SearchFallback message={shareMessage} />
               </View>
-            ) : (
-              <>
-                {running ? (
-                  <View style={styles.runningRow}>
-                    <ActivityIndicator size="small" color={T.color.accent} />
-                    <Text variant="footnote" tone="secondary" style={styles.flex1}>
-                      Reading the source page for each area. This can take 2 to 3 minutes; you can leave
-                      this screen open.
-                    </Text>
-                  </View>
-                ) : null}
-                {result ? (
-                  <ListGroup>
-                    {result.sources.map((s) => (
-                      <ListRow
-                        key={s.area}
-                        title={s.area}
-                        trailing={
-                          <Pill
-                            text={AREA_STATUS[s.status]?.label ?? s.status}
-                            tone={AREA_STATUS[s.status]?.tone ?? 'neutral'}
-                          />
-                        }
-                      />
-                    ))}
-                  </ListGroup>
-                ) : null}
-              </>
-            )}
+            ) : running ? (
+              <MobileSkeletonCard />
+            ) : null}
           </Card>
 
-          {result && result.banks.length > 0
-            ? result.banks.map((b) => <BankCard key={`${b.name}|${b.city}|${b.phone ?? ''}`} bank={b} />)
+          {!running && banks.length > 0
+            ? banks.map((b) => <BankCard key={`${b.name}|${b.city}|${b.phone ?? ''}`} bank={b} />)
             : null}
-          {result?.status === 'done' && result.banks.length === 0 ? (
+          {result?.status === 'done' && banks.length === 0 ? (
             result.sources.some((s) => s.status === 'ok' || s.status === 'not_found') ? (
-              <EmptyState
-                ios="drop.fill"
-                android="water_drop"
-                title="No blood bank listed for this search"
-                body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108."
-              />
+              <>
+                <EmptyState
+                  ios="drop.fill"
+                  android="water_drop"
+                  title="No blood bank listed for this search"
+                  body="Try a nearby city, check the public stock page yourself, or call the hospital's own blood bank. In an emergency call 108."
+                />
+                <SearchFallback message={shareMessage} />
+              </>
             ) : (
               // No area answered at all: that says nothing about stock, so it is
               // an unread page with a retry, never an empty result.
@@ -486,6 +503,7 @@ export default function BloodScreen() {
                   onPress={runSearch}
                   style={styles.retryBtn}
                 />
+                <SearchFallback message={shareMessage} />
               </Card>
             )
           ) : null}
@@ -616,7 +634,7 @@ const styles = StyleSheet.create({
   },
   statusChipActive: { backgroundColor: T.color.accent },
   errorBlock: { gap: T.space.xs },
-  runningRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  strong: { fontWeight: '700' },
   section: { gap: T.space.md },
   sectionTitle: { paddingHorizontal: T.space.xs },
   bankTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: T.space.sm },
