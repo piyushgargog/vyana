@@ -5,7 +5,6 @@
  *
  *   pnpm live:check                # fast checks: no agents, no model
  *   pnpm live:check --llm          # also the routes that need a model (set LLM_MOCK=1 or a provider on the server)
- *   pnpm live:check --agents       # also the routes that start TinyFish agents (uses credits)
  *
  * Each line is PASS, FAIL or SKIP; a difference from the docs is a FAIL to fix in the docs first. Exit code 1 on any FAIL.
  */
@@ -23,7 +22,6 @@ const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const PASSWORD_PATIENT = process.env.SEED_PASSWORD_PATIENT ?? "";
 const PASSWORD_DOCTOR = process.env.SEED_PASSWORD_DOCTOR ?? "";
 const WITH_LLM = process.argv.includes("--llm");
-const WITH_AGENTS = process.argv.includes("--agents");
 
 for (const [name, value] of [["NEXT_PUBLIC_SUPABASE_URL", SB_URL], ["NEXT_PUBLIC_SUPABASE_ANON_KEY", SB_KEY], ["SEED_PASSWORD_PATIENT", PASSWORD_PATIENT], ["SEED_PASSWORD_DOCTOR", PASSWORD_DOCTOR]] as const) {
   if (!value) {
@@ -37,11 +35,14 @@ const line = (state: "PASS" | "FAIL" | "SKIP", name: string, detail = "") => {
   if (state === "FAIL") failures++;
   console.log(`${state}  ${name}${detail ? `  - ${detail}` : ""}`);
 };
+/** Throw from a check to mark it SKIP instead of FAIL (an outside service that did not answer says nothing about us). */
+class SkipCheck extends Error {}
 async function check(name: string, fn: () => Promise<string | void>) {
   try {
     line("PASS", name, (await fn()) ?? "");
   } catch (err) {
-    line("FAIL", name, err instanceof Error ? err.message : String(err));
+    if (err instanceof SkipCheck) line("SKIP", name, err.message);
+    else line("FAIL", name, err instanceof Error ? err.message : String(err));
   }
 }
 const skip = (name: string, why: string) => line("SKIP", name, why);
@@ -151,14 +152,20 @@ await check("web_cache: a second identical request is served from the cache", as
   return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (needs a model or TINYFISH_MOCK=1)";
 });
 
-await check("blood search: Delhi is answered within 8 seconds from the public stock service, every row holds a unit count", async () => {
+await check("blood search: Delhi is answered within 5 seconds from the public stock service, at least one bank, every row holds a unit count", async () => {
   const t0 = Date.now();
   const res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" });
   const seconds = (Date.now() - t0) / 1000;
   expect(res.status === 200 && res.json?.status === "done", `blood ${res.status} ${res.text.slice(0, 120)}`);
-  expect(seconds < 8, `took ${seconds.toFixed(1)} s`);
   const banks = res.json?.banks ?? [];
-  if (banks.length === 0) return `no banks listed right now (sources: ${res.json?.sources.map((s: any) => s.status).join(", ")}); the public service may be down`;
+  if (banks.length === 0) {
+    // The server answers "done" with an errored source when the public service is
+    // down; that says nothing about Vyana, so the check skips instead of failing.
+    const answered = (res.json?.sources ?? []).some((s: any) => s.status === "ok" || s.status === "not_found");
+    if (!answered) throw new SkipCheck(`the public stock service did not answer (sources: ${(res.json?.sources ?? []).map((s: any) => s.status).join(", ") || "none"})`);
+    throw new Error("the service answered but listed no bank for Delhi");
+  }
+  expect(seconds < 5, `took ${seconds.toFixed(1)} s`);
   expect(banks.every((b: any) => Number.isInteger(b.units) && b.units > 0 && b.verified), "every row should hold a unit count");
   return `${banks.length} banks in ${seconds.toFixed(1)} s, most units ${banks[0].units}`;
 });
@@ -208,38 +215,6 @@ if (!WITH_LLM) {
     const docCond = await rest("GET", "conditions?source=eq.doctor&select=id&limit=1", P);
     if (docCond.json?.[0]) expect((await api("POST", "/api/care-plan", P, { condition_id: docCond.json[0].id })).status === 403, "a doctor's diagnosis should be 403 for the patient");
     return `${plan.json?.plan.do.length} do's, ${plan.json?.plan.red_flags.length} warning signs`;
-  });
-}
-
-if (!WITH_AGENTS) {
-  skip("agent routes: basket job, lab compare job, NMC verification", "add --agents (uses TinyFish credits; ~6 min for a basket)");
-} else {
-  await check("basket: POST with the demo prescription reads its active items, returns a job_id; GET finishes; price_quotes rows are written", async () => {
-    const rx = await rest("GET", "prescriptions?select=id&order=issued_on.desc&limit=1", P);
-    expect(rx.json?.[0]?.id, "the demo patient should have a prescription");
-    const start = await api("POST", "/api/prescriptions/basket", P, { prescription_id: rx.json[0].id });
-    expect(start.status === 200 && start.json?.job_id, `start ${start.status} ${start.text.slice(0, 120)}`);
-    let job = start.json!;
-    for (let i = 0; i < 60 && job.status === "running"; i++) {
-      await new Promise((r) => setTimeout(r, 10_000));
-      const poll = await api("GET", `/api/prescriptions/basket/${encodeURIComponent(job.job_id)}`, P);
-      expect(poll.status === 200, `poll ${poll.status}`);
-      job = poll.json!;
-    }
-    expect(job.status === "done", "the job should finish within 10 minutes");
-    const quotes = await rest("GET", "price_quotes?select=id&limit=1", P);
-    expect(quotes.status === 200, `price_quotes read ${quotes.status}`);
-    return `cheapest ${job.cheapest_source ?? "none"}, ${job.baskets.filter((b: any) => b.status === "ok").length} complete baskets; price_quotes readable`;
-  });
-  await check("lab compare: a job starts with four pending labs", async () => {
-    const res = await api("POST", "/api/labs/compare", P, { test_name: "HbA1c", city: "Delhi" });
-    expect(res.status === 200 && res.json?.job_id && res.json?.sources.length === 4, `labs ${res.status} ${res.text.slice(0, 120)}`);
-    return res.json?.status;
-  });
-  await check("NMC: a fake number never verifies (the pending demo doctor)", async () => {
-    const res = await api("POST", "/api/doctors/verify", doctor2!.token, { reg_no: "99887766", state_council: "Delhi Medical Council" });
-    expect(res.status === 200 && res.json?.status !== "verified", `verify ${res.status} ${res.text.slice(0, 120)}`);
-    return res.json?.status;
   });
 }
 

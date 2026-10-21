@@ -8,6 +8,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
 
 ### Changed
+- The live check (`pnpm live:check`) no longer runs the agent routes: the basket job, the lab compare job and the NMC check are gone, and so is the `--agents` flag (the web agent behind them is removed, ADR-072). The blood check now wants the public stock service to answer in under 5 seconds with at least one bank listed, and it skips — instead of failing — when that service does not answer at all.
 - RapidBlood reads the stock directly from the public e-RaktKosh service instead of a web agent: results come in about a second (before: 2 to 3 minutes), the city is matched to a district of the source (Gurugram and Noida work too), rows with several blood groups in one cell or without a count are not shown, answers are cached for 15 minutes and requests carry an identifying User-Agent. The wording stays: "listed", call to confirm. Blood search has its own rate-limit bucket (20 per 10 minutes).
 
 ### Fixed
