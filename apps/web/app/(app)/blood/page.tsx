@@ -18,8 +18,8 @@ import {
   type DbBloodRequest,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Field, LargeTitle, ListGroup, ListRow, Pill, SelectField } from "@/components/ui";
-import { Copy, Droplets, ExternalLink, Loader2, Phone, Send } from "lucide-react";
+import { Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Field, LargeTitle, ListGroup, Pill, SelectField } from "@/components/ui";
+import { Check, Copy, Droplets, ExternalLink, Loader2, Phone, Send } from "lucide-react";
 
 /** Shown at all times (RapidBlood, ADR-071): what the list is, and who does the matching. */
 const SAFETY_TEXT =
@@ -49,42 +49,49 @@ const AREA_STATUS: Record<string, { label: string; tone: "neutral" | "ok" | "war
   error: { label: "Could not read", tone: "warn" },
 };
 
+/** A `tel:` link only for something that is a phone number: digits with an optional leading +. */
+const telHref = (phone: string | null): string | null => {
+  const p = phone?.replace(/[\s().-]+/g, "") ?? "";
+  return /^\+?\d{6,15}$/.test(p) ? `tel:${p}` : null;
+};
+
 const componentWords = (c: string) => COMPONENTS.find((x) => x.value === c)?.label ?? c;
 
 function BankRow({ bank }: { bank: BloodBank }) {
   const units = bank.units === null ? "Count not listed" : `${bank.units} ${bank.units === 1 ? "unit" : "units"} listed`;
+  const tel = telHref(bank.phone);
   return (
-    <ListRow
-      title={bank.name}
-      subtitle={
-        <span className="block space-y-0.5">
-          <span className="block">{[bank.address, bank.city].filter(Boolean).join(", ")}</span>
-          <span className="block">
-            {units} · {bank.component}
-          </span>
-          <span className="block">
-            {bank.last_updated_text ? `Source says: ${bank.last_updated_text}. ` : ""}Read {relativeTime(bank.fetched_at)}
-          </span>
-        </span>
-      }
-      trailing={
-        <span className="flex flex-col items-end gap-2">
-          <Pill tone={bank.verified ? "ok" : "neutral"}>{bank.verified ? "Matches the page text" : "Not confirmed"}</Pill>
-          <span className="flex gap-2">
-            {bank.phone ? (
-              <ButtonLink href={`tel:${bank.phone.replace(/\s+/g, "")}`} variant="secondary" size="sm" aria-label={`Call ${bank.name}`}>
-                <Phone aria-hidden="true" className="h-4 w-4" />
-                Call
-              </ButtonLink>
-            ) : null}
-            <ButtonLink href={bank.source_url} variant="secondary" size="sm" target="_blank" rel="noopener noreferrer" aria-label={`Open the source page for ${bank.name}`}>
-              <ExternalLink aria-hidden="true" className="h-4 w-4" />
-              Source
-            </ButtonLink>
-          </span>
-        </span>
-      }
-    />
+    <li className="space-y-2 px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 text-[17px] font-semibold text-label">{bank.name}</p>
+        <Pill tone={bank.verified ? "ok" : "neutral"} className="shrink-0">
+          {bank.verified ? "Matches the page text" : "Not confirmed"}
+        </Pill>
+      </div>
+      <div className="space-y-0.5 text-[14px] text-label-3">
+        <p>{[bank.address, bank.city].filter(Boolean).join(", ")}</p>
+        <p>
+          {units} · {bank.component}
+        </p>
+        <p>
+          {bank.last_updated_text ? `Source says: ${bank.last_updated_text}. ` : ""}Read {relativeTime(bank.fetched_at)}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {tel ? (
+          <ButtonLink href={tel} variant="secondary" size="md" aria-label={`Call ${bank.name}`}>
+            <Phone aria-hidden="true" className="h-4 w-4" />
+            Call
+          </ButtonLink>
+        ) : null}
+        {bank.source_url.startsWith("https://") ? (
+          <ButtonLink href={bank.source_url} variant="secondary" size="md" target="_blank" rel="noopener noreferrer" aria-label={`Open the source page for ${bank.name}`}>
+            <ExternalLink aria-hidden="true" className="h-4 w-4" />
+            Source
+          </ButtonLink>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -114,27 +121,30 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
             aria-pressed={request.status === status}
             disabled={update.isPending}
             onClick={() => request.status !== status && update.mutate({ id: request.id, patch: { status } })}
-            className={`min-h-[44px] rounded-full px-3.5 text-[14px] font-semibold ${request.status === status ? "bg-accent text-white" : "bg-fill text-label-2"}`}
+            className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold ${request.status === status ? "bg-accent text-white" : "bg-fill text-label-2"}`}
           >
+            {request.status === status ? <Check aria-hidden="true" className="h-4 w-4" /> : null}
             {STATUS_LABEL[status]}
           </button>
         ))}
       </div>
-      {update.isError ? <p className="mt-2 text-[14px] text-danger-text">Could not save that change. Try again.</p> : null}
+      {update.isError ? <p role="alert" className="mt-2 text-[14px] text-danger-text">Could not save that change. Try again.</p> : null}
       <p className="mt-3 text-[13px] text-label-3">You set every status yourself; nothing here changes by itself.</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={copy}>
+        <Button variant="secondary" size="md" onClick={copy}>
           <Copy aria-hidden="true" className="h-4 w-4" />
           Copy message
         </Button>
-        <ButtonLink href={`https://wa.me/?text=${encodeURIComponent(message)}`} variant="secondary" size="sm" target="_blank" rel="noopener noreferrer">
+        <ButtonLink href={`https://wa.me/?text=${encodeURIComponent(message)}`} variant="secondary" size="md" target="_blank" rel="noopener noreferrer">
           <Send aria-hidden="true" className="h-4 w-4" />
           Send on WhatsApp
         </ButtonLink>
-        <ButtonLink href={`tel:${request.contact_phone.replace(/\s+/g, "")}`} variant="secondary" size="sm">
-          <Phone aria-hidden="true" className="h-4 w-4" />
-          Call {request.contact_name}
-        </ButtonLink>
+        {telHref(request.contact_phone) ? (
+          <ButtonLink href={telHref(request.contact_phone) as string} variant="secondary" size="md">
+            <Phone aria-hidden="true" className="h-4 w-4" />
+            Call {request.contact_name}
+          </ButtonLink>
+        ) : null}
       </div>
     </Card>
   );
@@ -163,10 +173,10 @@ export default function BloodPage() {
   const canSearch = BloodGroup.options.includes(groupValue as never) && cityValue.trim().length >= 2 && !search.isPending;
   const nameValue = contactName ?? profile?.full_name ?? "";
   const phoneValue = contactPhone ?? profile?.phone ?? "";
-  const canStart = unitsOk && hospital.trim().length >= 2 && nameValue.trim().length >= 1 && phoneValue.trim().length >= 5 && !createRequest.isPending;
+  const canStart = unitsOk && BloodGroup.options.includes(groupValue as never) && cityValue.trim().length >= 2 && hospital.trim().length >= 2 && nameValue.trim().length >= 1 && phoneValue.trim().length >= 5 && !createRequest.isPending;
 
-  const runSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!canSearch) return;
     const res = await search.mutateAsync({ blood_group: groupValue as never, component, city: cityValue.trim() }).catch(() => null);
     setJobId(res?.job_id ?? null);
@@ -230,11 +240,12 @@ export default function BloodPage() {
             Search blood banks
           </Button>
         </form>
-        {search.isError ? <ErrorState className="mt-4" title="The search did not start" body="Try again in a moment. In an emergency call 108." onRetry={() => search.reset()} /> : null}
+        {search.isError ? <ErrorState className="mt-4" title="The search did not start" body="Try again in a moment. In an emergency call 108." onRetry={() => runSearch()} /> : null}
       </Card>
 
+      <div aria-live="polite">
       {jobId ? (
-        <Card aria-live="polite">
+        <Card>
           <CardHeader title="Blood banks listed" />
           {job.isError ? (
             <ErrorState title="Could not read the results" body="Try again. In an emergency call 108." onRetry={() => job.refetch()} />
@@ -260,12 +271,17 @@ export default function BloodPage() {
                 </ListGroup>
               ) : null}
               {result?.status === "done" && result.banks.length === 0 ? (
-                <EmptyState icon={<Droplets />} title="No blood bank listed for this search" body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108." />
+                result.sources.some((s) => s.status === "ok" || s.status === "not_found") ? (
+                  <EmptyState icon={<Droplets />} title="No blood bank listed for this search" body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108." />
+                ) : (
+                  <ErrorState title="The source page could not be read" body="That says nothing about stock. Try again, or call the hospital's own blood bank. In an emergency call 108." onRetry={() => runSearch()} />
+                )
               ) : null}
             </>
           )}
         </Card>
       ) : null}
+      </div>
 
       <Card>
         <CardHeader title="Start a request" />
@@ -280,7 +296,7 @@ export default function BloodPage() {
             Start request
           </Button>
         </form>
-        {createRequest.isError ? <p className="mt-2 text-[14px] text-danger-text">Could not save the request. Check the fields and try again.</p> : null}
+        {createRequest.isError ? <p role="alert" className="mt-2 text-[14px] text-danger-text">Could not save the request. Check the fields and try again.</p> : null}
       </Card>
 
       <section aria-labelledby="blood-requests" className="space-y-3">
@@ -293,7 +309,7 @@ export default function BloodPage() {
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
         ) : (
           <Card>
-            <p className="text-[15px] text-label-3">{requests.isLoading ? "Loading your requests…" : "No requests yet."}</p>
+            <p className="text-[15px] text-label-3">{requests.isPending ? "Loading your requests…" : "No requests yet."}</p>
           </Card>
         )}
       </section>
