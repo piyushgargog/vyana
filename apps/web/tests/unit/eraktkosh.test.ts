@@ -45,6 +45,11 @@ describe("parseRow", () => {
     expect(bank?.phone).toBe("9000000006");
   });
 
+  it("decodes an entity only once", () => {
+    const bank = parseRow(row("Bank &amp;lt;b&amp;gt; &amp;amp; Co<br/>Road<br/>Phone: 9000000009", "Available, B-Ve:4"), area, "c", at);
+    expect(bank?.name).toBe("Bank &lt;b&gt; &amp; Co");
+  });
+
   it("returns null for rows that are not a table row or hold no stock", () => {
     expect(parseRow("nope", area, "c", at)).toBeNull();
     expect(parseRow(["1", "x"], area, "c", at)).toBeNull();

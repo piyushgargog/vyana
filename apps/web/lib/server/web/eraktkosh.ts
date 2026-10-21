@@ -133,12 +133,13 @@ const cleanText = (html: string): string => {
     else if (ch === ">") inTag = false;
     else if (!inTag) out += ch;
   }
+  // `&amp;` is decoded last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice.
   return out
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
 };
