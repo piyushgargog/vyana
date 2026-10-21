@@ -230,6 +230,9 @@ export default function PrescriptionDetailPage() {
                       .map((s) => s.title)
                       .join(", ") || "the checked sources"}
                     .
+                    {interactionsData.not_checked && interactionsData.not_checked.length > 0
+                      ? " This is not a full check: some medicines could not be checked (see below)."
+                      : ""}
                   </p>
                 </div>
               ) : (

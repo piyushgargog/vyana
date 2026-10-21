@@ -265,8 +265,8 @@ export default function AppointmentsIndexScreen() {
                     </Text>
                   </View>
                   <Pill
-                    text={h.kind === 'govt' ? 'GOVT' : 'PRIVATE'}
-                    tone={h.kind === 'govt' ? 'accent' : 'neutral'}
+                    text={h.kind === 'government' ? 'GOVT' : 'PRIVATE'}
+                    tone={h.kind === 'government' ? 'accent' : 'neutral'}
                   />
                 </View>
 

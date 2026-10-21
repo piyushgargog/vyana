@@ -57,7 +57,7 @@ export default function MobileProfileTab() {
 
   const fullName = fullNameOverride ?? profile?.full_name ?? '';
   const phone = phoneOverride ?? profile?.phone ?? '';
-  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? 'B+';
+  const bloodGroup = bloodGroupOverride ?? profile?.blood_group ?? '';
   const allergiesText =
     allergiesTextOverride ?? (profile?.allergies ?? []).join(', ');
   const preferredLang =

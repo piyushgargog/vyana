@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  EMERGENCY,
   useCarePlans,
   useMyCaregivers,
   useMyPatients,
@@ -297,7 +299,7 @@ export default function CaregiverScreen() {
                           color="blue"
                         />
                       }
-                      title={cp.condition_id}
+                      title="Care plan"
                       subtitle={`Status: ${cp.status}`}
                     />
                   ))}
@@ -306,8 +308,8 @@ export default function CaregiverScreen() {
 
               <Button
                 variant="destructive"
-                title="Emergency SOS · Call 108 for patient"
-                label="Trigger Emergency SOS for patient"
+                title="Call 108 for the patient"
+                label="Call 108 ambulance for the patient"
                 icon={
                   <Symbol
                     ios="phone.fill"
@@ -316,7 +318,11 @@ export default function CaregiverScreen() {
                     color={T.color.dangerText}
                   />
                 }
-                onPress={() => router.push('/sos')}
+                onPress={() =>
+                  Linking.openURL(`tel:${EMERGENCY.ambulance}`).catch(() =>
+                    showToast('Could not open the dialer. Dial 108 yourself.', 'error')
+                  )
+                }
               />
 
               <Button

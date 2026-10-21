@@ -28,6 +28,8 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
       ["chest", "pain"], ["chest", "tight"], ["chest", "pressure"], ["chest", "discomfort"], ["chest", "heavy"],
       ["seene", "dard"], ["seeney", "dard"], ["chhati", "dard"], ["chati", "dard"],
       ["सीने", "दर्द"], ["छाती", "दर्द"],
+      // A heart attack or heart pain named directly (added 21 Oct after the pre-release safety read).
+      ["heart", "attack"], ["heart", "pain"], ["dil", "daura"], ["dil", "dard"], ["दिल", "दौरा"], ["दिल", "दर्द"],
     ],
   },
   {
@@ -36,6 +38,7 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
     patterns: [
       ["short", "breath"], ["shortness", "breath"], ["breathless"], ["cant", "breathe"], ["cannot", "breathe"],
       ["difficulty", "breathing"], ["trouble", "breathing"], ["not", "breathing"], ["hard", "breathe"],
+      ["unable", "breathe"], ["not", "breathe"],
       ["saans", "nahi"], ["saans", "taklif"], ["saans", "takleef"], ["saans", "dikkat"], ["saans", "phool"],
       ["सांस", "नहीं"], ["सांस", "तकलीफ"], ["सांस", "दिक्कत"], ["सांस", "फूल"], ["साँस", "नहीं"], ["साँस", "तकलीफ"],
     ],
@@ -49,7 +52,8 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
     id: "unconscious",
     label: "Fainting or loss of consciousness",
     patterns: [
-      ["unconscious"], ["fainted"], ["fainting"], ["passed", "out"], ["not", "responding"], ["unresponsive"],
+      ["unconscious"], ["fainted"], ["fainting"], ["faint"], ["passed", "out"], ["not", "responding"], ["unresponsive"],
+      ["not", "waking"], ["not", "wake"], ["wont", "wake"], ["cant", "wake"],
       ["behosh"], ["बेहोश"],
     ],
   },
@@ -75,7 +79,7 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
     label: "Sudden weakness, numbness, confusion, trouble speaking or vision changes",
     patterns: [
       ["sudden", "weakness"], ["sudden", "numbness"], ["sudden", "confusion"], ["sudden", "vision"],
-      ["face", "drooping"], ["slurred", "speech"], ["cant", "speak"], ["unable", "speak"], ["paralysis"],
+      ["face", "drooping"], ["slurred", "speech"], ["cant", "speak"], ["unable", "speak"], ["paralysis"], ["stroke"],
       ["lakwa"], ["लकवा"],
     ],
   },

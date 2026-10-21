@@ -204,18 +204,18 @@ export default function LandingPage() {
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Scan printed or handwritten prescriptions. Vyana checks every
                   medicine against the photo and compares your whole prescription
-                  on 1mg, PharmEasy, Netmeds and Apollo, plus Jan Aushadhi generics.
+                  on 1mg, PharmEasy, Netmeds and Apollo.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
                   <span>Whole-Prescription Basket</span>
-                  <span className="text-accent-strong font-medium">Generic options found</span>
+                  <span className="text-accent-strong font-medium">Live prices</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• Compares 1mg, PharmEasy, Netmeds and Apollo</p>
-                  <p>• Verified Jan Aushadhi generic substitutes</p>
+                  <p>• A price counts only when it is on the product page</p>
                 </div>
               </div>
             </Card>
@@ -342,9 +342,10 @@ export default function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14px] leading-relaxed text-label-2">
-                  Chronic care plans and prescription adjustments require
-                  confirmation by licensed medical practitioners before being
-                  activated.
+                  A care plan your doctor prepares is reviewed by that doctor. A
+                  plan you generate yourself is marked &ldquo;Not reviewed by a
+                  doctor&rdquo;. Vyana never changes your prescription: only your
+                  doctor does.
                 </p>
               </div>
 
