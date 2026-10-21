@@ -123,7 +123,7 @@ function DoctorPatientSummaryContent({
   const handleCheckInteractions = async () => {
     try {
       setInteractionNotice(null);
-      const res = await checkInteractionsMutation.mutateAsync({});
+      const res = await checkInteractionsMutation.mutateAsync({ patient_id: patientId });
       setInteractionResult(res);
       showToast("Drug-drug interaction analysis completed.", "info");
     } catch (err: unknown) {
@@ -342,7 +342,11 @@ function DoctorPatientSummaryContent({
 
               {interactionResult.interactions?.length === 0 ? (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900">
-                  ✓ No severe drug-drug interactions detected between the analyzed medicines.
+                  No interaction found in:{" "}
+                  {interactionResult.sources_checked?.map((s) => s.title).join(", ") || "the checked sources"}.
+                  {interactionResult.not_checked && interactionResult.not_checked.length > 0
+                    ? ` Not checked: ${interactionResult.not_checked.join(", ")}.`
+                    : ""}
                 </div>
               ) : (
                 <div className="space-y-2">

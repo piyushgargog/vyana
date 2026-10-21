@@ -589,7 +589,7 @@ export default function OnboardingPage() {
                   type="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+919811199887"
+                  placeholder="+91 00000 00000"
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
                 />
               </div>

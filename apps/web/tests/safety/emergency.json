@@ -161,6 +161,51 @@
       "id": "burn-hi-1",
       "lang": "hi",
       "text": "बच्चे का हाथ गरम पानी से जल गया"
+    },
+    {
+      "id": "heart-en-1",
+      "lang": "en",
+      "text": "I think I am having a heart attack"
+    },
+    {
+      "id": "heart-hinglish-1",
+      "lang": "hinglish",
+      "text": "mere pitaji ko dil ka daura pad gaya hai"
+    },
+    {
+      "id": "heart-hinglish-2",
+      "lang": "hinglish",
+      "text": "dil mein bahut dard ho raha hai"
+    },
+    {
+      "id": "heart-hi-1",
+      "lang": "hi",
+      "text": "उन्हें दिल का दौरा पड़ा है"
+    },
+    {
+      "id": "stroke-en-3",
+      "lang": "en",
+      "text": "I think my father is having a stroke"
+    },
+    {
+      "id": "breath-en-3",
+      "lang": "en",
+      "text": "she is unable to breathe"
+    },
+    {
+      "id": "breath-en-4",
+      "lang": "en",
+      "text": "he does not breathe properly since the fall"
+    },
+    {
+      "id": "wake-en-1",
+      "lang": "en",
+      "text": "my grandmother is not waking up"
+    },
+    {
+      "id": "faint-en-1",
+      "lang": "en",
+      "text": "I feel faint and everything is going dark"
     }
   ],
   "controls": [
@@ -187,6 +232,18 @@
     {
       "id": "ctl-6",
       "text": "I have a burning feeling when I pee"
+    },
+    {
+      "id": "ctl-7",
+      "text": "what is a normal resting heart rate for an adult?"
+    },
+    {
+      "id": "ctl-8",
+      "text": "how many hours of sleep should I get each night?"
+    },
+    {
+      "id": "ctl-9",
+      "text": "my father had a routine heart check last year and it was fine"
     }
   ]
 }

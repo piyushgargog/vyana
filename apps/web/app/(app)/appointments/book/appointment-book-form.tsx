@@ -8,7 +8,6 @@ import {
   Calendar,
   Check,
   Clock,
-  Sparkles,
 } from "lucide-react";
 import {
   useBookAppointment,
@@ -556,21 +555,6 @@ export function AppointmentBookForm() {
               </div>
             )}
 
-            <div className="mt-4 border-t border-separator pt-3">
-              <ButtonLink
-                href="/triage"
-                variant="secondary"
-                size="sm"
-                icon={
-                  <Sparkles
-                    className="h-4 w-4 text-accent-strong"
-                    aria-hidden="true"
-                  />
-                }
-              >
-                Not sure which department? Try Symptom Triage
-              </ButtonLink>
-            </div>
           </Card>
 
           {/* 3. Appointment Date & Token Availability */}

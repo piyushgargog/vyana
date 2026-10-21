@@ -78,7 +78,7 @@ export default function TermsOfServicePage() {
                   <li>Personal medication schedule tracking and refill reminder alerts.</li>
                   <li>Prescription and laboratory report scanning and digitized summarization.</li>
                   <li>Emergency medical summary profile and offline-scannable QR code generation.</li>
-                  <li>Transparent price comparison across Indian online pharmacies and Jan Aushadhi generic stores.</li>
+                  <li>Transparent price comparison across Indian online pharmacies.</li>
                   <li>Hospital OPD discovery and token booking assistance.</li>
                 </ul>
                 <p className="text-[13px] text-label-3 pt-1">
@@ -150,7 +150,7 @@ export default function TermsOfServicePage() {
                   Third-Party Services &amp; External Links
                 </h2>
                 <p>
-                  Vyana may link to third-party services—including government ORS portals, Jan Aushadhi generic stores, commercial e-pharmacies, and emergency calling services. Vyana does not own or operate these external services and is not responsible for their delivery timelines, pricing changes, or independent terms.
+                  Vyana may link to third-party services—including government ORS portals, commercial e-pharmacies, and emergency calling services. Vyana does not own or operate these external services and is not responsible for their delivery timelines, pricing changes, or independent terms.
                 </p>
               </section>
 
