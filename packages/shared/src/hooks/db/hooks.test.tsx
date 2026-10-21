@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeResult } from "../../db/queries/fakeSupabase";
 import { AppProviders } from "../../providers/AppProviders";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useBookAppointment, useCarePlans, useConditions, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useHospitals, useMeals, useMyAppointments, useMyProfile } from "./index";
+import { DB_KEYS } from "./shared";
+import { useBookAppointment, useCarePlans, useConditions, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useHospitals, useMeals, useMyAppointments, useMyProfile, useRefreshChatHistory } from "./index";
 
 // jsdom starts slowly on a busy machine (CI, a laptop running the whole suite): be patient, not flaky
 configure({ asyncUtilTimeout: 8000 });
@@ -26,6 +27,20 @@ function setup(fake: ReturnType<typeof fakeSupabase>) {
 }
 
 afterEach(() => cleanup());
+
+describe("chat history refresh", () => {
+  it("reads the saved sessions and messages again when a reply has ended, and not before", () => {
+    const { wrapper, queryClient } = setup(fakeSupabase({}));
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { rerender } = renderHook(({ status }) => useRefreshChatHistory(status), { wrapper, initialProps: { status: "ready" } });
+    expect(invalidate).not.toHaveBeenCalled();
+    rerender({ status: "submitted" });
+    rerender({ status: "streaming" });
+    expect(invalidate).not.toHaveBeenCalled();
+    rerender({ status: "ready" });
+    expect(invalidate.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey)).toEqual([[DB_KEYS.chatSessions], [DB_KEYS.chatMessages]]);
+  });
+});
 
 describe("DB hooks", () => {
   it("do not query while signed out and run once the user signs in", async () => {

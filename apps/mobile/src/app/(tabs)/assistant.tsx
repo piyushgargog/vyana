@@ -18,6 +18,7 @@ import {
   useChatMessages,
   useChatSessions,
   useMyProfile,
+  useRefreshChatHistory,
   useUpdateProfile,
   type Language,
 } from '@vyana/shared';
@@ -225,6 +226,10 @@ export default function MobileAssistantTab() {
 
   const { data: savedMessages } = useChatMessages(sessionId);
 
+  // The live messages are newer than the saved ones (the reply is saved when the stream ends), so a session created by
+  // this chat must not be hydrated from the database over them.
+  const [startedHere, setStartedHere] = useState<string | undefined>(undefined);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AssistantMessage>({
@@ -238,6 +243,7 @@ export default function MobileAssistantTab() {
           );
           const nextSessionId = res.headers.get('x-session-id');
           if (nextSessionId && nextSessionId !== sessionId) {
+            setStartedHere(nextSessionId);
             setSessionId(nextSessionId);
           }
           return res;
@@ -250,12 +256,14 @@ export default function MobileAssistantTab() {
     useChat<AssistantMessage>({
       transport,
     });
+  useRefreshChatHistory(status);
 
   useEffect(() => {
     if (
       sessionId &&
       savedMessages &&
       hydratedSessionRef.current !== sessionId &&
+      startedHere !== sessionId &&
       status === 'ready'
     ) {
       hydratedSessionRef.current = sessionId;
@@ -270,7 +278,7 @@ export default function MobileAssistantTab() {
         }));
       setMessages(mapped);
     }
-  }, [sessionId, savedMessages, setMessages, status]);
+  }, [sessionId, savedMessages, setMessages, status, startedHere]);
 
   const [input, setInput] = useState('');
   const currentLang: Language =
@@ -296,6 +304,7 @@ export default function MobileAssistantTab() {
   const handleNewChat = () => {
     hydratedSessionRef.current = 'new';
     setSessionId(undefined);
+    setStartedHere(undefined);
     clearError();
     setMessages([]);
   };

@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useApi, useChatMessages, useChatSessions } from "@vyana/shared";
+import { useApi, useChatMessages, useChatSessions, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
   EmptyState,
@@ -65,6 +65,7 @@ export default function AssistantPage() {
 
   const { messages, setMessages, sendMessage, status, error, clearError } =
     useChat<AssistantMessage>({ transport });
+  useRefreshChatHistory(status);
 
   useEffect(() => {
     if (
