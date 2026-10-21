@@ -9,6 +9,7 @@ import { supabaseAdmin } from "./supabase-admin";
  */
 
 export const TTL = {
+  quarter: 15 * 60,
   hour: 60 * 60,
   day: 24 * 60 * 60,
 } as const;
