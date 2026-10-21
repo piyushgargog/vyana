@@ -4,21 +4,25 @@ import React, { useState } from "react";
 import {
   BLOOD_REQUEST_STATUSES,
   BloodGroup,
+  E_RAKTKOSH_URL,
   buildBloodRequestMessage,
   relativeTime,
+  smsShareUrl,
+  sortBloodBanks,
   useBloodJob,
   useBloodRequests,
   useCreateBloodRequest,
   useMyProfile,
   useSearchBlood,
   useUpdateBloodRequest,
+  whatsappShareUrl,
   type BloodBank,
   type BloodComponent,
   type BloodRequestStatus,
   type DbBloodRequest,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Field, LargeTitle, ListGroup, Pill, SelectField } from "@/components/ui";
+import { Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Field, LargeTitle, ListGroup, Pill, SelectField, SkeletonLine } from "@/components/ui";
 import { Check, Copy, Droplets, ExternalLink, Loader2, Phone, Send } from "lucide-react";
 
 /** Shown at all times (RapidBlood, ADR-071): what the list is, and who does the matching. */
@@ -39,14 +43,6 @@ const STATUS_LABEL: Record<BloodRequestStatus, string> = {
   arranged: "Arranged",
   received: "Received",
   cancelled: "Cancelled",
-};
-
-const AREA_STATUS: Record<string, { label: string; tone: "neutral" | "ok" | "warn" | "danger" }> = {
-  pending: { label: "Reading the page…", tone: "neutral" },
-  ok: { label: "Done", tone: "ok" },
-  not_found: { label: "Nothing listed", tone: "neutral" },
-  timeout: { label: "Took too long", tone: "warn" },
-  error: { label: "Could not read", tone: "warn" },
 };
 
 /** A `tel:` link only for something that is a phone number: digits with an optional leading +. */
@@ -74,8 +70,9 @@ function BankRow({ bank }: { bank: BloodBank }) {
           {units} · {bank.component}
         </p>
         <p>
-          {bank.last_updated_text ? `Source says: ${bank.last_updated_text}. ` : ""}Read {relativeTime(bank.fetched_at)}
+          {bank.last_updated_text ? `Updated ${bank.last_updated_text}` : `Read ${relativeTime(bank.fetched_at)}`}
         </p>
+        <p className="font-medium text-label-2">Call to confirm</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {tel ? (
@@ -92,6 +89,26 @@ function BankRow({ bank }: { bank: BloodBank }) {
         ) : null}
       </div>
     </li>
+  );
+}
+
+/** When a search finds nothing or cannot be read: the public stock page itself, and a way to share the request. */
+function SearchFallback({ message }: { message: string }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <ButtonLink href={E_RAKTKOSH_URL} variant="secondary" size="md" target="_blank" rel="noopener noreferrer" aria-label="Open e-RaktKosh, the public blood stock page">
+        <ExternalLink aria-hidden="true" className="h-4 w-4" />
+        Open e-RaktKosh
+      </ButtonLink>
+      <ButtonLink href={whatsappShareUrl(message)} variant="secondary" size="md" target="_blank" rel="noopener noreferrer" aria-label="Share this request on WhatsApp">
+        <Send aria-hidden="true" className="h-4 w-4" />
+        Share on WhatsApp
+      </ButtonLink>
+      <ButtonLink href={smsShareUrl(message)} variant="secondary" size="md" aria-label="Share this request by SMS">
+        <Send aria-hidden="true" className="h-4 w-4" />
+        Share by SMS
+      </ButtonLink>
+    </div>
   );
 }
 
@@ -135,9 +152,13 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
           <Copy aria-hidden="true" className="h-4 w-4" />
           Copy message
         </Button>
-        <ButtonLink href={`https://wa.me/?text=${encodeURIComponent(message)}`} variant="secondary" size="md" target="_blank" rel="noopener noreferrer">
+        <ButtonLink href={whatsappShareUrl(message)} variant="secondary" size="md" target="_blank" rel="noopener noreferrer">
           <Send aria-hidden="true" className="h-4 w-4" />
           Send on WhatsApp
+        </ButtonLink>
+        <ButtonLink href={smsShareUrl(message)} variant="secondary" size="md">
+          <Send aria-hidden="true" className="h-4 w-4" />
+          Send by SMS
         </ButtonLink>
         {telHref(request.contact_phone) ? (
           <ButtonLink href={telHref(request.contact_phone) as string} variant="secondary" size="md">
@@ -201,6 +222,18 @@ export default function BloodPage() {
 
   const result = job.data;
   const running = Boolean(jobId) && (job.isLoading || result?.status === "running");
+  const banks = result ? sortBloodBanks(result.banks) : [];
+  // The request this search belongs to, for the empty and failed states: the search fields
+  // plus the request form below, so the message says only what the patient typed.
+  const shareMessage = buildBloodRequestMessage({
+    blood_group: groupValue,
+    component,
+    units: unitsOk ? unitsNumber : 1,
+    hospital_name: hospital.trim(),
+    city: cityValue.trim(),
+    contact_name: nameValue.trim(),
+    contact_phone: phoneValue.trim(),
+  });
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -248,33 +281,37 @@ export default function BloodPage() {
         <Card>
           <CardHeader title="Blood banks listed" />
           {job.isError ? (
-            <ErrorState title="Could not read the results" body="Try again. In an emergency call 108." onRetry={() => job.refetch()} />
+            <>
+              <ErrorState title="Could not read the results" body="Try again. In an emergency call 108." onRetry={() => job.refetch()} />
+              <SearchFallback message={shareMessage} />
+            </>
           ) : (
             <>
-              {running ? <p className="mb-3 text-[15px] text-label-2">Reading the source page for each area. This can take 2 to 3 minutes; you can leave this page open.</p> : null}
-              {result ? (
-                <ul className="mb-3 flex flex-wrap gap-2" aria-label="Areas searched">
-                  {result.sources.map((s) => (
-                    <li key={s.area}>
-                      <Pill tone={AREA_STATUS[s.status]?.tone ?? "neutral"}>
-                        {s.area}: {AREA_STATUS[s.status]?.label ?? s.status}
-                      </Pill>
-                    </li>
-                  ))}
-                </ul>
+              {running ? (
+                <div className="space-y-3" aria-label="Reading the source page">
+                  <SkeletonLine className="w-2/3" />
+                  <SkeletonLine />
+                  <SkeletonLine className="w-1/2" />
+                </div>
               ) : null}
-              {result && result.banks.length > 0 ? (
+              {!running && banks.length > 0 ? (
                 <ListGroup>
-                  {result.banks.map((b) => (
+                  {banks.map((b) => (
                     <BankRow key={`${b.name}|${b.city}|${b.phone ?? ""}`} bank={b} />
                   ))}
                 </ListGroup>
               ) : null}
-              {result?.status === "done" && result.banks.length === 0 ? (
+              {result?.status === "done" && banks.length === 0 ? (
                 result.sources.some((s) => s.status === "ok" || s.status === "not_found") ? (
-                  <EmptyState icon={<Droplets />} title="No blood bank listed for this search" body="Try a nearby city, or call the hospital's own blood bank. In an emergency call 108." />
+                  <>
+                    <EmptyState icon={<Droplets />} title="No blood bank listed for this search" body="Try a nearby city, check the public stock page yourself, or call the hospital's own blood bank. In an emergency call 108." />
+                    <SearchFallback message={shareMessage} />
+                  </>
                 ) : (
-                  <ErrorState title="The source page could not be read" body="That says nothing about stock. Try again, or call the hospital's own blood bank. In an emergency call 108." onRetry={() => runSearch()} />
+                  <>
+                    <ErrorState title="The source page could not be read" body="That says nothing about stock. Try again, or call the hospital's own blood bank. In an emergency call 108." onRetry={() => runSearch()} />
+                    <SearchFallback message={shareMessage} />
+                  </>
                 )
               ) : null}
             </>
