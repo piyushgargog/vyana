@@ -146,6 +146,19 @@ describe("processPharmacyResult", () => {
     expect(b.status).toBe("partial");
   });
 
+  it("retries the confirmation fetch once, so one failed batch does not zero the basket (#225)", async () => {
+    fetchPagesMock
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValue({ results: [{ url: "https://www.netmeds.com/product/dolo", text: "Dolo 650 Tablet ₹30" }], errors: [] });
+    const b = await processPharmacyResult(netmeds, items.slice(0, 1), {
+      items: [{ index: 1, found: true, product_name: "Dolo", price: 30, product_url: "https://www.netmeds.com/product/dolo" }],
+    });
+    expect(fetchPagesMock).toHaveBeenCalledTimes(2);
+    expect(b.lines[0].price_verified).toBe(true);
+    expect(b.total).toBe(30);
+    expect(b.status).toBe("ok");
+  });
+
   it("reports not_found when nothing matched, and error for a malformed result", async () => {
     pages({});
     expect((await processPharmacyResult(netmeds, items, { items: [{ index: 1, found: false }, { index: 2, found: false }] })).status).toBe("not_found");

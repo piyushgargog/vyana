@@ -6,6 +6,7 @@
 
 export * from "./aiRuns";
 export * from "./appointments";
+export * from "./bloodRequests";
 export * from "./carePlans";
 export * from "./careLinks";
 export * from "./chat";
