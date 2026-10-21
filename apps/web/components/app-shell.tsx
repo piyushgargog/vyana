@@ -127,7 +127,7 @@ function AppShellContent({
             { href: "/consent", label: "Privacy", icon: ShieldCheck },
           ]
         : [
-            { href: "/dashboard", label: "Today", icon: House },
+            { href: "/dashboard", label: "Dashboard", icon: House },
             { href: "/prescriptions/scan", label: "Prescriptions", icon: Pill },
             { href: "/reports/upload", label: "Lab reports", icon: FlaskConical },
             { href: "/basket", label: "Medicine prices", icon: ShoppingBasket },

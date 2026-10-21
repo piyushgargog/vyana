@@ -25,6 +25,21 @@ export interface BasketItem {
 /** The remote run is stopped after this long; we give up on a running run a little later. */
 export const AGENT_MAX_SECONDS = 150;
 export const RUN_DEADLINE_MS = 190_000;
+
+/**
+ * A basket agent searches every item on one pharmacy site, so its budget grows with
+ * the basket (#225: a flat 150 s cap timed out Tata 1mg and PharmEasy on multi-item
+ * baskets while single-item checks finished). Single-task agents (labs, blood) keep
+ * the flat AGENT_MAX_SECONDS. The run deadline keeps its 40 s grace over the agent
+ * cap and stays under the queue deadline.
+ */
+export function agentMaxSeconds(itemCount: number): number {
+  return Math.min(420, AGENT_MAX_SECONDS + Math.max(0, itemCount - 1) * 30);
+}
+
+export function runDeadlineMs(itemCount: number): number {
+  return Math.min(QUEUE_DEADLINE_MS, agentMaxSeconds(itemCount) * 1000 + 40_000);
+}
 /**
  * TinyFish queues runs beyond the account's browser limit (2 at once on our plan, measured 12 Oct), so a run may
  * wait for another pharmacy to finish before it starts. Give queued runs this long from the job's start.
@@ -197,11 +212,21 @@ export async function processPharmacyResult(
   const toVerify = [...new Set(lines.filter((l) => l.unit_price !== null && l.product_url).map((l) => l.product_url as string))].slice(0, 10);
   const pages = new Map<string, Set<number>>();
   if (toVerify.length) {
-    try {
+    const fetchPrices = async () => {
       const res = await fetchPages({ urls: toVerify, ttl: 0, purpose: "Confirm the listed price of a medicine" }, { timeoutMs: VERIFY_TIMEOUT_MS, counter });
       for (const r of res.results) pages.set(r.url, pricesOnPage(r.text ?? ""));
+    };
+    try {
+      await fetchPrices();
     } catch {
-      log({ event: "basket_verify_failed", source: pharmacy.source });
+      // One failed batch must not zero the whole pharmacy (#225: a basket showed
+      // "Partial" with no total although the agent had found every item, because
+      // the single confirmation fetch failed) — retry once before giving up.
+      try {
+        await fetchPrices();
+      } catch {
+        log({ event: "basket_verify_failed", source: pharmacy.source });
+      }
     }
   }
 
@@ -286,7 +311,7 @@ export async function startBasketJob(uid: string, items: BasketItem[], counter: 
           goal: basketGoal(items, p),
           output_schema: BASKET_OUTPUT_SCHEMA,
           browser_profile: "stealth",
-          maxSeconds: AGENT_MAX_SECONDS,
+          maxSeconds: agentMaxSeconds(items.length),
           mockResult: process.env.TINYFISH_MOCK === "1" ? mockAgentResult(p, items) : undefined,
         },
         { counter },
@@ -345,7 +370,7 @@ async function basketForRun(run: z.infer<typeof JobRun>, job: JobPayload, counte
       return null;
     }
     const now = Date.now();
-    const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS;
+    const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > runDeadlineMs(job.items.length);
     const stuckQueued = now - job.started_at > QUEUE_DEADLINE_MS;
     if (stuckRunning || stuckQueued) {
       await cancelRun(runId, { counter });
