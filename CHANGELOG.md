@@ -18,6 +18,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Android app: the Today screen now greets you by name and time of day ("Good morning, Piyush") instead of showing an alert banner.
 
 ### Fixed
+- **Heading hierarchy (QA):** Section 3 of Terms of Service now uses an h2 matching sibling numbered sections, and Third-Party Data Processors on the Privacy Policy uses title-case h3 matching standard heading hierarchy for consistent screen-reader navigation (#219).
+- **Home page hero mockup (QA):** Removed the stale static date from the Today card preview inside the hero phone frame (#218).
 - The assistant's first answer in a new chat now stays on screen. It used to vanish when the stream ended (the page reloaded the saved chat, which did not have the answer yet) and only came back after a reload.
 - **Text fixes from QA:** the doctor header no longer shows a doubled "Dr. Dr." when the stored name already has the title; basket prices always show two decimals (₹163.40, not ₹163.4); the onboarding emergency-contact relationship field no longer comes prefilled; the "Account Role" badge reads "Account Role: Patient" instead of the all-caps constant style.
 - The emergency Medical ID QR is now plain readable text (name, blood group, allergies, medicines, one emergency contact) that any phone camera shows without internet. It used to be base64 text that only looked like gibberish, and its link needed internet. A long medicine list is cut with a "+N more" note. The QR has square corners and error level M so it scans on Android.

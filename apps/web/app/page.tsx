@@ -104,9 +104,6 @@ export default function LandingPage() {
               {/* Today Header */}
               <div className="flex items-end justify-between pb-3">
                 <div>
-                  <span className="text-[11px] font-semibold text-label-3">
-                    Wednesday, 14 October
-                  </span>
                   <p className="text-[26px] font-bold tracking-tight text-label">
                     Today
                   </p>

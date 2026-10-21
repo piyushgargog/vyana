@@ -168,7 +168,7 @@ export default function PrivacyPolicyPage() {
 
                 {/* Data Processors */}
                 <div className="rounded-card border border-separator bg-fill/50 p-4 space-y-2 mt-4">
-                  <h3 className="text-[12px] font-semibold uppercase tracking-wider text-label">
+                  <h3 className="text-[17px] font-semibold text-label">
                     Third-Party Data Processors
                   </h3>
                   <p className="text-[13px] text-label-2">
