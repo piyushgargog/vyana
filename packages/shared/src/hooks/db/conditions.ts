@@ -8,13 +8,15 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { addCondition, deleteCondition, listConditions, updateCondition, type ConditionInput, type ConditionPatch } from "../../db/queries/conditions";
 import type { DbError } from "../../db/queries/helpers";
 import type { DbCondition } from "../../db/types";
-import { DB_KEYS, useDb, useInvalidate } from "./shared";
+import { DB_KEYS, afterSession, useDb, useInvalidate } from "./shared";
 
 export function useConditions() {
   const { sb, ready } = useDb();
   return useQuery<DbCondition[], DbError>({
     queryKey: [DB_KEYS.conditions],
-    queryFn: () => listConditions(sb),
+    // Same guard as the hospital list (#223): the read waits for the client's own
+    // session to be attached before it goes out (#225).
+    queryFn: () => afterSession(sb, listConditions),
     enabled: ready,
   });
 }

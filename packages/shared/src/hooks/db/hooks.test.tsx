@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeResult } from "../../db/queries/fakeSupabase";
 import { AppProviders } from "../../providers/AppProviders";
 import { QUERY_ROOTS } from "../api/query-roots";
-import { useBookAppointment, useCarePlans, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useMeals, useMyAppointments, useMyProfile } from "./index";
+import { useBookAppointment, useCarePlans, useConditions, useCreateShareLink, useDeleteMeal, useDoctorQueue, useEmergencyRequest, useMeals, useMyAppointments, useMyProfile } from "./index";
 
 // jsdom starts slowly on a busy machine (CI, a laptop running the whole suite): be patient, not flaky
 configure({ asyncUtilTimeout: 8000 });
@@ -81,6 +81,40 @@ describe("DB hooks", () => {
     const roots = spy.mock.calls.map((c) => (c[0]?.queryKey as string[])[0]);
     expect(roots).toContain(QUERY_ROOTS.appointments);
     expect(roots).toContain("timeline");
+  });
+});
+
+describe("conditions list (#225)", () => {
+  it("waits for the client session before reading, so the list is not cached empty", async () => {
+    const fake = fakeSupabase({
+      userId: "user-1",
+      responses: { conditions: [ok([{ id: "c-1", name: "Type 2 Diabetes" }])] },
+    });
+    // The provider learns the session at once (first call). Later session loads are
+    // held back, as they are while the browser client is still settling right after
+    // sign-in. With the guard, the read needs two more loads (the guard's, then
+    // requireUserId's inside listConditions) and the table is not touched before
+    // they land; without the guard only requireUserId's load stands before the read.
+    let sessionLoads = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const auth = fake.sb.auth as unknown as { getSession: () => Promise<unknown> };
+    const immediate = { data: { session: { user: { id: "user-1" } } }, error: null };
+    auth.getSession = async () => {
+      sessionLoads += 1;
+      if (sessionLoads > 1) await gate;
+      return immediate;
+    };
+    const { wrapper } = setup(fake);
+    const { result } = renderHook(() => useConditions(), { wrapper });
+
+    await waitFor(() => expect(sessionLoads).toBeGreaterThan(1));
+    await act(async () => {});
+    expect(fake.calls.filter((c) => c.name === "from" && c.args[0] === "conditions")).toHaveLength(0);
+
+    release();
+    await waitFor(() => expect(result.current.data?.[0]?.name).toBe("Type 2 Diabetes"));
+    expect(sessionLoads).toBeGreaterThanOrEqual(3);
   });
 });
 
