@@ -9,3 +9,4 @@ export * from "./memory";
 export * from "./blood-request";
 export * from "./source-links";
 export * from "./qr";
+export * from "./trends";
