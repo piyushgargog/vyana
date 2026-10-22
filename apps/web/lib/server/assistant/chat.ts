@@ -112,7 +112,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   const emergency = matchRedFlags(question).length > 0;
   const { messages, placeholders } = redactHistory(turns, profile.full_name ? [profile.full_name] : []);
   const guard = new ReplyGuard({ language, placeholders, doseQuestion: isDoseQuestion(question) });
-  // The reply streams after the route has logged its line, so TinyFish calls are counted and logged here.
+  // The reply streams after the route has logged its line, so the AI run is recorded here.
   const started = Date.now();
   let tokens = { input_tokens: null as number | null, output_tokens: null as number | null };
   const runId = await startAiRun(

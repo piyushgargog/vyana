@@ -152,7 +152,7 @@ await check("web_cache: a second identical request is served from the cache", as
   const second = await api("POST", "/api/emergency/nearby", P, { lat: 28.6139, lng: 77.209 });
   expect(first.status === 200 && second.status === 200, "both calls should be 200");
   if (first.json?.hospitals.length) expect(second.json?.cached === true, "the second call should say cached: true");
-  return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (needs a model or TINYFISH_MOCK=1)";
+  return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (the map service and the table had nothing near this point)";
 });
 
 await check("blood search: Delhi is answered within 5 seconds from the public stock service, at least one bank, every row holds a unit count", async () => {
@@ -234,7 +234,13 @@ if (!WITH_LLM) {
     return `${res.json?.checked_medicines.length} checked, ${res.json?.interactions.length} found, ${res.json?.not_checked?.length ?? 0} not checked`;
   });
   await check("care plan: a patient-added condition gets a patient_generated plan; a doctor's diagnosis → 403 for the patient", async () => {
-    const own = await rest("POST", "conditions", P, { patient_id: patient!.id, name: "Type 2 Diabetes", source: "patient" });
+    // A condition can exist only once per patient (migration 0020), and the demo patient already has some (one is a
+    // doctor's diagnosis): take the first of these that the patient does not have yet, and delete it again below.
+    const existing = await rest("GET", `conditions?patient_id=eq.${patient!.id}&select=name`, P);
+    const have = new Set<string>((existing.json ?? []).map((c: { name: string }) => c.name.trim().toLowerCase()));
+    const name = ["Asthma", "Hypertension", "Migraine", "Anemia"].find((n) => !have.has(n.toLowerCase()));
+    expect(Boolean(name), "the demo patient has every condition this check could add");
+    const own = await rest("POST", "conditions", P, { patient_id: patient!.id, name, source: "patient" });
     expect(own.status === 201, `add condition ${own.status}`);
     const conditionId = own.json[0].id as string;
     try {

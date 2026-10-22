@@ -12,6 +12,6 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
-    env: { TINYFISH_MOCK: "1", WEB_MOCK: "1", LLM_MOCK: "1" },
+    env: { WEB_MOCK: "1", LLM_MOCK: "1" },
   },
 });

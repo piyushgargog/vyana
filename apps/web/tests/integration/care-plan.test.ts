@@ -19,7 +19,7 @@ const post = (body: unknown, token = VALID_TOKEN) =>
   );
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   db.rows.conditions = [{ id: CONDITION_ID, patient_id: USER_ID, name: "Type 2 Diabetes", source: "patient" }];

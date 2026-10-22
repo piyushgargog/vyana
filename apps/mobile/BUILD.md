@@ -19,7 +19,7 @@ The `preview` profile in [`eas.json`](eas.json) builds an installable `.apk` wit
    | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | its anon (public) key |
    | `EXPO_PUBLIC_API_URL` | the address of the deployed web app: `https://vyanahealth.app` (without a trailing slash; a phone cannot reach `localhost`) |
 
-   The service-role key, the TinyFish key and the AI keys belong only to the web deploy.
+   The service-role key and the AI keys belong only to the web deploy.
 
 ## Build
 

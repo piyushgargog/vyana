@@ -1,5 +1,5 @@
 /**
- * Re-checks the curated brand → salt list against the live product pages (free TinyFish Fetch calls):
+ * Re-checks the curated brand → salt list against the live product pages (read with the app's own page reader):
  *   - the brand's first word appears on its page
  *   - every name in `on_page` appears on its page
  * Run after any change to apps/web/lib/server/safety/brand-salts.ts, and before a release.
@@ -9,24 +9,26 @@
 import { fileURLToPath } from "node:url";
 import { BRAND_SALTS } from "../apps/web/lib/server/safety/brand-salts";
 import { normalizeText } from "../apps/web/lib/server/safety/verbatim";
-import { fetchPages } from "../apps/web/lib/server/tinyfish/client";
+import { fetchPage } from "../apps/web/lib/server/web/fetch-page";
 
 try {
   process.loadEnvFile(fileURLToPath(new URL("../apps/web/.env.local", import.meta.url)));
 } catch {
   // Fall back to variables already in the environment.
 }
-if (process.env.TINYFISH_MOCK === "1") {
-  console.error("TINYFISH_MOCK=1 is set: unset it to check the live pages.");
+if (process.env.WEB_MOCK === "1") {
+  console.error("WEB_MOCK=1 is set: unset it to check the live pages.");
   process.exit(1);
 }
 
 const urls = [...new Set(BRAND_SALTS.map((b) => b.url))];
 const pages = new Map<string, string>();
-for (let i = 0; i < urls.length; i += 10) {
-  const res = await fetchPages({ urls: urls.slice(i, i + 10), purpose: "Check a curated brand to salt list" }, { timeoutMs: 120_000 });
-  for (const r of res.results) pages.set(r.url, normalizeText(r.text ?? ""));
-  for (const e of res.errors) console.log(`FETCH FAILED ${e.url}: ${e.error}`);
+// Only the hosts of the curated source URLs may be read (the allow-list of this check).
+const allowed = [...new Set(urls.map((u) => new URL(u).hostname))];
+for (const url of urls) {
+  const page = await fetchPage(url, allowed, 400_000);
+  if (page) pages.set(url, normalizeText(page.text));
+  else console.log(`FETCH FAILED ${url}: the page could not be read`);
 }
 
 let failures = 0;

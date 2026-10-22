@@ -12,7 +12,7 @@ flowchart LR
   CD["Caddy<br/>HTTPS · headers"]
   subgraph Server["Next.js API routes (apps/web/app/api)"]
     API["Route handlers<br/>auth · validation · errors"]
-    TF["TinyFish layer<br/>Search · Fetch · Agent"]
+    WR["Web readers<br/>e-RaktKosh · OpenStreetMap · MedlinePlus · trusted pages"]
     AI["AI layer<br/>Vercel AI SDK"]
     C[("web_cache")]
   end
@@ -28,7 +28,7 @@ flowchart LR
   M & W -- "direct CRUD under RLS" --> DB
   M & W -- "uploads" --> ST
   RT -- "live status" --> M & W
-  API --> TF --> WEB
+  API --> WR --> WEB
   API --> AI
   API --> C
   API -- "service role (server-owned writes)" --> DB
@@ -50,62 +50,28 @@ flowchart LR
 | Path | Used for | Protection |
 |---|---|---|
 | **Direct to Supabase** (supabase-js under the user's session) | Plain reads and writes of the user's own records: profile, contacts, vitals, appointments, dose logs, blood requests | Row Level Security on every table |
-| **Through the API** (`/api/*`) | Anything that needs a secret or the live web: TinyFish agents, LLM calls, server-owned records | Bearer token check, Zod validation, server-only keys |
+| **Through the API** (`/api/*`) | Anything that needs a secret or the live web: LLM calls, the readers of public pages, server-owned records | Bearer token check, Zod validation, server-only keys |
 
-## How the live web is used (TinyFish)
+## How the live web is used
 
-| Feature | TinyFish API | What happens |
+The server reads public sources directly (`apps/web/lib/server/web`), with a User-Agent that says who we are, an allow-list of hosts, https only, a size cap and a cache. There is no outside agent service in between.
+
+| Feature | Source | What happens |
 |---|---|---|
-| Prescription basket → delivery | **Agent** ×4 (async), **Fetch** | One agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) finds every medicine on the prescription and returns prices as structured JSON; each price is then confirmed on the product page with Fetch; totals, missing items and savings are computed in code; the user orders on the cheapest pharmacy |
-| Doctor verification | **Agent** | Searches the NMC Indian Medical Register for a registration number and returns the official record |
-| Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
-| Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
-| Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
-| Lab test price compare | **Agent** (async), **Search**, **Fetch** | One agent per lab in the background, like the basket; a price counts only when it appears on the lab's page |
-| Blood stock (RapidBlood) | **Agent** ×up to 4 (async) | One agent per area (the searched city and up to three nearby cities) reads the public e-RaktKosh stock page; a bank is verified only when its copied stock cell equals its unit count and the same row holds its name; cached for 15 minutes |
-| PM-JAY hospitals | **Search** + **Fetch** | Empanelled hospitals near the user from government pages; names, addresses and specialities verbatim |
+| Blood stock (RapidBlood) | e-RaktKosh (NHM / C-DAC) public JSON endpoints | Three plain GET calls per area; a bank row is only what the source listed, shown with our own read time and "call to confirm" |
+| Nearby emergency hospitals | OpenStreetMap Overpass, then the seeded `hospitals` table | One request (about a second); emergency and ICU are `null` unless the map says so |
+| Care plans, interaction checks, assistant | MedlinePlus topic search and `fetchPage` on trusted health domains | Every statement keeps its source; a quote must be on the page the model was given |
+| Doctor registration | An admin | The admin checks the public register by hand and records the result; no automatic check |
+| Prices, lab tests, PM-JAY, hospital timings | Plain links to the pharmacies, labs, the official PM-JAY portal and the hospital's own site | The app reads no price or list from these sites |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
 
-## Prescription basket, step by step
-
-Browser agents take one to a few minutes per pharmacy, so pricing runs as a background job that the app polls.
-
-```mermaid
-sequenceDiagram
-  participant App
-  participant API as /api/prescriptions/basket
-  participant Cache as web_cache
-  participant TF as TinyFish
-  App->>API: POST { prescription_id } + Bearer token
-  API->>Cache: lookup (24 h, keyed by the sorted medicine list)
-  alt cached
-    API-->>App: status done, baskets, cached: true
-  else not cached
-    API->>TF: start 1 agent per pharmacy (run-async)
-    API-->>App: job_id, status running, every basket pending
-    loop every 4 s until done
-      App->>API: GET /{job_id}
-      API->>TF: run status
-      opt a run has finished
-        API->>TF: Fetch its product pages
-        API->>API: link on the pharmacy's site? price shown on the page? totals, sort, savings
-      end
-      API-->>App: baskets so far (finished ones + pending)
-    end
-  end
-```
-
-- The `job_id` is the job itself, encrypted and signed by the server, so no job table is needed and its contents can't be read or changed by the client. Only the user who started a job can read it.
-- A price that the product page doesn't show is returned as unconfirmed and left out of totals, so it can never make a basket look cheapest.
-- If a pharmacy times out or lacks a medicine, the job still finishes and says so per pharmacy.
-
 ## Blood stock search, step by step
 
-RapidBlood follows the same pattern: a background job that the app polls.
+RapidBlood is a short background job that the app polls.
 
-- `POST /api/blood/search` (`apps/web/app/api/blood/search/route.ts`) calls `startBloodJob` in [`tinyfish/blood.ts`](apps/web/lib/server/tinyfish/blood.ts). It returns a finished search from the cache, or starts one agent per area and returns a `job_id`.
-- `GET /api/blood/search/{job_id}` calls `pollBloodJob`. It reads each agent's run, checks its rows in `processBloodResult`, and returns the banks found so far, verified rows first.
+- `POST /api/blood/search` (`apps/web/app/api/blood/search/route.ts`) calls `startBloodJob` in [`blood.ts`](apps/web/lib/server/blood.ts). It returns a finished search from the cache, or starts the search of each area and returns a `job_id`.
+- `GET /api/blood/search/{job_id}` calls `pollBloodJob`. It reads the answers of the areas, checks their rows, and returns the banks found so far, verified rows first.
 - The `job_id` is sealed by the server, and only the user who started the search can read it.
 - A finished search is cached for 15 minutes under its blood group, component and city.
 - Requests that the patient tracks are rows in `blood_requests` (migration `0013`). The app reads and writes that table directly under owner-only row level security, and the patient sets each status. The search itself keeps no table.
@@ -140,7 +106,7 @@ Every API route has a request and response schema in `packages/shared/src/contra
 
 ## Security boundaries
 
-- Only `apps/web` server code holds secrets (Supabase service role, TinyFish, LLM). The mobile app and the browser never see them.
+- Only `apps/web` server code holds secrets (Supabase service role, LLM). The mobile app and the browser never see them.
 - The server sits behind Cloudflare; its firewall accepts web traffic only from Cloudflare, and SSH only from the administrator's address, so the server's own address is never public. Caddy adds security headers (HSTS, content-type, frame, referrer and permissions policies).
 - An AI provider sees patient text only after names, phone numbers, addresses and IDs are removed, and only if its data terms are recorded; the code refuses other providers in production.
 - The service-role client is used only for server-owned writes, after an explicit ownership check.
@@ -152,7 +118,7 @@ Every API route has a request and response schema in `packages/shared/src/contra
 The web app and API run as one container (Next.js standalone build) behind Caddy, which handles HTTPS, on a single server with Docker Compose: `Dockerfile`, `docker-compose.yml` and `Caddyfile` at the repository root. Supabase (Postgres, Auth, Storage, Realtime) is a hosted project. Secrets live in an env file on the server, outside git and outside the image; only the two public `NEXT_PUBLIC_*` values are passed in while the image is built. Start it with `docker compose --env-file apps/web/.env.production up -d --build`.
 
 ```text
-Browser / app → Cloudflare (proxy, TLS) → firewall (Cloudflare only) → Caddy (HTTPS, headers) → web container → Supabase · TinyFish · AI provider
+Browser / app → Cloudflare (proxy, TLS) → firewall (Cloudflare only) → Caddy (HTTPS, headers) → web container → Supabase · public web sources · AI provider
 ```
 
 The web container publishes no port; Caddy reaches it over the Compose network. Updates are `git pull` and the same `docker compose` command; a rollback is checking out the previous commit and running it again.
