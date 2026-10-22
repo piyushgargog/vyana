@@ -15,7 +15,6 @@ import {
   useEmergencyContacts,
   useEmergencyRequest,
   useNearbyHospitals,
-  usePmjayHospitals,
   useSos,
   type EmergencySosRes,
 } from '@vyana/shared';
@@ -33,6 +32,7 @@ import {
   Text,
 } from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
+import { PMJAY_PORTAL_URL } from '@/constants/pmjay';
 import { T } from '@/constants/theme';
 
 export default function MobileSosScreen() {
@@ -49,9 +49,7 @@ export default function MobileSosScreen() {
 
   const sosMutation = useSos();
   const nearbyMutation = useNearbyHospitals();
-  const pmjayMutation = usePmjayHospitals();
   const { mutate: findNearby } = nearbyMutation;
-  const { mutate: findPmjay } = pmjayMutation;
   const { data: contacts = [] } = useEmergencyContacts();
   const { data: emergencyRequest } = useEmergencyRequest(
     requestId ?? undefined
@@ -80,7 +78,6 @@ export default function MobileSosScreen() {
           const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setCoords(c);
           findNearby(c);
-          findPmjay(c);
         }
       } catch {
         if (!ignore) {
@@ -97,7 +94,7 @@ export default function MobileSosScreen() {
     return () => {
       ignore = true;
     };
-  }, [findNearby, findPmjay]);
+  }, [findNearby]);
 
   const triggerSosCall = useCallback(async () => {
     // The warning haptic (U2): an SOS starting should feel different from any ordinary tap.
@@ -496,74 +493,25 @@ export default function MobileSosScreen() {
         )}
       </Card>
 
-      {/* Ayushman Bharat (PM-JAY) Empanelled Hospitals */}
+      {/* Ayushman Bharat (PM-JAY): a link to the official portal, nothing read by the app */}
       <Card>
-        <CardHeader title="PM-JAY Empanelled Hospitals" />
+        <CardHeader title="Ayushman Bharat (PM-JAY)" />
         <Text variant="footnote" tone="tertiary">
-          Cashless treatment under Ayushman Bharat (fetched strictly from
-          verified government pages)
+          Eligibility and the list of empanelled hospitals are checked on the
+          official portal. Open it to look it up yourself.
         </Text>
-        {pmjayMutation.isPending && (
-          <ActivityIndicator size="small" color={T.color.accent} />
-        )}
-
-        {pmjayMutation.data?.hospitals &&
-        pmjayMutation.data.hospitals.length > 0 ? (
-          pmjayMutation.data.hospitals.map((ph, pIdx) => (
-            <View key={`${ph.name}-${pIdx}`} style={styles.hospitalRow}>
-              <View style={styles.hospitalText}>
-                <Text variant="headline">{ph.name}</Text>
-                {ph.address ? (
-                  <Text variant="footnote" tone="tertiary">{ph.address}</Text>
-                ) : null}
-                {ph.specialities && ph.specialities.length > 0 && (
-                  <Text variant="footnote" tone="accent">
-                    {ph.specialities.join(' · ')}
-                  </Text>
-                )}
-              </View>
-              <Button
-                title="Gov Source"
-                variant="secondary"
-                size="sm"
-                style={styles.actionBtn}
-                label={`View government page for ${ph.name}`}
-                icon={
-                  <Symbol
-                    ios="arrow.up.right"
-                    android="open_in_new"
-                    size={14}
-                    color={T.color.accentStrong}
-                  />
-                }
-                onPress={() => {
-                  const u = ph.source_url || 'https://hospitals.pmjay.gov.in';
-                  Linking.openURL(u).catch(() => {
-                    showToast('Could not open government page', 'error');
-                  });
-                }}
-              />
-            </View>
-          ))
-        ) : (
-          <View style={styles.pmjayEmpty}>
-            <Text variant="subhead" tone="tertiary" style={styles.italic}>
-              {coords
-                ? 'No official list found nearby'
-                : locationLoading
-                  ? 'Finding your location…'
-                  : 'Location is off, so hospitals near you cannot be searched. Search by state on the national portal.'}
-            </Text>
-            <Button
-              title="Open hospitals.pmjay.gov.in"
-              variant="secondary"
-              size="sm"
-              style={styles.smallBtn}
-              label="Open National PM-JAY Hospital Search portal"
-              onPress={() => Linking.openURL('https://hospitals.pmjay.gov.in')}
-            />
-          </View>
-        )}
+        <Button
+          title="Open hospitals.pmjay.gov.in"
+          variant="secondary"
+          size="sm"
+          style={styles.smallBtn}
+          label="Open the official PM-JAY hospital search portal"
+          onPress={() =>
+            Linking.openURL(PMJAY_PORTAL_URL).catch(() => {
+              showToast('Could not open the PM-JAY hospital search', 'error');
+            })
+          }
+        />
       </Card>
 
       <MobileDisclaimerFooter />
@@ -671,5 +619,4 @@ const styles = StyleSheet.create({
   },
   hospitalText: { flex: 1, gap: 2 },
   hospitalActions: { flexDirection: 'row', gap: T.space.sm },
-  pmjayEmpty: { gap: T.space.sm, alignItems: 'flex-start' },
 });
