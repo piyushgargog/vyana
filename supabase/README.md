@@ -108,8 +108,7 @@ To run one by hand: `select public.run_missed_dose_check();`.
 
 ## Rate limits (migration 0012)
 
-The API limits how often one user can call the AI and web-agent routes, so one account cannot use up the team's Groq and
-TinyFish credits. The database only keeps the counters; the API (`withRoute`, issue #138) decides the limits.
+The API limits how often one user can call the AI routes, so one account cannot use up the team's free Groq quota. The database only keeps the counters; the API (`withRoute`, issue #138) decides the limits.
 
 | What | Detail |
 |---|---|

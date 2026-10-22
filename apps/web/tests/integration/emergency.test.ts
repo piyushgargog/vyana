@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EmergencyNearbyRes, EmergencySosRes, HospitalInfoRes } from "@vyana/shared";
+import { EmergencyNearbyRes, EmergencySosRes } from "@vyana/shared";
 import { USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
@@ -15,9 +15,7 @@ vi.mock("next/server", async (orig) => ({
 
 const { POST: nearby } = await import("@/app/api/emergency/nearby/route");
 const { POST: sos } = await import("@/app/api/emergency/sos/route");
-const { POST: info } = await import("@/app/api/hospitals/info/route");
 const { simulateAmbulance } = await import("@/lib/server/emergency");
-const tinyfish = await import("@/lib/server/tinyfish/client");
 
 const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: unknown, token: string | null = VALID_TOKEN) =>
   handler(
@@ -30,7 +28,7 @@ const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: 
   );
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   scheduled.length = 0;
@@ -47,9 +45,8 @@ describe("POST /api/emergency/nearby", () => {
     const body = EmergencyNearbyRes.parse(await res.json());
     expect(body.area).toBe("[mock] Preet Vihar, Delhi");
     expect(body.hospitals).toHaveLength(1);
-    expect(body.hospitals[0]).toMatchObject({ name: "[mock] City Emergency Hospital", phone: "011-2345 6789", has_emergency: true, has_icu: true });
+    expect(body.hospitals[0]).toMatchObject({ name: "[mock] City Emergency Hospital", phone: "011-2345 6789", has_emergency: true, has_icu: null });
     expect(body.hospitals[0].maps_url.startsWith("https://www.google.com/maps/search/?api=1&query=")).toBe(true);
-    expect(db.rows.ai_runs?.[0]).toMatchObject({ feature: "hospitals_nearby", status: "ok" });
   });
 
   it("serves the same ~1 km area from cache", async () => {
@@ -58,8 +55,10 @@ describe("POST /api/emergency/nearby", () => {
     expect(again.cached).toBe(true);
   });
 
-  it("never fails: a broken search still answers 200 with no hospitals", async () => {
-    vi.spyOn(tinyfish, "search").mockRejectedValue(new Error("search down"));
+  it("never fails: a broken map service and an empty table still answer 200 with no hospitals", async () => {
+    vi.stubEnv("WEB_MOCK", "0");
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
+    db.rows.hospitals = [];
     const res = await post(nearby, { lat: 12.97, lng: 77.59 });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ area: null, hospitals: [], cached: false });
@@ -118,37 +117,5 @@ describe("POST /api/emergency/sos", () => {
       db.rows.emergency_requests[1].status = "cancelled";
     });
     expect(db.rows.emergency_requests[1].status).toBe("cancelled");
-  });
-});
-
-describe("POST /api/hospitals/info", () => {
-  const H = "51000000-0000-4000-8000-000000000001";
-  beforeEach(() => {
-    db.rows.hospitals = [{ id: H, name: "All India Institute of Medical Sciences, New Delhi", website: "https://www.aiims.edu", opd_info: null, opd_info_fetched_at: null }];
-  });
-
-  it("returns OPD rows found on the page and saves them for 7 days", async () => {
-    const first = HospitalInfoRes.parse(await (await post(info, { hospital_id: H })).json());
-    expect(first.cached).toBe(false);
-    expect(first.opd).toEqual([{ department: "General Medicine", days: "Monday to Saturday", timings: "9:00 AM to 1:00 PM" }]);
-    expect(first.source_url).toBeTruthy();
-    expect(db.rows.hospitals[0].opd_info).toMatchObject({ opd: first.opd });
-
-    const second = HospitalInfoRes.parse(await (await post(info, { hospital_id: H })).json());
-    expect(second.cached).toBe(true);
-    expect(second.opd).toEqual(first.opd);
-  });
-
-  it("refreshes info older than 7 days", async () => {
-    db.rows.hospitals[0].opd_info = { opd: [], notes: null, source_url: null };
-    db.rows.hospitals[0].opd_info_fetched_at = new Date(Date.now() - 8 * 86_400_000).toISOString();
-    const res = HospitalInfoRes.parse(await (await post(info, { hospital_id: H })).json());
-    expect(res.cached).toBe(false);
-    expect(res.opd).toHaveLength(1);
-  });
-
-  it("404s for an unknown hospital and 400s for a bad id", async () => {
-    expect((await post(info, { hospital_id: "52000000-0000-4000-8000-000000000009" })).status).toBe(404);
-    expect((await post(info, { hospital_id: "not-a-uuid" })).status).toBe(400);
   });
 });

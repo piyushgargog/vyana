@@ -103,7 +103,7 @@ describe("toolActivityLabel", () => {
   });
 
   it("labels the price comparison tool", () => {
-    expect(toolActivityLabel("tool-compare_medicine_prices")).toBe("Comparing pharmacy prices…");
+    expect(toolActivityLabel("tool-medicine_price_links")).toBe("Preparing pharmacy links…");
   });
 
   it("returns null for everything else", () => {

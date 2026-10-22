@@ -19,6 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
       "package": "com.vyana.health",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -39,8 +40,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#F2F2F7",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 180
+          "image": "./assets/images/splash-logo.png",
+          "imageWidth": 104
         }
       ],
       [
@@ -61,7 +62,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Vyana needs access to your photos to upload prescriptions and medical reports.",
-          "cameraPermission": "Vyana needs access to your camera to scan prescriptions and lab reports."
+          "cameraPermission": "Vyana needs access to your camera to scan prescriptions and lab reports.",
+          "microphonePermission": false
         }
       ],
       "expo-document-picker"

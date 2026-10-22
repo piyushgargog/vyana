@@ -15,6 +15,7 @@ import {
   type InteractionsRes,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { Button, ButtonLink, Card } from "@/components/ui";
 import { SkeletonCard } from "@/components/ui-primitives";
 
 interface PrescribeFormItem extends DoctorPrescriptionItem {
@@ -347,15 +348,12 @@ function DoctorPrescribeContent({
 
   if (!isNewAppointment && apptError) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
+      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-sm text-danger-text">
         <h2 className="text-base font-bold">Appointment record not found</h2>
         <p className="mt-1 text-xs">{apptError}</p>
-        <Link
-          href="/doctor"
-          className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
-        >
+        <ButtonLink href="/doctor" size="sm" className="mt-4">
           Return to Queue
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -366,49 +364,50 @@ function DoctorPrescribeContent({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/doctor"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 hover:text-teal-900"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-strong hover:text-accent"
         >
           ← Return to OPD Queue
         </Link>
         {effectivePatientId && (
-          <Link
+          <ButtonLink
             href={`/doctor/patients/${effectivePatientId}`}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            variant="secondary"
+            size="sm"
           >
             View Patient History
-          </Link>
+          </ButtonLink>
         )}
       </div>
 
       {/* Patient Clinical Context Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+      <Card className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white font-bold text-sm">
+              <span className="flex h-10 w-10 items-center justify-center rounded-tile bg-accent text-white font-bold text-sm">
                 Rx
               </span>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">
+                <h1 className="text-xl font-bold text-label">
                   Write Digital E-Prescription
                 </h1>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-label-3">
                   Official clinical prescription with automatic condition registration and care plan drafting
                 </p>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-700">
-              <span className="font-bold text-slate-900">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-label-2">
+              <span className="font-bold text-label">
                 Patient: {patient?.full_name || "Patient Record"}
               </span>
               {appointment && (
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+                <span className="rounded-row bg-fill px-2 py-0.5 font-semibold text-label-2">
                   Token #{appointment.token_no} · {appointment.appointment_date}
                 </span>
               )}
               {patient?.blood_group && (
-                <span className="rounded-md bg-red-50 border border-red-200 px-2 py-0.5 font-bold text-red-700">
+                <span className="rounded-row bg-danger-soft border border-danger/30 px-2 py-0.5 font-bold text-danger-text">
                   Blood Group: {patient.blood_group}
                 </span>
               )}
@@ -418,33 +417,33 @@ function DoctorPrescribeContent({
           {/* Allergies Notice */}
           <div className="w-full sm:w-72 shrink-0">
             {patient?.allergies && (Array.isArray(patient.allergies) ? patient.allergies.length > 0 : Boolean(patient.allergies)) ? (
-              <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-950">
-                <span className="font-bold text-red-800 block">
+              <div className="rounded-tile border border-danger/40 bg-danger-soft p-3 text-xs text-label">
+                <span className="font-bold text-danger-text block">
                   Patient Allergies Alert:
                 </span>
-                <span className="font-semibold text-red-900">
+                <span className="font-semibold text-danger-text">
                   {Array.isArray(patient.allergies) ? patient.allergies.join(", ") : patient.allergies}
                 </span>
               </div>
             ) : (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
+              <div className="rounded-tile border border-separator bg-fill p-2.5 text-xs text-label-2">
                 No drug allergies on record.
               </div>
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Prescription Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Diagnosis & Clinical Notes Section */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+        <Card className="space-y-4 p-5 sm:p-6">
           <div>
             <label
               htmlFor="rx-diagnosis"
-              className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1"
+              className="block text-xs font-bold uppercase tracking-wider text-label mb-1"
             >
-              Clinical Diagnosis <span className="text-red-600">* (Required)</span>
+              Clinical Diagnosis <span className="text-danger-text">* (Required)</span>
             </label>
             <input
               id="rx-diagnosis"
@@ -453,9 +452,9 @@ function DoctorPrescribeContent({
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
               placeholder="e.g. Type 2 Diabetes Mellitus, Essential Hypertension, Upper Respiratory Tract Infection"
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none"
+              className="w-full rounded-row border border-separator bg-surface p-3 text-sm font-semibold text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-teal-800">
+            <p className="mt-1 text-[11px] text-accent-strong">
               Saving this diagnosis automatically records the chronic condition and generates an AI draft care plan for your review.
             </p>
           </div>
@@ -463,7 +462,7 @@ function DoctorPrescribeContent({
           <div>
             <label
               htmlFor="rx-clinical-notes"
-              className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1"
+              className="block text-xs font-bold uppercase tracking-wider text-label-2 mb-1"
             >
               Doctor Clinical Notes & Advice (Optional)
             </label>
@@ -473,18 +472,18 @@ function DoctorPrescribeContent({
               value={clinicalNotes}
               onChange={(e) => setClinicalNotes(e.target.value)}
               placeholder="General patient instructions, dietary restrictions, follow-up date…"
-              className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none"
+              className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
           </div>
-        </div>
+        </Card>
 
         {/* Existing Medications Warning Bar */}
         {existingActiveItems.length > 0 && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-950">
-            <span className="font-bold text-blue-900">
+          <div className="rounded-tile border border-accent/20 bg-accent-soft p-3.5 text-xs text-label">
+            <span className="font-bold text-accent-strong">
               Current Patient Medications on Record:
             </span>
-            <span className="ml-1 text-blue-800">
+            <span className="ml-1 text-label-2">
               {existingActiveItems.map((m) => m.medicine_name).join(", ")}
             </span>
           </div>
@@ -493,53 +492,49 @@ function DoctorPrescribeContent({
         {/* Medication Builder Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-base font-bold text-label">
               Prescribed Medicines ({medicines.length})
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-label-3">
               Specify dosage, frequency, and reminder schedule for home pharmacy fulfillment and dose tracking.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleCheckInteractions}
-              className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 transition shadow-xs"
             >
               Check Interactions
-            </button>
-            <button
-              type="button"
-              onClick={handleAddMedicine}
-              className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800 transition shadow-xs"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleAddMedicine}>
               + Add Medicine
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Drug Interactions Feedback Card */}
         {interactionNotice && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900">
+          <div className="rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-xs text-label">
             <p className="font-semibold">{interactionNotice}</p>
           </div>
         )}
 
         {interactionResult && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+          <Card className="space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-label">
                 Drug Interaction Analysis
               </h3>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-label-3">
                 {interactionResult.interactions?.length || 0} interaction(s) found
               </span>
             </div>
 
             {interactionResult.not_checked &&
               interactionResult.not_checked.length > 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                <div className="rounded-tile border border-warn/30 bg-warn-soft p-2.5 text-xs text-label">
                   <span>Not checked (unknown salt/formulation): </span>
                   <span className="font-semibold">
                     {interactionResult.not_checked.join(", ")}
@@ -548,17 +543,17 @@ function DoctorPrescribeContent({
               )}
 
             {interactionResult.interactions?.length === 0 ? (
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-700">
+              <div className="rounded-tile bg-fill border border-separator p-2.5 text-xs text-label-2">
                 No drug-drug interactions detected in checked sources.
               </div>
             ) : (
               interactionResult.interactions?.map((it, i) => (
                 <div
                   key={i}
-                  className={`rounded-xl border p-3 text-xs ${
+                  className={`rounded-tile border p-3 text-xs ${
                     it.severity === "major"
-                      ? "border-red-300 bg-red-50 text-red-950"
-                      : "border-amber-300 bg-amber-50 text-amber-950"
+                      ? "border-danger/40 bg-danger-soft text-label"
+                      : "border-warn/40 bg-warn-soft text-label"
                   }`}
                 >
                   <div className="flex items-center justify-between font-bold">
@@ -567,11 +562,11 @@ function DoctorPrescribeContent({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {it.layer && (
-                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-row bg-fill text-label-2 font-medium">
                           Layer: {it.layer}
                         </span>
                       )}
-                      <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-white/80">
+                      <span className="uppercase text-[11px] px-1.5 py-0.5 rounded-row bg-surface/80">
                         {it.severity}
                       </span>
                     </div>
@@ -579,12 +574,12 @@ function DoctorPrescribeContent({
                   <p className="mt-1">{it.effect}</p>
                   {it.advice && <p className="mt-1 font-semibold">{it.advice}</p>}
                   {it.quote && (
-                    <p className="mt-1 text-[11px] italic text-slate-600 bg-white/50 p-1.5 rounded border border-slate-200">
+                    <p className="mt-1 text-[11px] italic text-label-2 bg-surface/50 p-1.5 rounded-row border border-separator">
                       &ldquo;{it.quote}&rdquo;
                     </p>
                   )}
                   {it.sources && it.sources.length > 0 && (
-                    <div className="mt-1.5 text-[11px] text-slate-500">
+                    <div className="mt-1.5 text-[11px] text-label-3">
                       <span>Sources: </span>
                       {it.sources.map((src, sIdx) => (
                         <a
@@ -592,7 +587,7 @@ function DoctorPrescribeContent({
                           href={src.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-teal-700 underline mr-2 hover:text-teal-900"
+                          className="text-accent-strong underline mr-2 hover:text-accent"
                         >
                           {src.title}
                         </a>
@@ -605,7 +600,7 @@ function DoctorPrescribeContent({
 
             {interactionResult.sources_checked &&
               interactionResult.sources_checked.length > 0 && (
-                <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                <div className="text-[11px] text-label-3 pt-1 border-t border-separator">
                   <span>Sources checked: </span>
                   {interactionResult.sources_checked.map((s, idx) => (
                     <a
@@ -613,32 +608,29 @@ function DoctorPrescribeContent({
                       href={s.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-teal-700 underline mr-2 hover:text-teal-900"
+                      className="text-accent-strong underline mr-2 hover:text-accent"
                     >
                       {s.title}
                     </a>
                   ))}
                 </div>
               )}
-          </div>
+          </Card>
         )}
 
         {/* Medicine Rows */}
         <div className="space-y-4">
           {medicines.map((med, idx) => (
-            <div
-              key={med.id}
-              className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-3"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <span className="text-xs font-bold text-teal-800">
+            <Card key={med.id} className="space-y-3 p-4 sm:p-5">
+              <div className="flex items-center justify-between border-b border-separator pb-2.5">
+                <span className="text-xs font-bold text-accent-strong">
                   Medicine #{idx + 1}
                 </span>
                 {medicines.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveMedicine(med.id)}
-                    className="text-xs font-semibold text-red-600 hover:text-red-800"
+                    className="text-xs font-semibold text-danger-text hover:text-danger"
                   >
                     Remove
                   </button>
@@ -648,10 +640,11 @@ function DoctorPrescribeContent({
               {/* Row 1: Name, Strength, Form */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-medicine-name`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Medicine Name *
                   </label>
                   <input
+                    id={`${med.id}-medicine-name`}
                     type="text"
                     required
                     value={med.medicine_name}
@@ -659,22 +652,23 @@ function DoctorPrescribeContent({
                       handleUpdateMedicine(med.id, "medicine_name", e.target.value)
                     }
                     placeholder="e.g. Metformin, Paracetamol, Telmisartan"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-strength`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Strength / Dose
                   </label>
                   <input
+                    id={`${med.id}-strength`}
                     type="text"
                     value={med.strength || ""}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "strength", e.target.value)
                     }
                     placeholder="e.g. 500 mg, 10 mg"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -682,15 +676,16 @@ function DoctorPrescribeContent({
               {/* Row 2: Form, Frequency, Food Timing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-form`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Form
                   </label>
                   <select
+                    id={`${med.id}-form`}
                     value={med.form}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "form", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
                   >
                     <option value="tablet">Tablet</option>
                     <option value="capsule">Capsule</option>
@@ -702,15 +697,16 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-frequency`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Frequency
                   </label>
                   <select
+                    id={`${med.id}-frequency`}
                     value={med.frequency}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "frequency", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
                   >
                     <option value="OD">OD — Once Daily (09:00)</option>
                     <option value="BD">BD — Twice Daily (09:00, 21:00)</option>
@@ -723,15 +719,16 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-with-food`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Relation to Food
                   </label>
                   <select
+                    id={`${med.id}-with-food`}
                     value={med.with_food}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "with_food", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
                   >
                     <option value="after">After Food</option>
                     <option value="before">Before Food / Empty Stomach</option>
@@ -743,26 +740,28 @@ function DoctorPrescribeContent({
               {/* Row 3: Instructions & Quantity */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-instructions`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Patient Instructions
                   </label>
                   <input
+                    id={`${med.id}-instructions`}
                     type="text"
                     value={med.instructions || ""}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "instructions", e.target.value)
                     }
                     placeholder="e.g. Take with warm water after dinner"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label htmlFor={`${med.id}-quantity-total`} className="block text-[11px] font-bold text-label-2 mb-1">
                       Total Units
                     </label>
                     <input
+                      id={`${med.id}-quantity-total`}
                       type="number"
                       min="1"
                       value={med.quantity_total ?? ""}
@@ -773,14 +772,15 @@ function DoctorPrescribeContent({
                           parseInt(e.target.value) || 0
                         )
                       }
-                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                      className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label htmlFor={`${med.id}-duration-days`} className="block text-[11px] font-bold text-label-2 mb-1">
                       Days
                     </label>
                     <input
+                      id={`${med.id}-duration-days`}
                       type="number"
                       min="1"
                       value={med.duration_days ?? ""}
@@ -791,38 +791,39 @@ function DoctorPrescribeContent({
                           parseInt(e.target.value) || 0
                         )
                       }
-                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                      className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
 
         {/* Pipeline Execution Banner */}
         {isSubmitting && (
-          <div className="rounded-2xl border border-teal-300 bg-teal-50 p-4 text-xs text-teal-950 flex items-center gap-3">
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-700 border-t-transparent" />
+          <div className="rounded-card border border-accent/30 bg-accent-soft p-4 text-xs text-label flex items-center gap-3">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             <span className="font-semibold">{pipelineStep}</span>
           </div>
         )}
 
         {/* Submit Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-200 pt-5">
-          <Link
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-separator pt-5">
+          <ButtonLink
             href="/doctor"
-            className="w-full sm:w-auto text-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            variant="secondary"
+            className="w-full sm:w-auto"
           >
             Cancel
-          </Link>
-          <button
+          </ButtonLink>
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto rounded-xl bg-teal-700 px-6 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-md disabled:opacity-60"
+            className="w-full sm:w-auto"
           >
             {isSubmitting ? "Processing…" : "Issue Prescription & Generate Care Plan"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

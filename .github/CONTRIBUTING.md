@@ -58,7 +58,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org): `type(scope)
 | `api` | API routes |
 | `shared` | `@vyana/shared` |
 | `db` | database |
-| `tinyfish` | TinyFish layer |
+| `web-readers` | the readers of public web pages and services (`lib/server/web`) |
 | `ai` | AI layer |
 | `ui` | UI components |
 | `deps` | dependencies |
@@ -67,7 +67,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org): `type(scope)
 Examples:
 
 ```
-feat(api): add medicines compare route with parallel TinyFish agents
+feat(api): add a nearby hospitals route that reads OpenStreetMap
 fix(mobile): reschedule dose reminders after app restart
 feat(db): add RLS policies for prescriptions
 ```

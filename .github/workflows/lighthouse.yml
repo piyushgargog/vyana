@@ -43,7 +43,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://mock.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key
       NEXT_PUBLIC_USE_MOCKS: "true"
-      TINYFISH_MOCK: "1"
+      WEB_MOCK: "1"
       LLM_MOCK: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,7 +58,7 @@ jobs:
       - name: Build web
         run: pnpm --filter @vyana/web build
       - name: Run Lighthouse CI (${{ matrix.name }})
-        run: npx --yes @lhci/cli@0.15.1 autorun --config=lighthouserc.json ${{ matrix.lhci_args }}
+        run: pnpm exec lhci autorun --config=lighthouserc.json ${{ matrix.lhci_args }}
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

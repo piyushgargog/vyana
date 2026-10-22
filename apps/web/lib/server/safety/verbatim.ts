@@ -2,6 +2,13 @@
  * Evidence check (PLAN §2A rule 1, DESIGN §10): a value the model extracted is kept only when the exact
  * source text it cites appears in the document. Pure functions, no I/O.
  */
+import { z } from "zod";
+
+/**
+ * The LLM output shape of one extracted field (§2A rule 1): the value the model read, wrapped with the exact
+ * source text it quotes as evidence. `verifyEvidence` / `evidenceFound` below check that evidence afterwards.
+ */
+export const field = <T extends z.ZodTypeAny>(value: T) => z.object({ value: value.nullable(), evidence: z.string().nullable() });
 
 const DASHES = /[‐-―−﹘﹣－]/g;
 const QUOTES_SINGLE = /[‘’‚‛′]/g;

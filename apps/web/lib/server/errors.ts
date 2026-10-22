@@ -33,15 +33,12 @@ export const rateLimited = (retryAfterSeconds: number) => {
   );
 };
 export const upstream = (message = "A source we depend on failed. Try again.") => new AppError("UPSTREAM_ERROR", message, 502);
-export const upstreamTimeout = (message = "A source we depend on took too long. Try again.") =>
-  new AppError("UPSTREAM_TIMEOUT", message, 504);
 
 /** Facts a handler can add to its single log line. Never put tokens or health data here. */
 export interface RouteContext {
   requestId: string;
   userId?: string;
   cache?: "hit" | "miss";
-  tinyfishCalls: number;
 }
 
 type Handler<P> = (req: Request, ctx: RouteContext, params: P) => Promise<Response>;
@@ -55,22 +52,25 @@ function isTimeout(err: unknown): boolean {
   return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
 }
 
-/** Maps any thrown error to the documented error shape (SPEC §0). */
-export function toErrorResponse(err: unknown, requestId: string): Response {
-  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, err.headers);
+/**
+ * Maps any thrown error to the documented error shape (SPEC §0). `headers` adds headers the caller must keep on
+ * the error too (the share page's 404 carries its no-store headers); an `AppError`'s own headers win on a clash.
+ */
+export function toErrorResponse(err: unknown, requestId: string, headers: Record<string, string> = {}): Response {
+  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, { ...headers, ...err.headers });
   if (err instanceof ZodError) {
     const message = err.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");
-    return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId);
+    return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId, headers);
   }
-  if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId);
-  return errorResponse("INTERNAL", "Something went wrong", 500, requestId);
+  if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId, headers);
+  return errorResponse("INTERNAL", "The request could not be finished. Please try again.", 500, requestId, headers);
 }
 
 /**
  * Wraps a route handler: catches errors, maps them to `ApiErrorBody` and writes one log line per request.
  *
  * ```ts
- * export const POST = withRoute("prescriptions/basket", async (req, ctx) => { ... });
+ * export const POST = withRoute("care-plan", async (req, ctx) => { ... });
  * ```
  *
  * With `rateLimit` the route counts as a call of the signed-in user before the handler runs: the sign-in check comes
@@ -88,7 +88,7 @@ export interface RouteOptions {
 
 export function withRoute<P = unknown>(route: string, handler: Handler<P>, options: RouteOptions = {}) {
   return async (req: Request, params: P): Promise<Response> => {
-    const ctx: RouteContext = { requestId: newRequestId(), tinyfishCalls: 0 };
+    const ctx: RouteContext = { requestId: newRequestId() };
     const started = Date.now();
     let res: Response;
     let error: unknown;
@@ -106,7 +106,6 @@ export function withRoute<P = unknown>(route: string, handler: Handler<P>, optio
       status: res.status,
       duration_ms: Date.now() - started,
       cache: ctx.cache,
-      tinyfish_calls: ctx.tinyfishCalls,
       // Unexpected errors keep their class name for debugging; the message may hold data, so it is not logged.
       error: error && !(error instanceof AppError) && !(error instanceof ZodError) ? (error as Error).name ?? "Error" : undefined,
     });

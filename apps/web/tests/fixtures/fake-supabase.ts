@@ -23,6 +23,8 @@ export const db = {
   storage: new Map<string, Blob>(),
   /** Tables whose next insert fails (to test rollbacks). */
   failInsert: new Set<string>(),
+  /** Tables whose next update fails with a unique violation (23505), as the database guard of migration 0022 answers. */
+  failUpdate: new Set<string>(),
   /** What is_doctor_of answers: "doctorId:patientId" pairs. */
   doctorOf: new Set<string>(),
 };
@@ -39,6 +41,7 @@ export function resetDb() {
   db.inserts.length = 0;
   db.storage.clear();
   db.failInsert.clear();
+  db.failUpdate.clear();
   db.doctorOf.clear();
 }
 resetDb();
@@ -52,11 +55,14 @@ function query(name: string) {
   let pendingUpdate: Row | null = null;
   let pendingDelete = false;
   let limitN = Infinity;
-  const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v));
+  const notNull: string[] = [];
+  const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v) && notNull.every((c) => r[c] != null));
 
   const chain = {
     select: () => chain,
     eq: (col: string, value: unknown) => (filters.push([col, value]), chain),
+    // only `.not(col, "is", null)` is understood
+    not: (col: string) => (notNull.push(col), chain),
     gt: (_col: string, value: string) => ((gtExpires = value), chain),
     order: () => chain,
     limit: (n: number) => ((limitN = n), chain),
@@ -97,6 +103,11 @@ function query(name: string) {
     delete: () => ((pendingDelete = true), chain),
     update: (values: Row) => ((pendingUpdate = values), chain),
     then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
+      if (pendingUpdate && db.failUpdate.has(name)) {
+        db.failUpdate.delete(name);
+        const error = Object.assign(new Error(`duplicate key value violates unique constraint "idx_doctors_verified_registration"`), { code: "23505" });
+        return resolve({ data: null, error } as unknown as { data: Row[] | null; error: null });
+      }
       if (pendingUpdate) {
         for (const r of matching()) Object.assign(r, pendingUpdate);
         return resolve({ data: null, error: null });
@@ -134,8 +145,13 @@ export const fakeSupabaseModule = {
   }),
   supabaseForUser: (token: string) => ({
     from: query,
-    rpc: async (fn: string, args: { p: string }) =>
-      fn === "is_doctor_of" ? { data: db.doctorOf.has(`${users[token]}:${args.p}`), error: null } : { data: null, error: new Error(`no rpc ${fn}`) },
+    rpc: async (fn: string, args: { p: string }) => {
+      if (fn === "is_doctor_of") return { data: db.doctorOf.has(`${users[token]}:${args.p}`), error: null };
+      // Daily AI limit (issue 346): a plan with room left, so route tests are not blocked.
+      if (fn === "current_plan") return { data: [{ plan_id: "free", daily_ai_calls: 30 }], error: null };
+      if (fn === "my_ai_usage_today") return { data: [{ calls: 0, input_tokens: 0, output_tokens: 0 }], error: null };
+      return { data: null, error: new Error(`no rpc ${fn}`) };
+    },
   }),
   requireEnv: (name: string) => {
     const v = process.env[name];
