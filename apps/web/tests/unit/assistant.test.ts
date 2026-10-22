@@ -3,7 +3,7 @@ import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
 import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
-import { isTrustedHealthUrl } from "@/lib/server/tinyfish/sources";
+import { isTrustedHealthUrl } from "@/lib/server/web/domains";
 
 type Part = TextStreamPart<ToolSet>;
 

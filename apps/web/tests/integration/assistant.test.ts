@@ -63,7 +63,7 @@ function modelSaying(text: string) {
 }
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   testModel = null;

@@ -6,7 +6,7 @@
 
 **Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, get your medicines delivered at the best price straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
 
-Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the live web (pharmacies, labs, blood banks, the NMC medical register, hospitals) and bring back what your health needs.
+It reads public health sources directly (the e-RaktKosh blood stock, OpenStreetMap hospitals, MedlinePlus and other trusted health sites) and points you to pharmacies, labs and official portals with plain links.
 
 **Live:** [vyanahealth.app](https://vyanahealth.app) (web app and API, hosted in Mumbai behind Cloudflare). Sign up with an email address; please use made-up details only, not your real health data.
 
@@ -43,24 +43,21 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 
 More screens (Today, Ask Vyana, a care plan, blood search, SOS and the rest) are captured with [`docs/images/capture-screens.mjs`](docs/images/capture-screens.mjs) against the demo patient — see [`docs/images/README.md`](docs/images/README.md).
 
-## How TinyFish is used
+## Where the live web comes in
 
-Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md). The server reads public sources itself (code in `apps/web/lib/server/web`): a User-Agent that says who we are, a list of allowed hosts, https only, a size cap and a cache.
 
-| Feature | TinyFish API | Endpoint | Code |
+| Feature | Source | Endpoint | Code |
 |---|---|---|---|
-| Prescription basket price compare (delivery) | **Agent**: one agent per pharmacy prices the whole basket in the background; each price is then confirmed on the product page with **Fetch** | `POST /api/prescriptions/basket`, `GET /api/prescriptions/basket/{job_id}` | [`tinyfish/basket.ts`](apps/web/lib/server/tinyfish/basket.ts) |
-| Doctor verification | **Agent** reads the NMC Indian Medical Register; the server decides | `POST /api/doctors/verify` | [`tinyfish/nmc.ts`](apps/web/lib/server/tinyfish/nmc.ts) |
-| Nearby emergency hospitals, hospital OPD timings | **Search** + **Fetch**; names, addresses and phone numbers must be on the fetched page | `POST /api/emergency/nearby`, `POST /api/emergency/sos`, `POST /api/hospitals/info` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
-| Care plans | **Search** + **Fetch** of guideline pages; every bullet quotes its page | `POST /api/care-plan` | [`care-plan.ts`](apps/web/lib/server/care-plan.ts) |
-| Drug interaction check | **Search** + **Fetch** on trusted medicine sites; each interaction shown with its exact sentence | `POST /api/medicines/interactions` | [`interactions.ts`](apps/web/lib/server/interactions.ts) |
-| AI assistant | **Search** + **Fetch** as the assistant's tools, trusted health sites only; only fetched links can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
-| Lab test price compare | **Agent** per lab in the background; each price is confirmed on the lab's page with **Fetch** | `POST /api/labs/compare`, `GET /api/labs/compare/{job_id}` | [`tinyfish/labs.ts`](apps/web/lib/server/tinyfish/labs.ts) |
-| PM-JAY hospitals | **Search** + **Fetch**, government pages only | `POST /api/schemes/pmjay-hospitals` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
+| Blood stock (RapidBlood) | The public e-RaktKosh service | `POST /api/blood/search`, `GET /api/blood/search/{job_id}` | [`web/eraktkosh.ts`](apps/web/lib/server/web/eraktkosh.ts) |
+| Nearby emergency hospitals | OpenStreetMap, then the seeded hospitals table | `POST /api/emergency/nearby`, `POST /api/emergency/sos` | [`web/overpass.ts`](apps/web/lib/server/web/overpass.ts) |
+| Care plans | MedlinePlus and trusted guideline pages; every bullet quotes its page | `POST /api/care-plan` | [`care-plan.ts`](apps/web/lib/server/care-plan.ts) |
+| Drug interaction check | A reviewed table with sources; a medicine not in it is shown as "not checked" | `POST /api/medicines/interactions` | [`interactions.ts`](apps/web/lib/server/interactions.ts) |
+| AI assistant | MedlinePlus search and page reading as the assistant's tools, trusted health sites only | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
+| Doctor registration | Checked by an admin by hand | `POST /api/doctors/verify` | [`doctor-verify.ts`](apps/web/lib/server/doctor-verify.ts) |
+| Prices, lab tests, PM-JAY, hospital timings | Plain links to the pharmacies, labs, the official PM-JAY portal and the hospital's own site | none | [`source-links.ts`](packages/shared/src/health/source-links.ts) |
 
-**RapidBlood** runs one agent per area (the searched city and up to three nearby cities) on the public e-RaktKosh stock page, through `POST /api/blood/search` and `GET /api/blood/search/{job_id}` ([`tinyfish/blood.ts`](apps/web/lib/server/tinyfish/blood.ts)). A bank is marked verified only when the stock cell the agent copied matches its unit count and sits in the same row as the bank's name. Results are cached for 15 minutes. RapidBlood does not reserve or move blood: it lists what the source showed, with the time the source gave, and tells the patient to call the blood bank.
-
-Every TinyFish call goes through one client ([`tinyfish/client.ts`](apps/web/lib/server/tinyfish/client.ts)) with timeouts, a per-minute agent limit and an offline mock mode. Public results are cached in Postgres, and `pnpm prewarm` fills the cache before a demo. Live checks: `pnpm smoke:tinyfish`, `pnpm smoke:basket`, and `pnpm verify:interactions`, `verify:red-flags` and `verify:brands`, which re-check the reviewed safety lists against their source pages.
+Public results are cached in Postgres.
 
 ## AI you can trust
 
@@ -78,7 +75,7 @@ Details: [`ARCHITECTURE.md`](ARCHITECTURE.md#ai-safety).
 **Mobile:** Expo (React Native) · Expo Router
 **Backend:** Next.js Route Handlers
 **Database:** Supabase (Postgres, Auth, Storage, Realtime)
-**Web agents:** TinyFish
+**Public sources:** e-RaktKosh, OpenStreetMap, MedlinePlus (read by the server)
 **AI:** Vercel AI SDK, provider-agnostic (Gemini, Groq, NVIDIA, OpenRouter, Hugging Face)
 **Hosting:** Docker Compose · Caddy · Cloudflare, on one server
 **Tooling:** TypeScript · pnpm + Turborepo

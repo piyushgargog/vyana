@@ -39,7 +39,6 @@ export interface RouteContext {
   requestId: string;
   userId?: string;
   cache?: "hit" | "miss";
-  tinyfishCalls: number;
 }
 
 type Handler<P> = (req: Request, ctx: RouteContext, params: P) => Promise<Response>;
@@ -71,7 +70,7 @@ export function toErrorResponse(err: unknown, requestId: string, headers: Record
  * Wraps a route handler: catches errors, maps them to `ApiErrorBody` and writes one log line per request.
  *
  * ```ts
- * export const POST = withRoute("prescriptions/basket", async (req, ctx) => { ... });
+ * export const POST = withRoute("care-plan", async (req, ctx) => { ... });
  * ```
  *
  * With `rateLimit` the route counts as a call of the signed-in user before the handler runs: the sign-in check comes
@@ -89,7 +88,7 @@ export interface RouteOptions {
 
 export function withRoute<P = unknown>(route: string, handler: Handler<P>, options: RouteOptions = {}) {
   return async (req: Request, params: P): Promise<Response> => {
-    const ctx: RouteContext = { requestId: newRequestId(), tinyfishCalls: 0 };
+    const ctx: RouteContext = { requestId: newRequestId() };
     const started = Date.now();
     let res: Response;
     let error: unknown;
@@ -107,7 +106,6 @@ export function withRoute<P = unknown>(route: string, handler: Handler<P>, optio
       status: res.status,
       duration_ms: Date.now() - started,
       cache: ctx.cache,
-      tinyfish_calls: ctx.tinyfishCalls,
       // Unexpected errors keep their class name for debugging; the message may hold data, so it is not logged.
       error: error && !(error instanceof AppError) && !(error instanceof ZodError) ? (error as Error).name ?? "Error" : undefined,
     });

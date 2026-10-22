@@ -80,7 +80,7 @@ export type RateLimitBucket = keyof typeof RATE_LIMITS;
 /** A bucket with its name, for `withRoute`'s `rateLimit` option. */
 export const rateLimitOf = (bucket: RateLimitBucket) => ({ bucket, ...RATE_LIMITS[bucket] });
 
-/** Which routes (without `/api/`) are limited, and in which bucket. The routes that start a job (basket, labs) are limited; polling a job is not. */
+/** Which routes (without `/api/`) are limited, and in which bucket. The routes that start a job (blood search) are limited; polling a job is not. */
 export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "assistant/chat": "ai_chat",
   "prescriptions/extract": "ai_document",
@@ -89,11 +89,7 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "care-plan": "ai_other",
   triage: "ai_other",
   "medicines/interactions": "ai_other",
-  "prescriptions/basket": "agent",
-  "labs/compare": "agent",
   "blood/search": "lookup",
   "doctors/verify": "lookup",
-  "hospitals/info": "agent",
-  "schemes/pmjay-hospitals": "agent",
   "emergency/nearby": "public",
 };

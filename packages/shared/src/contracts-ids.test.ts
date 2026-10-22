@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { BasketCompareReq, GenerateCarePlanReq, HospitalInfoReq, InteractionsReq } from "./contracts";
+import { GenerateCarePlanReq, InteractionsReq } from "./contracts";
 
 // Regression (ADR-052): the demo seed uses simple ids such as dddddddd-dddd-dddd-dddd-dddddddddddd. A strict
 // uuid() check rejected them, so every route given a seeded id answered 400 (found by the first live check).
@@ -18,8 +18,6 @@ describe("ids in the contract", () => {
   it("every id in the seed is accepted wherever a route takes an id", () => {
     for (const id of ids) {
       expect(GenerateCarePlanReq.safeParse({ condition_id: id }).success, id).toBe(true);
-      expect(BasketCompareReq.safeParse({ prescription_id: id }).success, id).toBe(true);
-      expect(HospitalInfoReq.safeParse({ hospital_id: id }).success, id).toBe(true);
       expect(InteractionsReq.safeParse({ prescription_id: id }).success, id).toBe(true);
     }
   });

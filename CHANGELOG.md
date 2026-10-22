@@ -4,6 +4,10 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Removed
+- Removed the medicine basket, lab price comparison, hospital OPD info and PM-JAY list endpoints, with their contracts, mocks, hooks and tests (the screens use plain links now).
+- Removed the web agent vendor integration completely: code, tests, scripts, environment variables and the privacy page entry.
+
 ### Added
 - When a plan's daily AI limit is used up, AI features answer with the usual 'try again later' message until midnight (India time).
 
