@@ -5,7 +5,12 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- README "Screens" section with the home page at desktop (1366 px) and phone (390 px) sizes in `docs/images/`, plus `docs/images/capture-screens.mjs` — one command that captures the remaining app screens (Today, Ask Vyana, scan result, care plan, interactions, blood, SOS) at both sizes once it is given the demo patient's login, and the checklist every image must pass (demo data only, no keys or server addresses, under 300 KB).
+- What every AI call costs is now recorded and readable (issue #300): `ai_runs` gains `provider`, `input_tokens`, `output_tokens` and `latency_ms` (migration 0015, filled in by the server as it writes each run; older rows keep no size). A service-role-only view `ai_usage_daily` rolls calls and tokens up per user, per feature, per day in Asia/Kolkata, and `my_ai_usage_today()` hands a signed-in user only their own totals for today — the numbers behind the "AI uses left today" line, through `getMyAiUsageToday` and `useMyAiUsageToday`.
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
+
+### Fixed
+- Accessibility pass (U1): no text under 11 px/pt anywhere — the phone tab bar labels (web and phone), the doctor pages' small badges and the phone's report and prescription details all move to 11. Tap targets that were 36 px are now 44: the header sign-out button, the sheet close button and the small icon button. On the phone, the secondary and tertiary text colours are aligned with the web tokens (label2 0.78, label3 0.74 opacity), because at the old values they measured 4.47:1 and 3.29:1 on the canvas — under the 4.5:1 that small text needs; they now measure 5.26:1 and 4.74:1.
 
 ### Changed
 - RapidBlood reads the stock directly from the public e-RaktKosh service instead of a web agent: results come in about a second (before: 2 to 3 minutes), the city is matched to a district of the source (Gurugram and Noida work too), rows with several blood groups in one cell or without a count are not shown, answers are cached for 15 minutes and requests carry an identifying User-Agent. The wording stays: "listed", call to confirm. Blood search has its own rate-limit bucket (20 per 10 minutes).

@@ -35,11 +35,13 @@ Its AI web agents, powered by [TinyFish](https://tinyfish.ai), go out across the
 | 🧠 | **Health Memory Graph** | Share a timeline link for 24 hours, 7 days or 30 days with only the parts you pick: labs, vitals, medicines or adherence. The doctor sees lab trends, vitals, medicines over time and a 30 day adherence strip, all drawn from your stored records, with no AI-written text; you see how many times the link was opened |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |
 
-## Screenshots
+## Screens
 
-| Home | Emergency SOS |
+| Home (desktop) | Home (phone) |
 |---|---|
-| ![Vyana home page](.github/assets/home.png) | ![Emergency page with 108/112 call buttons](.github/assets/emergency.png) |
+| [![Vyana home page, desktop](docs/images/home-desktop.png)](docs/images/home-desktop.png) | [![Vyana home page, phone](docs/images/home-phone.png)](docs/images/home-phone.png) |
+
+More screens (Today, Ask Vyana, a care plan, blood search, SOS and the rest) are captured with [`docs/images/capture-screens.mjs`](docs/images/capture-screens.mjs) against the demo patient — see [`docs/images/README.md`](docs/images/README.md).
 
 ## How TinyFish is used
 

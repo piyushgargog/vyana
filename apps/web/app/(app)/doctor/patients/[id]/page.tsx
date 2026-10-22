@@ -364,7 +364,7 @@ function DoctorPatientSummaryContent({
                           {it.medicine_a} ↔ {it.medicine_b}
                         </span>
                         <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${
+                          className={`rounded px-1.5 py-0.5 text-[11px] uppercase ${
                             it.severity === "major"
                               ? "bg-red-200 text-red-900"
                               : "bg-amber-200 text-amber-900"
@@ -417,7 +417,7 @@ function DoctorPatientSummaryContent({
                           : ""}
                       </p>
                     </div>
-                    <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
                       Active
                     </span>
                   </div>
@@ -623,7 +623,7 @@ function DoctorPatientSummaryContent({
                                   <td className="py-1.5">
                                     {val.flag ? (
                                       <span
-                                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                                        className={`rounded px-1.5 py-0.5 text-[11px] font-bold uppercase ${
                                           val.flag === "high"
                                             ? "bg-red-100 text-red-800"
                                             : val.flag === "low"
@@ -751,7 +751,7 @@ function DoctorPatientSummaryContent({
                     <span className="text-[11px] font-semibold text-slate-400">
                       {entry.date}
                     </span>
-                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-700">
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase text-slate-700">
                       {entry.kind}
                     </span>
                   </div>
