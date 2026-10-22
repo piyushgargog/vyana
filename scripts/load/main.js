@@ -4,6 +4,7 @@
  *
  *   k6 run -e SCENARIO=me scripts/load/main.js
  *   k6 run -e SCENARIO=dashboard -e QUICK=1 scripts/load/main.js
+ *   k6 run -e SCENARIO=care-plan -e CONFIRM_MOCK_LLM=1 scripts/load/main.js   (mock-model builds only)
  *
  * Scenarios: dashboard, me, blood, care-plan, assistant, share.
  * Each run ends with a small table: requests, error rate, p50 and p95.
@@ -20,11 +21,38 @@ const PASSWORD = __ENV.PATIENT_PASSWORD || "";
 const SCENARIO = __ENV.SCENARIO || "me";
 const QUICK = __ENV.QUICK === "1";
 
-if (/vyanahealth\.app|vyana\.app/.test(BASE) || /supabase\.co/.test(SB)) {
-  throw new Error("Refusing to run: this looks like the live site. Load tests run on a local or staging build only.");
+// Allow-list, not a block-list: the target must be this machine, or exactly
+// the staging URL named in STAGING_URL. Anything else — the live site under
+// any name, the server's own address, a lookalike host — is refused before a
+// single request is made.
+const STAGING = (__ENV.STAGING_URL || "").replace(/\/+$/, "");
+function hostOf(raw) {
+  const m = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(raw);
+  if (!m) return "";
+  // "[::1]:3000" → "::1"; "localhost:3000" → "localhost"
+  return m[1].replace(/^\[/, "").split(/[:\]]/)[0].toLowerCase();
+}
+function isAllowedTarget(raw) {
+  const host = hostOf(raw);
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  return STAGING !== "" && raw === STAGING;
+}
+if (!isAllowedTarget(BASE) || !isAllowedTarget(SB)) {
+  throw new Error(
+    "Refusing to run: BASE_URL and SUPABASE_URL must be localhost, 127.0.0.1, or exactly the STAGING_URL you set. Load tests run nowhere else.",
+  );
 }
 if (!ANON || !PASSWORD) {
   throw new Error("Set SUPABASE_ANON_KEY and PATIENT_PASSWORD (see scripts/load/README.md).");
+}
+// The care-plan and assistant scenarios spend model calls and write real
+// rows (plans, chat messages, ai_runs) wherever they point. They run only
+// against a build started with LLM_MOCK=1, and only when the person running
+// the test says so out loud:
+if ((SCENARIO === "care-plan" || SCENARIO === "assistant") && __ENV.CONFIRM_MOCK_LLM !== "1") {
+  throw new Error(
+    "The care-plan and assistant scenarios call the model: run them only against a build with LLM_MOCK=1, and pass -e CONFIRM_MOCK_LLM=1 to confirm the target is that build.",
+  );
 }
 
 const duration = new Trend("route_duration", true);
@@ -70,6 +98,15 @@ export function setup() {
   const token = signIn.json("access_token");
   const userId = signIn.json("user.id");
   const auth = { headers: { apikey: ANON, authorization: `Bearer ${token}`, "content-type": "application/json" } };
+
+  // Warm the blood search once: the app caches the public service's answer
+  // for 15 minutes, so without this the early virtual users would measure
+  // the cold upstream fetch instead of Vyana. The reply is not recorded.
+  http.post(
+    `${BASE}/api/blood/search`,
+    JSON.stringify({ blood_group: "O+", component: "whole_blood", city: "Delhi" }),
+    { headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } },
+  );
 
   // The care plan scenario needs one of the patient's own conditions.
   const conditions = http.get(`${SB}/rest/v1/conditions?patient_id=eq.${userId}&select=id&limit=1`, auth);

@@ -60,17 +60,36 @@ plan and the assistant, which write more).
 - **me** — `GET /api/me`.
 - **blood** — `POST /api/blood/search` for Delhi. The app caches a search for
   15 minutes, so after the first call the load lands on Vyana, not on the
-  public stock service. Run one warm-up call by hand before the ramp, and
-  never point this scenario at a deployment whose cache is cold and shared
-  with real users.
+  public stock service. `setup()` makes that warm-up call itself; never
+  point this scenario at a deployment whose cache is cold and shared with
+  real users.
 - **care-plan** — `POST /api/care-plan` for the demo patient's first
-  condition (found in `setup()`), with the mock model.
+  condition (found in `setup()`), with the mock model. Refused unless
+  `CONFIRM_MOCK_LLM=1` is passed (see below).
 - **assistant** — `POST /api/assistant/chat` with one short message; the mock
   model streams a fixed answer, and the chat rows are written for real.
+  Refused unless `CONFIRM_MOCK_LLM=1` is passed (see below).
 - **share** — `GET /api/share/<token>` for a medical-ID link `setup()`
   creates (and revokes at the end). No sign-in: this is the public page a
   stranger's phone opens from the QR code.
 
 Passwords and tokens travel only in the environment variables above. Nothing
-in this folder holds a credential, and the scripts refuse to run against a
-`BASE_URL` that looks like the live site.
+in this folder holds a credential. Two guards run before any request:
+
+- **Targets are an allow-list.** `BASE_URL` and `SUPABASE_URL` must be
+  `localhost`, `127.0.0.1`, or exactly the `STAGING_URL` you set — anything
+  else, the live site under any name or address included, is refused.
+- **The model scenarios need an explicit confirmation.** `care-plan` and
+  `assistant` spend model calls and write real rows wherever they point, so
+  they run only with `-e CONFIRM_MOCK_LLM=1`, which is the runner's way of
+  saying "the target was started with `LLM_MOCK=1`".
+
+## Results
+
+The database-layer measurements behind the index review (the dose scan
+before and after migration 0018, and the read mix) were run on a local
+database with the seed plus synthetic volume; the raw output is in
+[`results/`](results/). The end-to-end k6 summaries (requests, error rate,
+p50, p95 per scenario) still need a run against a local Supabase stack —
+until they exist, treat any end-to-end figure as an estimate, not a
+measurement.
