@@ -14,6 +14,34 @@ export function dayKey(instant: string | Date, timeZone: string): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+/**
+ * The instant the day containing `instant` begins in `timeZone` — local midnight.
+ * Found by correcting a UTC-midnight guess with the zone's own wall clock, so it
+ * holds on half-hour zones and across daylight-saving changes.
+ */
+export function startOfDay(instant: Date, timeZone: string): Date {
+  const [y, m, d] = dayKey(instant, timeZone).split("-").map(Number);
+  const target = Date.UTC(y, m - 1, d);
+  let guess = target;
+  for (let i = 0; i < 3; i++) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(guess));
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+    const wallAsUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+    if (wallAsUtc === target) break;
+    guess -= wallAsUtc - target;
+  }
+  return new Date(guess);
+}
+
 /** Minutes after midnight of an instant in `timeZone` (for the 5-minute windows below). */
 function minuteOfDay(instant: string, timeZone: string): number {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(instant));

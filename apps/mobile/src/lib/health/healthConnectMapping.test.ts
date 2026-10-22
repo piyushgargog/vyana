@@ -56,6 +56,19 @@ describe("hcSleepSamples", () => {
     expect(out).toHaveLength(1);
     expect(out[0]?.endAt).toBe("2026-10-22T06:00:00.000Z");
   });
+
+  it("a session of only awake and out-of-bed stages is not a night of sleep", () => {
+    const out = hcSleepSamples({
+      startTime: "2026-10-21T23:00:00.000Z",
+      endTime: "2026-10-22T06:00:00.000Z",
+      stages: [
+        { startTime: "2026-10-21T23:00:00.000Z", endTime: "2026-10-22T02:00:00.000Z", stage: 1 },
+        { startTime: "2026-10-22T02:00:00.000Z", endTime: "2026-10-22T06:00:00.000Z", stage: 3 },
+      ],
+      metadata: meta,
+    } as never);
+    expect(out).toEqual([]);
+  });
 });
 
 describe("hcHeartRateSamples", () => {

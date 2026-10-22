@@ -25,18 +25,23 @@ const ASLEEP_STAGES = new Set([2, 4, 5, 6]);
  */
 export function hcSleepSamples(record: RecordResult<"SleepSession">): RawSample[] {
   const deviceName = origin(record);
-  const stages = (record.stages ?? []).filter((s) => ASLEEP_STAGES.has(s.stage));
-  if (stages.length === 0) {
+  // The whole-session fallback is only for a session with no stages at all (older apps
+  // write those). The unfiltered list is tested first, on purpose: a session whose
+  // stages are all awake or out of bed is not a night of sleep, and must not be
+  // counted whole just because filtering left nothing.
+  if (!record.stages || record.stages.length === 0) {
     return [{ kind: "sleep", at: record.startTime, endAt: record.endTime, value: 0, externalId: id(record, `hc-sleep-${record.startTime}`), deviceName }];
   }
-  return stages.map((s, i) => ({
-    kind: "sleep" as const,
-    at: s.startTime,
-    endAt: s.endTime,
-    value: 0,
-    externalId: `${id(record, `hc-sleep-${record.startTime}`)}#${i}`,
-    deviceName,
-  }));
+  return record.stages
+    .filter((s) => ASLEEP_STAGES.has(s.stage))
+    .map((s, i) => ({
+      kind: "sleep" as const,
+      at: s.startTime,
+      endAt: s.endTime,
+      value: 0,
+      externalId: `${id(record, `hc-sleep-${record.startTime}`)}#${i}`,
+      deviceName,
+    }));
 }
 
 export function hcHeartRateSamples(record: RecordResult<"HeartRate">): RawSample[] {

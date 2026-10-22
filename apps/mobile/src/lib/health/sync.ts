@@ -4,7 +4,7 @@
 // (counts and a short error code only) is all a caller ever sees.
 // Owner: Vaibhav Parmar
 
-import { aggregateSamples, mergeDaily } from "./aggregate";
+import { aggregateSamples, mergeDaily, startOfDay } from "./aggregate";
 import { HealthSourceError, type DailyAggregate, type HealthSource, type SpotReading } from "./types";
 
 /** The storage the sync writes to — the real one is db.ts over @vyana/shared (#325). */
@@ -71,15 +71,17 @@ export async function syncHealth(
     }
 
     const conn = await db.getConnection(source.id);
-    // The window starts a day before the last successful run, on purpose: a day's values
-    // are computed from records that can end after the day starts (the night's sleep ends
-    // in the morning), so re-reading the overlap keeps a re-sync from overwriting a whole
-    // day with the half of it that happened after the last run. The unique keys make the
-    // overlap free: everything in it is already stored and is skipped or rewritten equal.
-    const OVERLAP_MS = 24 * 3600 * 1000;
+    // The window starts at local midnight of the day before the last successful run,
+    // on purpose: a day's values are computed from records that can end after the day
+    // starts (the night's sleep ends in the morning), so the overlap day is re-read —
+    // but whole, from its first minute. A window that opened mid-day would hand back
+    // that day's totals for only part of the day, and the upsert would overwrite the
+    // stored day with them. The unique keys make the overlap free: everything in it
+    // is already stored and is skipped or rewritten equal.
+    const DAY_MS = 24 * 3600 * 1000;
     const since = conn?.lastSyncAt
-      ? new Date(new Date(conn.lastSyncAt).getTime() - OVERLAP_MS)
-      : new Date(now.getTime() - FIRST_RUN_DAYS * 24 * 3600 * 1000);
+      ? startOfDay(new Date(new Date(conn.lastSyncAt).getTime() - DAY_MS), timeZone)
+      : startOfDay(new Date(now.getTime() - FIRST_RUN_DAYS * DAY_MS), timeZone);
 
     let platformDays: DailyAggregate[];
     let samples;

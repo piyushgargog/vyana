@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aggregateSamples, dayKey, mergeDaily } from "./aggregate";
+import { aggregateSamples, dayKey, mergeDaily, startOfDay } from "./aggregate";
 import type { RawSample } from "./types";
 
 const TZ = "Asia/Kolkata";
@@ -22,6 +22,23 @@ describe("dayKey", () => {
   it("the zone decides, not UTC: 19:00Z is already the next day in Kolkata", () => {
     expect(dayKey("2026-10-21T19:00:00Z", TZ)).toBe("2026-10-22");
     expect(dayKey("2026-10-21T19:00:00Z", "UTC")).toBe("2026-10-21");
+  });
+});
+
+describe("startOfDay", () => {
+  it("is the UTC midnight of the same day in UTC", () => {
+    expect(startOfDay(new Date("2026-10-22T12:00:00Z"), "UTC").toISOString()).toBe("2026-10-22T00:00:00.000Z");
+  });
+
+  it("lands on 18:30Z the evening before in Kolkata (a half-hour zone)", () => {
+    expect(startOfDay(new Date("2026-10-22T12:00:00Z"), TZ).toISOString()).toBe("2026-10-21T18:30:00.000Z");
+  });
+
+  it("uses the offset of that day's midnight, not of the instant, across daylight-saving changes", () => {
+    // Spring forward (8 March 2026): midnight is still EST, five hours behind UTC.
+    expect(startOfDay(new Date("2026-03-08T12:00:00Z"), "America/New_York").toISOString()).toBe("2026-03-08T05:00:00.000Z");
+    // Fall back (1 November 2026): midnight is still EDT, four hours behind UTC.
+    expect(startOfDay(new Date("2026-11-01T12:00:00Z"), "America/New_York").toISOString()).toBe("2026-11-01T04:00:00.000Z");
   });
 });
 

@@ -17,7 +17,7 @@ import {
   type QuantitySample,
 } from "@kingstinct/react-native-healthkit";
 
-import { dayKey } from "./aggregate";
+import { dayKey, startOfDay } from "./aggregate";
 import { hkBloodPressurePairs, hkQuantityToSample, hkSleepSamples, type HkCategorySampleLike, type HkQuantitySampleLike } from "./healthKitMapping";
 import { HealthSourceError, type DailyAggregate, type HealthMetric, type HealthSource, type PermissionResult, type RawSample } from "./types";
 
@@ -92,8 +92,12 @@ export class HealthKitSource implements HealthSource {
       byDay.set(day, row);
       return row;
     };
+    // The collection is anchored at local midnight of the first day: anchored at a
+    // time of day, its "days" would be 24-hour windows running from that time, and a
+    // bucket would land on the wrong calendar day.
+    const anchor = startOfDay(from, timeZone);
     const collect = async (identifier: string, unit: string, apply: (row: DailyAggregate, value: number) => void) => {
-      const stats = await queryStatisticsCollectionForQuantity(identifier as never, ["cumulativeSum"], from, { day: 1 }, { ...dateFilter(from, to), unit: unit as never });
+      const stats = await queryStatisticsCollectionForQuantity(identifier as never, ["cumulativeSum"], anchor, { day: 1 }, { ...dateFilter(anchor, to), unit: unit as never });
       for (const s of stats) {
         if (s.sumQuantity && s.startDate) apply(ensure(dayKey(s.startDate, timeZone)), s.sumQuantity.quantity);
       }
@@ -109,8 +113,8 @@ export class HealthKitSource implements HealthSource {
     const opts = dateFilter(from, to);
     // limit 0 = every sample in the window (the library's own convention).
     const [hr, resting, spo2Raw, glucose, weight, systolic, diastolic, sleep] = await Promise.all([
-      queryQuantitySamples(QUANTITY_FOR.heart_rate as never, { ...opts, limit: 0, unit: "bpm" as never }),
-      queryQuantitySamples(QUANTITY_FOR.resting_hr as never, { ...opts, limit: 0, unit: "bpm" as never }),
+      queryQuantitySamples(QUANTITY_FOR.heart_rate as never, { ...opts, limit: 0, unit: "count/min" as never }),
+      queryQuantitySamples(QUANTITY_FOR.resting_hr as never, { ...opts, limit: 0, unit: "count/min" as never }),
       queryQuantitySamples(QUANTITY_FOR.spo2 as never, { ...opts, limit: 0, unit: "%" as never }),
       queryQuantitySamples(QUANTITY_FOR.glucose as never, { ...opts, limit: 0, unit: "mg/dL" as never }),
       queryQuantitySamples(QUANTITY_FOR.weight as never, { ...opts, limit: 0, unit: "kg" as never }),
