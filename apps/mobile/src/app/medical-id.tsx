@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { Linking, StyleSheet, View } from 'react-native';
 import {
   buildMedicalIdQr,
@@ -81,6 +82,7 @@ export default function MedicalIdScreen() {
     if (!shareUrl) return;
     try {
       await Clipboard.setStringAsync(shareUrl);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       showToast('Link copied for your doctor', 'success');
     } catch {
       showToast('Could not copy the link', 'error');
