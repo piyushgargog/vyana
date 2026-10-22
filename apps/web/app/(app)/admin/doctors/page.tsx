@@ -326,7 +326,6 @@ export default function AdminDoctorsPage() {
                       {website && (
                         <ButtonLink
                           variant="secondary"
-                          size="sm"
                           href={website}
                           target="_blank"
                           rel="noopener noreferrer"
