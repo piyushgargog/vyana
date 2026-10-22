@@ -244,6 +244,18 @@ describe("POST /api/doctors/verify", () => {
     expect((await post({ reg_no: "", state_council: "x" })).status).toBe(400);
   });
 
+  it("rejects a registration year outside 1950-2100 with 400 and saves nothing", async () => {
+    // Same range as the admin's check (AdminDoctorCheckReq.year); junk years must not reach the database.
+    for (const year of [0, 1890, 2101, 999999]) {
+      const res = await post({ ...send, year_of_registration: year });
+      expect(res.status).toBe(400);
+    }
+    expect(row(USER_ID).year_of_registration).toBeUndefined();
+    // Boundary years are accepted like the admin path accepts them.
+    expect((await post({ ...send, year_of_registration: 1950 })).status).toBe(200);
+    expect((await post({ ...send, year_of_registration: 2100 })).status).toBe(200);
+  });
+
   it("settles the role before reading the body: a patient gets 403 even with a body that is not JSON", async () => {
     // Before issue #359 the body was parsed first, so this answered 400 instead of 403.
     db.rows.profiles[0].role = "patient";

@@ -121,7 +121,7 @@ export const EmergencySosRes = z.object({
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
   reg_no: z.string().min(1), state_council: z.string().min(2),
-  year_of_registration: z.number().int().optional(),
+  year_of_registration: z.number().int().min(1950).max(2100).optional(),
 });
 export const DoctorVerifyRes = z.object({
   status: z.enum(["verified","failed","pending"]),

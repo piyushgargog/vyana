@@ -3,7 +3,7 @@ import { requireRole, requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { checkInteractions } from "@/lib/server/interactions";
 
-// Up to 15 pairs: Search + Fetch per pair in parallel, then one model call (SPEC §14).
+// Pure table lookup over the reviewed list of well-known interactions; no model call.
 export const maxDuration = 120;
 
 export const POST = withRoute("medicines/interactions", async (req, ctx) => {
