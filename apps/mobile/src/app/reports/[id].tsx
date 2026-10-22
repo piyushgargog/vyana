@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { T } from '@/constants/theme';
 import { useLabReport } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
@@ -23,7 +24,7 @@ export default function LabReportDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0D9488" />
+        <ActivityIndicator size="large" color={T.color.accent} />
         <Text style={styles.loadingText}>Loading lab report…</Text>
       </View>
     );
@@ -153,7 +154,7 @@ export default function LabReportDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+  screen: { flex: 1, backgroundColor: T.color.canvas },
   content: { padding: 16, gap: 14 },
   loadingContainer: {
     flex: 1,
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
+  loadingText: { fontSize: 13, color: T.color.label2 },
   notFoundContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -170,68 +171,68 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
   },
-  notFoundTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingBottom: 4,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 12, color: '#64748B' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: T.color.label },
+  headerSub: { fontSize: 12, color: T.color.label2 },
   backBtn: {
-    backgroundColor: '#0F766E',
+    backgroundColor: T.color.accentStrong,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
   },
-  backBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  backBtnText: { color: T.color.white, fontWeight: '700', fontSize: 12 },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 16,
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.color.separator,
   },
-  summaryTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  summaryBody: { fontSize: 13, color: '#334155', lineHeight: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  summaryTitle: { fontSize: 14, fontWeight: '700', color: T.color.label },
+  summaryBody: { fontSize: 13, color: T.color.label, lineHeight: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: T.color.label },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 14,
     padding: 20,
     alignItems: 'center',
   },
-  emptyText: { fontSize: 13, color: '#64748B' },
+  emptyText: { fontSize: 13, color: T.color.label2 },
   valueCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.color.separator,
   },
   valueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  testName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  refRange: { fontSize: 12, color: '#64748B' },
+  testName: { fontSize: 15, fontWeight: '700', color: T.color.label },
+  refRange: { fontSize: 12, color: T.color.label2 },
   valueRight: { alignItems: 'flex-end', gap: 4 },
-  valueNum: { fontSize: 16, fontWeight: '800', color: '#0F766E' },
-  valueAbnormal: { color: '#B91C1C' },
-  unitText: { fontSize: 12, fontWeight: '500', color: '#64748B' },
+  valueNum: { fontSize: 16, fontWeight: '800', color: T.color.accentStrong },
+  valueAbnormal: { color: T.color.dangerText },
+  unitText: { fontSize: 12, fontWeight: '500', color: T.color.label2 },
   flagBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  flagHigh: { backgroundColor: '#FEE2E2' },
-  flagLow: { backgroundColor: '#FEF3C7' },
-  flagNormal: { backgroundColor: '#D1FAE5' },
+  flagHigh: { backgroundColor: T.color.dangerSoft },
+  flagLow: { backgroundColor: T.color.warnSoft },
+  flagNormal: { backgroundColor: T.color.okSoft },
   flagBadgeText: { fontSize: 11, fontWeight: '800' },
-  flagHighText: { color: '#B91C1C' },
-  flagLowText: { color: '#B45309' },
-  flagNormalText: { color: '#065F46' },
+  flagHighText: { color: T.color.dangerText },
+  flagLowText: { color: T.color.warn },
+  flagNormalText: { color: T.color.ok },
 });

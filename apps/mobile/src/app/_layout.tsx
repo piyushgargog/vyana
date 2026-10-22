@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { KeyboardAvoidingView, KeyboardProvider } from 'react-native-keyboard-controller';
 import { MobileAppProviders } from '@/components/providers';
+import { T } from '@/constants/theme';
 import { WelcomeSplash } from '@/components/welcome-splash';
 import { onNotificationTap } from '@/lib/notifications';
 import { useReminderSync } from '@/lib/useReminderSync';
@@ -47,8 +48,8 @@ function RootNavigator() {
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#0F766E' },
-          headerTintColor: '#FFFFFF',
+          headerStyle: { backgroundColor: T.color.accentStrong },
+          headerTintColor: T.color.white,
           headerTitleStyle: { fontWeight: '700' },
         }}
       >
