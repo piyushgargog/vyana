@@ -313,7 +313,7 @@ function DoctorCarePlanReviewContent({
           onChange={(e) =>
             setDraftPlan({ ...draftPlan, summary: e.target.value })
           }
-          className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+          className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 outline-none focus:border-accent"
         />
       </div>
 
@@ -344,7 +344,8 @@ function DoctorCarePlanReviewContent({
                     next[idx] = e.target.value;
                     setDraftPlan({ ...draftPlan, do: next });
                   }}
-                  className="flex-1 bg-transparent text-slate-900 focus:outline-none"
+                  aria-label={`Recommended action ${idx + 1}`}
+                  className="flex-1 bg-transparent text-slate-900"
                 />
                 <button
                   type="button"
@@ -368,7 +369,8 @@ function DoctorCarePlanReviewContent({
               value={newDoItem}
               onChange={(e) => setNewDoItem(e.target.value)}
               placeholder="Add recommended action…"
-              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+              aria-label="Add recommended action"
+              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
             />
             <button
               type="button"
@@ -413,7 +415,8 @@ function DoctorCarePlanReviewContent({
                     next[idx] = e.target.value;
                     setDraftPlan({ ...draftPlan, dont: next });
                   }}
-                  className="flex-1 bg-transparent text-slate-900 focus:outline-none"
+                  aria-label={`Action to avoid ${idx + 1}`}
+                  className="flex-1 bg-transparent text-slate-900"
                 />
                 <button
                   type="button"
@@ -437,7 +440,8 @@ function DoctorCarePlanReviewContent({
               value={newDontItem}
               onChange={(e) => setNewDontItem(e.target.value)}
               placeholder="Add restriction / contraindication…"
-              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+              aria-label="Add restriction / contraindication"
+              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
             />
             <button
               type="button"
@@ -487,7 +491,8 @@ function DoctorCarePlanReviewContent({
                         diet: { ...draftPlan.diet, eat_more: next },
                       });
                     }}
-                    className="flex-1 bg-transparent text-emerald-950 focus:outline-none"
+                    aria-label={`Food to include ${idx + 1}`}
+                    className="flex-1 bg-transparent text-emerald-950"
                   />
                   <button
                     type="button"
@@ -514,7 +519,8 @@ function DoctorCarePlanReviewContent({
                 value={newEatMoreItem}
                 onChange={(e) => setNewEatMoreItem(e.target.value)}
                 placeholder="e.g. Green leafy vegetables…"
-                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs"
+                aria-label="Add food to include"
+                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs outline-none focus:border-accent"
               />
               <button
                 type="button"
@@ -559,7 +565,8 @@ function DoctorCarePlanReviewContent({
                         diet: { ...draftPlan.diet, limit: next },
                       });
                     }}
-                    className="flex-1 bg-transparent text-amber-950 focus:outline-none"
+                    aria-label={`Food to limit ${idx + 1}`}
+                    className="flex-1 bg-transparent text-amber-950"
                   />
                   <button
                     type="button"
@@ -586,7 +593,8 @@ function DoctorCarePlanReviewContent({
                 value={newLimitItem}
                 onChange={(e) => setNewLimitItem(e.target.value)}
                 placeholder="e.g. Refined sugars, high-sodium snacks…"
-                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs"
+                aria-label="Add food to limit"
+                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs outline-none focus:border-accent"
               />
               <button
                 type="button"
@@ -636,7 +644,8 @@ function DoctorCarePlanReviewContent({
                   next[idx] = e.target.value;
                   setDraftPlan({ ...draftPlan, red_flags: next });
                 }}
-                className="flex-1 bg-transparent font-medium focus:outline-none"
+                aria-label={`Red flag symptom ${idx + 1}`}
+                className="flex-1 bg-transparent font-medium"
               />
               <button
                 type="button"
@@ -660,7 +669,8 @@ function DoctorCarePlanReviewContent({
             value={newRedFlagItem}
             onChange={(e) => setNewRedFlagItem(e.target.value)}
             placeholder="Add red flag symptom (e.g. Sudden severe chest pain, loss of consciousness)…"
-            className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+            aria-label="Add red flag symptom"
+            className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
           />
           <button
             type="button"
@@ -723,7 +733,8 @@ function DoctorCarePlanReviewContent({
             value={newTestName}
             onChange={(e) => setNewTestName(e.target.value)}
             placeholder="Test name (e.g. HbA1c, Serum Creatinine)…"
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+            aria-label="Follow-up test name"
+            className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
           />
           <div className="flex items-center gap-1 text-xs text-slate-600">
             <span>Every</span>
@@ -732,7 +743,8 @@ function DoctorCarePlanReviewContent({
               min="1"
               value={newTestDays}
               onChange={(e) => setNewTestDays(parseInt(e.target.value) || 30)}
-              className="w-16 rounded-xl border border-slate-300 px-2 py-1.5 text-xs text-center"
+              aria-label="Days between follow-up tests"
+              className="w-16 rounded-xl border border-slate-300 px-2 py-1.5 text-xs text-center outline-none focus:border-accent"
             />
             <span>days</span>
           </div>
