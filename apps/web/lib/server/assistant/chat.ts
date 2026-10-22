@@ -41,7 +41,7 @@ export const isDoseQuestion = (q: string): boolean =>
   findDosePatterns(q).length > 0 ||
   /\b(?:how (?:much|many)|what dose|dosage|dose|double|skip|stop taking|halve|increase|reduce|take (?:\d|two|three|half)|instead of \d|kitn[aie]|badha|kam kar|chhod)\b|कितनी|कितना|खुराक/iu.test(q);
 
-const SAFE_ERROR = "Something went wrong while answering. Please try again.";
+const SAFE_ERROR = "The answer could not be finished. Please try again.";
 
 export const ChatBody = z.object({
   session_id: z.guid().optional(),
