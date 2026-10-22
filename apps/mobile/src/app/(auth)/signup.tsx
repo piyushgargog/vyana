@@ -43,7 +43,9 @@ export default function MobileSignupScreen() {
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   );
-  const [now, setNow] = useState(() => Date.now());
+  // Starts at 0 and is set in the resend handlers and the interval (same
+  // pattern as the web form, where the clock cannot be read during render).
+  const [now, setNow] = useState(0);
 
   const confirmationUrl = signupConfirmationUrl(baseUrl);
   const resendSeconds =

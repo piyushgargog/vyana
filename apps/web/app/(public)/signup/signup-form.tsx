@@ -40,7 +40,9 @@ export function SignupForm() {
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   );
-  const [now, setNow] = useState(() => Date.now());
+  // Starts at 0: reading the clock during render would break the static
+  // prerender (Next 16). It is set in the resend handlers and the interval.
+  const [now, setNow] = useState(0);
 
   const confirmationUrl = () =>
     signupConfirmationUrl(window.location.origin);
