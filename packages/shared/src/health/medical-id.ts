@@ -2,6 +2,8 @@
 // The offline Medical ID QR (plan 6.5): what a first responder can read without internet.
 // Owner: Vaibhav Parmar
 
+import { cleanInlineText } from "../text/clean";
+
 /**
  * The QR holds plain text, so any phone camera shows it as it is, with no app and no internet: a first responder reads
  * the lines straight from the scan result. (It used to be base64-encoded JSON, which a camera shows as gibberish.)
@@ -29,7 +31,6 @@ export interface MedicalIdContact {
 
 const NOT_RECORDED = "not recorded";
 
-const clean = (text: string | null | undefined, max: number) => (text ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 
@@ -59,16 +60,16 @@ export function buildMedicalIdQr(
   maxLength: number = MEDICAL_ID_MAX_LENGTH,
 ): string {
   const medicines = meds
-    .map((m) => clean(m.strength ? `${m.medicine_name} ${m.strength}` : m.medicine_name, 80))
+    .map((m) => cleanInlineText(m.strength ? `${m.medicine_name} ${m.strength}` : m.medicine_name, 80))
     .filter((m) => m !== "")
     .slice(0, 30);
-  const allergies = profile.allergies.map((a) => clean(a, 60)).filter((a) => a !== "").slice(0, 20);
+  const allergies = profile.allergies.map((a) => cleanInlineText(a, 60)).filter((a) => a !== "").slice(0, 20);
 
-  const blood = clean(profile.blood_group, 10) || NOT_RECORDED;
-  const phone = contact ? clean(contact.phone, 30) : "";
+  const blood = cleanInlineText(profile.blood_group, 10) || NOT_RECORDED;
+  const phone = contact ? cleanInlineText(contact.phone, 30) : "";
   const hasContact = Boolean(contact && phone);
-  let name = clean(profile.full_name, 80) || NOT_RECORDED;
-  let contactName = contact ? clean(contact.name, 50) || "contact" : "";
+  let name = cleanInlineText(profile.full_name, 80) || NOT_RECORDED;
+  let contactName = contact ? cleanInlineText(contact.name, 50) || "contact" : "";
 
   const make = (m: number, a: number) =>
     [

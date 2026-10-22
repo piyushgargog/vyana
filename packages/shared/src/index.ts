@@ -15,3 +15,4 @@ export * from "./hooks/db";
 export * from "./ui-helpers";
 export * from "./health";
 export * from "./text/markdown";
+export * from "./text/clean";
