@@ -82,7 +82,7 @@ describe("POST /api/assistant/chat", () => {
     const chunks = await chunksOf(res);
     await settled();
     const text = textOf(chunks);
-    expect(text).toMatch(/\]\(https:\/\/who\.int\/is-dolo-650-safe-with-alcohol-1\)/);
+    expect(text).toMatch(/\]\(https:\/\/medlineplus\.gov\/is-dolo-650-safe-with-alcohol-1\.html\)/);
     expect(chunks.some((c) => c.type === "tool-input-available" && c.toolName === "search_health_web")).toBe(true);
 
     expect(db.rows.chat_sessions).toEqual([expect.objectContaining({ id: sessionId, user_id: USER_ID, title: "Is Dolo 650 safe with alcohol?" })]);
@@ -91,7 +91,7 @@ describe("POST /api/assistant/chat", () => {
     const run = db.rows.ai_runs[0];
     expect(chunks[0]).toMatchObject({ type: "start", messageMetadata: { ai_run_id: run.id } });
     expect(run).toMatchObject({ feature: "assistant_chat", prompt_version: "assistant@1", status: "ok", input_ref: `chat_sessions/${sessionId}` });
-    expect(run.sources).toEqual([{ title: "[mock] Is Dolo 650 safe with alcohol? (1)", url: "https://who.int/is-dolo-650-safe-with-alcohol-1" }]);
+    expect(run.sources).toEqual([{ title: "[mock] Is Dolo 650 safe with alcohol? (1)", url: "https://medlineplus.gov/is-dolo-650-safe-with-alcohol-1.html" }]);
   });
 
   it("starts with the 108 notice on emergency words, in the user's language", async () => {

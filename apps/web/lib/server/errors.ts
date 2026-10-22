@@ -23,7 +23,7 @@ export const unauthorized = (message = "Sign in to continue") => new AppError("U
 export const forbidden = (message = "You don't have access to this") => new AppError("FORBIDDEN", message, 403);
 export const notFound = (message = "Not found") => new AppError("NOT_FOUND", message, 404);
 /** Over a per-user limit (issue 138): 429 with a plain message and a `Retry-After` header in seconds. */
-export const rateLimited = (retryAfterSeconds: number) => {
+const rateLimited = (retryAfterSeconds: number) => {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return new AppError(
     "RATE_LIMITED",
@@ -33,8 +33,6 @@ export const rateLimited = (retryAfterSeconds: number) => {
   );
 };
 export const upstream = (message = "A source we depend on failed. Try again.") => new AppError("UPSTREAM_ERROR", message, 502);
-export const upstreamTimeout = (message = "A source we depend on took too long. Try again.") =>
-  new AppError("UPSTREAM_TIMEOUT", message, 504);
 
 /** Facts a handler can add to its single log line. Never put tokens or health data here. */
 export interface RouteContext {
@@ -56,7 +54,7 @@ function isTimeout(err: unknown): boolean {
 }
 
 /** Maps any thrown error to the documented error shape (SPEC §0). */
-export function toErrorResponse(err: unknown, requestId: string): Response {
+function toErrorResponse(err: unknown, requestId: string): Response {
   if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, err.headers);
   if (err instanceof ZodError) {
     const message = err.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");

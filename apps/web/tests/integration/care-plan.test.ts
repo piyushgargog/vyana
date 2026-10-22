@@ -47,7 +47,7 @@ describe("POST /api/care-plan", () => {
     expect(plan.red_flags[0]).toBe("Feeling very unwell");
     expect(plan.red_flags).toContain("Chest pain or pressure");
     expect(plan.sources.map((s) => s.url)).toEqual(
-      expect.arrayContaining(["https://mohfw.gov.in/type-2-diabetes-patient-guidelines-diet-lifestyle-1", "https://medlineplus.gov/ency/article/000313.htm"]),
+      expect.arrayContaining(["https://medlineplus.gov/type-2-diabetes-1.html", "https://medlineplus.gov/ency/article/000313.htm"]),
     );
 
     const saved = db.rows.care_plans[0];
@@ -92,7 +92,7 @@ describe("POST /api/care-plan", () => {
   it("caches the guideline pages per condition", async () => {
     await post({ condition_id: CONDITION_ID });
     await post({ condition_id: CONDITION_ID });
-    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:type 2 diabetes"]);
+    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:v3:type 2 diabetes"]);
     expect(db.rows.care_plans).toHaveLength(2);
   });
 });

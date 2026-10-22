@@ -47,6 +47,6 @@ export function isEmergencyReplyText(text: string): boolean {
 /** The label to show for a tool part of an assistant message, or null when the part is not shown. */
 export function toolActivityLabel(partType: string): string | null {
   if (partType === "tool-search_health_web" || partType === "tool-read_page") return "Searching trusted sources…";
-  if (partType === "tool-compare_medicine_prices") return "Comparing pharmacy prices…";
+  if (partType === "tool-medicine_price_links") return "Preparing pharmacy links…";
   return null;
 }
