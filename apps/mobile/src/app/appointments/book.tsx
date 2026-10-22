@@ -251,7 +251,7 @@ export default function AppointmentBookScreen() {
                   Phone: {selectedHospital.phone}
                 </Text>
               ) : null}
-              {selectedHospital.website ? (
+              {selectedHospital.website?.startsWith('https://') ? (
                 <Button
                   title="Hospital website"
                   variant="secondary"

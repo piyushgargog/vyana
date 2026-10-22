@@ -493,12 +493,13 @@ export default function MobileSosScreen() {
         )}
       </Card>
 
-      {/* Ayushman Bharat (PM-JAY) Empanelled Hospitals */}
+      {/* Ayushman Bharat (PM-JAY) hospitals */}
       <Card>
-        <CardHeader title="PM-JAY Empanelled Hospitals" />
+        <CardHeader title="PM-JAY Hospitals" />
         <Text variant="footnote" tone="tertiary">
-          Cashless treatment under Ayushman Bharat (fetched strictly from
-          verified government pages)
+          Cashless treatment under Ayushman Bharat — read from the official
+          PM-JAY hospital pages; confirm a hospital takes your card on the
+          portal.
         </Text>
         {pmjayMutation.isPending && (
           <ActivityIndicator size="small" color={T.color.accent} />

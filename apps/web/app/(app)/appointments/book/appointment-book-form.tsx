@@ -434,7 +434,7 @@ export function AppointmentBookForm() {
                   Phone: {selectedHospital.phone}
                 </p>
               ) : null}
-              {selectedHospital.website ? (
+              {selectedHospital.website?.startsWith("https://") ? (
                 <ButtonLink
                   href={selectedHospital.website}
                   target="_blank"

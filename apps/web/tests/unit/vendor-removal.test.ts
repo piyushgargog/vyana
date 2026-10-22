@@ -1,6 +1,8 @@
 // W3 (#297): the old web-agent vendor is gone from every user-visible string under apps/, and the
 // doctor badge words are the manual-check ones. This scans the app sources so the name cannot
-// quietly come back in a label, a toast or a page.
+// quietly come back in a label, a toast or a page. One exception: the privacy page keeps its
+// sub-processor line until PR X ships, because main still sends lookup data to that vendor —
+// the line is a disclosure, not a product claim, and it goes when the data flow does.
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -28,6 +30,7 @@ describe("vendor removal (W3)", () => {
     const offenders: string[] = [];
     for (const root of APP_ROOTS) {
       for (const file of sourceFiles(root)) {
+        if (file.endsWith(join("(public)", "privacy", "page.tsx"))) continue;
         if (/tinyfish/i.test(readFileSync(file, "utf8"))) offenders.push(file);
       }
     }

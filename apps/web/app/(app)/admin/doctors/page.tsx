@@ -104,7 +104,9 @@ export default function AdminDoctorsPage() {
 
   // The manual doctor check (W3): the admin opens the register, compares the entry by hand,
   // then records what they found. The server side of POST /api/doctors/verify for an admin
-  // entry lands in PR S; until then the form posts the fields below and shows the answer.
+  // entry lands in PR S; until it ships and NEXT_PUBLIC_ADMIN_MANUAL_CHECK is switched on,
+  // the sheet is read-only, so no admin records a check the server cannot save yet.
+  const MANUAL_CHECK_ENABLED = process.env.NEXT_PUBLIC_ADMIN_MANUAL_CHECK === "true";
   const [checkDoctor, setCheckDoctor] = useState<DoctorWithRelations | null>(null);
   const [checkRegNo, setCheckRegNo] = useState("");
   const [checkCouncil, setCheckCouncil] = useState("");
@@ -113,10 +115,12 @@ export default function AdminDoctorsPage() {
   const [checkBusy, setCheckBusy] = useState(false);
 
   const openCheck = (doc: DoctorWithRelations) => {
+    // The fields start empty on purpose: the admin types what the register itself shows,
+    // never a copy of the doctor's own claim.
     setCheckDoctor(doc);
-    setCheckRegNo(doc.reg_no);
-    setCheckCouncil(doc.state_council);
-    setCheckYear(doc.year_of_registration ? String(doc.year_of_registration) : "");
+    setCheckRegNo("");
+    setCheckCouncil("");
+    setCheckYear("");
     setCheckNote("");
   };
 
@@ -146,22 +150,36 @@ export default function AdminDoctorsPage() {
         }),
       });
       if (!res.ok) throw new Error(`The server answered ${res.status}`);
-      const now = new Date().toISOString();
+      // The badge follows the status the server itself returns — a bare 2xx (or a
+      // "pending" answer) never shows as a completed check.
+      const body = (await res.json().catch(() => null)) as {
+        verification_status?: string;
+        status?: string;
+        verified_at?: string;
+      } | null;
+      const serverStatus = body?.verification_status ?? body?.status;
+      if (serverStatus !== "verified" && serverStatus !== "failed" && serverStatus !== "pending") {
+        showToast("The server answered without a check status, so nothing was changed", "warning");
+        return;
+      }
       setDoctors((prev) =>
         prev.map((d) =>
           d.id === checkDoctor.id
             ? {
                 ...d,
-                verification_status: decision === "approve" ? "verified" : "failed",
-                verified_at: now,
+                verification_status: serverStatus,
+                verified_at:
+                  serverStatus === "pending" ? d.verified_at : (body?.verified_at ?? new Date().toISOString()),
               }
             : d
         )
       );
       showToast(
-        decision === "approve"
+        serverStatus === "verified"
           ? "Doctor approved — checked by hand against the register"
-          : "Doctor rejected — the register entry did not match",
+          : serverStatus === "failed"
+            ? "Doctor rejected — the register entry did not match"
+            : "Saved as pending — the server has not finished this check",
         "success"
       );
       setCheckDoctor(null);
@@ -488,7 +506,7 @@ export default function AdminDoctorsPage() {
               variant="primary"
               size="lg"
               className="w-full"
-              disabled={checkBusy}
+              disabled={checkBusy || !MANUAL_CHECK_ENABLED}
               onClick={() => submitCheck("approve")}
             >
               Approve
@@ -497,7 +515,7 @@ export default function AdminDoctorsPage() {
               variant="destructive"
               size="md"
               className="w-full"
-              disabled={checkBusy}
+              disabled={checkBusy || !MANUAL_CHECK_ENABLED}
               onClick={() => submitCheck("reject")}
             >
               Reject
@@ -507,6 +525,12 @@ export default function AdminDoctorsPage() {
       >
         {checkDoctor && (
           <div className="space-y-4">
+            {!MANUAL_CHECK_ENABLED && (
+              <p className="rounded-xl border border-separator bg-fill px-3 py-2 text-[14px] text-label-2">
+                Manual checks open when the server update ships. Until then this sheet only
+                shows what the doctor claimed — nothing can be recorded yet.
+              </p>
+            )}
             <p className="text-[15px] text-label-2">
               Open the register, find the entry for{" "}
               <strong className="text-label">{checkDoctor.profile?.full_name || "this doctor"}</strong>,

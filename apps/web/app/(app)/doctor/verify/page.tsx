@@ -230,7 +230,7 @@ export default function DoctorVerifyPage() {
       {/* Verification Submission Form */}
       <Card>
         <CardHeader
-          title="Run Official Register Verification"
+          title="Your registration details"
           trailing={
             <span className="text-[13px] text-label-3">
               National & State Registers
@@ -238,7 +238,9 @@ export default function DoctorVerifyPage() {
           }
         />
         <p className="mb-4 text-[15px] text-label-2">
-          Checks the National Medical Commission and State Medical Council registers to cross-reference your credentials.
+          Send the registration number and council from your certificate. A Vyana admin then
+          compares them with the National Medical Commission and State Medical Council
+          registers by hand.
         </p>
 
         <form onSubmit={handleStartVerification} className="space-y-4">
@@ -308,8 +310,8 @@ export default function DoctorVerifyPage() {
               }
             >
               {verifyMutation.isPending
-                ? "Verifying with NMC…"
-                : "Verify Credentials with NMC"}
+                ? "Sending…"
+                : "Send for the admin check"}
             </Button>
           </div>
         </form>
