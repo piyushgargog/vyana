@@ -43,10 +43,9 @@ export function refillDueRule(input: RefillDueInput): ProposalDraft | null {
   );
   if (!status.refill_due || status.days_left === null) return null;
   const daysLeft = status.days_left;
-  const name = item.medicine_name + (item.strength ? " " + item.strength : "");
   return {
     kind: "refill_due",
-    title: `${name} may need a refill`,
+    title: `${item.medicine_name} may need a refill`,
     reason:
       daysLeft <= 0
         ? "The pack from your prescription is used up."

@@ -24,7 +24,7 @@ describe("refillDueRule", () => {
     const d = refillDueRule({ today: "2026-10-22", item: item(), doseLogs: taken(8) });
     expect(d).not.toBeNull();
     expect(d?.kind).toBe("refill_due");
-    expect(d?.title).toBe("Zentrabol 10 mg may need a refill");
+    expect(d?.title).toBe("Zentrabol may need a refill");
     expect(d?.reason).toBe("About 2 days of this medicine are left.");
     expect(d?.payload).toEqual({ item_id: "item-1", days_left: 2 });
     expect(d?.expires_in_days).toBe(7);
@@ -47,7 +47,7 @@ describe("refillDueRule", () => {
     expect(refillDueRule({ today: "2026-10-22", item: item(), doseLogs: taken(6) })).toBeNull();
   });
 
-  it("omits the strength from the title when there is none", () => {
+  it("never puts the strength in the title", () => {
     expect(refillDueRule({ today: "2026-10-22", item: item({ strength: null }), doseLogs: taken(8) })?.title).toBe("Zentrabol may need a refill");
   });
 
@@ -62,7 +62,7 @@ describe("refillDueRule", () => {
 
   it("title and reason never use banned words", () => {
     for (const n of [8, 10]) {
-      const d = refillDueRule({ today: "2026-10-22", item: item({ strength: null }), doseLogs: taken(n) });
+      const d = refillDueRule({ today: "2026-10-22", item: item({ strength: "10 mg" }), doseLogs: taken(n) });
       expect(d?.title).not.toMatch(BANNED);
       expect(d?.reason).not.toMatch(BANNED);
     }
