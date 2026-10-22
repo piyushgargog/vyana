@@ -26,3 +26,4 @@ export * from "./shareLinks";
 export * from "./storage";
 export * from "./timeline";
 export * from "./vitals";
+export * from "./wearables";

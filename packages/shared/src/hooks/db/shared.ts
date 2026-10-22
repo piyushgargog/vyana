@@ -23,6 +23,8 @@ export const DB_KEYS = {
   doseLogs: "dose-logs",
   adherence: "adherence",
   vitals: "vitals",
+  dailyActivity: "daily-activity",
+  deviceConnections: "device-connections",
   meals: "meals",
   chatSessions: "chat-sessions",
   chatMessages: "chat-messages",
