@@ -43,6 +43,55 @@ The build runs in the cloud. When it finishes, EAS prints a link and a QR code f
 2. Tag the release (`git tag v1.0.0 && git push origin v1.0.0`): the release workflow creates the GitHub Release from the matching section of `CHANGELOG.md`.
 3. Download the `.apk` from the build page and attach it: `gh release upload v1.0.0 vyana-1.0.0.apk`.
 
+## Before the APK is published or linked anywhere: check its permissions
+
+The 1.0.0 APK asked for the microphone (`RECORD_AUDIO`) and for "draw over
+other apps" (`SYSTEM_ALERT_WINDOW`), neither of which the app uses (issue
+#377). Both are blocked in `app.json` (`android.blockedPermissions`), and the
+image picker is told `microphonePermission: false` so it never asks for the
+microphone in the first place. Do not publish or link a build until both
+checks below pass.
+
+1. The generated manifest:
+
+   ```bash
+   cd apps/mobile
+   npx expo prebuild --platform android --no-install
+   node ./scripts/check-android-permissions.mjs android/app/src/main/AndroidManifest.xml
+   ```
+
+   It must print OK: each blocked permission appears only as a
+   `tools:node="remove"` entry, which is what makes the Android manifest
+   merger drop the permission even when a library's manifest asks for it.
+
+   The same check runs on every pull request: it is wired into CI as a
+   step in the `expo-doctor` job in `.github/workflows/ci.yml`:
+
+   ```yaml
+   - name: Blocked Android permissions stay blocked
+     working-directory: apps/mobile
+     env:
+       EXPO_NO_TELEMETRY: "1"
+     run: |
+       npx expo prebuild --platform android --no-install
+       node ./scripts/check-android-permissions.mjs android/app/src/main/AndroidManifest.xml
+   ```
+
+2. The built APK itself (the merged manifest is the only ground truth). With
+   the Android SDK build-tools on the machine (`aapt` ships with them; EAS
+   build machines have them, a release manager's machine needs Android
+   Studio or the command-line tools):
+
+   ```bash
+   aapt dump permissions vyana-<version>.apk
+   ```
+
+   The output must not list `android.permission.RECORD_AUDIO` or
+   `android.permission.SYSTEM_ALERT_WINDOW`. (`apkanalyzer manifest
+   permissions vyana-<version>.apk` from the Android SDK command-line tools
+   prints the same list.) If either appears, do not upload the APK: fix the
+   config first and rebuild.
+
 ## A pitfall that closed the first APK on launch
 
 React Compiler (`experiments.reactCompiler`) writes `Symbol.for("react.memo_cache_sentinel")` into every compiled component. A file that imports a component called `Symbol` (our icon) hides the built-in `Symbol`, so the call fails with "undefined is not a function" and the app closes. The compiler is off in `app.json`. Before turning it on again, rename the icon component (for example to `SymbolIcon`) in every file. A release build prints no JavaScript error on screen: read the crash with `adb logcat -b events | grep am_crash` on a phone connected by USB or wireless debugging.

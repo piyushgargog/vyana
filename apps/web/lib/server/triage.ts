@@ -14,7 +14,7 @@ import { supabaseAdmin } from "./supabase-admin";
  * departments from our list. Every sentence the user reads is fixed text from here.
  */
 
-export const DEFAULT_DEPARTMENT = "General Medicine";
+const DEFAULT_DEPARTMENT = "General Medicine";
 const MAX_DEPARTMENTS = 2;
 
 /** The general warning signs shown with every non-emergency result (ids in `red-flags.ts`). */

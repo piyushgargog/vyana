@@ -9,6 +9,7 @@ import {
 } from "@/components/ui";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/terms" },
   title: "Terms of Service · Vyana",
   description:
     "Plain-language Terms of Service for Vyana. Understand user responsibilities, AI assistive tools, and medical disclaimers.",
