@@ -42,6 +42,21 @@ describe("htmlToText", () => {
     expect(text).not.toMatch(/for \(let|color: red/);
   });
 
+  it("takes the content of <article> or <main> and leaves the banner, breadcrumbs and menus out", () => {
+    const page = "<html><head><title>Diabetes | MedlinePlus</title></head><body><div>Skip navigation Official websites use .gov</div><div>Home &rarr; Health Topics</div>" +
+      "<article><h1>Diabetes Type 2</h1><p>" + "Type 2 diabetes is a long-term condition and regular activity helps. ".repeat(6) + "</p></article><div>Footer links</div></body></html>";
+    const { title, text } = htmlToText(page);
+    expect(title).toBe("Diabetes | MedlinePlus");
+    expect(text).toContain("# Diabetes Type 2");
+    expect(text).not.toMatch(/Skip navigation|Official websites|Health Topics|Footer/);
+    // a page without <main> or <article> is read whole
+    expect(htmlToText("<div>" + "Plain page text with no main element at all. ".repeat(8) + "</div>").text).toContain("Plain page text");
+  });
+
+  it("decodes numeric and common named entities once, and ignores nonsense ones", () => {
+    expect(htmlToText("<p>A &#8594; B &rarr; C &#x2013; D &unknown; E &#1114112; F &amp;lt;</p>").text).toBe("A \u2192 B \u2192 C \u2013 D &unknown; E F &lt;");
+  });
+
   it("does not hang or throw on broken markup", () => {
     expect(htmlToText("<p>one <b>two").text).toBe("one two");
     expect(htmlToText("<div><script>never closed").text).toBe("");
