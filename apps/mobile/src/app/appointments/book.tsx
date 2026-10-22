@@ -116,19 +116,7 @@ export default function AppointmentBookScreen() {
   const opdInfo = infoMutation.data;
 
   return (
-    <Screen
-      eyebrow="New booking"
-      title="Book OPD Token"
-      trailing={
-        <Button
-          title="Cancel"
-          variant="plain"
-          size="sm"
-          label="Back to appointments list"
-          onPress={() => router.back()}
-        />
-      }
-    >
+    <Screen eyebrow="New booking" title="Book OPD Token">
       {confirmedAppt ? (
         /* Booking Confirmation Card */
         <View style={styles.stack}>

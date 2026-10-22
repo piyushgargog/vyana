@@ -236,16 +236,6 @@ export default function ConditionCarePlanScreen() {
     <Screen
       eyebrow="Care plan"
       title={activePlan?.condition || 'Chronic Care Plan'}
-      trailing={
-        <Button
-          title="Done"
-          variant="plain"
-          size="sm"
-          label="Back"
-          onPress={() => router.back()}
-          style={styles.doneBtn}
-        />
-      }
     >
       {/* Plan Status Badges */}
       {isDoctorApproved ? (
