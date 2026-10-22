@@ -45,40 +45,31 @@ afterEach(() => {
 });
 
 describe("POST /api/medicines/interactions", () => {
-  it("finds table interactions first, then quoted ones, and lists what it couldn't check", async () => {
+  it("finds the reviewed table's interaction and lists every other pair and unknown medicine as not checked", async () => {
     const res = await post();
     expect(res.status).toBe(200);
     const body = InteractionsRes.parse(await res.json());
 
     expect(body.checked_medicines).toEqual(["Ecosprin 75 mg", "Clopilet 75 mg", "Omez 20 mg"]);
-    expect(body.not_checked).toEqual(["Shelcal 500 mg"]);
-
-    const [first, ...rest] = body.interactions;
-    expect(first).toMatchObject({ medicine_a: "Clopilet 75 mg", medicine_b: "Omez 20 mg", layer: "table", severity: "major" });
-    expect(rest.length).toBe(2); // aspirin+clopidogrel, aspirin+omeprazole (clopidogrel+omeprazole is the table's)
-    for (const i of rest) {
-      expect(i.layer).toBe("sources");
-      expect(i.quote).toMatch(/^Taking (aspirin|clopidogrel|omeprazole) with (aspirin|clopidogrel|omeprazole) may increase the risk of side effects\.$/);
-      expect(i.severity).toBe("moderate");
-      expect(i.sources[0].url).toMatch(/^https:\/\/medlineplus\.gov\//);
-      expect(i.advice).toContain("Don't stop or change");
-    }
-    expect(JSON.stringify(body)).not.toMatch(/\bsafe\b/i);
-    expect(body.sources_checked.map((s) => s.url)).toContain("https://sps.nhs.uk/articles/using-clopidogrel-with-proton-pump-inhibitors-ppis/");
-    expect(db.rows.ai_runs[0]).toMatchObject({ feature: "interactions", status: "ok", prompt_version: "interactions@1" });
-    expect(db.rows.interaction_checks).toHaveLength(1);
-    expect([...db.web_cache.keys()].filter((k) => k.startsWith("interaction_pair:")).sort()).toEqual([
-      "interaction_pair:aspirin|clopidogrel",
-      "interaction_pair:aspirin|omeprazole",
+    expect(body.interactions).toHaveLength(1);
+    expect(body.interactions[0]).toMatchObject({ medicine_a: "Clopilet 75 mg", medicine_b: "Omez 20 mg", layer: "table", severity: "major" });
+    expect(body.not_checked).toEqual([
+      "Shelcal 500 mg",
+      "Ecosprin 75 mg + Clopilet 75 mg (not in the reviewed list yet)",
+      "Ecosprin 75 mg + Omez 20 mg (not in the reviewed list yet)",
     ]);
+    expect(body.ai.model).toBe("none");
+    expect(JSON.stringify(body)).not.toMatch(/safe/i);
+    expect(body.sources_checked.map((s) => s.url)).toContain("https://sps.nhs.uk/articles/using-clopidogrel-with-proton-pump-inhibitors-ppis/");
+    expect(db.rows.interaction_checks).toHaveLength(1);
+    expect(db.rows.ai_runs ?? []).toHaveLength(0); // no model is called any more
   });
 
   it("returns the saved result for the same medicines", async () => {
     await post();
     const again = InteractionsRes.parse(await (await post()).json());
     expect(again.cached).toBe(true);
-    expect(again.interactions).toHaveLength(3);
-    expect(db.rows.ai_runs).toHaveLength(1);
+    expect(again.interactions).toHaveLength(1);
   });
 
   it("checks only one prescription when asked", async () => {

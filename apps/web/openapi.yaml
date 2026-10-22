@@ -737,7 +737,7 @@ paths:
 
         **Who can call it:** patient, or the patient's doctor.
 
-        **TinyFish:** Search, Fetch.
+        **TinyFish:** none (MedlinePlus topic search and an own page fetch).
       operationId: post_care_plan
       requestBody:
         required: true
@@ -794,11 +794,11 @@ paths:
         - Care
       summary: Check a patient's medicines for interactions
       description: |-
-        A patient checks their own medicines (all current ones, or one prescription). A doctor checks a patient they treat by sending `prescription_id` or `patient_id`; any other doctor gets 403. Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. A reviewed table of well-known interactions is checked first (`layer: table`); other pairs are looked up on trusted medicine pages, and an interaction is reported only with the exact sentence that states it (`layer: sources`). When none is found, the response lists the sources that were checked; it never calls a combination safe.
+        A patient checks their own medicines (all current ones, or one prescription). A doctor checks a patient they treat by sending `prescription_id` or `patient_id`; any other doctor gets 403. Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. Only a reviewed table of well-known interactions is checked (`layer: table`); every other pair of known medicines is listed in `not_checked` ("not in the reviewed list yet"). A combination is never called safe, and an empty result never means that nothing interacts.
 
         **Who can call it:** patient, doctor of the patient.
 
-        **TinyFish:** Search, Fetch.
+        **TinyFish:** none.
       operationId: post_medicines_interactions
       requestBody:
         required: true
