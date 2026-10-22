@@ -7,6 +7,8 @@
  *   pnpm live:check --llm          # also the routes that need a model (set LLM_MOCK=1 or a provider on the server)
  *
  * Each line is PASS, FAIL or SKIP; a difference from the docs is a FAIL to fix in the docs first. Exit code 1 on any FAIL.
+ * Checks that create rows (a condition, a chat session) delete them again before they end, even when
+ * they fail — the demo account is shared, and leftovers pile up in it (#333).
  */
 import { fileURLToPath } from "node:url";
 
@@ -196,12 +198,25 @@ await check("share links: create as the patient, read without signing in, revoke
 });
 
 await check("assistant: streams, returns x-session-id, starts with the 108 notice on an emergency (no model needed for the notice)", async () => {
-  const res = await api("POST", "/api/assistant/chat", P, { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "I have chest pain" }] }] });
-  expect(res.status === 200 || res.status === 500, `status ${res.status}`);
-  if (res.status === 500) return "model not configured (500); run with LLM_MOCK=1 or a provider to check the stream";
-  expect(res.headers.get("x-session-id"), "x-session-id header");
-  expect(res.text.includes("108"), "the stream should contain the 108 notice");
-  return "session " + res.headers.get("x-session-id");
+  let sessionId: string | null = null;
+  try {
+    const res = await api("POST", "/api/assistant/chat", P, { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "I have chest pain" }] }] });
+    sessionId = res.headers.get("x-session-id");
+    expect(res.status === 200 || res.status === 500, `status ${res.status}`);
+    if (res.status === 500) return "model not configured (500); run with LLM_MOCK=1 or a provider to check the stream";
+    expect(sessionId, "x-session-id header");
+    expect(res.text.includes("108"), "the stream should contain the 108 notice");
+    return "session " + sessionId;
+  } finally {
+    // The session this check started is deleted again (#333); its messages go with it (cascade).
+    if (sessionId) {
+      try {
+        await rest("DELETE", `chat_sessions?id=eq.${sessionId}`, P);
+      } catch {
+        // Cleanup is best-effort; a failed delete must not mask the check's own result.
+      }
+    }
+  }
 });
 
 if (!WITH_LLM) {
@@ -221,11 +236,22 @@ if (!WITH_LLM) {
   await check("care plan: a patient-added condition gets a patient_generated plan; a doctor's diagnosis → 403 for the patient", async () => {
     const own = await rest("POST", "conditions", P, { patient_id: patient!.id, name: "Type 2 Diabetes", source: "patient" });
     expect(own.status === 201, `add condition ${own.status}`);
-    const plan = await api("POST", "/api/care-plan", P, { condition_id: own.json[0].id });
-    expect(plan.status === 200 && plan.json?.status === "patient_generated" && plan.json?.plan?.sources?.length, `care plan ${plan.status} ${plan.text.slice(0, 160)}`);
-    const docCond = await rest("GET", "conditions?source=eq.doctor&select=id&limit=1", P);
-    if (docCond.json?.[0]) expect((await api("POST", "/api/care-plan", P, { condition_id: docCond.json[0].id })).status === 403, "a doctor's diagnosis should be 403 for the patient");
-    return `${plan.json?.plan.do.length} do's, ${plan.json?.plan.red_flags.length} warning signs`;
+    const conditionId = own.json[0].id as string;
+    try {
+      const plan = await api("POST", "/api/care-plan", P, { condition_id: conditionId });
+      expect(plan.status === 200 && plan.json?.status === "patient_generated" && plan.json?.plan?.sources?.length, `care plan ${plan.status} ${plan.text.slice(0, 160)}`);
+      const docCond = await rest("GET", "conditions?source=eq.doctor&select=id&limit=1", P);
+      if (docCond.json?.[0]) expect((await api("POST", "/api/care-plan", P, { condition_id: docCond.json[0].id })).status === 403, "a doctor's diagnosis should be 403 for the patient");
+      return `${plan.json?.plan.do.length} do's, ${plan.json?.plan.red_flags.length} warning signs`;
+    } finally {
+      // The condition this check added is deleted again (#333); its care plans go with it —
+      // care_plans.condition_id is on delete cascade, and this check is their only source here.
+      try {
+        await rest("DELETE", `conditions?id=eq.${conditionId}`, P);
+      } catch {
+        // Cleanup is best-effort; a failed delete must not mask the check's own result.
+      }
+    }
   });
 }
 
