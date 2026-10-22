@@ -117,6 +117,25 @@ describe("POST /api/doctors/verify", () => {
     expect(row(OTHER_USER_ID)).toMatchObject({ verification_status: "failed", reg_no: "claimed-1" });
   });
 
+  it("clears verified_at when an admin rejects a doctor who was verified before", async () => {
+    asAdmin();
+    db.rows.doctors = [
+      { id: OTHER_USER_ID, reg_no: "claimed-1", state_council: "Delhi Medical Council", verification_status: "verified", verified_at: "2026-01-01T00:00:00.000Z" },
+    ];
+    const res = await post({
+      doctor_id: OTHER_USER_ID,
+      decision: "reject",
+      reg_no: "not-in-the-register",
+      state_council: "Delhi Medical Council",
+      year: null,
+      note: "No such entry.",
+    });
+    expect(res.status).toBe(200);
+    const body = DoctorVerifyRes.parse(await res.json());
+    expect(body.status).toBe("failed");
+    expect(row(OTHER_USER_ID)).toMatchObject({ verification_status: "failed", verified_at: null });
+  });
+
   it("refuses to approve a number already verified on another account, and changes nothing", async () => {
     asAdmin();
     db.rows.doctors = [

@@ -74,7 +74,7 @@ export async function adminCheckDoctor({ user, profile }: AuthedUser, body: Admi
   if (body.decision === "reject") {
     const { error: saveError } = await admin
       .from("doctors")
-      .update({ verification_status: "failed", verification_json: verificationJson })
+      .update({ verification_status: "failed", verified_at: null, verification_json: verificationJson })
       .eq("id", body.doctor_id);
     if (saveError) throw saveError;
     log({ event: "doctor_check", status: "failed" });
