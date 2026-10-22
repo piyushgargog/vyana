@@ -41,6 +41,8 @@ export interface MemoryVital {
   value2: number | null;
   unit: string | null;
   measured_at: string;
+  /** Where the reading came from (`manual`, `health_connect`, `healthkit`, `ble`); rows read before the column existed carry none and read as manual. */
+  source?: string | null;
 }
 
 /** One medicine as the server read it (a row of `prescription_items`). */
@@ -138,7 +140,14 @@ function buildVitals(vitals: MemoryVital[], today: string): VitalSeries[] {
     series.push({
       type,
       unit: [...sorted].reverse().find((r) => r.unit)?.unit ?? null,
-      points: sorted.map((r) => ({ at: r.measured_at, value: r.value!, value2: r.value2 })),
+      // A reading the sync engine stored is marked as from a device (issue #328); a manual
+      // reading carries no mark, so old payloads stay exactly as they were.
+      points: sorted.map((r) => ({
+        at: r.measured_at,
+        value: r.value!,
+        value2: r.value2,
+        ...(r.source && r.source !== "manual" ? { from_device: true } : {}),
+      })),
     });
   }
   series.sort((a, b) => (a.points[a.points.length - 1].at < b.points[b.points.length - 1].at ? 1 : -1));
