@@ -14,8 +14,8 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
       <View style={Platform.OS === 'ios' ? styles.iosRoot : styles.androidRoot}>
         {Platform.OS !== 'ios' && (
           <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
             style={styles.backdrop}
             onPress={onClose}
           />

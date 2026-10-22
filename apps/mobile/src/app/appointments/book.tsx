@@ -9,6 +9,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   addDays,
+  filterHospitalsByQuery,
   formatLocalDate,
   useBookAppointment,
   useHospital,
@@ -38,20 +39,24 @@ export default function AppointmentBookScreen() {
     }>();
   const { showToast } = useVyanaMobile();
 
-  const { data: hospitals = [] } = useHospitals();
+  const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals();
   const [hospitalQuery, setHospitalQuery] = useState('');
-  const filteredHospitals = useMemo(() => {
-    const q = hospitalQuery.trim().toLowerCase();
-    if (!q) return hospitals;
-    return hospitals.filter(
-      (h) =>
-        h.name.toLowerCase().includes(q) || h.city.toLowerCase().includes(q)
-    );
-  }, [hospitals, hospitalQuery]);
+  const filteredHospitals = useMemo(
+    () => filterHospitalsByQuery(hospitals, hospitalQuery),
+    [hospitals, hospitalQuery]
+  );
   const [userHospitalId, setUserHospitalId] = useState<string>(
     initialHospitalId || ''
   );
   const selectedHospitalId = userHospitalId || hospitals[0]?.id || '';
+  // The hospital that will be booked stays on screen while searching, even when the
+  // search text does not match it — it is pinned above the results.
+  const visibleHospitals = useMemo(() => {
+    const selected = hospitals.find((h) => h.id === selectedHospitalId);
+    if (!selected || filteredHospitals.some((h) => h.id === selected.id))
+      return filteredHospitals;
+    return [selected, ...filteredHospitals];
+  }, [hospitals, filteredHospitals, selectedHospitalId]);
 
   const { data: hospital, isLoading: hospLoading } =
     useHospital(selectedHospitalId);
@@ -236,12 +241,19 @@ export default function AppointmentBookScreen() {
               )}
             </View>
             <View style={styles.stackSm}>
-              {filteredHospitals.length === 0 ? (
+              {hospitalsLoading ? (
+                <ActivityIndicator size="small" color={T.color.accent} />
+              ) : hospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospitals are listed yet.
+                </Text>
+              ) : hospitalQuery.trim().length > 0 &&
+                filteredHospitals.length === 0 ? (
                 <Text variant="footnote" tone="tertiary" style={styles.italic}>
                   No hospital matches that search.
                 </Text>
               ) : null}
-              {filteredHospitals.map((h) => {
+              {visibleHospitals.map((h) => {
                 const isSelected = h.id === selectedHospitalId;
                 return (
                   <Pressable
