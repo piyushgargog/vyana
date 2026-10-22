@@ -15,3 +15,13 @@ export { triageMock, triageEmergencyMock, TRIAGE_DISCLAIMER } from "./triage";
 export { hospitalInfoMock } from "./hospital-info";
 export { pmjayHospitalsMock } from "./pmjay-hospitals";
 export { shareMock, shareMemoryMock } from "./share";
+export {
+  connectDeviceMock,
+  deleteMyDeviceDataMock,
+  deviceConnectionsMock,
+  pauseDeviceMock,
+  resetDevicesMock,
+  resumeDeviceMock,
+  setDeviceConsentMock,
+  syncDeviceMock,
+} from "./devices";

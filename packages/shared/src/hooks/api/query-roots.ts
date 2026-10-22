@@ -15,4 +15,5 @@ export const QUERY_ROOTS = {
   shareLinks: "share-links",
   sharedRecord: "shared-record",
   basketJob: "basket-job",
+  devices: "devices",
 } as const;

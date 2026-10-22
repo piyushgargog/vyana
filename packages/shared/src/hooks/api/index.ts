@@ -42,6 +42,7 @@ import type {
 import { QUERY_ROOTS } from "./query-roots";
 
 export { QUERY_ROOTS } from "./query-roots";
+export * from "./devices";
 
 export function useCompareMedicine() {
   const api = useApi();

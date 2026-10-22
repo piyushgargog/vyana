@@ -383,6 +383,34 @@ export const ShareRes = z.object({
 export const MeExportRes = z.record(z.string(), z.unknown()); // every row the user owns, keyed by table
 export const OkRes = z.object({ ok: z.literal(true) });
 
+// Connected devices (#327, ADR-073; provisional until Vaibhav's W1/W2 land): the phone's
+// own health store is the source — aggregates only, one row a day plus spot readings.
+export const DeviceMetric = z.enum([
+  "steps",
+  "heart_rate",
+  "sleep",
+  "blood_oxygen",
+  "blood_pressure",
+  "blood_glucose",
+  "weight",
+]);
+export const DevicePlatform = z.enum(["health_connect", "apple_health"]);
+export const DeviceConnectionStatus = z.enum(["connected", "paused", "not_connected"]);
+export const DeviceConnection = z.object({
+  platform: DevicePlatform,
+  /** False when the store is not on this phone (Health Connect missing on Android 13 and below). */
+  available: z.boolean(),
+  status: DeviceConnectionStatus,
+  last_synced_at: z.string().nullable(),
+  /** The last sync did not finish; the screens say so in a plain sentence, never a code. */
+  last_sync_failed: z.boolean(),
+  metrics: z.array(DeviceMetric),
+});
+export const DeviceConnectionsRes = z.object({
+  consent_granted: z.boolean(),
+  connections: z.array(DeviceConnection),
+});
+
 
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
@@ -443,3 +471,8 @@ export type ShareMemory = z.infer<typeof ShareMemory>;
 export type ShareRes = z.infer<typeof ShareRes>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;
+export type DeviceMetric = z.infer<typeof DeviceMetric>;
+export type DevicePlatform = z.infer<typeof DevicePlatform>;
+export type DeviceConnectionStatus = z.infer<typeof DeviceConnectionStatus>;
+export type DeviceConnection = z.infer<typeof DeviceConnection>;
+export type DeviceConnectionsRes = z.infer<typeof DeviceConnectionsRes>;
