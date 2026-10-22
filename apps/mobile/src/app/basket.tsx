@@ -21,7 +21,6 @@ import {
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 
@@ -334,7 +333,6 @@ export default function BasketHeroScreen() {
         </>
       )}
 
-      <MobileAiSafetyBanner feature="prescriptions_basket" />
       <MobileDisclaimerFooter />
     </Screen>
   );

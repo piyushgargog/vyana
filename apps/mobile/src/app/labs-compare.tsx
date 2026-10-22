@@ -18,7 +18,6 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 import {
@@ -167,8 +166,6 @@ export default function LabsCompareScreen() {
         Live home-sample collection prices across Healthians, Redcliffe,
         Thyrocare and 1mg Labs.
       </Text>
-
-      <MobileAiSafetyBanner />
 
       {/* Search & City Filter Card */}
       <Card>
