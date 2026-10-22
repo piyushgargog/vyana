@@ -12,6 +12,44 @@ export const RESEND_CONFIRMATION_COOLDOWN_SECONDS = 60;
 export const RESEND_ERROR_MESSAGE =
   'We could not resend the email. Please wait a minute and try again.';
 
+// One fixed text for every other sign-up failure: never echo the provider's
+// words, so the reply cannot show whether an address already has an account.
+export const SIGNUP_ERROR_MESSAGE =
+  'We could not create your account. Check your details and try again.';
+export const SIGNUP_PASSWORD_ERROR_MESSAGE =
+  'Your password is too short. Use at least 8 characters.';
+export const SIGNUP_EMAIL_ERROR_MESSAGE =
+  'Enter a valid email address.';
+
+interface SignupProviderError {
+  message?: string;
+  code?: string;
+}
+
+function isAlreadyRegistered(error: SignupProviderError): boolean {
+  return (
+    error.code === 'user_already_exists' ||
+    error.code === 'email_exists' ||
+    /already (registered|exists|been registered)/i.test(error.message ?? '')
+  );
+}
+
+function signupErrorMessage(error: SignupProviderError): string {
+  if (
+    error.code === 'weak_password' ||
+    /password.*(at least|short|characters)/i.test(error.message ?? '')
+  ) {
+    return SIGNUP_PASSWORD_ERROR_MESSAGE;
+  }
+  if (
+    error.code === 'email_address_invalid' ||
+    /invalid.*email|email.*invalid|validate email/i.test(error.message ?? '')
+  ) {
+    return SIGNUP_EMAIL_ERROR_MESSAGE;
+  }
+  return SIGNUP_ERROR_MESSAGE;
+}
+
 export type SignupRole = 'patient' | 'doctor';
 
 export interface SignupDetails {
@@ -64,13 +102,17 @@ export async function submitSignup(
       },
     });
 
-    if (error) return { status: 'error', message: error.message };
+    if (error) {
+      // A taken address looks exactly like a new one: same inbox state.
+      if (isAlreadyRegistered(error)) return { status: 'confirmation', email };
+      return { status: 'error', message: signupErrorMessage(error) };
+    }
     if (data.session) return { status: 'session' };
     return { status: 'confirmation', email };
-  } catch (err) {
+  } catch {
     return {
       status: 'error',
-      message: err instanceof Error ? err.message : 'Signup failed',
+      message: SIGNUP_ERROR_MESSAGE,
     };
   }
 }
