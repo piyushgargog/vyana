@@ -4,6 +4,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- When a plan's daily AI limit is used up, AI features answer with the usual 'try again later' message until midnight (India time).
+
 ### Changed
 - Trend chart, QR code and phone screens now read the shared design tokens (issue #365): the trend chart's second series changes colour, and the phone screens change look slightly, to match the web theme.
 - Phone navigation pass (U2): sheets now show a grabber and the Android sheet closes by tapping the dimmed area behind it, not only the close button. Haptics land on the moments that confirm something — a success tap when a dose is marked taken and when a share link is copied, and the warning tap when an SOS starts — never on ordinary taps. The hospital picker in appointment booking gets a real search field (search keyboard, clear button, results under it, a "no match" line).

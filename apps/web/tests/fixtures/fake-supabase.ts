@@ -145,8 +145,13 @@ export const fakeSupabaseModule = {
   }),
   supabaseForUser: (token: string) => ({
     from: query,
-    rpc: async (fn: string, args: { p: string }) =>
-      fn === "is_doctor_of" ? { data: db.doctorOf.has(`${users[token]}:${args.p}`), error: null } : { data: null, error: new Error(`no rpc ${fn}`) },
+    rpc: async (fn: string, args: { p: string }) => {
+      if (fn === "is_doctor_of") return { data: db.doctorOf.has(`${users[token]}:${args.p}`), error: null };
+      // Daily AI limit (issue 346): a plan with room left, so route tests are not blocked.
+      if (fn === "current_plan") return { data: [{ plan_id: "free", daily_ai_calls: 30 }], error: null };
+      if (fn === "my_ai_usage_today") return { data: [{ calls: 0, input_tokens: 0, output_tokens: 0 }], error: null };
+      return { data: null, error: new Error(`no rpc ${fn}`) };
+    },
   }),
   requireEnv: (name: string) => {
     const v = process.env[name];
