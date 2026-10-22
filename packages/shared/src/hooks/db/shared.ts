@@ -16,6 +16,7 @@ import { useSession, useSupabase } from "../../providers/AppProviders";
  */
 export const DB_KEYS = {
   profile: "profile",
+  aiUsage: "ai-usage",
   myDoctor: "my-doctor",
   contacts: "emergency-contacts",
   conditions: "conditions",

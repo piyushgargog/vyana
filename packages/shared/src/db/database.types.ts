@@ -19,9 +19,13 @@ export type Database = {
           feature: string
           id: string
           input_ref: string | null
+          input_tokens: number | null
+          latency_ms: number | null
           model: string | null
           output_json: Json | null
+          output_tokens: number | null
           prompt_version: string | null
+          provider: string | null
           report_note: string | null
           sources: Json | null
           status: string
@@ -33,9 +37,13 @@ export type Database = {
           feature: string
           id?: string
           input_ref?: string | null
+          input_tokens?: number | null
+          latency_ms?: number | null
           model?: string | null
           output_json?: Json | null
+          output_tokens?: number | null
           prompt_version?: string | null
+          provider?: string | null
           report_note?: string | null
           sources?: Json | null
           status?: string
@@ -46,9 +54,13 @@ export type Database = {
           feature?: string
           id?: string
           input_ref?: string | null
+          input_tokens?: number | null
+          latency_ms?: number | null
           model?: string | null
           output_json?: Json | null
+          output_tokens?: number | null
           prompt_version?: string | null
+          provider?: string | null
           report_note?: string | null
           sources?: Json | null
           status?: string
@@ -1507,7 +1519,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_usage_daily: {
+        Row: {
+          calls: number | null
+          day: string | null
+          feature: string | null
+          input_tokens: number | null
+          output_tokens: number | null
+          user_id: string | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "ai_runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_care_invite: {
@@ -1610,6 +1641,14 @@ export type Database = {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_caregiver_of: { Args: { p: string }; Returns: boolean }
       is_doctor_of: { Args: { p: string }; Returns: boolean }
+      my_ai_usage_today: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calls: number
+          input_tokens: number
+          output_tokens: number
+        }[]
+      }
       my_caregivers: {
         Args: Record<PropertyKey, never>
         Returns: {
