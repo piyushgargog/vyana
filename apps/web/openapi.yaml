@@ -1060,6 +1060,12 @@ paths:
 
         **TinyFish:** Search, Fetch (as assistant tools).
       operationId: assistant_chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatBody"
       responses:
         "200":
           description: Server-sent UI message stream
@@ -1478,6 +1484,46 @@ components:
         - sources
         - status
         - cached
+      additionalProperties: false
+    ChatBody:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        messages:
+          minItems: 1
+          maxItems: 100
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum:
+                  - system
+                  - user
+                  - assistant
+              parts:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    text:
+                      type: string
+                      maxLength: 4000
+                  required:
+                    - type
+                  additionalProperties: {}
+            required:
+              - role
+              - parts
+            additionalProperties: {}
+      required:
+        - messages
       additionalProperties: false
     DoctorVerifyReq:
       type: object
@@ -2332,8 +2378,12 @@ components:
       properties:
         lat:
           type: number
+          minimum: -90
+          maximum: 90
         lng:
           type: number
+          minimum: -180
+          maximum: 180
       required:
         - lat
         - lng

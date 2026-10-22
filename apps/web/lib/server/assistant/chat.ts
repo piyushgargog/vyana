@@ -9,8 +9,7 @@ import {
   type ModelMessage,
   type UIMessageChunk,
 } from "ai";
-import { z } from "zod";
-import { Language } from "@vyana/shared";
+import { Language, type ChatBody } from "@vyana/shared";
 import { finishAiRun, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
@@ -42,15 +41,6 @@ export const isDoseQuestion = (q: string): boolean =>
   /\b(?:how (?:much|many)|what dose|dosage|dose|double|skip|stop taking|halve|increase|reduce|take (?:\d|two|three|half)|instead of \d|kitn[aie]|badha|kam kar|chhod)\b|कितनी|कितना|खुराक/iu.test(q);
 
 const SAFE_ERROR = "Something went wrong while answering. Please try again.";
-
-export const ChatBody = z.object({
-  session_id: z.guid().optional(),
-  messages: z
-    .array(z.object({ role: z.string(), parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).loose()) }).loose())
-    .min(1)
-    .max(100),
-});
-export type ChatBody = z.infer<typeof ChatBody>;
 
 type Turn = { role: "user" | "assistant"; text: string };
 

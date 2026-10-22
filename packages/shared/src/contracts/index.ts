@@ -5,7 +5,7 @@ import { z } from "zod";
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
+export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
 
 // ---------- AI accuracy & safety (plan §2A) ----------
@@ -317,7 +317,7 @@ export const HospitalInfoRes = z.object({
 });
 
 // ---------- POST /api/schemes/pmjay-hospitals ----------
-export const PmjayHospitalsReq = z.object({ lat: z.number(), lng: z.number() });
+export const PmjayHospitalsReq = z.object({ lat: Lat, lng: Lng });
 export const PmjayHospitalsRes = z.object({
   area: z.string().nullable(),
   hospitals: z.array(z.object({
@@ -377,6 +377,25 @@ export const ShareRes = z.object({
   })).nullable(),                                     // only for kind = "timeline"
   memory: ShareMemory.nullable(),                     // CONTRACT CHANGED 21 Oct (v1.1.0): null for a link without scopes (the old flat page)
   expires_at: z.string(),
+});
+
+// ---------- POST /api/assistant/chat ----------  (the reply is an AI SDK UI-message stream, not JSON)
+// The client sends AI SDK UI messages. Only the text of the last 20 user/assistant messages is read, the last
+// message must be the user's question, and a message's text is capped here like every other body's field
+// (this body lived in the server lib, with the cap as a hand check after parsing, until issue #375).
+export const ChatBody = z.object({
+  session_id: z.guid().optional(),
+  messages: z
+    .array(
+      z
+        .object({
+          role: z.enum(["system", "user", "assistant"]),
+          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()),
+        })
+        .loose(),
+    )
+    .min(1)
+    .max(100),
 });
 
 // ---------- GET /api/me/export · DELETE /api/me ----------
@@ -441,5 +460,6 @@ export type SharedProfile = z.infer<typeof SharedProfile>;
 export type ShareScope = z.infer<typeof ShareScope>;
 export type ShareMemory = z.infer<typeof ShareMemory>;
 export type ShareRes = z.infer<typeof ShareRes>;
+export type ChatBody = z.infer<typeof ChatBody>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;
