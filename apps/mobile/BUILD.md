@@ -52,7 +52,7 @@ image picker is told `microphonePermission: false` so it never asks for the
 microphone in the first place. Do not publish or link a build until both
 checks below pass.
 
-1. The generated manifest (CI runs this on every pull request too):
+1. The generated manifest:
 
    ```bash
    cd apps/mobile
@@ -63,6 +63,20 @@ checks below pass.
    It must print OK: each blocked permission appears only as a
    `tools:node="remove"` entry, which is what makes the Android manifest
    merger drop the permission even when a library's manifest asks for it.
+
+   To run the same check on every pull request, add this step to the
+   `expo-doctor` job in `.github/workflows/ci.yml` (kept here because
+   changing a workflow file needs a token with the `workflow` scope):
+
+   ```yaml
+   - name: Blocked Android permissions stay blocked
+     working-directory: apps/mobile
+     env:
+       EXPO_NO_TELEMETRY: "1"
+     run: |
+       npx expo prebuild --platform android --no-install
+       node ./scripts/check-android-permissions.mjs android/app/src/main/AndroidManifest.xml
+   ```
 
 2. The built APK itself (the merged manifest is the only ground truth). With
    the Android SDK build-tools on the machine (`aapt` ships with them; EAS
