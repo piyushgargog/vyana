@@ -35,9 +35,21 @@ export const registerMockPage = (url: string, text: string): void => void mockPa
 const DROP = new Set(["script", "style", "noscript", "svg", "nav", "header", "footer", "form", "aside", "iframe", "button", "select", "template"]);
 const BLOCK = new Set(["p", "div", "section", "article", "main", "br", "tr", "ul", "ol", "table", "blockquote", "dl", "dt", "dd", "h1", "h2", "h3", "h4", "h5", "h6", "li"]);
 
+const NAMED: Record<string, string> = {
+  rarr: "\u2192", larr: "\u2190", ndash: "\u2013", mdash: "\u2014", hellip: "\u2026", rsquo: "\u2019", lsquo: "\u2018",
+  rdquo: "\u201d", ldquo: "\u201c", copy: "\u00a9", reg: "\u00ae", laquo: "\u00ab", raquo: "\u00bb", bull: "\u2022", middot: "\u00b7",
+};
+
+function codePoint(n: number): string {
+  return Number.isInteger(n) && n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : "";
+}
+
 export function decodeEntities(s: string): string {
   // `&amp;` last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice.
   return s
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h: string) => codePoint(parseInt(h, 16)))
+    .replace(/&#(\d{1,7});/g, (_, d: string) => codePoint(Number(d)))
+    .replace(/&([a-z]{2,8});/g, (m, name: string) => NAMED[name] ?? m)
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -49,7 +61,29 @@ export function decodeEntities(s: string): string {
 const tidy = (s: string) => decodeEntities(s).replace(/[ \t\r\f\v]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 
 /** A small tokenizer (no backtracking regexes on remote text): drops page chrome, keeps headings as "# " and list items as "- ". */
+/** The inside of `<main>`, else of `<article>`, else the whole page (menus, banners and breadcrumbs sit outside them on most sites). */
+function contentPart(html: string): string {
+  const lower = html.toLowerCase();
+  for (const tag of ["main", "article"]) {
+    const open = lower.indexOf(`<${tag}`);
+    if (open === -1) continue;
+    const gt = lower.indexOf(">", open);
+    const close = lower.lastIndexOf(`</${tag}`);
+    if (gt !== -1 && close > gt) return html.slice(gt + 1, close);
+  }
+  return html;
+}
+
+/** The title of the whole page and the text of its content part (the whole page when the content part is nearly empty). */
 export function htmlToText(html: string): { title: string; text: string } {
+  const whole = tokenize(html);
+  const part = contentPart(html);
+  if (part === html) return whole;
+  const inner = tokenize(part);
+  return { title: whole.title, text: inner.text.length >= MIN_TEXT_CHARS ? inner.text : whole.text };
+}
+
+function tokenize(html: string): { title: string; text: string } {
   const lower = html.toLowerCase();
   let title = "";
   let out = "";
