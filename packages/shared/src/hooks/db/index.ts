@@ -4,6 +4,7 @@
 // React Query hooks that wrap the direct-DB query functions (plan 7.2 and 7.5).
 // Owner: Vaibhav Parmar
 
+export * from "./agentProposals";
 export * from "./aiRuns";
 export * from "./appointments";
 export * from "./bloodRequests";
@@ -18,10 +19,12 @@ export * from "./doses";
 export * from "./emergency";
 export * from "./hospitals";
 export * from "./meals";
+export * from "./plans";
 export * from "./prescriptions";
 export * from "./profile";
 export * from "./reports";
 export * from "./shareLinks";
 export * from "./timeline";
 export * from "./vitals";
+export * from "./waitlist";
 export { DB_KEYS } from "./shared";

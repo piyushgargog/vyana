@@ -1,7 +1,7 @@
 "use client";
 
 // Connected-devices hooks (#327, ADR-073). The names Vaibhav's W2 lands —
-// useDeviceConnections, useDeleteMyDeviceData, syncHealth — are provisional here:
+// useDeviceConnections, useDisconnectDevice, syncHealth — are provisional here:
 // they run against the in-memory mock store in mocks/devices until his sync engine
 // (one HealthSource over Health Connect / HealthKit) replaces the store. Device data
 // never crosses the REST API, so these hooks do not go through useApi().
@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DeviceConnection, DeviceConnectionsRes, DevicePlatform } from "../../contracts";
 import {
   connectDeviceMock,
-  deleteMyDeviceDataMock,
+  disconnectDeviceMock,
   deviceConnectionsMock,
   pauseDeviceMock,
   resumeDeviceMock,
@@ -66,6 +66,14 @@ export function useSyncHealth() {
   return useDeviceMutation<DevicePlatform>((platform) => syncDeviceMock(platform));
 }
 
-export function useDeleteMyDeviceData() {
-  return useDeviceMutation<DevicePlatform>((platform) => deleteMyDeviceDataMock(platform));
+/** Disconnect this device and stop syncing. It does not delete stored readings. */
+export function useDisconnectDevice() {
+  return useDeviceMutation<DevicePlatform>((platform) => disconnectDeviceMock(platform));
+}
+
+/** Hook point for the real delete: PR #349's "delete my device data" database function
+ *  (migration 0019) is not on main yet, so nothing calls this. Wire it here, then add a
+ *  `useDeleteMyDeviceReadings` mutation and the strong "deletes every reading" wording. */
+export async function deleteMyDeviceReadings(_platform: DevicePlatform): Promise<never> {
+  throw new Error("Deleting stored device readings is not available yet.");
 }

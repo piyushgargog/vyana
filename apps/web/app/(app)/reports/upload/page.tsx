@@ -269,7 +269,7 @@ export default function ReportUploadPage() {
                   className="space-y-3 rounded-tile border border-separator bg-surface p-4"
                 >
                   <p className="text-[15px] font-semibold text-label">
-                    Something went wrong
+                    The upload did not finish
                   </p>
                   <p className="text-[15px] text-label-2">{uploadError}</p>
                   <Button

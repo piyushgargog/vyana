@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   StyleSheet,
   TextInput,
@@ -9,10 +10,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   addDays,
+  filterHospitalsByQuery,
   formatLocalDate,
   useBookAppointment,
   useHospital,
-  useHospitalInfo,
   useHospitals,
   type DbAppointment,
 } from '@vyana/shared';
@@ -21,7 +22,6 @@ import {
   Button,
   Card,
   CardHeader,
-  Pill,
   Screen,
   Symbol,
   Text,
@@ -38,24 +38,28 @@ export default function AppointmentBookScreen() {
     }>();
   const { showToast } = useVyanaMobile();
 
-  const { data: hospitals = [] } = useHospitals();
+  const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals();
+  const [hospitalQuery, setHospitalQuery] = useState('');
+  const filteredHospitals = useMemo(
+    () => filterHospitalsByQuery(hospitals, hospitalQuery),
+    [hospitals, hospitalQuery]
+  );
   const [userHospitalId, setUserHospitalId] = useState<string>(
     initialHospitalId || ''
   );
   const selectedHospitalId = userHospitalId || hospitals[0]?.id || '';
+  // The hospital that will be booked stays on screen while searching, even when the
+  // search text does not match it — it is pinned above the results.
+  const visibleHospitals = useMemo(() => {
+    const selected = hospitals.find((h) => h.id === selectedHospitalId);
+    if (!selected || filteredHospitals.some((h) => h.id === selected.id))
+      return filteredHospitals;
+    return [selected, ...filteredHospitals];
+  }, [hospitals, filteredHospitals, selectedHospitalId]);
 
   const { data: hospital, isLoading: hospLoading } =
     useHospital(selectedHospitalId);
-  const infoMutation = useHospitalInfo();
-  const loadHospitalInfo = infoMutation.mutate; // stable between renders (the mutation object is not)
   const bookMutation = useBookAppointment();
-
-  // Load OPD timings via TinyFish, once per hospital
-  useEffect(() => {
-    if (selectedHospitalId) {
-      loadHospitalInfo({ hospital_id: selectedHospitalId });
-    }
-  }, [selectedHospitalId, loadHospitalInfo]);
 
   const departments = useMemo(
     () => hospital?.departments ?? [],
@@ -113,22 +117,12 @@ export default function AppointmentBookScreen() {
   };
 
   const selectedDeptObj = departments.find((d) => d.id === selectedDeptId);
-  const opdInfo = infoMutation.data;
+  // Only a saved https address is ever offered as a link.
+  const hospitalSite =
+    hospital?.website && hospital.website.startsWith('https://') ? hospital.website : null;
 
   return (
-    <Screen
-      eyebrow="New booking"
-      title="Book OPD Token"
-      trailing={
-        <Button
-          title="Cancel"
-          variant="plain"
-          size="sm"
-          label="Back to appointments list"
-          onPress={() => router.back()}
-        />
-      }
-    >
+    <Screen eyebrow="New booking" title="Book OPD Token">
       {confirmedAppt ? (
         /* Booking Confirmation Card */
         <View style={styles.stack}>
@@ -202,8 +196,44 @@ export default function AppointmentBookScreen() {
           {/* 1. Select Hospital */}
           <Card>
             <CardHeader title="1. Select Hospital" />
+            {/* A real search field (U2): search keyboard, a clear button, results under it. */}
+            <View style={styles.searchRow}>
+              <TextInput
+                accessibilityLabel="Search hospitals"
+                placeholder="Search hospitals"
+                placeholderTextColor={T.color.label3}
+                value={hospitalQuery}
+                onChangeText={setHospitalQuery}
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.searchInput}
+              />
+              {hospitalQuery.length > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear the hospital search"
+                  onPress={() => setHospitalQuery('')}
+                  style={styles.clearBtn}
+                >
+                  <Symbol ios="xmark.circle.fill" android="cancel" size={20} color={T.color.label3} />
+                </Pressable>
+              )}
+            </View>
             <View style={styles.stackSm}>
-              {hospitals.map((h) => {
+              {hospitalsLoading ? (
+                <ActivityIndicator size="small" color={T.color.accent} />
+              ) : hospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospitals are listed yet.
+                </Text>
+              ) : hospitalQuery.trim().length > 0 &&
+                filteredHospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospital matches that search.
+                </Text>
+              ) : null}
+              {visibleHospitals.map((h) => {
                 const isSelected = h.id === selectedHospitalId;
                 return (
                   <Pressable
@@ -245,32 +275,25 @@ export default function AppointmentBookScreen() {
             </View>
           </Card>
 
-          {/* OPD Timings (live lookup) */}
-          {opdInfo && (
-            <Card style={styles.opdCard}>
-              <View style={styles.opdHeader}>
-                <Pill text="LIVE OPD INFO" tone="accent" />
-                {opdInfo.cached && <Pill text="CACHED" tone="neutral" />}
-              </View>
-              <Text variant="headline" tone="accent">
-                Verified OPD Registration Timings
-              </Text>
-              {opdInfo.opd.map((slot, idx) => (
-                <View key={idx} style={styles.opdSlotRow}>
-                  <Text variant="footnote" tone="accent" style={styles.bold}>
-                    {slot.department}:
-                  </Text>
-                  <Text variant="footnote" tone="accent">
-                    {slot.days} ({slot.timings})
-                  </Text>
-                </View>
-              ))}
-              {opdInfo.notes && (
-                <Text variant="footnote" tone="accent" style={styles.italic}>
-                  Note: {opdInfo.notes}
-                </Text>
-              )}
-            </Card>
+          {hospitalSite && (
+            <Button
+              title="Open the hospital's own website"
+              variant="secondary"
+              label={`Open the website of ${hospital?.name ?? 'the hospital'}`}
+              icon={
+                <Symbol
+                  ios="arrow.up.right"
+                  android="open_in_new"
+                  size={16}
+                  color={T.color.accentStrong}
+                />
+              }
+              onPress={() =>
+                Linking.openURL(hospitalSite).catch(() =>
+                  showToast('Could not open the hospital website', 'error')
+                )
+              }
+            />
           )}
 
           {/* 2. Select Department */}
@@ -456,9 +479,6 @@ const styles = StyleSheet.create({
     backgroundColor: T.color.accentSoft,
   },
   hospOptionText: { flex: 1, gap: 2 },
-  opdCard: { borderWidth: 1, borderColor: T.color.accentSoft },
-  opdHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  opdSlotRow: { flexDirection: 'row', gap: T.space.xs, flexWrap: 'wrap' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
   chip: {
     minHeight: 44,
@@ -501,5 +521,22 @@ const styles = StyleSheet.create({
     minHeight: 44,
     ...T.text.subhead,
     color: T.color.label,
+  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  searchInput: {
+    flex: 1,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    minHeight: 44,
+    ...T.text.subhead,
+    color: T.color.label,
+  },
+  clearBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

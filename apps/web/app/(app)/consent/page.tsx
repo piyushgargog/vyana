@@ -10,6 +10,7 @@ import {
   useMyProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { Button, Card, Pill } from "@/components/ui";
 
 export default function ConsentPage() {
   const router = useRouter();
@@ -48,17 +49,15 @@ export default function ConsentPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+      <Card className="space-y-6 p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator pb-4">
           <div>
-            <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900">
-              DPDP Act 2023 · Data Fiduciary Notice
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900 mt-2">
+            <Pill tone="accent">DPDP Act 2023 · Data Fiduciary Notice</Pill>
+            <h1 className="text-2xl font-bold text-label mt-2">
               Health Data & Privacy Consent
             </h1>
           </div>
-          <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-mono font-semibold text-slate-700">
+          <span className="rounded-row border border-separator bg-fill px-3 py-1.5 text-xs font-mono font-semibold text-label-2">
             Version: {CONSENT_VERSION}
           </span>
         </div>
@@ -66,21 +65,21 @@ export default function ConsentPage() {
         {errorMsg && (
           <div
             role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"
+            className="rounded-tile border border-danger/30 bg-danger-soft p-3 text-xs font-medium text-danger-text"
           >
             {errorMsg}
           </div>
         )}
 
         {alreadyConsented && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-medium text-emerald-900">
+          <div className="rounded-tile border border-ok/30 bg-ok-soft p-3.5 text-xs font-medium text-ok">
             Active consent recorded for policy version{" "}
             <strong>{CONSENT_VERSION}</strong>. You may review your rights below
             or export/delete your data at any time from your Profile.
           </div>
         )}
 
-        <div className="space-y-4 text-sm text-slate-700 leading-relaxed">
+        <div className="space-y-4 text-sm text-label-2 leading-relaxed">
           <p>
             Before storing any personal health information in{" "}
             <strong>Vyana</strong>, please review in plain language what
@@ -88,45 +87,47 @@ export default function ConsentPage() {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
-              <div className="font-bold text-slate-900">
+            <div className="rounded-tile border border-separator bg-fill p-4 space-y-1">
+              <div className="font-bold text-label">
                 1. What We Store & Why
               </div>
-              <p className="text-slate-600">
+              <p className="text-label-2">
                 Your profile, allergies, prescriptions, dose logs, lab reports,
                 vitals, and OPD appointments are stored solely to power your
                 personal health timeline, dose reminders, and doctor visits.
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
-              <div className="font-bold text-slate-900">
+            <div className="rounded-tile border border-separator bg-fill p-4 space-y-1">
+              <div className="font-bold text-label">
                 2. Row-Level Security & Sharing
               </div>
-              <p className="text-slate-600">
+              <p className="text-label-2">
                 Your records are isolated by PostgreSQL Row-Level Security (RLS).
                 Caregivers or doctors only see records you explicitly link or
                 share via time-limited tokens.
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
-              <div className="font-bold text-slate-900">
+            <div className="rounded-tile border border-separator bg-fill p-4 space-y-1">
+              <div className="font-bold text-label">
                 3. AI Redaction & Verification
               </div>
-              <p className="text-slate-600">
-                Before text is sent to an AI model for OCR or plain-language
-                explanation, phone numbers, emails, Aadhaar/PAN, and patient
-                header blocks are stripped. You always review extracted values
-                before saving.
+              <p className="text-label-2">
+                Before text is sent to an AI model for extraction or
+                plain-language explanation, phone numbers, emails, Aadhaar/PAN,
+                and patient header blocks are removed from it. A photo is first
+                read by a vision model that sees the whole image, so photograph
+                only the document. You always review extracted values before
+                saving.
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
-              <div className="font-bold text-slate-900">
+            <div className="rounded-tile border border-separator bg-fill p-4 space-y-1">
+              <div className="font-bold text-label">
                 4. Right to Export & Erase
               </div>
-              <p className="text-slate-600">
+              <p className="text-label-2">
                 Under India&apos;s Digital Personal Data Protection (DPDP) Act
                 2023, you can download all your health data as JSON or
                 permanently delete your account and files in two taps.
@@ -136,12 +137,12 @@ export default function ConsentPage() {
         </div>
 
         <form onSubmit={handleAcceptConsent} className="space-y-4 pt-2">
-          <label className="flex items-start gap-3 text-xs sm:text-sm text-slate-800 cursor-pointer">
+          <label className="flex items-start gap-3 text-xs sm:text-sm text-label cursor-pointer">
             <input
               type="checkbox"
               checked={checkedPurpose}
               onChange={(e) => setCheckedPurpose(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+              className="mt-1 h-4 w-4 rounded border-separator accent-accent"
             />
             <span>
               I consent to Vyana storing and processing my health records for
@@ -151,12 +152,12 @@ export default function ConsentPage() {
             </span>
           </label>
 
-          <label className="flex items-start gap-3 text-xs sm:text-sm text-slate-800 cursor-pointer">
+          <label className="flex items-start gap-3 text-xs sm:text-sm text-label cursor-pointer">
             <input
               type="checkbox"
               checked={checkedAiNotice}
               onChange={(e) => setCheckedAiNotice(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+              className="mt-1 h-4 w-4 rounded border-separator accent-accent"
             />
             <span>
               I understand that Vyana is an informational health companion and
@@ -165,12 +166,12 @@ export default function ConsentPage() {
             </span>
           </label>
 
-          <p className="text-xs text-slate-500 pt-1">
+          <p className="text-xs text-label-3 pt-1">
             Please read our full{" "}
             <Link
               href="/privacy"
               target="_blank"
-              className="font-medium text-teal-700 underline"
+              className="font-medium text-accent-strong underline"
             >
               Privacy Policy
             </Link>{" "}
@@ -178,7 +179,7 @@ export default function ConsentPage() {
             <Link
               href="/terms"
               target="_blank"
-              className="font-medium text-teal-700 underline"
+              className="font-medium text-accent-strong underline"
             >
               Terms of Service
             </Link>
@@ -186,22 +187,21 @@ export default function ConsentPage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-            <button
+            <Button
               type="submit"
               disabled={
                 !checkedPurpose ||
                 !checkedAiNotice ||
                 grantConsentMutation.isPending
               }
-              className="rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50 cursor-pointer"
             >
               {grantConsentMutation.isPending
                 ? "Recording Consent…"
                 : "I Consent & Continue →"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

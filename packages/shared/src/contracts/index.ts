@@ -5,7 +5,7 @@ import { z } from "zod";
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
+export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
 
 // ---------- AI accuracy & safety (plan §2A) ----------
@@ -16,22 +16,6 @@ export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), 
 const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.string().nullable().optional() };
 
 // ---------- shared pieces ----------
-export const PriceSource = z.enum(["1mg","pharmeasy","netmeds","apollo","janaushadhi","healthians","redcliffe","thyrocare","1mg_labs"]);
-export const PriceQuote = z.object({
-  kind: z.enum(["medicine","lab_test"]),
-  query: z.string(),
-  source: PriceSource,
-  product_name: z.string(),
-  pack_size: z.string().nullable(),
-  price: z.number().nullable(),          // INR selling price
-  mrp: z.number().nullable(),            // INR
-  in_stock: z.boolean().nullable(),
-  product_url: z.string().nullable(),
-  fetched_at: z.string(),                // ISO datetime
-  price_verified: z.boolean().optional(), // CONTRACT CHANGED 13 Oct (ADR-050): price seen on the fetched page
-});
-export const SourceStatus = z.object({ source: PriceSource, status: z.enum(["pending","ok","not_found","timeout","error"]) }); // "pending" added 13 Oct (ADR-050)
-
 export const Hospital = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -73,24 +57,8 @@ export const LabValue = z.object({
 
 export const SourceLink = z.object({ title: z.string(), url: z.string() });
 
-// ---------- single-medicine price check ----------
-// No route of its own (ADR-038): medicines.compare posts a one-item basket and returns BasketCompareRes.
-export const MedicinesCompareReq = z.object({ medicine: z.string().min(2), strength: z.string().optional() });
-
-// ---------- POST /api/labs/compare ----------
-export const LabsCompareReq = z.object({ test_name: z.string().min(2), city: z.string().min(2) });
-export const LabsCompareRes = z.object({            // CONTRACT CHANGED 13 Oct (ADR-050): a job like the basket
-  job_id: z.string().min(1),                          // poll GET /api/labs/compare/{job_id} while running
-  status: z.enum(["running","done"]),
-  query: z.string(), city: z.string(),
-  quotes: z.array(PriceQuote),                        // verified first, by price
-  sources: z.array(SourceStatus),
-  cheapest: PriceQuote.nullable(),                    // lowest VERIFIED price
-  cached: z.boolean(),
-});
-
 // ---------- POST /api/blood/search · GET /api/blood/search/{job_id} ----------  (RapidBlood, v1.1.0)
-// A job like the basket and the labs: POST starts it, poll GET while `status` is "running". Words in the UI are "listed",
+// A job like the blood search: POST starts it, poll GET while `status` is "running". Words in the UI are "listed",
 // never "available": a row is what a public source page showed at `fetched_at`.
 export const BloodGroup = z.enum(["A+","A-","B+","B-","AB+","AB-","O+","O-"]);
 export const BloodComponent = z.enum(["whole_blood","red_cells","platelets","plasma"]);
@@ -163,6 +131,12 @@ export const DoctorVerifyRes = z.object({
   }).nullable(),
   checked_at: z.string(),
 });
+// An admin records the outcome of checking a doctor's registration in the public register by hand.
+export const AdminDoctorCheckReq = z.object({
+  doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
+  year: z.number().int().min(1950).max(2100).nullable(), note: z.string().max(300),
+});
 
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
@@ -204,46 +178,6 @@ export const LabValueCorrectRes = z.object({
   value: LabValue,
   summary: z.string(),
   follow_up_tests: z.array(z.string()),
-});
-
-// ---------- POST /api/prescriptions/basket ----------
-export const BasketItemInput = z.object({
-  medicine: z.string().min(2),
-  strength: z.string().optional(),
-  quantity: z.number().int().positive().optional(),   // packs to buy; default 1
-});
-export const BasketCompareReq = z.object({
-  prescription_id: z.guid().optional(),      // price the prescription's active items
-  items: z.array(BasketItemInput).min(1).max(10).optional(), // or an ad-hoc list (e.g. "Reorder" for one item)
-}).refine((b) => Boolean(b.prescription_id) !== Boolean(b.items), { message: "Send prescription_id or items, not both" });
-export const BasketLine = z.object({
-  medicine: z.string(),
-  strength: z.string().nullable(),
-  quantity: z.number().int(),
-  product_name: z.string().nullable(),
-  pack_size: z.string().nullable(),
-  unit_price: z.number().nullable(),                  // INR per pack
-  line_total: z.number().nullable(),                  // unit_price × quantity; null unless price_verified
-  in_stock: z.boolean().nullable(),
-  product_url: z.string().nullable(),
-  price_verified: z.boolean(),                        // the price was found on the fetched product page (plan §2A)
-});
-export const PharmacyBasket = z.object({
-  source: PriceSource,
-  status: z.enum(["pending","ok","partial","not_found","timeout","error"]), // pending = agent still running; partial = some items missing or unverified
-  lines: z.array(BasketLine),
-  total: z.number().nullable(),                       // sum of verified lines
-  missing: z.array(z.string()),                       // medicines not found on this pharmacy
-  checkout_url: z.string().nullable(),                // page the user opens to order and pay
-});
-export const BasketCompareRes = z.object({
-  job_id: z.string().min(1),                          // opaque; poll GET /api/prescriptions/basket/{job_id} while running
-  status: z.enum(["running","done"]),               // done = no basket is pending
-  baskets: z.array(PharmacyBasket),                   // complete baskets first, then by total asc; nulls last
-  cheapest_source: PriceSource.nullable(),            // cheapest COMPLETE basket
-  generic: z.object({ lines: z.array(BasketLine), total: z.number().nullable() }).nullable(), // Jan Aushadhi
-  savings_vs_highest: z.number().nullable(),          // INR: most expensive complete basket − cheapest
-  cached: z.boolean(),
 });
 
 // ---------- POST /api/care-plan ----------  (replaces the v1 nutrition plan)
@@ -305,30 +239,6 @@ export const TriageRes = z.object({
   ai: AiMeta,
 });
 
-// ---------- POST /api/hospitals/info ----------
-export const HospitalInfoReq = z.object({ hospital_id: z.guid() });
-export const HospitalInfoRes = z.object({
-  hospital_id: z.guid(),
-  opd: z.array(z.object({ department: z.string(), days: z.string(), timings: z.string() })),
-  notes: z.string().nullable(),
-  source_url: z.string().nullable(),
-  fetched_at: z.string(),
-  cached: z.boolean(),
-});
-
-// ---------- POST /api/schemes/pmjay-hospitals ----------
-export const PmjayHospitalsReq = z.object({ lat: z.number(), lng: z.number() });
-export const PmjayHospitalsRes = z.object({
-  area: z.string().nullable(),
-  hospitals: z.array(z.object({
-    name: z.string(),
-    address: z.string().nullable(),
-    specialities: z.array(z.string()),
-    source_url: z.string().nullable(),
-  })),
-  cached: z.boolean(),
-});
-
 // ---------- GET /api/share/[token] ----------  (no auth; token in the path)
 export const SharedProfile = z.object({
   full_name: z.string().nullable(),
@@ -379,6 +289,25 @@ export const ShareRes = z.object({
   expires_at: z.string(),
 });
 
+// ---------- POST /api/assistant/chat ----------  (the reply is an AI SDK UI-message stream, not JSON)
+// The client sends AI SDK UI messages. Only the text of the last 20 user/assistant messages is read, the last
+// message must be the user's question, and a message's text is capped here like every other body's field
+// (this body lived in the server lib, with the cap as a hand check after parsing, until issue #375).
+export const ChatBody = z.object({
+  session_id: z.guid().optional(),
+  messages: z
+    .array(
+      z
+        .object({
+          role: z.enum(["system", "user", "assistant"]),
+          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()),
+        })
+        .loose(),
+    )
+    .min(1)
+    .max(100),
+});
+
 // ---------- GET /api/me/export · DELETE /api/me ----------
 export const MeExportRes = z.record(z.string(), z.unknown()); // every row the user owns, keyed by table
 export const OkRes = z.object({ ok: z.literal(true) });
@@ -415,16 +344,10 @@ export const DeviceConnectionsRes = z.object({
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>;
-export type PriceSource = z.infer<typeof PriceSource>;
-export type PriceQuote = z.infer<typeof PriceQuote>;
-export type SourceStatus = z.infer<typeof SourceStatus>;
 export type Hospital = z.infer<typeof Hospital>;
 export type PrescriptionItem = z.infer<typeof PrescriptionItem>;
 export type LabValue = z.infer<typeof LabValue>;
 export type SourceLink = z.infer<typeof SourceLink>;
-export type MedicinesCompareReq = z.infer<typeof MedicinesCompareReq>;
-export type LabsCompareReq = z.infer<typeof LabsCompareReq>;
-export type LabsCompareRes = z.infer<typeof LabsCompareRes>;
 export type BloodGroup = z.infer<typeof BloodGroup>;
 export type BloodComponent = z.infer<typeof BloodComponent>;
 export type BloodSearchReq = z.infer<typeof BloodSearchReq>;
@@ -439,6 +362,7 @@ export type EmergencySosReq = z.infer<typeof EmergencySosReq>;
 export type EmergencySosRes = z.infer<typeof EmergencySosRes>;
 export type DoctorVerifyReq = z.infer<typeof DoctorVerifyReq>;
 export type DoctorVerifyRes = z.infer<typeof DoctorVerifyRes>;
+export type AdminDoctorCheckReq = z.infer<typeof AdminDoctorCheckReq>;
 export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;
 export type ReportAnalyzeReq = z.infer<typeof ReportAnalyzeReq>;
@@ -447,11 +371,6 @@ export type LabValueCorrectReq = z.infer<typeof LabValueCorrectReq>;
 export type LabValueCorrectRes = z.infer<typeof LabValueCorrectRes>;
 export type Language = z.infer<typeof Language>;
 export type AiMeta = z.infer<typeof AiMeta>;
-export type BasketItemInput = z.infer<typeof BasketItemInput>;
-export type BasketCompareReq = z.infer<typeof BasketCompareReq>;
-export type BasketLine = z.infer<typeof BasketLine>;
-export type PharmacyBasket = z.infer<typeof PharmacyBasket>;
-export type BasketCompareRes = z.infer<typeof BasketCompareRes>;
 export type CarePlan = z.infer<typeof CarePlan>;
 export type CarePlanStatus = z.infer<typeof CarePlanStatus>;
 export type GenerateCarePlanReq = z.infer<typeof GenerateCarePlanReq>;
@@ -461,14 +380,11 @@ export type Interaction = z.infer<typeof Interaction>;
 export type InteractionsRes = z.infer<typeof InteractionsRes>;
 export type TriageReq = z.infer<typeof TriageReq>;
 export type TriageRes = z.infer<typeof TriageRes>;
-export type HospitalInfoReq = z.infer<typeof HospitalInfoReq>;
-export type HospitalInfoRes = z.infer<typeof HospitalInfoRes>;
-export type PmjayHospitalsReq = z.infer<typeof PmjayHospitalsReq>;
-export type PmjayHospitalsRes = z.infer<typeof PmjayHospitalsRes>;
 export type SharedProfile = z.infer<typeof SharedProfile>;
 export type ShareScope = z.infer<typeof ShareScope>;
 export type ShareMemory = z.infer<typeof ShareMemory>;
 export type ShareRes = z.infer<typeof ShareRes>;
+export type ChatBody = z.infer<typeof ChatBody>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;
 export type DeviceMetric = z.infer<typeof DeviceMetric>;

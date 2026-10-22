@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   connectDeviceMock,
-  deleteMyDeviceDataMock,
+  disconnectDeviceMock,
   deviceConnectionsMock,
   pauseDeviceMock,
   resetDevicesMock,
@@ -55,14 +55,32 @@ describe("connected devices mock store (#327)", () => {
     expect(conn.last_synced_at).not.toBeNull();
   });
 
-  it("disconnect and delete returns the connection to a clean state", () => {
+  it("disconnect returns the connection to a clean state", () => {
     setDeviceConsentMock(true);
     connectDeviceMock("health_connect");
-    const conn = deleteMyDeviceDataMock("health_connect");
+    const conn = disconnectDeviceMock("health_connect");
     expect(conn.status).toBe("not_connected");
     expect(conn.last_synced_at).toBeNull();
     // Consent itself is a separate choice and stays as the person left it.
     expect(deviceConnectionsMock().consent_granted).toBe(true);
+  });
+
+  it("refuses to sync while consent is off or the device is not connected", () => {
+    expect(() => syncDeviceMock("health_connect")).toThrow(/consent is off/);
+    setDeviceConsentMock(true);
+    expect(() => syncDeviceMock("health_connect")).toThrow(/not connected/);
+  });
+
+  it("turning consent off disconnects every device and blocks sync and connect", () => {
+    setDeviceConsentMock(true);
+    connectDeviceMock("health_connect");
+    connectDeviceMock("apple_health");
+    const res = setDeviceConsentMock(false);
+    expect(res.consent_granted).toBe(false);
+    expect(res.connections.every((c) => c.status === "not_connected")).toBe(true);
+    expect(res.connections.every((c) => c.last_synced_at === null)).toBe(true);
+    expect(() => syncDeviceMock("health_connect")).toThrow(/consent is off/);
+    expect(() => connectDeviceMock("health_connect")).toThrow(/consent is off/);
   });
 
   it("the two platforms are independent", () => {

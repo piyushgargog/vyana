@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKETS } from "@vyana/shared";
-import { forbidden } from "../errors";
+import { forbidden, upstream } from "../errors";
 
 /** The private buckets; every file is kept under `{user_id}/` (supabase/migrations/0003_storage.sql). */
 const FILE_BUCKETS = [BUCKETS.prescriptions, BUCKETS.labReports] as const;
@@ -61,6 +61,9 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "chat_sessions", owner: ["user_id"], order: "id" },
   { table: "chat_messages", owner: ["user_id"], order: "id" },
   { table: "ai_runs", owner: ["user_id"], order: "id" },
+  { table: "agent_proposals", owner: ["patient_id"], order: "id" },
+  { table: "agent_actions", owner: ["patient_id"], order: "id" },
+  { table: "user_plans", owner: ["user_id"], order: "user_id" },
   { table: "push_tokens", owner: ["user_id"], order: "token", omit: ["token"] },
 ];
 
@@ -74,6 +77,9 @@ export const NOT_EXPORTED: Record<string, string> = {
   price_quotes: "public prices, not tied to a user",
   web_cache: "server cache, not tied to a user",
   tinyfish_monitors: "server configuration, not tied to a user",
+  plans: "the plan catalogue, public information, not tied to a user",
+  waitlist: "an email address given on a public form, keyed by address rather than by account, and no health content",
+  waitlist_attempts: "timestamps of anonymous waitlist attempts, kept only to rate limit the public form; they name no account and hold no content",
 };
 
 export interface ExportedFile {
@@ -219,10 +225,10 @@ async function removeUserFiles(sb: SupabaseClient, bucket: string, userId: strin
     if (paths.length === 0) return removed;
     const { data, error } = await sb.storage.from(bucket).remove(paths);
     if (error) throw error;
-    if (!data || data.length === 0) throw new Error(`Could not remove the files in ${bucket}`);
+    if (!data || data.length === 0) throw upstream("Your files couldn't be removed. Try again.");
     removed += data.length;
   }
-  throw new Error(`Too many files in ${bucket}`);
+  throw upstream("Your files couldn't be removed. Try again.");
 }
 
 /**

@@ -148,7 +148,7 @@ const label = (c: Candidate) => `${c.provider}:${c.id}`;
  * (`'reasoning_content' is unsupported`), whichever model wrote it, so no call carries it (P24). The models do not
  * need it: each step reasons again from the visible text and tool results.
  */
-export function withoutReasoning<P extends { prompt: unknown }>(params: P): P {
+function withoutReasoning<P extends { prompt: unknown }>(params: P): P {
   const prompt = (params.prompt as { role: string; content: unknown }[]).flatMap((m) => {
     if (m.role !== "assistant" || !Array.isArray(m.content)) return [m];
     const content = (m.content as { type: string }[]).filter((p) => p.type !== "reasoning");

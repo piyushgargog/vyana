@@ -49,6 +49,10 @@ export function deviceConnectionsMock(): DeviceConnectionsRes {
 
 export function setDeviceConsentMock(granted: boolean): DeviceConnectionsRes {
   store = { ...store, consentGranted: granted };
+  if (!granted) {
+    // Consent off means no device is read any more: every connection is disconnected.
+    for (const platform of ALL_PLATFORMS) disconnectDeviceMock(platform);
+  }
   return deviceConnectionsMock();
 }
 
@@ -85,15 +89,24 @@ export function resumeDeviceMock(platform: DevicePlatform): DeviceConnection {
 
 /** A sync stamps the time and clears a failed flag — the engine's result, mocked. */
 export function syncDeviceMock(platform: DevicePlatform): DeviceConnection {
+  if (!store.consentGranted) {
+    throw new Error("Device health data consent is off. Turn it on from the consent screen first.");
+  }
+  const current = store.connections.find((c) => c.platform === platform);
+  if (current?.status !== "connected") {
+    throw new Error("This device is not connected, so there is nothing to sync.");
+  }
   return updateConnection(platform, {
     last_synced_at: new Date().toISOString(),
     last_sync_failed: false,
   });
 }
 
-/** Disconnect and delete: the connection goes and every device reading with it.
- *  What the person typed in themselves is not device data and is never touched here. */
-export function deleteMyDeviceDataMock(platform: DevicePlatform): DeviceConnection {
+/** Disconnect: the connection goes and syncing stops. This does NOT delete readings
+ *  that were already stored — the real delete is the database function "delete my
+ *  device data" (PR #349, migration 0019); wire it into `deleteMyDeviceReadings` in
+ *  hooks/api/devices.ts once it is on main. */
+export function disconnectDeviceMock(platform: DevicePlatform): DeviceConnection {
   return updateConnection(platform, {
     status: "not_connected",
     last_synced_at: null,

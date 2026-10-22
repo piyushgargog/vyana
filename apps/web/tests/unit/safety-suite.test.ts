@@ -6,8 +6,6 @@ import { lookupInteractions } from "@/lib/server/safety/interactions-table";
 import { matchRedFlags } from "@/lib/server/safety/red-flags";
 import { scoreCitations, scoreNoDiagnosis, scoreNoDose, scorePlanLines, textFromSse, toolUrlsFromSse } from "../safety/score";
 import { redact } from "@/lib/server/safety/redact";
-import { plausiblePrice } from "@/lib/server/tinyfish/basket";
-import { PHARMACIES, absoluteUrl, isOnDomain } from "@/lib/server/tinyfish/sources";
 
 /**
  * EVALUATION §6 suites that need no model: they test the fixed rules and run in CI on every change. The cases live in
@@ -31,21 +29,6 @@ describe("safety suite: redaction", () => {
     const out = redact(text, { knownNames: known_names ?? [] }).text;
     for (const s of secrets) expect(out, `"${s}" leaked`).not.toContain(s);
     for (const k of keep) expect(out, `"${k}" was removed`).toContain(k);
-  });
-});
-
-describe("safety suite: prices", () => {
-  type Case = { id: string; pharmacy: string; product_url: string; price: unknown; mrp: number | null; expect: "dropped" | "price_null" | "kept" };
-  const suite = load("prices") as { cases: Case[] };
-  it.each(suite.cases)("$id → $expect", ({ pharmacy, product_url, price, mrp, expect: want }) => {
-    const p = PHARMACIES.find((x) => x.source === pharmacy);
-    expect(p).toBeDefined();
-    // The same two checks processPharmacyResult runs on every agent line (SPEC §12, PLAN §2A).
-    const url = absoluteUrl(product_url, p!.searchUrl("dolo 650"));
-    const linked = Boolean(url && isOnDomain(url, p!.domain));
-    const unit = linked ? plausiblePrice(price as number, mrp) : null;
-    const got = !linked ? "dropped" : unit === null ? "price_null" : "kept";
-    expect(got).toBe(want);
   });
 });
 

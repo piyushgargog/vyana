@@ -19,8 +19,8 @@ export interface RateLimitVerdict {
 /** A broken counter must never keep a patient out, so the check gives up after this long and lets the request through. */
 const CHECK_TIMEOUT_MS = 2000;
 
-/** Mock runs (`LLM_MOCK=1`, `TINYFISH_MOCK=1`) cost nothing, so they are not counted: tests and the eval scripts stay under no limit. */
-const isMockRun = () => process.env.LLM_MOCK === "1" || process.env.TINYFISH_MOCK === "1";
+/** Mock runs (`LLM_MOCK=1`, `WEB_MOCK=1`) cost nothing, so they are not counted: tests and the eval scripts stay under no limit. */
+const isMockRun = () => process.env.LLM_MOCK === "1" || process.env.WEB_MOCK === "1";
 
 /**
  * Users who are never counted: `RATE_LIMIT_EXEMPT_USER_IDS`, comma separated, on the server only. It exists so the safety

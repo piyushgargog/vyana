@@ -36,4 +36,19 @@ test.describe("patient flow", () => {
     await expect(errors, `console errors: ${errors.join("; ")}`).toHaveLength(0);
     await signOut(page);
   });
+
+  // Prices as lookup links (issue #298): the four shop buttons of pharmacySearchLinks
+  // (1mg, PharmEasy, Netmeds, Apollo). Parked until W1 (#295) replaces the basket
+  // page's agent comparison with those links — drop the .fixme then. Written now so
+  // the step lands with the rest of the agent removal.
+  test.fixme("prices page shows the four shop lookup buttons", async ({ page }) => {
+    const password = requiredEnv("E2E_PASSWORD_PATIENT");
+    await signIn(page, "patient@vyana.test", password);
+    await page.goto("/basket");
+    for (const shop of ["1mg", "PharmEasy", "Netmeds", "Apollo"]) {
+      await expect(page.getByRole("link", { name: new RegExp(shop, "i") }).first()).toBeVisible();
+    }
+    await expectNoHorizontalScroll(page);
+    await signOut(page);
+  });
 });

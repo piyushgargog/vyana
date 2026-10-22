@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
   CONSENT_VERSION,
@@ -52,8 +53,11 @@ export default function MobileTabsLayout() {
     !profile?.onboarded
   ) {
     return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={T.color.accent} />
+      <View style={styles.loadingScreen} accessibilityLabel="Loading your Vyana">
+        <ActivityIndicator size="large" color={T.color.accent} accessibilityLabel="Loading your Vyana" />
+        <Text variant="subhead" tone="secondary">
+          Loading your Vyana…
+        </Text>
       </View>
     );
   }
@@ -97,6 +101,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
     backgroundColor: T.color.canvas,
   },
+
 });

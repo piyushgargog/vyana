@@ -5,7 +5,7 @@ import {
   DEVICE_METRIC_LABELS,
   relativeTime,
   useConnectDevice,
-  useDeleteMyDeviceData,
+  useDisconnectDevice,
   useDeviceConnections,
   usePauseDevice,
   useResumeDevice,
@@ -46,7 +46,7 @@ export default function ConnectedDevicesScreen() {
   const pauseMutation = usePauseDevice();
   const resumeMutation = useResumeDevice();
   const syncMutation = useSyncHealth();
-  const deleteMutation = useDeleteMyDeviceData();
+  const deleteMutation = useDisconnectDevice();
 
   const [explainerOpen, setExplainerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -207,8 +207,8 @@ export default function ConnectedDevicesScreen() {
                   />
                 )}
                 <Button
-                  title="Disconnect and delete my device data"
-                  label="Disconnect and delete my device data"
+                  title="Disconnect this device"
+                  label="Disconnect this device"
                   variant="destructive"
                   onPress={() => setDeleteOpen(true)}
                 />
@@ -224,26 +224,25 @@ export default function ConnectedDevicesScreen() {
         <Button title="Continue" label="Continue to the permission request" onPress={handleContinueFromExplainer} />
       </Sheet>
 
-      {/* Destructive confirmation: exactly what is deleted, and what is kept. */}
-      <Sheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Disconnect and delete?">
+      {/* Confirmation: disconnecting stops syncing; it does not delete stored readings. */}
+      <Sheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Disconnect this device?">
         <Text variant="subhead" tone="secondary">
-          This deletes every reading that came from your devices — steps, heart rate, sleep,
-          blood oxygen, blood pressure, blood glucose and weight — and removes the connection,
-          so syncing stops.
+          Vyana stops syncing from this device and removes the connection. Readings that were
+          already synced are not deleted by this.
         </Text>
         <Text variant="subhead" tone="secondary">
-          What you typed in yourself is kept.
+          What you typed in yourself is not touched. You can connect again at any time.
         </Text>
         <Button
-          title="Disconnect and delete my device data"
-          label="Confirm: disconnect and delete my device data"
+          title="Disconnect this device"
+          label="Confirm: disconnect this device"
           variant="destructive"
           loading={deleteMutation.isPending}
           onPress={() =>
             deleteMutation.mutate(platform, { onSuccess: () => setDeleteOpen(false) })
           }
         />
-        <Button title="Keep my data" label="Keep my device data and stay connected" variant="plain" onPress={() => setDeleteOpen(false)} />
+        <Button title="Stay connected" label="Stay connected" variant="plain" onPress={() => setDeleteOpen(false)} />
       </Sheet>
     </Screen>
   );
