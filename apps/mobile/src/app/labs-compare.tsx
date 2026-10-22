@@ -176,6 +176,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: { fontWeight: '700' },
   presetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
-  presetChip: { minHeight: 40 },
+  presetChip: { minHeight: 44 },
   buttonsWrap: { gap: T.space.sm },
 });
