@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   RESEND_CONFIRMATION_COOLDOWN_SECONDS,
   resendConfirmationLabel,
+  RESEND_ERROR_MESSAGE,
   resendSignupConfirmation,
   signupConfirmationUrl,
   submitSignup,
@@ -109,5 +110,22 @@ describe('mobile signup confirmation flow', () => {
     expect(resendConfirmationLabel(42)).toBe('Resend in 42 seconds');
     expect(resendConfirmationLabel(1)).toBe('Resend in 1 second');
     expect(resendConfirmationLabel(0)).toBe('Resend confirmation email');
+  });
+
+  it('shows one generic message for every resend failure', async () => {
+    const rejected = {
+      signUp: vi.fn(),
+      resend: vi.fn(async () => {
+        throw new Error('User not found');
+      }),
+    };
+    const failed = {
+      signUp: vi.fn(),
+      resend: vi.fn(async () => errorResponse('Email rate limit exceeded')),
+    };
+    const a = await resendSignupConfirmation(rejected, 'a@example.com', CONFIRMATION_URL);
+    const b = await resendSignupConfirmation(failed, 'b@example.com', CONFIRMATION_URL);
+    expect(a).toEqual({ status: 'error', message: RESEND_ERROR_MESSAGE });
+    expect(b).toEqual(a);
   });
 });

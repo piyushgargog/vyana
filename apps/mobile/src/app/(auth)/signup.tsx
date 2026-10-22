@@ -57,7 +57,11 @@ export default function MobileSignupScreen() {
     if (!pendingEmail || resendAvailableAt === null) return;
     if (resendAvailableAt <= Date.now()) return;
 
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => {
+      const tick = Date.now();
+      setNow(tick);
+      if (tick >= resendAvailableAt) clearInterval(timer);
+    }, 1000);
     return () => clearInterval(timer);
   }, [pendingEmail, resendAvailableAt]);
 

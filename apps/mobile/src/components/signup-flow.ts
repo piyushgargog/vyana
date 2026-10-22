@@ -7,6 +7,11 @@ import type {
 export const SIGNUP_CONFIRMATION_PATH = '/auth/confirmed';
 export const RESEND_CONFIRMATION_COOLDOWN_SECONDS = 60;
 
+// One fixed text for every resend failure: never echo the provider's words,
+// so the reply cannot show whether an address has an account.
+export const RESEND_ERROR_MESSAGE =
+  'We could not resend the email. Please wait a minute and try again.';
+
 export type SignupRole = 'patient' | 'doctor';
 
 export interface SignupDetails {
@@ -84,15 +89,12 @@ export async function resendSignupConfirmation(
       options: { emailRedirectTo: confirmationUrl },
     });
 
-    if (error) return { status: 'error', message: error.message };
+    if (error) return { status: 'error', message: RESEND_ERROR_MESSAGE };
     return { status: 'sent', email: trimmedEmail };
-  } catch (err) {
+  } catch {
     return {
       status: 'error',
-      message:
-        err instanceof Error
-          ? err.message
-          : 'Could not resend the confirmation email',
+      message: RESEND_ERROR_MESSAGE,
     };
   }
 }
