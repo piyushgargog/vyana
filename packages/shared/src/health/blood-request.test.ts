@@ -19,6 +19,13 @@ describe("buildBloodRequestMessage", () => {
     );
   });
 
+  it("leaves the unit count out entirely when none was entered", () => {
+    const { units: _units, ...withoutUnits } = request;
+    const text = buildBloodRequestMessage(withoutUnits);
+    expect(text).toContain("Component: red cells\n");
+    expect(text).not.toMatch(/\d+ units?\b/);
+  });
+
   it("says 1 unit, not 1 units", () => {
     expect(buildBloodRequestMessage({ ...request, units: 1 })).toContain("Component: red cells, 1 unit\n");
   });

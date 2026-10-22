@@ -15,6 +15,7 @@ import {
   useUpsertDoctorProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { Button, Card, Field, Pill, SelectField } from "@/components/ui";
 import { SkeletonCard } from "@/components/ui-primitives";
 
 export default function OnboardingPage() {
@@ -181,15 +182,15 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+      <Card className="space-y-6 p-6 sm:p-8">
         <div>
-          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-900">
+          <Pill tone="accent">
             Account Role: {role.charAt(0).toUpperCase() + role.slice(1)}
-          </span>
-          <h1 className="text-2xl font-bold text-slate-900 mt-2">
+          </Pill>
+          <h1 className="text-2xl font-bold text-label mt-2">
             {profile?.onboarded ? "Your health profile" : "Complete Your Vyana Onboarding"}
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-label-2 mt-1">
             {profile?.onboarded
               ? "Your Medical ID essentials, allergies, emergency contacts and doctor registration details. Changes save to the same profile the rest of the app reads."
               : "Configure your Medical ID essentials, allergies, emergency contacts, or doctor registration details."}
@@ -199,7 +200,7 @@ export default function OnboardingPage() {
         {errorMsg && (
           <div
             role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"
+            className="rounded-tile border border-danger/30 bg-danger-soft p-3 text-xs font-medium text-danger-text"
           >
             {errorMsg}
           </div>
@@ -207,305 +208,190 @@ export default function OnboardingPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {role === "doctor" && (
-            <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-5 space-y-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-teal-900">
+            <div className="rounded-card border border-accent/20 bg-accent-soft p-5 space-y-4">
+              <div className="text-xs font-bold uppercase tracking-wider text-accent-strong">
                 Doctor Credentials · Hospital, Department & NMC Registration
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="ob-doc-hosp"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    Hospital
-                  </label>
-                  <select
-                    id="ob-doc-hosp"
-                    value={hospitalId}
-                    onChange={(e) => setHospitalId(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  >
-                    {hospitals.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.name} ({h.city})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SelectField
+                  id="ob-doc-hosp"
+                  label="Hospital"
+                  value={hospitalId}
+                  onChange={(e) => setHospitalId(e.target.value)}
+                >
+                  {hospitals.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} ({h.city})
+                    </option>
+                  ))}
+                </SelectField>
 
-                <div>
-                  <label
-                    htmlFor="ob-doc-dept"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    Department
-                  </label>
-                  <select
-                    id="ob-doc-dept"
-                    value={departmentName}
-                    onChange={(e) => setDepartmentName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  >
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SelectField
+                  id="ob-doc-dept"
+                  label="Department"
+                  value={departmentName}
+                  onChange={(e) => setDepartmentName(e.target.value)}
+                >
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </SelectField>
 
-                <div>
-                  <label
-                    htmlFor="ob-doc-reg"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    NMC / State Council Registration No.
-                  </label>
-                  <input
-                    id="ob-doc-reg"
-                    type="text"
-                    required
-                    value={regNo}
-                    onChange={(e) => setRegNo(e.target.value)}
-                    placeholder="e.g., DMC-45892"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  />
-                </div>
+                <Field
+                  id="ob-doc-reg"
+                  label="NMC / State Council Registration No."
+                  type="text"
+                  required
+                  value={regNo}
+                  onChange={(e) => setRegNo(e.target.value)}
+                  placeholder="e.g., DMC-45892"
+                />
 
-                <div>
-                  <label
-                    htmlFor="ob-doc-council"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    State Medical Council
-                  </label>
-                  <input
-                    id="ob-doc-council"
-                    type="text"
-                    required
-                    value={stateCouncil}
-                    onChange={(e) => setStateCouncil(e.target.value)}
-                    placeholder="e.g., Delhi Medical Council"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  />
-                </div>
+                <Field
+                  id="ob-doc-council"
+                  label="State Medical Council"
+                  type="text"
+                  required
+                  value={stateCouncil}
+                  onChange={(e) => setStateCouncil(e.target.value)}
+                  placeholder="e.g., Delhi Medical Council"
+                />
 
-                <div>
-                  <label
-                    htmlFor="ob-doc-spec"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    Specialization
-                  </label>
-                  <input
-                    id="ob-doc-spec"
-                    type="text"
-                    required
-                    value={specialization}
-                    onChange={(e) => setSpecialization(e.target.value)}
-                    placeholder="e.g., General Medicine"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  />
-                </div>
+                <Field
+                  id="ob-doc-spec"
+                  label="Specialization"
+                  type="text"
+                  required
+                  value={specialization}
+                  onChange={(e) => setSpecialization(e.target.value)}
+                  placeholder="e.g., General Medicine"
+                />
 
-                <div>
-                  <label
-                    htmlFor="ob-doc-year"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
-                  >
-                    Year of Registration
-                  </label>
-                  <input
-                    id="ob-doc-year"
-                    type="number"
-                    value={yearOfReg}
-                    onChange={(e) => setYearOfReg(e.target.value)}
-                    placeholder="2015"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                  />
-                </div>
+                <Field
+                  id="ob-doc-year"
+                  label="Year of Registration"
+                  type="number"
+                  value={yearOfReg}
+                  onChange={(e) => setYearOfReg(e.target.value)}
+                  placeholder="2015"
+                />
               </div>
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="ob-name"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                Full Name
-              </label>
-              <input
-                id="ob-name"
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-            </div>
+            <Field
+              id="ob-name"
+              label="Full Name"
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
 
-            <div>
-              <label
-                htmlFor="ob-phone"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                Mobile Number
-              </label>
-              <input
-                id="ob-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-            </div>
+            <Field
+              id="ob-phone"
+              label="Mobile Number"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
 
-            <div>
-              <label
-                htmlFor="ob-dob"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                Date of Birth
-              </label>
-              <input
-                id="ob-dob"
-                type="date"
-                aria-label="Date of birth"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-            </div>
+            <Field
+              id="ob-dob"
+              label="Date of Birth"
+              type="date"
+              aria-label="Date of birth"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+            />
 
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor="ob-sex"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Sex
-                </label>
-                <select
-                  id="ob-sex"
-                  value={sex}
-                  required
-                  onChange={(e) => setSex(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                >
-                  <option value="" disabled>
-                    Select sex
-                  </option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              <SelectField
+                id="ob-sex"
+                label="Sex"
+                value={sex}
+                required
+                onChange={(e) => setSex(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select sex
+                </option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </SelectField>
 
-              <div>
-                <label
-                  htmlFor="ob-blood"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Blood Group
-                </label>
-                <select
-                  id="ob-blood"
-                  value={bloodGroup}
-                  required
-                  onChange={(e) => setBloodGroup(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                >
-                  <option value="" disabled>
-                    Select blood group
-                  </option>
-                  {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
-                    (bg) => (
-                      <option key={bg} value={bg}>
-                        {bg}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
+              <SelectField
+                id="ob-blood"
+                label="Blood Group"
+                value={bloodGroup}
+                required
+                onChange={(e) => setBloodGroup(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select blood group
+                </option>
+                {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
+                  (bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  )
+                )}
+              </SelectField>
             </div>
 
-            <div>
-              <label
-                htmlFor="ob-city"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                City
-              </label>
-              <input
-                id="ob-city"
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="ob-lang"
-                className="block text-xs font-semibold text-slate-700 mb-1"
-              >
-                Preferred Language
-              </label>
-              <select
-                id="ob-lang"
-                value={preferredLang}
-                onChange={(e) => setPreferredLang(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="hinglish">Hinglish</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="ob-allergies"
-              className="block text-xs font-semibold text-slate-700 mb-1"
-            >
-              Known Drug or Food Allergies (comma-separated, encoded in Medical ID QR)
-            </label>
-            <input
-              id="ob-allergies"
+            <Field
+              id="ob-city"
+              label="City"
               type="text"
-              value={allergiesText}
-              onChange={(e) => setAllergiesText(e.target.value)}
-              placeholder="e.g., Penicillin, Peanuts"
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
             />
+
+            <SelectField
+              id="ob-lang"
+              label="Preferred Language"
+              value={preferredLang}
+              onChange={(e) => setPreferredLang(e.target.value)}
+            >
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+              <option value="hinglish">Hinglish</option>
+            </SelectField>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          <Field
+            id="ob-allergies"
+            label="Known Drug or Food Allergies (comma-separated, encoded in Medical ID QR)"
+            type="text"
+            value={allergiesText}
+            onChange={(e) => setAllergiesText(e.target.value)}
+            placeholder="e.g., Penicillin, Peanuts"
+          />
+
+          <div className="rounded-tile border border-separator bg-fill p-4 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-label-3">
               Active Chronic Conditions
             </div>
             <div className="flex flex-wrap gap-2">
               {conditions.map((c) => (
-                <span
-                  key={c.id}
-                  className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-900"
-                >
+                <Pill key={c.id} tone="accent">
                   {c.name}
-                </span>
+                </Pill>
               ))}
               {/* "None recorded" is a fact the page may only state after a successful
                   read (#225): while loading it says so, and on error it offers a retry
                   instead of claiming the patient has no conditions. */}
               {conditionsLoading ? (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-label-3">
                   Loading your recorded conditions…
                 </span>
               ) : conditionsError ? (
-                <span className="text-xs text-red-700">
+                <span className="text-xs text-danger-text">
                   Could not load your conditions.{" "}
                   <button
                     type="button"
@@ -516,7 +402,7 @@ export default function OnboardingPage() {
                   </button>
                 </span>
               ) : conditions.length === 0 ? (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-label-3">
                   No chronic conditions recorded yet.
                 </span>
               ) : null}
@@ -531,21 +417,22 @@ export default function OnboardingPage() {
                 value={newCondition}
                 onChange={(e) => setNewCondition(e.target.value)}
                 placeholder="e.g., Hypothyroidism, Asthma"
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
+                className="flex-1 rounded-row border border-transparent bg-surface px-4 text-[13px] text-label placeholder:text-label-3 outline-none transition-colors focus:border-accent"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 disabled={addConditionMutation.isPending}
                 onClick={handleAddConditionClick}
-                className="rounded-xl border border-teal-700 bg-white px-4 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-50 cursor-pointer"
               >
                 + Add Condition
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-red-900">
+          <div className="rounded-tile border border-danger/30 bg-danger-soft p-4 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-danger-text">
               Primary Emergency Contact (Alerted on SOS 108 & Shown on Medical ID)
             </div>
             {emergencyContacts.length > 0 && (
@@ -553,7 +440,7 @@ export default function OnboardingPage() {
                 {emergencyContacts.map((ec) => (
                   <span
                     key={ec.id}
-                    className="rounded-full bg-white border border-red-200 px-3 py-1 text-xs font-medium text-slate-800"
+                    className="rounded-full bg-surface border border-danger/30 px-3 py-1 text-xs font-medium text-label"
                   >
                     {ec.name} ({ec.phone}) · {ec.relation}
                   </span>
@@ -561,70 +448,45 @@ export default function OnboardingPage() {
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label
-                  htmlFor="ob-ec-name"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Contact Name
-                </label>
-                <input
-                  id="ob-ec-name"
-                  type="text"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Family member name"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="ob-ec-phone"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Contact Mobile Number
-                </label>
-                <input
-                  id="ob-ec-phone"
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+91 00000 00000"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="ob-ec-rel"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Relationship
-                </label>
-                <input
-                  id="ob-ec-rel"
-                  type="text"
-                  value={contactRel}
-                  onChange={(e) => setContactRel(e.target.value)}
-                  placeholder="Spouse / Parent"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900"
-                />
-              </div>
+              <Field
+                id="ob-ec-name"
+                label="Contact Name"
+                type="text"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                placeholder="Family member name"
+              />
+              <Field
+                id="ob-ec-phone"
+                label="Contact Mobile Number"
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+91 00000 00000"
+              />
+              <Field
+                id="ob-ec-rel"
+                label="Relationship"
+                type="text"
+                value={contactRel}
+                onChange={(e) => setContactRel(e.target.value)}
+                placeholder="Spouse / Parent"
+              />
             </div>
           </div>
 
           <div className="flex justify-end pt-2">
-            <button
+            <Button
               type="submit"
               disabled={completeOnboardingMutation.isPending}
-              className="rounded-xl bg-teal-700 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50 cursor-pointer"
             >
               {completeOnboardingMutation.isPending
                 ? "Saving Profile…"
                 : "Save Profile & Open Portal →"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

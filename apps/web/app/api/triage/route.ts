@@ -3,7 +3,8 @@ import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { triage } from "@/lib/server/triage";
 
-// One model call at most (SPEC §15).
+// One model call at most (SPEC §15). No role gate on purpose: any signed-in user may check symptoms —
+// the answer is worked out from the caller's own profile only, so there is no role to gate on.
 export const maxDuration = 60;
 
 export const POST = withRoute("triage", async (req, ctx) => {

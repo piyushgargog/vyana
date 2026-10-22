@@ -9,12 +9,11 @@ import {
   type ModelMessage,
   type UIMessageChunk,
 } from "ai";
-import { z } from "zod";
-import { Language } from "@vyana/shared";
-import { finishAiRun, startAiRun } from "../ai";
+import { Language, type ChatBody } from "@vyana/shared";
+import { finishAiRun, providerOf, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
-import { getModel, isLlmMock } from "../llm";
+import { getModel, isLlmMock, modelName } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
@@ -41,16 +40,7 @@ export const isDoseQuestion = (q: string): boolean =>
   findDosePatterns(q).length > 0 ||
   /\b(?:how (?:much|many)|what dose|dosage|dose|double|skip|stop taking|halve|increase|reduce|take (?:\d|two|three|half)|instead of \d|kitn[aie]|badha|kam kar|chhod)\b|कितनी|कितना|खुराक/iu.test(q);
 
-const SAFE_ERROR = "Something went wrong while answering. Please try again.";
-
-export const ChatBody = z.object({
-  session_id: z.guid().optional(),
-  messages: z
-    .array(z.object({ role: z.string(), parts: z.array(z.object({ type: z.string(), text: z.string().optional() }).loose()) }).loose())
-    .min(1)
-    .max(100),
-});
-export type ChatBody = z.infer<typeof ChatBody>;
+const SAFE_ERROR = "The answer could not be finished. Please try again.";
 
 type Turn = { role: "user" | "assistant"; text: string };
 
@@ -68,7 +58,7 @@ export function historyFrom(messages: ChatBody["messages"]): Turn[] {
 }
 
 /** The newest turns that fit `HISTORY_CHARS` (the last question is always kept); a history that had to be cut starts with a user turn again. */
-export function fitHistory(turns: Turn[]): Turn[] {
+function fitHistory(turns: Turn[]): Turn[] {
   let total = 0;
   const kept: Turn[] = [];
   for (let i = turns.length - 1; i >= 0; i--) {
@@ -123,6 +113,8 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   const { messages, placeholders } = redactHistory(turns, profile.full_name ? [profile.full_name] : []);
   const guard = new ReplyGuard({ language, placeholders, doseQuestion: isDoseQuestion(question) });
   // The reply streams after the route has logged its line, so TinyFish calls are counted and logged here.
+  const started = Date.now();
+  let tokens = { input_tokens: null as number | null, output_tokens: null as number | null };
   const runId = await startAiRun(
     { feature: "assistant_chat", userId: user.id, promptVersion: ASSISTANT_PROMPT_VERSION, inputRef: `chat_sessions/${sessionId}`, sources: [] },
     "text",
@@ -169,6 +161,13 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         }
         writer.write(next.value);
       }
+      // Numbers only (issue #342); a usage that cannot be read leaves the columns empty.
+      try {
+        const usage = await result.usage;
+        tokens = { input_tokens: usage.inputTokens ?? null, output_tokens: usage.outputTokens ?? null };
+      } catch {
+        /* the reply is already on its way; usage is only for our own cost record */
+      }
       if (failed) return;
       const note = guard.closingNotes();
       if (note) writeText(writer, "vyana-note", note);
@@ -181,6 +180,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         output: { text: guard.text, notes: guard.notes, removed_urls: guard.removed, emergency_notice: emergency },
         sources: guard.sources,
         status,
+        usage: { provider: providerOf(modelName("text")), ...tokens, latency_ms: Date.now() - started },
       });
       log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved

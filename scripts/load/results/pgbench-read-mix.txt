@@ -1,0 +1,17 @@
+Read mix (pgbench), same local database and volume as explain-dose-scan.txt.
+Script: profile point read; a patient's dose_logs page; a share_links token read;
+one ai_runs daily aggregate — the four reads the hot routes make most.
+Command: pgbench -c 10 -j 2 -T 30 -f bench.sql (10 clients)
+
+transaction type: /tmp/bench.sql
+scaling factor: 1
+query mode: simple
+number of clients: 10
+number of threads: 2
+maximum number of tries: 1
+duration: 30 s
+number of transactions actually processed: 40667
+number of failed transactions: 0 (0.000%)
+latency average = 7.374 ms
+initial connection time = 24.563 ms
+tps = 1356.120461 (without initial connection time)

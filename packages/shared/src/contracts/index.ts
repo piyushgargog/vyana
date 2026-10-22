@@ -5,7 +5,7 @@ import { z } from "zod";
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
+export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
 
 // ---------- AI accuracy & safety (plan §2A) ----------
@@ -163,6 +163,12 @@ export const DoctorVerifyRes = z.object({
   }).nullable(),
   checked_at: z.string(),
 });
+// An admin records the outcome of checking a doctor's registration in the public register by hand.
+export const AdminDoctorCheckReq = z.object({
+  doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
+  year: z.number().int().min(1950).max(2100).nullable(), note: z.string().max(300),
+});
 
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
@@ -317,7 +323,7 @@ export const HospitalInfoRes = z.object({
 });
 
 // ---------- POST /api/schemes/pmjay-hospitals ----------
-export const PmjayHospitalsReq = z.object({ lat: z.number(), lng: z.number() });
+export const PmjayHospitalsReq = z.object({ lat: Lat, lng: Lng });
 export const PmjayHospitalsRes = z.object({
   area: z.string().nullable(),
   hospitals: z.array(z.object({
@@ -379,6 +385,25 @@ export const ShareRes = z.object({
   expires_at: z.string(),
 });
 
+// ---------- POST /api/assistant/chat ----------  (the reply is an AI SDK UI-message stream, not JSON)
+// The client sends AI SDK UI messages. Only the text of the last 20 user/assistant messages is read, the last
+// message must be the user's question, and a message's text is capped here like every other body's field
+// (this body lived in the server lib, with the cap as a hand check after parsing, until issue #375).
+export const ChatBody = z.object({
+  session_id: z.guid().optional(),
+  messages: z
+    .array(
+      z
+        .object({
+          role: z.enum(["system", "user", "assistant"]),
+          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()),
+        })
+        .loose(),
+    )
+    .min(1)
+    .max(100),
+});
+
 // ---------- GET /api/me/export · DELETE /api/me ----------
 export const MeExportRes = z.record(z.string(), z.unknown()); // every row the user owns, keyed by table
 export const OkRes = z.object({ ok: z.literal(true) });
@@ -411,6 +436,7 @@ export type EmergencySosReq = z.infer<typeof EmergencySosReq>;
 export type EmergencySosRes = z.infer<typeof EmergencySosRes>;
 export type DoctorVerifyReq = z.infer<typeof DoctorVerifyReq>;
 export type DoctorVerifyRes = z.infer<typeof DoctorVerifyRes>;
+export type AdminDoctorCheckReq = z.infer<typeof AdminDoctorCheckReq>;
 export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;
 export type ReportAnalyzeReq = z.infer<typeof ReportAnalyzeReq>;
@@ -441,5 +467,6 @@ export type SharedProfile = z.infer<typeof SharedProfile>;
 export type ShareScope = z.infer<typeof ShareScope>;
 export type ShareMemory = z.infer<typeof ShareMemory>;
 export type ShareRes = z.infer<typeof ShareRes>;
+export type ChatBody = z.infer<typeof ChatBody>;
 export type MeExportRes = z.infer<typeof MeExportRes>;
 export type OkRes = z.infer<typeof OkRes>;

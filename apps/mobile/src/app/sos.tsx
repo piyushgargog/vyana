@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
 import {
   BLINKIT,
   EMERGENCY,
@@ -99,6 +100,8 @@ export default function MobileSosScreen() {
   }, [findNearby, findPmjay]);
 
   const triggerSosCall = useCallback(async () => {
+    // The warning haptic (U2): an SOS starting should feel different from any ordinary tap.
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     setSosActive(true);
     // Dial 108 directly
     Linking.openURL(`tel:${EMERGENCY.ambulance}`).catch(() => {

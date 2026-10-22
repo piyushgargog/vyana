@@ -14,7 +14,8 @@ const COMPONENT_WORDS: Record<string, string> = {
 export interface BloodRequestMessageInput {
   blood_group: string;
   component: string;
-  units: number;
+  /** Omit when the patient has not entered a valid count — the message never invents one. */
+  units?: number;
   hospital_name: string;
   city: string;
   contact_name: string;
@@ -30,7 +31,10 @@ const clean = (text: string, max: number) => text.replace(/\s+/g, " ").trim().sl
  */
 export function buildBloodRequestMessage(input: BloodRequestMessageInput): string {
   const component = COMPONENT_WORDS[input.component] ?? clean(input.component.replace(/_/g, " "), 40);
-  const units = `${input.units} ${input.units === 1 ? "unit" : "units"}`;
+  const units =
+    input.units !== undefined && Number.isInteger(input.units) && input.units >= 1
+      ? `, ${input.units} ${input.units === 1 ? "unit" : "units"}`
+      : "";
   const hospital = clean(input.hospital_name, 80);
   const city = clean(input.city, 60);
   const contact = clean(input.contact_name, 50);
@@ -38,7 +42,7 @@ export function buildBloodRequestMessage(input: BloodRequestMessageInput): strin
   return [
     "Blood needed",
     `Group: ${clean(input.blood_group, 10)}`,
-    `Component: ${component}, ${units}`,
+    `Component: ${component}${units}`,
     `Hospital: ${city ? `${hospital}, ${city}` : hospital}`,
     `Contact: ${phone ? `${contact} ${phone}` : contact}`,
   ].join("\n");

@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { Language, type CarePlan, type GenerateCarePlanReq, type GenerateCarePlanRes, type SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
-import { requireRole, type AuthedUser } from "./auth";
+import type { AuthedUser } from "./auth";
 import { forbidden, notFound, upstream } from "./errors";
 import { log } from "./log";
 import { CARE_PLAN_PROMPT_VERSION, CARE_PLAN_SYSTEM, carePlanPrompt } from "./prompts/care-plan";
@@ -65,8 +65,6 @@ export function intervalDays(quote: string): number | null {
 }
 
 // ---------------------------------------------------------------- checks
-
-export { CARE_PLAN_DOMAINS, guidelinePages, type Page } from "./web/guideline-pages";
 
 export interface VerifiedPlan {
   plan: CarePlan;
@@ -188,7 +186,6 @@ export const forPrompt = (pages: Page[]): Page[] =>
 
 export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> {
   const { sb, user, profile } = authed;
-  requireRole(profile, "patient", "doctor");
 
   // Read as the caller: RLS shows a patient their own conditions and a doctor their patients' conditions.
   const { data, error } = await sb.from("conditions").select("id, patient_id, name, source").eq("id", body.condition_id).maybeSingle();

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+
 import {
   DbMealLog,
   MEAL_CALORIES_MAX,
@@ -14,7 +14,6 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 import {
@@ -50,7 +49,6 @@ function shiftDateString(dateStr: string, days: number): string {
 }
 
 export default function MealsScreen() {
-  const router = useRouter();
   const { showToast } = useVyanaMobile();
 
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString);
@@ -142,26 +140,11 @@ export default function MealsScreen() {
   const isToday = selectedDate === getTodayString();
 
   return (
-    <Screen
-      eyebrow="Care"
-      title="Daily Meal Log"
-      trailing={
-        <Button
-          title="Done"
-          variant="plain"
-          size="sm"
-          label="Back"
-          onPress={() => router.back()}
-          style={styles.doneBtn}
-        />
-      }
-    >
+    <Screen eyebrow="Care" title="Daily Meal Log">
       <Text variant="subhead" tone="secondary">
         Log your breakfast, lunch, dinner and snacks in alignment with your
         care plan.
       </Text>
-
-      <MobileAiSafetyBanner />
 
       {/* Date Navigation Strip */}
       <Card>

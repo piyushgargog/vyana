@@ -13,6 +13,109 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_actions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          patient_id: string
+          proposal_id: string
+          result: NonNullable<Json>
+          status: string
+        }
+        ComputedFields: never
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          proposal_id: string
+          result?: NonNullable<Json>
+          status: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          proposal_id?: string
+          result?: NonNullable<Json>
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_actions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_actions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "agent_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_proposals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          dedupe_key: string | null
+          evidence: NonNullable<Json>
+          expires_at: string | null
+          id: string
+          kind: string
+          patient_id: string
+          payload: NonNullable<Json>
+          reason: string
+          rule_id: string | null
+          status: string
+          title: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          dedupe_key?: string | null
+          evidence?: NonNullable<Json>
+          expires_at?: string | null
+          id?: string
+          kind: string
+          patient_id: string
+          payload?: NonNullable<Json>
+          reason: string
+          rule_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          dedupe_key?: string | null
+          evidence?: NonNullable<Json>
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          patient_id?: string
+          payload?: NonNullable<Json>
+          reason?: string
+          rule_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_proposals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_runs: {
         Row: {
           created_at: string
@@ -1090,6 +1193,31 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          daily_ai_calls: number | null
+          features: NonNullable<Json>
+          id: string
+          max_profiles: number | null
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          daily_ai_calls?: number | null
+          features?: NonNullable<Json>
+          id: string
+          max_profiles?: number | null
+          name: string
+        }
+        Update: {
+          daily_ai_calls?: number | null
+          features?: NonNullable<Json>
+          id?: string
+          max_profiles?: number | null
+          name?: string
+        }
+        Relationships: []
+      }
       prescription_items: {
         Row: {
           active: boolean
@@ -1450,6 +1578,43 @@ export type Database = {
         }
         Relationships: []
       }
+      user_plans: {
+        Row: {
+          plan_id: string
+          since: string
+          source: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          plan_id: string
+          since?: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          plan_id?: string
+          since?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_plans_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vitals: {
         Row: {
           created_at: string
@@ -1491,6 +1656,55 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          note: string | null
+          plan_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          note?: string | null
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          note?: string | null
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+        }
+        ComputedFields: never
+        Insert: {
+          attempted_at?: string
+          id?: number
+        }
+        Update: {
+          attempted_at?: string
+          id?: number
+        }
+        Relationships: []
       }
       web_cache: {
         Row: {
@@ -1599,6 +1813,42 @@ export type Database = {
         }
         Returns: string
       }
+      current_plan: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          daily_ai_calls: number
+          features: Json
+          max_profiles: number
+          name: string
+          plan_id: string
+          since: string
+          source: string
+        }[]
+      }
+      decide_proposal: {
+        Args: { p_approve: boolean; p_proposal_id: string }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          dedupe_key: string | null
+          evidence: NonNullable<Json>
+          expires_at: string | null
+          id: string
+          kind: string
+          patient_id: string
+          payload: NonNullable<Json>
+          reason: string
+          rule_id: string | null
+          status: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "agent_proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       department_tokens: {
         Args: { p_date: string; p_department: string }
         Returns: {
@@ -1625,6 +1875,7 @@ export type Database = {
           year_of_registration: number
         }[]
       }
+      expire_proposals: { Args: Record<PropertyKey, never>; Returns: number }
       hit_rate_limit: {
         Args: {
           p_bucket: string
@@ -1641,6 +1892,10 @@ export type Database = {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_caregiver_of: { Args: { p: string }; Returns: boolean }
       is_doctor_of: { Args: { p: string }; Returns: boolean }
+      join_waitlist: {
+        Args: { p_email: string; p_note?: string; p_plan_id: string }
+        Returns: boolean
+      }
       my_ai_usage_today: {
         Args: Record<PropertyKey, never>
         Returns: {

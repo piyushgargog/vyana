@@ -137,14 +137,6 @@ export default function PrescriptionDetailScreen() {
               : 'Scanned Paper Rx'}
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back</Text>
-        </Pressable>
       </View>
 
       {/* Diagnosis & Action Banner */}

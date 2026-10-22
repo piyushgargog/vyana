@@ -1,0 +1,33 @@
+-- 0018_indexes.sql
+-- The index review (issue #303): one index the hot queries earn. Two others
+-- were measured and deliberately not added — the numbers are in PR #303.
+-- Owner: Vaibhav Parmar
+--
+-- The ten most common queries were run with explain (analyze, buffers) on a
+-- database carrying the demo seed plus synthetic runtime volume (100k AI
+-- runs, 102k chat messages, 104k dose logs, 5k share links). Eight of the ten
+-- were already served by an index or are scans of tables that stay small. Of
+-- the remaining two:
+--
+-- The missed-dose scan (the cron route, every 15 minutes) reads dose_logs by
+-- status and a scheduled_for window. Without an index of its own the planner
+-- walks the (item_id, scheduled_for) unique index and the heap — a day-window
+-- count measured 2.9 ms over 104k rows, growing linearly with the table. An
+-- index on (status, scheduled_for) answers it index-only: 0.36 ms, and the
+-- broad status reads stop scanning the whole table (the explain (analyze,
+-- buffers) output is in scripts/load/results/explain-dose-scan.txt).
+--
+-- The other candidate, (session_id, created_at) on chat_messages, was built
+-- and measured and is NOT in this migration: at 2,000 messages in a session
+-- the planner prefers the existing (session_id) index plus a 1.2 ms in-memory
+-- sort, and it still prefers it with the composite index present. Revisit
+-- if real sessions grow past tens of thousands of messages.
+--
+-- The plain create index below takes a SHARE lock on dose_logs while it
+-- builds (writes pause for the build). At this table's size that is a
+-- fraction of a second inside a deploy; if the table ever grows large,
+-- build the same index with create index concurrently in its own migration
+-- instead. "if not exists" keeps a re-run of this file harmless.
+
+create index if not exists idx_dose_logs_status_scheduled
+  on public.dose_logs (status, scheduled_for);

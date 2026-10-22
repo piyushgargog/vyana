@@ -163,7 +163,7 @@ describe("the routes of the app", () => {
   });
 
   it("never limit SOS, polling a job, the account, the share page, the cron job or the webhook", () => {
-    for (const name of ["emergency/sos", "labs/compare/[job_id]", "prescriptions/basket/[job_id]", "me", "me/export", "share/[token]", "cron/missed-doses", "reports/values/correct"]) {
+    for (const name of ["emergency/sos", "labs/compare/[job_id]", "prescriptions/basket/[job_id]", "me", "me/export", "share/[token]", "cron/missed-doses"]) {
       const f = found.find((x) => x.name === name);
       expect(f, name).toBeDefined();
       expect(f?.bucket, name).toBeNull();

@@ -3,7 +3,7 @@
 //   node docs/images/capture-screens.mjs        (run from the repo root)
 //
 // Environment:
-//   VYANA_BASE_URL     where the web app runs   (default http://localhost:3100)
+//   VYANA_BASE_URL     where the web app runs   (default http://localhost:3000)
 //   VYANA_DEMO_EMAIL   the demo patient login    (e.g. patient@vyana.test)
 //   VYANA_DEMO_PASSWORD  its password            (from the team's seed secrets)
 //
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
 const OUT = dirname(fileURLToPath(import.meta.url));
-const BASE = (process.env.VYANA_BASE_URL || "http://localhost:3100").replace(/\/$/, "");
+const BASE = (process.env.VYANA_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 const EMAIL = process.env.VYANA_DEMO_EMAIL;
 const PASSWORD = process.env.VYANA_DEMO_PASSWORD;
 
@@ -60,11 +60,16 @@ for (const [sizeName, viewport] of SIZES) {
 
 if (EMAIL && PASSWORD) {
   const page = await browser.newPage({ viewport: SIZES[1][1] });
-  await page.goto(BASE + "/login", { waitUntil: "networkidle" }).catch(() => {});
+  await page.goto(BASE + "/login", { waitUntil: "networkidle" });
   await page.getByLabel(/email/i).first().fill(EMAIL);
   await page.getByLabel(/password/i).first().fill(PASSWORD);
   await page.getByRole("button", { name: /sign in|log in/i }).first().click();
-  await page.waitForTimeout(3000);
+  // Prove the sign-in worked before capturing anything: if the app is still on
+  // /login, every "app screen" below would silently save the login page.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
+  if (new URL(page.url()).pathname.startsWith("/login")) {
+    throw new Error("Sign-in did not leave /login — check the demo email and password.");
+  }
   for (const [sizeName, viewport] of SIZES) {
     for (const shot of APP_SHOTS) await shoot(page, shot.slug, shot.path, sizeName, viewport);
   }
