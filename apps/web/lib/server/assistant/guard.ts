@@ -50,7 +50,7 @@ export function readyLength(buffer: string): number {
 }
 
 /** How much of `text` is whole sentences: up to the last ". ", "! ", "? ", "। " or line break. */
-export function sentencesLength(text: string): number {
+function sentencesLength(text: string): number {
   let end = 0;
   for (const m of text.matchAll(/[.!?।](?=\s)\s*|\n+/gu)) end = (m.index ?? 0) + m[0].length;
   return end;

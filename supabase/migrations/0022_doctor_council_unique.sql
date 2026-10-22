@@ -1,4 +1,4 @@
--- 0016_doctor_council_unique.sql
+-- 0022_doctor_council_unique.sql
 -- One council registration, one verified doctor (issue #360). Owner: Vaibhav Parmar
 --
 -- The app already refuses a registration number that another verified doctor holds
@@ -12,7 +12,7 @@
 -- verification_status — live on public.doctors; profiles holds none of them.)
 --
 -- The normalisation is the app's own (normalizeRegNo / councilKey in
--- apps/web/lib/server/tinyfish/nmc.ts), restated below as two immutable functions so
+-- apps/web/lib/server/doctor-register.ts), restated below as two immutable functions so
 -- the index agrees with the app spelling for spelling: "MCI/12-345" and "mci 12345"
 -- are the same number, and "Delhi Medical Council", "Medical Council of Delhi" and
 -- "Delhi" are the same council. If the app functions ever change, these must change
@@ -102,3 +102,10 @@ create unique index idx_doctors_verified_registration
     (public.doctor_council_key(state_council))
   )
   where verification_status = 'verified';
+
+-- Only the index (and the table owner) needs these helpers; the app never calls them
+-- directly, so close the door for the public and anonymous roles.
+revoke all on function public.doctor_reg_no_key(text) from public, anon;
+revoke all on function public.doctor_council_key(text) from public, anon;
+grant execute on function public.doctor_reg_no_key(text) to authenticated, service_role;
+grant execute on function public.doctor_council_key(text) to authenticated, service_role;

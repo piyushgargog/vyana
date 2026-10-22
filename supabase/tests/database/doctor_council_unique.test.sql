@@ -1,5 +1,5 @@
 -- supabase/tests/database/doctor_council_unique.test.sql
--- The database guard of 0016: one council registration, one verified doctor.
+-- The database guard of 0022: one council registration, one verified doctor.
 -- Run with: supabase test db
 -- Owner: Vaibhav Parmar
 

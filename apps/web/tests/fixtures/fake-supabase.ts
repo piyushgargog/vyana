@@ -23,7 +23,7 @@ export const db = {
   storage: new Map<string, Blob>(),
   /** Tables whose next insert fails (to test rollbacks). */
   failInsert: new Set<string>(),
-  /** Tables whose next update fails with a unique violation (23505), as the database guard of migration 0016 answers. */
+  /** Tables whose next update fails with a unique violation (23505), as the database guard of migration 0022 answers. */
   failUpdate: new Set<string>(),
   /** What is_doctor_of answers: "doctorId:patientId" pairs. */
   doctorOf: new Set<string>(),

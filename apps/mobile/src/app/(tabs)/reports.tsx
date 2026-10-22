@@ -64,7 +64,7 @@ export default function MobileReportsTab() {
           style={styles.actionBtn}
         />
         <Button
-          title="Compare Lab Prices"
+          title="Compare Lab Tests"
           variant="secondary"
           size="md"
           onPress={() => router.push('/labs-compare')}

@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "^1.64.0",
     "turbo": "^2",
     "yaml": "^2.9.1",

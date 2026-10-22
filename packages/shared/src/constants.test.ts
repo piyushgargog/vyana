@@ -110,6 +110,7 @@ describe("Scope v2 constants", () => {
       "medicines/interactions", "prescriptions/basket", "prescriptions/extract", "reports/analyze", "schemes/pmjay-hospitals", "triage",
     ]);
     expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();
+    expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("lookup");
     for (const bucket of Object.values(RATE_LIMITED_ROUTES)) expect(RATE_LIMITS[bucket]).toBeDefined();
   });
 
