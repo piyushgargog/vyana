@@ -9,6 +9,7 @@ import {
 } from "@/components/ui";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy Policy · Vyana",
   description:
     "Learn what data Vyana stores, why we store it, how AI is safely used, who can access your records, and how to download or delete your data under the DPDP Act 2023.",

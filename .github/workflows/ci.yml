@@ -78,3 +78,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: npx --yes expo-doctor
         working-directory: apps/mobile
+      - name: Blocked Android permissions stay blocked
+        working-directory: apps/mobile
+        env:
+          EXPO_NO_TELEMETRY: "1"
+        run: |
+          npx expo prebuild --platform android --no-install
+          node ./scripts/check-android-permissions.mjs android/app/src/main/AndroidManifest.xml

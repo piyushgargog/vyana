@@ -6,12 +6,6 @@ import type { BloodComponent, BloodGroup, BloodRequestStatus } from "../../contr
 import type { DbBloodRequest } from "../types";
 import { DbError, requireUserId, unwrap, type Sb } from "./helpers";
 
-/** The groups a request can ask for — the words of the v1.1 contracts (#246), typed from them so there is one source. */
-export const BLOOD_GROUPS: readonly BloodGroup[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
-/** The components of the v1.1 contracts (#246). */
-export const BLOOD_COMPONENTS: readonly BloodComponent[] = ["whole_blood", "red_cells", "platelets", "plasma"];
-
 /** Where a request stands, in the order it usually moves. `cancelled` can come from any step. */
 export const BLOOD_REQUEST_STATUSES: readonly BloodRequestStatus[] = ["searching", "contacted", "confirmed", "arranged", "received", "cancelled"];
 
