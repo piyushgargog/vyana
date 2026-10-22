@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ApiErrorBody } from "@vyana/shared";
-import { AppError, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
+import { AppError, jsonRes, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
 
 const call = (handler: Parameters<typeof withRoute>[1], body?: string) =>
   withRoute("test", handler)(new Request("http://localhost/api/test", { method: "POST", body }), undefined);
@@ -92,5 +92,32 @@ describe("parseBody", () => {
     }, "{not json");
     expect(res.status).toBe(400);
     expect((await errorOf(res)).message).toBe("Request body must be valid JSON");
+  });
+});
+
+describe("jsonRes", () => {
+  const contract = z.object({ ok: z.boolean() });
+
+  it("returns the contract-parsed payload outside production", async () => {
+    const res = jsonRes(contract, { ok: true });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("throws a ZodError on contract drift outside production", () => {
+    expect(() => jsonRes(contract, { ok: "yes" })).toThrow(z.ZodError);
+  });
+
+  it("skips validation and keeps the init in production", async () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const res = jsonRes(contract, { ok: "yes" }, { headers: { "cache-control": "no-store" } });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: "yes" });
+      expect(res.headers.get("cache-control")).toBe("no-store");
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
   });
 });
