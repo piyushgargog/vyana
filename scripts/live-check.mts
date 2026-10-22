@@ -234,17 +234,14 @@ if (!WITH_LLM) {
     return `${res.json?.checked_medicines.length} checked, ${res.json?.interactions.length} found, ${res.json?.not_checked?.length ?? 0} not checked`;
   });
   await check("care plan: a patient-added condition gets a patient_generated plan; a doctor's diagnosis → 403 for the patient", async () => {
-    // A condition can exist only once per patient (migration 0020): when an earlier run left this one behind, use it
-    // and leave it in place; otherwise add it here and delete it again below.
-    let added = true;
-    let own = await rest("POST", "conditions", P, { patient_id: patient!.id, name: "Type 2 Diabetes", source: "patient" });
-    if (own.status === 409) {
-      added = false;
-      own = await rest("GET", `conditions?patient_id=eq.${patient!.id}&source=eq.patient&name=ilike.Type 2 Diabetes&select=id&limit=1`, P);
-      expect(own.status === 200 && own.json?.[0]?.id, `add condition 409 and no existing one found (${own.status})`);
-    } else {
-      expect(own.status === 201, `add condition ${own.status}`);
-    }
+    // A condition can exist only once per patient (migration 0020), and the demo patient already has some (one is a
+    // doctor's diagnosis): take the first of these that the patient does not have yet, and delete it again below.
+    const existing = await rest("GET", `conditions?patient_id=eq.${patient!.id}&select=name`, P);
+    const have = new Set<string>((existing.json ?? []).map((c: { name: string }) => c.name.trim().toLowerCase()));
+    const name = ["Asthma", "Hypertension", "Migraine", "Anemia"].find((n) => !have.has(n.toLowerCase()));
+    expect(Boolean(name), "the demo patient has every condition this check could add");
+    const own = await rest("POST", "conditions", P, { patient_id: patient!.id, name, source: "patient" });
+    expect(own.status === 201, `add condition ${own.status}`);
     const conditionId = own.json[0].id as string;
     try {
       const plan = await api("POST", "/api/care-plan", P, { condition_id: conditionId });
@@ -256,7 +253,7 @@ if (!WITH_LLM) {
       // The condition this check added is deleted again (#333); its care plans go with it —
       // care_plans.condition_id is on delete cascade, and this check is their only source here.
       try {
-        if (added) await rest("DELETE", `conditions?id=eq.${conditionId}`, P);
+        await rest("DELETE", `conditions?id=eq.${conditionId}`, P);
       } catch {
         // Cleanup is best-effort; a failed delete must not mask the check's own result.
       }
