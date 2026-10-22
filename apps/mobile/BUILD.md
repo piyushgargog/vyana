@@ -64,9 +64,8 @@ checks below pass.
    `tools:node="remove"` entry, which is what makes the Android manifest
    merger drop the permission even when a library's manifest asks for it.
 
-   To run the same check on every pull request, add this step to the
-   `expo-doctor` job in `.github/workflows/ci.yml` (kept here because
-   changing a workflow file needs a token with the `workflow` scope):
+   The same check runs on every pull request: it is wired into CI as a
+   step in the `expo-doctor` job in `.github/workflows/ci.yml`:
 
    ```yaml
    - name: Blocked Android permissions stay blocked
