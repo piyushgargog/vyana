@@ -166,18 +166,23 @@
 /* The same two states in the dark appearance (issue #287): solid dark surfaces, light edges. */
 @media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce) {
   .glass {
-    background: rgb(28 28 30 / 0.98);
+    background: var(--color-surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
   .glass-bar {
-    background: rgb(0 0 0 / 0.98);
+    background: var(--color-canvas);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }
 
 @media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root {
+    /* More contrast strengthens the text tokens too, not only the surfaces. */
+    --color-label-2: rgb(255 255 255 / 0.95);
+    --color-label-3: rgb(235 235 245 / 0.85);
+  }
   .glass {
     background: rgb(28 28 30 / 0.94);
     border-color: rgb(255 255 255 / 0.55);
