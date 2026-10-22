@@ -23,6 +23,7 @@ import {
   type Language,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { FormattedMarkdown } from '@/components/formatted-markdown';
 import { Button, EmptyState, Screen, SosPill, Symbol, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
@@ -92,6 +93,17 @@ const ChatBubble = memo(function ChatBubble({
   const hasEmergencyNotice =
     message.role === 'assistant' && isEmergencyReplyText(text);
 
+  // The "searching" pill shows once, and only while a search is still running (#332):
+  // a finished tool call leaves no pill above the answer.
+  const toolState = (part: (typeof message.parts)[number]): string | undefined =>
+    'state' in part ? (part as { state?: string }).state : undefined;
+  const runningSearchIdx = message.parts.findIndex(
+    (p) =>
+      (p.type === 'tool-search_health_web' || p.type === 'tool-read_page') &&
+      toolState(p) !== 'output-available' &&
+      toolState(p) !== 'output-error'
+  );
+
   return (
     <View
       accessibilityLabel={isUser ? `You said: ${text}` : `Vyana Assistant said: ${text}`}
@@ -104,6 +116,7 @@ const ChatBubble = memo(function ChatBubble({
       {/* Tool activity */}
       {message.parts.map((part, idx) => {
         if (part.type === 'tool-search_health_web' || part.type === 'tool-read_page') {
+          if (idx !== runningSearchIdx) return null;
           return (
             <View key={`tool-${idx}`} style={styles.toolPill}>
               <ActivityIndicator size="small" color={T.color.accent} />
@@ -133,6 +146,8 @@ const ChatBubble = memo(function ChatBubble({
               />
             );
           }
+          const state = toolState(part);
+          if (state === 'output-available' || state === 'output-error') return null;
           return (
             <View key={`tool-${idx}`} style={styles.toolPill}>
               <ActivityIndicator size="small" color={T.color.accent} />
@@ -146,11 +161,14 @@ const ChatBubble = memo(function ChatBubble({
         return null;
       })}
 
-      {text.length > 0 && (
-        <Text variant="body" tone={isUser ? 'white' : 'label'}>
-          {text}
-        </Text>
-      )}
+      {text.length > 0 &&
+        (isUser ? (
+          <Text variant="body" tone="white">
+            {text}
+          </Text>
+        ) : (
+          <FormattedMarkdown text={text} />
+        ))}
 
       {hasEmergencyNotice && (
         <View style={styles.emergencyActions}>

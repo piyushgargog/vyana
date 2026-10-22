@@ -50,7 +50,9 @@ export function Screen({
   if (!scroll) {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
-        {header}
+        {/* The header takes the same side margin as the content (#332): outside the
+            padded container it ran edge to edge and pushed the trailing action off. */}
+        <View style={styles.headerPad}>{header}</View>
         <View style={[styles.content, { flex: 1 }]}>{children}</View>
       </View>
     );
@@ -74,6 +76,7 @@ export function Screen({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.color.canvas },
   content: { paddingHorizontal: T.space.lg, gap: T.space.lg },
+  headerPad: { paddingHorizontal: T.space.lg },
   header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: T.space.md, paddingBottom: T.space.xs },
   titles: { flex: 1, minWidth: 0 },
 });

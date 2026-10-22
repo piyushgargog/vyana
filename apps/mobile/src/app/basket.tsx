@@ -21,7 +21,6 @@ import {
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 
@@ -87,9 +86,6 @@ export default function BasketScreen() {
     <Screen
       title="Compare medicine prices"
       eyebrow="Medicine prices"
-      trailing={
-        <Button title="Done" variant="secondary" onPress={() => router.back()} label="Back to medicines" />
-      }
     >
       {medicines.length === 0 ? (
         itemsLoading ? (
@@ -174,8 +170,6 @@ export default function BasketScreen() {
           prices.
         </Text>
       </Card>
-
-      <MobileAiSafetyBanner feature="prescriptions_basket" />
       <MobileDisclaimerFooter />
     </Screen>
   );

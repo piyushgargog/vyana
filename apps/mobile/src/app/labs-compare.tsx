@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { labSearchLinks } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 import { Button, Card, CardHeader, Screen, Symbol, Text } from '@/components/ui';
@@ -21,7 +20,6 @@ const POPULAR_TESTS = [
 ];
 
 export default function LabsCompareScreen() {
-  const router = useRouter();
   const { showToast } = useVyanaMobile();
 
   // A report's test can open this screen with ?test_name=...; otherwise the person types or picks a test.
@@ -40,23 +38,11 @@ export default function LabsCompareScreen() {
     <Screen
       eyebrow="Labs"
       title="Compare lab tests"
-      trailing={
-        <Button
-          title="Done"
-          variant="plain"
-          size="sm"
-          label="Back"
-          onPress={() => router.back()}
-          style={styles.doneBtn}
-        />
-      }
     >
       <Text variant="subhead" tone="secondary">
         Look a test up on the lab sites themselves. Vyana does not show or
         check prices.
       </Text>
-
-      <MobileAiSafetyBanner />
 
       <Card>
         <CardHeader title="Find a lab test" />
@@ -147,7 +133,6 @@ export default function LabsCompareScreen() {
 }
 
 const styles = StyleSheet.create({
-  doneBtn: { minHeight: 44, justifyContent: 'center' },
   input: {
     backgroundColor: T.color.surface,
     borderWidth: 1,

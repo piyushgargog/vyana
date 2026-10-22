@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { KeyboardAvoidingView, KeyboardProvider } from 'react-native-keyboard-controller';
 import { MobileAppProviders } from '@/components/providers';
+import { T } from '@/constants/theme';
 import { WelcomeSplash } from '@/components/welcome-splash';
 import { onNotificationTap } from '@/lib/notifications';
 import { useReminderSync } from '@/lib/useReminderSync';
@@ -47,143 +48,89 @@ function RootNavigator() {
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#0F766E' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontWeight: '700' },
+          // One way back and one title (#332): the bar carries only the back arrow,
+          // on the canvas colour; every pushed screen shows its own large title.
+          headerTitle: '',
+          headerStyle: { backgroundColor: T.color.canvas },
+          headerTintColor: T.color.accentStrong,
+          headerShadowVisible: false,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="(auth)/login"
-          options={{ title: 'Sign In · Vyana' }}
         />
         <Stack.Screen
           name="(auth)/signup"
-          options={{ title: 'Create Account · Vyana' }}
         />
         <Stack.Screen
           name="consent"
-          options={{ title: 'DPDP Health Data Consent' }}
         />
         <Stack.Screen
           name="onboarding"
-          options={{ title: 'Complete Onboarding' }}
         />
         <Stack.Screen
           name="sos"
           options={{
             presentation: 'modal',
-            title: 'Emergency SOS · 108 / 112',
           }}
         />
         <Stack.Screen
           name="medical-id"
           options={{
             presentation: 'modal',
-            title: 'Emergency Medical ID',
           }}
         />
         <Stack.Screen
           name="basket"
-          options={{
-            title: 'Compare Medicine Prices',
-          }}
         />
         <Stack.Screen
           name="timeline"
-          options={{
-            title: 'Health Timeline',
-          }}
         />
         <Stack.Screen
           name="blood"
-          options={{
-            title: 'Find Blood · Vyana',
-          }}
         />
         <Stack.Screen
           name="triage"
-          options={{
-            title: 'Symptom Triage',
-          }}
         />
         <Stack.Screen
           name="caregiver/index"
-          options={{
-            title: 'Caregiver Circle & Dashboard',
-          }}
         />
         <Stack.Screen
           name="caregiver/invite"
-          options={{
-            title: 'Invite Caregiver',
-          }}
         />
         <Stack.Screen
           name="caregiver/enter-code"
-          options={{
-            title: 'Enter Caregiver Code',
-          }}
         />
         <Stack.Screen
           name="prescriptions/scan"
-          options={{
-            title: 'Scan Prescription',
-          }}
         />
         <Stack.Screen
           name="prescriptions/[id]"
-          options={{
-            title: 'Prescription Details',
-          }}
         />
         <Stack.Screen
           name="appointments/index"
-          options={{
-            title: 'Hospital OPD Appointments',
-          }}
         />
         <Stack.Screen
           name="appointments/book"
-          options={{
-            title: 'Book OPD Token',
-          }}
         />
         <Stack.Screen
           name="reports/upload"
-          options={{
-            title: 'Upload Lab Report',
-          }}
         />
         <Stack.Screen
           name="reports/[id]"
-          options={{
-            title: 'Lab Report Details',
-          }}
         />
         <Stack.Screen
           name="care/[conditionId]"
-          options={{
-            title: 'Care Plan & Vitals',
-          }}
         />
         <Stack.Screen
           name="labs-compare"
-          options={{
-            title: 'Compare Lab Tests',
-          }}
         />
         <Stack.Screen
           name="schemes/pmjay"
-          options={{
-            title: 'PM-JAY Empanelled Hospitals',
-          }}
         />
         <Stack.Screen
           name="care/meals"
-          options={{
-            title: 'Daily Meal Log',
-          }}
         />
       </Stack>
       </KeyboardAvoidingView>

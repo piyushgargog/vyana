@@ -6,7 +6,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+
 import * as Clipboard from 'expo-clipboard';
 import {
   BLOOD_REQUEST_STATUSES,
@@ -269,7 +269,6 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
 }
 
 export default function BloodScreen() {
-  const router = useRouter();
   const { showToast } = useVyanaMobile();
   const { data: profile } = useMyProfile();
   const search = useSearchBlood();
@@ -352,20 +351,7 @@ export default function BloodScreen() {
   });
 
   return (
-    <Screen
-      eyebrow="Emergency"
-      title="Find blood"
-      trailing={
-        <Button
-          title="Done"
-          variant="plain"
-          size="md"
-          label="Done, go back"
-          onPress={() => router.back()}
-          style={styles.doneBtn}
-        />
-      }
-    >
+    <Screen eyebrow="Emergency" title="Find blood">
       <Text variant="subhead" tone="secondary">
         Blood banks that list stock for your blood group, and a tracker for the request.
       </Text>
