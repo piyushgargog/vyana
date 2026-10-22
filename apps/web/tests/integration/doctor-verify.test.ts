@@ -76,6 +76,20 @@ describe("POST /api/doctors/verify", () => {
     expect(lookups).toEqual([]);
   });
 
+  it("answers failed, not a server error, when the database guard refuses the verified save", async () => {
+    // The read-then-write race the guard of migration 0016 exists for: the check
+    // above saw the number free, but by the time this save lands another account
+    // holds it, and the database answers with a unique violation (23505).
+    db.failUpdate.add("doctors");
+    const res = await post({ ...delhi, year_of_registration: 2011 });
+    expect(res.status).toBe(200);
+    const body = DoctorVerifyRes.parse(await res.json());
+    expect(body).toMatchObject({ status: "failed", match: null });
+    expect(me()).toMatchObject({ verification_status: "failed", reg_no: "old" });
+    expect(me().verified_at).toBeUndefined();
+    expect((me().verification_json as { reason: string }).reason).toBe("already linked to another account");
+  });
+
   it("stays pending when the register doesn't answer, and doesn't cache that", async () => {
     const body = DoctorVerifyRes.parse(await (await post({ reg_no: "slow-1", state_council: "Delhi Medical Council" })).json());
     expect(body).toMatchObject({ status: "pending", match: null });

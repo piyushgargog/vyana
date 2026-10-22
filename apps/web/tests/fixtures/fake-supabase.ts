@@ -23,6 +23,8 @@ export const db = {
   storage: new Map<string, Blob>(),
   /** Tables whose next insert fails (to test rollbacks). */
   failInsert: new Set<string>(),
+  /** Tables whose next update fails with a unique violation (23505), as the database guard of migration 0016 answers. */
+  failUpdate: new Set<string>(),
   /** What is_doctor_of answers: "doctorId:patientId" pairs. */
   doctorOf: new Set<string>(),
 };
@@ -39,6 +41,7 @@ export function resetDb() {
   db.inserts.length = 0;
   db.storage.clear();
   db.failInsert.clear();
+  db.failUpdate.clear();
   db.doctorOf.clear();
 }
 resetDb();
@@ -100,6 +103,11 @@ function query(name: string) {
     delete: () => ((pendingDelete = true), chain),
     update: (values: Row) => ((pendingUpdate = values), chain),
     then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
+      if (pendingUpdate && db.failUpdate.has(name)) {
+        db.failUpdate.delete(name);
+        const error = Object.assign(new Error(`duplicate key value violates unique constraint "idx_doctors_verified_registration"`), { code: "23505" });
+        return resolve({ data: null, error } as unknown as { data: Row[] | null; error: null });
+      }
       if (pendingUpdate) {
         for (const r of matching()) Object.assign(r, pendingUpdate);
         return resolve({ data: null, error: null });

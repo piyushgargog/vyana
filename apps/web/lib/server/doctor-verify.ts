@@ -12,6 +12,10 @@ import { closestRecord, councilKey, lookupRegister, normalizeRegNo, recordMatche
 
 const REGISTER_DAYS = 30;
 
+/** True when the database refused a save as a duplicate (Postgres 23505) — here, the verified-registration guard of migration 0016. */
+const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === "object" && err !== null && (err as { code?: unknown }).code === "23505";
+
 const toMatch = (r: NmcRecord | null): DoctorVerifyRes["match"] =>
   r ? { name: r.name, reg_no: r.reg_no, state_council: r.state_council, year_of_registration: r.year_of_registration ?? null } : null;
 
@@ -70,7 +74,17 @@ export async function verifyDoctor({ sb, user, profile }: AuthedUser, body: Doct
   const records = hit.value.found ? hit.value.records : [];
   const match = records.find((r) => recordMatches(r, claim)) ?? null;
   if (match) {
-    await save("verified", { records, reason: "matched" }, true);
+    try {
+      await save("verified", { records, reason: "matched" }, true);
+    } catch (err) {
+      // Two approvals of the same number at the same moment: the check above passed
+      // for both, and the database guard (migration 0016) refused this save. That is
+      // the same answer as the check above, not a server error.
+      if (!isUniqueViolation(err)) throw err;
+      await save("failed", { reason: "already linked to another account" });
+      log({ event: "doctor_verify", status: "failed", guard: "registration" });
+      return { status: "failed", match: null, checked_at: checkedAt };
+    }
     log({ event: "doctor_verify", status: "verified", cached: hit.cached });
     return { status: "verified", match: toMatch(match), checked_at: checkedAt };
   }
