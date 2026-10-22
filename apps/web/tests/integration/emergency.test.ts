@@ -17,7 +17,6 @@ const { POST: nearby } = await import("@/app/api/emergency/nearby/route");
 const { POST: sos } = await import("@/app/api/emergency/sos/route");
 const { POST: info } = await import("@/app/api/hospitals/info/route");
 const { simulateAmbulance } = await import("@/lib/server/emergency");
-const tinyfish = await import("@/lib/server/tinyfish/client");
 
 const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: unknown, token: string | null = VALID_TOKEN) =>
   handler(
@@ -30,7 +29,7 @@ const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: 
   );
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   scheduled.length = 0;
@@ -47,9 +46,8 @@ describe("POST /api/emergency/nearby", () => {
     const body = EmergencyNearbyRes.parse(await res.json());
     expect(body.area).toBe("[mock] Preet Vihar, Delhi");
     expect(body.hospitals).toHaveLength(1);
-    expect(body.hospitals[0]).toMatchObject({ name: "[mock] City Emergency Hospital", phone: "011-2345 6789", has_emergency: true, has_icu: true });
+    expect(body.hospitals[0]).toMatchObject({ name: "[mock] City Emergency Hospital", phone: "011-2345 6789", has_emergency: true, has_icu: null });
     expect(body.hospitals[0].maps_url.startsWith("https://www.google.com/maps/search/?api=1&query=")).toBe(true);
-    expect(db.rows.ai_runs?.[0]).toMatchObject({ feature: "hospitals_nearby", status: "ok" });
   });
 
   it("serves the same ~1 km area from cache", async () => {
@@ -58,8 +56,10 @@ describe("POST /api/emergency/nearby", () => {
     expect(again.cached).toBe(true);
   });
 
-  it("never fails: a broken search still answers 200 with no hospitals", async () => {
-    vi.spyOn(tinyfish, "search").mockRejectedValue(new Error("search down"));
+  it("never fails: a broken map service and an empty table still answer 200 with no hospitals", async () => {
+    vi.stubEnv("WEB_MOCK", "0");
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
+    db.rows.hospitals = [];
     const res = await post(nearby, { lat: 12.97, lng: 77.59 });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ area: null, hospitals: [], cached: false });

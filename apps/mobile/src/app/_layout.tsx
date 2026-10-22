@@ -86,7 +86,7 @@ function RootNavigator() {
         <Stack.Screen
           name="basket"
           options={{
-            title: 'Prescription Basket · Home Delivery',
+            title: 'Compare Medicine Prices',
           }}
         />
         <Stack.Screen
@@ -170,7 +170,7 @@ function RootNavigator() {
         <Stack.Screen
           name="labs-compare"
           options={{
-            title: 'Compare Lab Prices',
+            title: 'Compare Lab Tests',
           }}
         />
         <Stack.Screen

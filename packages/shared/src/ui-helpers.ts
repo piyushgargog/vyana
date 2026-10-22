@@ -1,6 +1,7 @@
 import { DEFAULT_TIMES, type FrequencyType } from "./constants";
 import { CarePlan } from "./contracts";
 import type { DbPrescriptionItem, DbShareLink } from "./db/types";
+import { formatLocalDate } from "./health/dates";
 import { carePlanMock } from "./mocks/care-plan";
 
 export function parseCarePlanJson(
@@ -66,7 +67,7 @@ export function computeItemRefill(
   return {
     dosesPerDay,
     daysLeft,
-    refillDate: refillDt.toISOString().slice(0, 10),
+    refillDate: formatLocalDate(refillDt),
     needsRefillSoon: daysLeft <= alertWindow,
   };
 }

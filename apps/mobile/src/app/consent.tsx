@@ -36,7 +36,7 @@ const CONSENT_POINTS = [
     icon: { ios: 'shield.fill' as const, android: 'shield' },
     color: 'green' as const,
     title: 'AI redaction and safety',
-    body: 'Phone numbers, emails, Aadhaar/PAN, and patient header blocks are stripped before any AI analysis. You always review extracted items before saving.',
+    body: 'Phone numbers, emails, Aadhaar/PAN, and patient header blocks are removed from the text before an AI model extracts or explains it. A photo is first read by a vision model that sees the whole image, so photograph only the document. You always review extracted items before saving.',
   },
   {
     icon: { ios: 'square.and.arrow.up.fill' as const, android: 'share' },

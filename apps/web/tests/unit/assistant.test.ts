@@ -162,7 +162,7 @@ describe("historyFrom", () => {
 });
 
 describe("assistant tools", () => {
-  const tools = assistantTools({ userId: "u1", sb: {} as never, guard: guardFor(), counter: { tinyfishCalls: 0 } });
+  const tools = assistantTools({ userId: "u1", sb: {} as never, guard: guardFor() });
   const opts = { toolCallId: "c", messages: [] } as never;
 
   it("trusts only the listed health sites", () => {
@@ -179,7 +179,7 @@ describe("assistant tools", () => {
 
   it("search_health_web only searches trusted sites and registers the results", async () => {
     const guard = guardFor();
-    const t = assistantTools({ userId: "u1", sb: {} as never, guard, counter: { tinyfishCalls: 0 } });
+    const t = assistantTools({ userId: "u1", sb: {} as never, guard });
     const out = (await t.search_health_web.execute!({ query: "dolo alcohol" }, opts)) as { results: { url: string }[] };
     expect(out.results.every((r) => isTrustedHealthUrl(r.url))).toBe(true);
     guard.clean(`${out.results[0].url} `);
