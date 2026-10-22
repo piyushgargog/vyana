@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(25);
 
 -- 1 patient A · 2 patient B · 3 doctor D (Medicine, has an appointment with A) · 4 doctor E (Skin, no patient)
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -108,6 +108,25 @@ select lives_ok(
 select is(
   (select count(*)::int from public.vitals where source = 'manual'),
   3, 'manual rows are the default source: the seeded one and the two just added');
+
+-- ----------------------------------------------------------------------------
+-- The connection upsert: a second write of the same connection updates it
+-- (PostgREST names every payload column in the update, key columns included)
+-- ----------------------------------------------------------------------------
+select lives_ok(
+  $$ insert into public.device_connections (patient_id, provider, status, permissions, last_sync_at, last_error)
+     values ('10000000-0000-0000-0000-000000000001', 'health_connect', 'connected', '{steps,sleep}', '2026-10-22 10:00:00+00', null)
+     on conflict (patient_id, provider) do update set
+       patient_id = excluded.patient_id, provider = excluded.provider,
+       status = excluded.status, permissions = excluded.permissions,
+       last_sync_at = excluded.last_sync_at, last_error = excluded.last_error $$,
+  'the patient can write the same connection a second time (the sync upsert)');
+select is(
+  (select count(*)::int from public.device_connections where patient_id = '10000000-0000-0000-0000-000000000001'),
+  1, 'the upsert updates the one connection row, it does not add another');
+select is(
+  (select last_sync_at from public.device_connections where patient_id = '10000000-0000-0000-0000-000000000001'),
+  '2026-10-22 10:00:00+00'::timestamptz, 'the second write moves last_sync_at');
 
 -- ----------------------------------------------------------------------------
 -- delete_my_device_data: device rows go, manual rows stay, connections revoke

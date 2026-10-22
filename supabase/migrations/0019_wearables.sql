@@ -108,7 +108,7 @@ revoke all on public.device_connections from anon;
 revoke insert, update on public.device_connections from authenticated;
 grant insert (patient_id, provider, status, permissions, last_sync_at, last_error)
   on public.device_connections to authenticated;
-grant update (status, permissions, last_sync_at, last_error)
+grant update (patient_id, provider, status, permissions, last_sync_at, last_error)
   on public.device_connections to authenticated;
 
 -- ---------------------------------------------------------------------------
