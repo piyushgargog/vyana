@@ -163,6 +163,12 @@ export const DoctorVerifyRes = z.object({
   }).nullable(),
   checked_at: z.string(),
 });
+// An admin records the outcome of checking a doctor's registration in the public register by hand.
+export const AdminDoctorCheckReq = z.object({
+  doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
+  year: z.number().int().min(1950).max(2100).nullable(), note: z.string().max(300),
+});
 
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
@@ -430,6 +436,7 @@ export type EmergencySosReq = z.infer<typeof EmergencySosReq>;
 export type EmergencySosRes = z.infer<typeof EmergencySosRes>;
 export type DoctorVerifyReq = z.infer<typeof DoctorVerifyReq>;
 export type DoctorVerifyRes = z.infer<typeof DoctorVerifyRes>;
+export type AdminDoctorCheckReq = z.infer<typeof AdminDoctorCheckReq>;
 export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;
 export type ReportAnalyzeReq = z.infer<typeof ReportAnalyzeReq>;
