@@ -25,7 +25,7 @@ const NEARBY_CITIES: Record<string, string[]> = {
 };
 const MAX_AREAS = 4;
 
-export const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeKeyPart(r.city)}`;
+const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeKeyPart(r.city)}`;
 
 /** The searched city first, then nearby cities; a name that matches no district of the source is dropped. */
 export async function bloodAreas(city: string): Promise<Area[]> {
@@ -44,7 +44,7 @@ export async function bloodAreas(city: string): Promise<Area[]> {
 }
 
 /** Most units first (every row is read from the response itself, so all are verified). */
-export function summarizeBlood(results: AreaResult[]): { banks: BloodBank[]; sources: BloodSearchSource[]; status: "done" } {
+function summarizeBlood(results: AreaResult[]): { banks: BloodBank[]; sources: BloodSearchSource[]; status: "done" } {
   const seen = new Set<string>();
   const banks = results
     .flatMap((r) => r.banks)

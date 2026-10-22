@@ -62,7 +62,8 @@ export function ButtonLink({ variant = "primary", size = "md", icon, className, 
 }
 
 const ICON_SIZES: Record<Size, string> = {
-  sm: "h-9 w-9 p-0",
+  // 44 px minimum tap target (U1): even the small icon button is 44 by 44.
+  sm: "h-11 w-11 p-0",
   md: "h-11 w-11 p-0",
   lg: "h-[52px] w-[52px] p-0",
 };

@@ -19,9 +19,13 @@ export type Database = {
           feature: string
           id: string
           input_ref: string | null
+          input_tokens: number | null
+          latency_ms: number | null
           model: string | null
           output_json: Json | null
+          output_tokens: number | null
           prompt_version: string | null
+          provider: string | null
           report_note: string | null
           sources: Json | null
           status: string
@@ -33,9 +37,13 @@ export type Database = {
           feature: string
           id?: string
           input_ref?: string | null
+          input_tokens?: number | null
+          latency_ms?: number | null
           model?: string | null
           output_json?: Json | null
+          output_tokens?: number | null
           prompt_version?: string | null
+          provider?: string | null
           report_note?: string | null
           sources?: Json | null
           status?: string
@@ -46,9 +54,13 @@ export type Database = {
           feature?: string
           id?: string
           input_ref?: string | null
+          input_tokens?: number | null
+          latency_ms?: number | null
           model?: string | null
           output_json?: Json | null
+          output_tokens?: number | null
           prompt_version?: string | null
+          provider?: string | null
           report_note?: string | null
           sources?: Json | null
           status?: string
@@ -1078,6 +1090,31 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          daily_ai_calls: number | null
+          features: NonNullable<Json>
+          id: string
+          max_profiles: number | null
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          daily_ai_calls?: number | null
+          features?: NonNullable<Json>
+          id: string
+          max_profiles?: number | null
+          name: string
+        }
+        Update: {
+          daily_ai_calls?: number | null
+          features?: NonNullable<Json>
+          id?: string
+          max_profiles?: number | null
+          name?: string
+        }
+        Relationships: []
+      }
       prescription_items: {
         Row: {
           active: boolean
@@ -1438,6 +1475,43 @@ export type Database = {
         }
         Relationships: []
       }
+      user_plans: {
+        Row: {
+          plan_id: string
+          since: string
+          source: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          plan_id: string
+          since?: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          plan_id?: string
+          since?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_plans_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vitals: {
         Row: {
           created_at: string
@@ -1480,6 +1554,55 @@ export type Database = {
           },
         ]
       }
+      waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          note: string | null
+          plan_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          note?: string | null
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          note?: string | null
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+        }
+        ComputedFields: never
+        Insert: {
+          attempted_at?: string
+          id?: number
+        }
+        Update: {
+          attempted_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
       web_cache: {
         Row: {
           expires_at: string
@@ -1507,7 +1630,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_usage_daily: {
+        Row: {
+          calls: number | null
+          day: string | null
+          feature: string | null
+          input_tokens: number | null
+          output_tokens: number | null
+          user_id: string | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "ai_runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_care_invite: {
@@ -1568,6 +1710,18 @@ export type Database = {
         }
         Returns: string
       }
+      current_plan: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          daily_ai_calls: number
+          features: Json
+          max_profiles: number
+          name: string
+          plan_id: string
+          since: string
+          source: string
+        }[]
+      }
       department_tokens: {
         Args: { p_date: string; p_department: string }
         Returns: {
@@ -1610,6 +1764,18 @@ export type Database = {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_caregiver_of: { Args: { p: string }; Returns: boolean }
       is_doctor_of: { Args: { p: string }; Returns: boolean }
+      join_waitlist: {
+        Args: { p_email: string; p_note?: string; p_plan_id: string }
+        Returns: boolean
+      }
+      my_ai_usage_today: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calls: number
+          input_tokens: number
+          output_tokens: number
+        }[]
+      }
       my_caregivers: {
         Args: Record<PropertyKey, never>
         Returns: {

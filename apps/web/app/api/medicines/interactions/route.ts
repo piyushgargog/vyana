@@ -10,6 +10,6 @@ export const POST = withRoute("medicines/interactions", async (req, ctx) => {
   const authed = await requireUser(req);
   ctx.userId = authed.user.id;
   const body = await parseBody(req, InteractionsReq);
-  const res = await checkInteractions(authed, body, ctx);
+  const res = await checkInteractions(authed, body);
   return Response.json(process.env.NODE_ENV === "production" ? res : InteractionsRes.parse(res));
 }, { rateLimit: rateLimitOf("ai_other") });

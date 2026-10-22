@@ -3,9 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { tool } from "ai";
 import { z } from "zod";
 import { log } from "../log";
-import { normalizeItems, startBasketJob } from "../tinyfish/basket";
-import { fetchPages, search, type CallCounter } from "../tinyfish/client";
-import { TRUSTED_HEALTH_DOMAINS, isTrustedHealthUrl } from "../tinyfish/sources";
+import { pharmacySearchLinks } from "@vyana/shared";
+import { TRUSTED_HEALTH_DOMAINS, isTrustedHealthUrl } from "../web/domains";
+import { fetchPage } from "../web/fetch-page";
+import { searchHealthTopics } from "../web/medlineplus";
 import type { ReplyGuard } from "./guard";
 
 /**
@@ -23,27 +24,19 @@ interface ToolContext {
   userId: string;
   sb: SupabaseClient;
   guard: ReplyGuard;
-  counter: CallCounter;
 }
 
-export function assistantTools({ userId, sb, guard, counter }: ToolContext) {
+export function assistantTools({ userId, sb, guard }: ToolContext) {
   return {
     search_health_web: tool({
-      description: `Search trusted health websites (${TRUSTED_HEALTH_DOMAINS.join(", ")}). Returns up to 5 results with title, url and snippet. Use before answering any health question.`,
+      description: "Search MedlinePlus (US National Library of Medicine) health topics. Returns up to 5 results with title, url and snippet. Use before answering any health question; no result means say that you found no trusted page.",
       inputSchema: z.object({ query: z.string().min(2).max(200) }),
       execute: async ({ query }) => {
-        try {
-          const res = await search({ query, include_domains: [...TRUSTED_HEALTH_DOMAINS] }, { counter });
-          const results = res.results
-            .filter((r) => isTrustedHealthUrl(r.url))
-            .slice(0, 5)
-            .map((r) => ({ title: r.title || r.site_name, url: r.url, snippet: r.snippet }));
-          for (const r of results) guard.allow(r.url, r.title);
-          return { results };
-        } catch {
-          log({ event: "assistant_tool_failed", tool: "search_health_web" });
-          return failed("Search isn't available right now.");
-        }
+        const results = (await searchHealthTopics(query, 5))
+          .filter((r) => isTrustedHealthUrl(r.url))
+          .map((r) => ({ title: r.title, url: r.url, snippet: r.snippet }));
+        for (const r of results) guard.allow(r.url, r.title);
+        return { results };
       },
     }),
 
@@ -53,14 +46,11 @@ export function assistantTools({ userId, sb, guard, counter }: ToolContext) {
       execute: async ({ url }) => {
         if (!isTrustedHealthUrl(url)) return failed(`Only these sites can be opened: ${TRUSTED_HEALTH_DOMAINS.join(", ")}.`);
         try {
-          const res = await fetchPages({ urls: [url], format: "markdown" }, { counter });
-          const page = res.results[0];
-          const finalUrl = page?.final_url ?? url;
-          if (!page?.text || !isTrustedHealthUrl(finalUrl)) return failed("This page couldn't be read.");
-          const title = page.title ?? finalUrl;
-          guard.allow(url, title);
-          guard.allow(finalUrl, title);
-          return { url: finalUrl, title, text: page.text.slice(0, PAGE_CHARS) };
+          const page = await fetchPage(url, TRUSTED_HEALTH_DOMAINS, PAGE_CHARS);
+          if (!page || !isTrustedHealthUrl(page.url)) return failed("This page couldn't be read.");
+          guard.allow(url, page.title);
+          guard.allow(page.url, page.title);
+          return { url: page.url, title: page.title, text: page.text };
         } catch {
           log({ event: "assistant_tool_failed", tool: "read_page" });
           return failed("This page couldn't be read right now.");
@@ -109,36 +99,14 @@ export function assistantTools({ userId, sb, guard, counter }: ToolContext) {
       },
     }),
 
-    compare_medicine_prices: tool({
+    medicine_price_links: tool({
       description:
-        "Compare the price of one medicine on 4 Indian online pharmacies. Returns finished prices if they were checked in the last day; otherwise starts a live check (a few minutes) and returns its job_id.",
+        "Links that search one medicine on 4 Indian online pharmacies. Vyana cannot see or check prices: the person compares on the shop's own page. Use it when someone asks where to compare or buy a medicine; never state a price.",
       inputSchema: z.object({ medicine: z.string().min(2).max(80), strength: z.string().max(40).optional() }),
       execute: async ({ medicine, strength }) => {
-        try {
-          const job = await startBasketJob(userId, normalizeItems([{ medicine, strength }]), counter);
-          if (job.status === "running") {
-            return {
-              status: "running" as const,
-              job_id: job.job_id,
-              message: "Prices are being checked live on 4 pharmacies. This takes a few minutes: open the price screen to see them.",
-            };
-          }
-          const baskets = job.baskets.map((b) => ({
-            pharmacy: b.source,
-            status: b.status,
-            total: b.total,
-            checkout_url: b.checkout_url,
-            lines: b.lines.map((l) => ({ product_name: l.product_name, pack_size: l.pack_size, price: l.unit_price, price_verified: l.price_verified, product_url: l.product_url })),
-          }));
-          for (const b of baskets) {
-            guard.allow(b.checkout_url, b.pharmacy);
-            for (const l of b.lines) guard.allow(l.product_url, l.product_name);
-          }
-          return { status: "done" as const, job_id: job.job_id, cheapest: job.cheapest_source, savings_vs_highest: job.savings_vs_highest, baskets };
-        } catch {
-          log({ event: "assistant_tool_failed", tool: "compare_medicine_prices" });
-          return failed("The price check couldn't be started right now.");
-        }
+        const links = pharmacySearchLinks(strength ? `${medicine} ${strength}` : medicine);
+        for (const l of links) guard.allow(l.url, l.name);
+        return { links, note: "Vyana does not show or check prices; open a shop to compare." };
       },
     }),
   };

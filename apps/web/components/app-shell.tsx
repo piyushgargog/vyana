@@ -177,7 +177,7 @@ function AppShellContent({
               onClick={handleSignOut}
               aria-label="Sign out"
               title="Sign out"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-label-3 transition-colors hover:bg-fill hover:text-label"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-label-3 transition-colors hover:bg-fill hover:text-label"
             >
               <LogOut aria-hidden="true" className="h-[18px] w-[18px]" />
             </button>
@@ -198,7 +198,7 @@ function AppShellContent({
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={cn("flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full px-1 py-1.5 text-[10px] transition-colors", active ? "bg-accent-soft font-semibold text-accent-strong" : "text-label-3")}
+              className={cn("flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[11px] transition-colors", active ? "bg-accent-soft font-semibold text-accent-strong" : "text-label-3")}
             >
               <Icon aria-hidden="true" className="h-[22px] w-[22px]" />
               {label}
