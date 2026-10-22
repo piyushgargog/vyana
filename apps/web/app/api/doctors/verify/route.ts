@@ -1,7 +1,7 @@
 import { AdminDoctorCheckReq, DoctorVerifyReq, DoctorVerifyRes, rateLimitOf } from "@vyana/shared";
-import { requireRole, requireUser } from "@/lib/server/auth";
+import { requireUser } from "@/lib/server/auth";
 import { adminCheckDoctor, submitDoctorRegistration } from "@/lib/server/doctor-verify";
-import { badRequest, withRoute } from "@/lib/server/errors";
+import { badRequest, forbidden, withRoute } from "@/lib/server/errors";
 
 // A doctor sends their registration details; an admin records a check done by hand (issue #344).
 export const maxDuration = 30;
@@ -9,7 +9,13 @@ export const maxDuration = 30;
 export const POST = withRoute("doctors/verify", async (req, ctx) => {
   const authed = await requireUser(req);
   ctx.userId = authed.user.id;
-  requireRole(authed.profile, "doctor", "admin");
+  // The caller's role is settled before the body is read (issue #359): any other role is refused
+  // outright, so a patient or caregiver gets 403 whatever they send, well-formed or not. Only then
+  // is the body parsed, with the schema that fits the role.
+  const role = authed.profile.role;
+  if (role !== "admin" && role !== "doctor") {
+    throw forbidden();
+  }
   let raw: unknown;
   try {
     raw = await req.json();
@@ -17,7 +23,7 @@ export const POST = withRoute("doctors/verify", async (req, ctx) => {
     throw badRequest("Request body must be valid JSON");
   }
   let res;
-  if (authed.profile.role === "admin") {
+  if (role === "admin") {
     res = await adminCheckDoctor(authed, AdminDoctorCheckReq.parse(raw));
   } else {
     // A `decision` belongs to an admin's check; a doctor only sends their own registration details.

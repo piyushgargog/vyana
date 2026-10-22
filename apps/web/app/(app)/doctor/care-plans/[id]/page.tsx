@@ -11,6 +11,7 @@ import {
   type DbProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { Button, ButtonLink, Card, Pill } from "@/components/ui";
 import { AiSafetyBanner, SkeletonCard } from "@/components/ui-primitives";
 
 interface ConditionWithPatient extends DbCondition {
@@ -190,17 +191,14 @@ function DoctorCarePlanReviewContent({
 
   if (planError || !carePlan || !draftPlan) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
+      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-sm text-danger-text">
         <h2 className="text-base font-bold">Care Plan Not Available</h2>
         <p className="mt-1 text-xs">
           {planError || "Unable to locate care plan document for review."}
         </p>
-        <Link
-          href="/doctor"
-          className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
-        >
+        <ButtonLink href="/doctor" size="sm" className="mt-4">
           Return to Queue
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -215,14 +213,14 @@ function DoctorCarePlanReviewContent({
         <div className="flex items-center gap-3">
           <Link
             href="/doctor"
-            className="text-xs font-semibold text-teal-800 hover:text-teal-900"
+            className="text-xs font-semibold text-accent-strong hover:text-accent"
           >
             ← OPD Queue
           </Link>
           {conditionInfo?.patient_id && (
             <Link
               href={`/doctor/patients/${conditionInfo.patient_id}`}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+              className="text-xs font-semibold text-label-2 hover:text-label"
             >
               · Patient Profile
             </Link>
@@ -232,35 +230,29 @@ function DoctorCarePlanReviewContent({
         {/* Status Badge */}
         <div>
           {isApproved ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-300 px-3 py-1 text-xs font-bold text-emerald-900">
-              ✓ Doctor Approved Care Plan
-            </span>
+            <Pill tone="ok">✓ Doctor Approved Care Plan</Pill>
           ) : isDraft ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-3 py-1 text-xs font-bold text-amber-900">
-              ⚠ Draft Plan — Pending Doctor Approval
-            </span>
+            <Pill tone="warn">⚠ Draft Plan — Pending Doctor Approval</Pill>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 border border-blue-300 px-3 py-1 text-xs font-bold text-blue-900">
-              Patient-Generated Plan
-            </span>
+            <Pill tone="accent">Patient-Generated Plan</Pill>
           )}
         </div>
       </div>
 
       {/* Hero Review Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+      <Card className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-label">
               Care Plan: {draftPlan.condition}
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-600">
+            <p className="mt-1 text-xs sm:text-sm text-label-2">
               Patient:{" "}
               <strong>
                 {conditionInfo?.patient?.full_name || "Assigned Patient"}
               </strong>
               {carePlan.reviewed_at && (
-                <span className="ml-2 text-slate-500">
+                <span className="ml-2 text-label-3">
                   (Approved on {carePlan.reviewed_at.slice(0, 10)})
                 </span>
               )}
@@ -269,40 +261,39 @@ function DoctorCarePlanReviewContent({
 
           <div className="flex items-center gap-2">
             {!isApproved ? (
-              <button
-                type="button"
+              <Button
+                size="sm"
                 disabled={approveMutation.isPending}
                 onClick={handleApprove}
-                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm disabled:opacity-60"
               >
                 {approveMutation.isPending ? "Approving…" : "Approve & Publish to Patient"}
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={approveMutation.isPending}
                 onClick={handleApprove}
-                className="rounded-xl border border-teal-600 bg-teal-50 px-4 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 transition shadow-xs"
               >
                 {approveMutation.isPending ? "Updating…" : "Update Approved Plan"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {/* Clinical Safety Banner */}
         {!isApproved && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-950">
+          <div className="mt-4 rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-xs text-label">
             <strong>Clinical Safety Rule:</strong> Patients cannot see draft care plans until a verified doctor reviews and approves them. You may edit recommendations, add clinical red flags, and set diagnostic follow-up test frequencies before publishing.
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Summary Field */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
+      <Card className="space-y-2 p-5">
         <label
           htmlFor="plan-summary"
-          className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+          className="block text-xs font-bold uppercase tracking-wider text-label-2"
         >
           Clinical Summary & Overview
         </label>
@@ -313,19 +304,19 @@ function DoctorCarePlanReviewContent({
           onChange={(e) =>
             setDraftPlan({ ...draftPlan, summary: e.target.value })
           }
-          className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 outline-none focus:border-accent"
+          className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label focus:border-accent focus:outline-none"
         />
-      </div>
+      </Card>
 
       {/* 2-Column: Do's and Don'ts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Recommended Actions (Do) */}
-        <div className="rounded-2xl border border-teal-200 bg-white p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-teal-100 pb-2">
-            <h2 className="text-sm font-bold text-teal-950">
+        <Card className="space-y-3 border border-accent/30 p-5">
+          <div className="flex items-center justify-between border-b border-separator pb-2">
+            <h2 className="text-sm font-bold text-label">
               Recommended Actions (Do)
             </h2>
-            <span className="text-[11px] text-teal-700 font-semibold">
+            <span className="text-[11px] text-accent-strong font-semibold">
               {draftPlan.do.length} items
             </span>
           </div>
@@ -334,7 +325,7 @@ function DoctorCarePlanReviewContent({
             {draftPlan.do.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 rounded-xl bg-teal-50/50 border border-teal-100 p-2 text-xs"
+                className="flex items-center gap-2 rounded-row bg-accent-soft border border-accent/20 p-2 text-xs"
               >
                 <input
                   type="text"
@@ -345,7 +336,7 @@ function DoctorCarePlanReviewContent({
                     setDraftPlan({ ...draftPlan, do: next });
                   }}
                   aria-label={`Recommended action ${idx + 1}`}
-                  className="flex-1 bg-transparent text-slate-900"
+                  className="flex-1 bg-transparent text-label"
                 />
                 <button
                   type="button"
@@ -355,7 +346,7 @@ function DoctorCarePlanReviewContent({
                       do: draftPlan.do.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-slate-400 hover:text-red-600 font-bold px-1"
+                  className="text-label-3 hover:text-danger-text font-bold px-1"
                 >
                   ✕
                 </button>
@@ -370,10 +361,11 @@ function DoctorCarePlanReviewContent({
               onChange={(e) => setNewDoItem(e.target.value)}
               placeholder="Add recommended action…"
               aria-label="Add recommended action"
-              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
+              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 if (newDoItem.trim()) {
                   setDraftPlan({
@@ -383,20 +375,19 @@ function DoctorCarePlanReviewContent({
                   setNewDoItem("");
                 }
               }}
-              className="rounded-xl bg-teal-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-800"
             >
               Add
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Actions to Avoid (Don't) */}
-        <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-rose-100 pb-2">
-            <h2 className="text-sm font-bold text-rose-950">
+        <Card className="space-y-3 border border-danger/30 p-5">
+          <div className="flex items-center justify-between border-b border-separator pb-2">
+            <h2 className="text-sm font-bold text-label">
               Actions to Avoid (Don&apos;t)
             </h2>
-            <span className="text-[11px] text-rose-700 font-semibold">
+            <span className="text-[11px] text-danger-text font-semibold">
               {draftPlan.dont.length} items
             </span>
           </div>
@@ -405,7 +396,7 @@ function DoctorCarePlanReviewContent({
             {draftPlan.dont.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 rounded-xl bg-rose-50/50 border border-rose-100 p-2 text-xs"
+                className="flex items-center gap-2 rounded-row bg-danger-soft border border-danger/20 p-2 text-xs"
               >
                 <input
                   type="text"
@@ -416,7 +407,7 @@ function DoctorCarePlanReviewContent({
                     setDraftPlan({ ...draftPlan, dont: next });
                   }}
                   aria-label={`Action to avoid ${idx + 1}`}
-                  className="flex-1 bg-transparent text-slate-900"
+                  className="flex-1 bg-transparent text-label"
                 />
                 <button
                   type="button"
@@ -426,7 +417,7 @@ function DoctorCarePlanReviewContent({
                       dont: draftPlan.dont.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-slate-400 hover:text-red-600 font-bold px-1"
+                  className="text-label-3 hover:text-danger-text font-bold px-1"
                 >
                   ✕
                 </button>
@@ -441,10 +432,11 @@ function DoctorCarePlanReviewContent({
               onChange={(e) => setNewDontItem(e.target.value)}
               placeholder="Add restriction / contraindication…"
               aria-label="Add restriction / contraindication"
-              className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
+              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 if (newDontItem.trim()) {
                   setDraftPlan({
@@ -454,31 +446,30 @@ function DoctorCarePlanReviewContent({
                   setNewDontItem("");
                 }
               }}
-              className="rounded-xl bg-rose-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-800"
             >
               Add
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Dietary Guidelines */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+      <Card className="space-y-4 p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-label">
           Dietary Guidelines
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           {/* Foods to Eat More */}
           <div className="space-y-2">
-            <span className="font-bold text-emerald-800 block">
+            <span className="font-bold text-ok block">
               Foods to Include (Eat More):
             </span>
             <div className="space-y-1.5">
               {(draftPlan.diet.eat_more || []).map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 p-1.5"
+                  className="flex items-center gap-2 rounded-row bg-ok-soft border border-ok/20 p-1.5"
                 >
                   <input
                     type="text"
@@ -492,7 +483,7 @@ function DoctorCarePlanReviewContent({
                       });
                     }}
                     aria-label={`Food to include ${idx + 1}`}
-                    className="flex-1 bg-transparent text-emerald-950"
+                    className="flex-1 bg-transparent text-label"
                   />
                   <button
                     type="button"
@@ -505,7 +496,7 @@ function DoctorCarePlanReviewContent({
                         },
                       });
                     }}
-                    className="text-slate-400 hover:text-red-600 px-1"
+                    className="text-label-3 hover:text-danger-text px-1"
                   >
                     ✕
                   </button>
@@ -520,10 +511,11 @@ function DoctorCarePlanReviewContent({
                 onChange={(e) => setNewEatMoreItem(e.target.value)}
                 placeholder="e.g. Green leafy vegetables…"
                 aria-label="Add food to include"
-                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs outline-none focus:border-accent"
+                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (newEatMoreItem.trim()) {
                     setDraftPlan({
@@ -536,23 +528,22 @@ function DoctorCarePlanReviewContent({
                     setNewEatMoreItem("");
                   }
                 }}
-                className="rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white"
               >
                 Add
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Foods to Limit */}
           <div className="space-y-2">
-            <span className="font-bold text-amber-800 block">
+            <span className="font-bold text-warn block">
               Foods to Limit / Avoid:
             </span>
             <div className="space-y-1.5">
               {(draftPlan.diet.limit || []).map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 p-1.5"
+                  className="flex items-center gap-2 rounded-row bg-warn-soft border border-warn/20 p-1.5"
                 >
                   <input
                     type="text"
@@ -566,7 +557,7 @@ function DoctorCarePlanReviewContent({
                       });
                     }}
                     aria-label={`Food to limit ${idx + 1}`}
-                    className="flex-1 bg-transparent text-amber-950"
+                    className="flex-1 bg-transparent text-label"
                   />
                   <button
                     type="button"
@@ -579,7 +570,7 @@ function DoctorCarePlanReviewContent({
                         },
                       });
                     }}
-                    className="text-slate-400 hover:text-red-600 px-1"
+                    className="text-label-3 hover:text-danger-text px-1"
                   >
                     ✕
                   </button>
@@ -594,10 +585,11 @@ function DoctorCarePlanReviewContent({
                 onChange={(e) => setNewLimitItem(e.target.value)}
                 placeholder="e.g. Refined sugars, high-sodium snacks…"
                 aria-label="Add food to limit"
-                className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs outline-none focus:border-accent"
+                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (newLimitItem.trim()) {
                     setDraftPlan({
@@ -610,22 +602,21 @@ function DoctorCarePlanReviewContent({
                     setNewLimitItem("");
                   }
                 }}
-                className="rounded-lg bg-amber-700 px-2.5 py-1 text-xs font-semibold text-white"
               >
                 Add
-              </button>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Red Flags: Critical Hospital / 108 Symptoms */}
-      <div className="rounded-2xl border border-red-300 bg-red-50/50 p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-b border-red-200 pb-2">
-          <h2 className="text-sm font-bold text-red-900">
+      <Card className="space-y-3 border border-danger/40 bg-danger-soft p-5">
+        <div className="flex items-center justify-between border-b border-danger/30 pb-2">
+          <h2 className="text-sm font-bold text-danger-text">
             Emergency Red Flags (Immediate Hospital / 108 Escalation)
           </h2>
-          <span className="text-[11px] text-red-700 font-semibold">
+          <span className="text-[11px] text-danger-text font-semibold">
             {draftPlan.red_flags.length} symptoms
           </span>
         </div>
@@ -634,7 +625,7 @@ function DoctorCarePlanReviewContent({
           {draftPlan.red_flags.map((item, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 rounded-xl bg-white border border-red-200 p-2 text-xs text-red-950 shadow-xs"
+              className="flex items-center gap-2 rounded-row bg-surface border border-danger/30 p-2 text-xs text-label"
             >
               <input
                 type="text"
@@ -655,7 +646,7 @@ function DoctorCarePlanReviewContent({
                     red_flags: draftPlan.red_flags.filter((_, i) => i !== idx),
                   });
                 }}
-                className="text-slate-400 hover:text-red-700 font-bold px-1"
+                className="text-label-3 hover:text-danger-text font-bold px-1"
               >
                 ✕
               </button>
@@ -670,10 +661,11 @@ function DoctorCarePlanReviewContent({
             onChange={(e) => setNewRedFlagItem(e.target.value)}
             placeholder="Add red flag symptom (e.g. Sudden severe chest pain, loss of consciousness)…"
             aria-label="Add red flag symptom"
-            className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
+            className="flex-1 rounded-row border border-danger/30 bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => {
               if (newRedFlagItem.trim()) {
                 setDraftPlan({
@@ -683,20 +675,19 @@ function DoctorCarePlanReviewContent({
                 setNewRedFlagItem("");
               }
             }}
-            className="rounded-xl bg-red-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-800"
           >
             Add Red Flag
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Follow-up Diagnostic Tests */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+      <Card className="space-y-3 p-5">
+        <div className="flex items-center justify-between border-b border-separator pb-2">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-label">
             Recommended Follow-up Diagnostic Tests
           </h2>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-label-3">
             Triggers automatic reminders on the patient mobile app
           </span>
         </div>
@@ -705,11 +696,11 @@ function DoctorCarePlanReviewContent({
           {draftPlan.follow_up_tests.map((ft, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs"
+              className="flex items-center justify-between gap-3 rounded-row bg-fill border border-separator p-2.5 text-xs"
             >
-              <span className="font-bold text-slate-900">{ft.test}</span>
+              <span className="font-bold text-label">{ft.test}</span>
               <div className="flex items-center gap-2">
-                <span className="text-slate-600">Every {ft.every_days} days</span>
+                <span className="text-label-2">Every {ft.every_days} days</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -718,7 +709,7 @@ function DoctorCarePlanReviewContent({
                       follow_up_tests: draftPlan.follow_up_tests.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-slate-400 hover:text-red-600 px-1"
+                  className="text-label-3 hover:text-danger-text px-1"
                 >
                   ✕
                 </button>
@@ -734,9 +725,9 @@ function DoctorCarePlanReviewContent({
             onChange={(e) => setNewTestName(e.target.value)}
             placeholder="Test name (e.g. HbA1c, Serum Creatinine)…"
             aria-label="Follow-up test name"
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-accent"
+            className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
-          <div className="flex items-center gap-1 text-xs text-slate-600">
+          <div className="flex items-center gap-1 text-xs text-label-2">
             <span>Every</span>
             <input
               type="number"
@@ -744,12 +735,13 @@ function DoctorCarePlanReviewContent({
               value={newTestDays}
               onChange={(e) => setNewTestDays(parseInt(e.target.value) || 30)}
               aria-label="Days between follow-up tests"
-              className="w-16 rounded-xl border border-slate-300 px-2 py-1.5 text-xs text-center outline-none focus:border-accent"
+              className="w-16 rounded-row border border-separator bg-surface px-2 py-1.5 text-xs text-center text-label focus:border-accent focus:outline-none"
             />
             <span>days</span>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => {
               if (newTestName.trim()) {
                 setDraftPlan({
@@ -762,17 +754,16 @@ function DoctorCarePlanReviewContent({
                 setNewTestName("");
               }
             }}
-            className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
           >
             Add Test
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Clinical Sources & Evidence Citations */}
       {draftPlan.sources && draftPlan.sources.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <Card className="space-y-2 p-5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-label-2">
             Clinical Guideline References
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -782,36 +773,34 @@ function DoctorCarePlanReviewContent({
                 href={s.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1 text-xs font-medium text-teal-800 hover:underline"
+                className="inline-flex items-center gap-1 rounded-row bg-accent-soft border border-accent/20 px-2.5 py-1 text-xs font-medium text-accent-strong hover:underline"
               >
                 ↗ {s.title}
               </a>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Bottom Approval Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Card className="flex flex-col items-center justify-between gap-3 p-5 sm:flex-row">
         <Link
           href="/doctor"
-          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+          className="text-xs font-semibold text-label-2 hover:text-label"
         >
           Cancel & Return to OPD Queue
         </Link>
-        <button
-          type="button"
+        <Button
           disabled={approveMutation.isPending}
           onClick={handleApprove}
-          className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm disabled:opacity-60"
         >
           {approveMutation.isPending
             ? "Approving…"
             : isApproved
               ? "Save Updated Care Plan"
               : "Approve & Publish Care Plan"}
-        </button>
-      </div>
+        </Button>
+      </Card>
 
       <AiSafetyBanner feature="doctor-care-plan" contextId={carePlan.id} />
     </div>

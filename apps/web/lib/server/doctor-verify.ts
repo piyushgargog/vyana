@@ -16,14 +16,19 @@ interface DoctorRow {
   id: string;
   reg_no: string | null;
   state_council: string | null;
+  year_of_registration: number | null;
   verification_status: DoctorVerifyRes["status"];
 }
+
+/** True when the database refused a save as a duplicate (Postgres 23505) — here, the verified-registration guard of migration 0022. */
+const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === "object" && err !== null && (err as { code?: unknown }).code === "23505";
 
 /** A doctor sends their registration details. Stays `pending` until an admin checks them. */
 export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: DoctorVerifyReq): Promise<DoctorVerifyRes> {
   const { data: doctor, error } = await sb
     .from("doctors")
-    .select("id, reg_no, state_council, verification_status")
+    .select("id, reg_no, state_council, year_of_registration, verification_status")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw error;
@@ -32,11 +37,13 @@ export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: D
   const admin = supabaseAdmin();
   const checkedAt = new Date().toISOString();
   const row = doctor as DoctorRow;
-  // A verified doctor who sends the same number and council again keeps `verified`; only a change re-opens the check.
+  // A verified doctor who sends the same number, council and year again keeps `verified`;
+  // a change to any of the three re-opens the check (issue #344, as amended for issue #359).
   const unchanged =
     row.verification_status === "verified" &&
     normalizeRegNo(row.reg_no ?? "") === normalizeRegNo(body.reg_no) &&
-    councilKey(row.state_council ?? "") === councilKey(body.state_council);
+    councilKey(row.state_council ?? "") === councilKey(body.state_council) &&
+    (row.year_of_registration ?? null) === (body.year_of_registration ?? null);
 
   const patch: Record<string, unknown> = {
     reg_no: body.reg_no.trim(),
@@ -98,13 +105,19 @@ export async function adminCheckDoctor({ user }: AuthedUser, body: AdminDoctorCh
     .update({
       verification_status: "verified",
       verified_at: checkedAt,
-      reg_no: body.reg_no.trim(),
-      state_council: body.state_council.trim(),
+      // The admin-typed values, stored exactly as typed (issue #359); matching stays normalisation-based.
+      reg_no: body.reg_no,
+      state_council: body.state_council,
       year_of_registration: body.year,
       verification_json: verificationJson,
     })
     .eq("id", body.doctor_id);
-  if (saveError) throw saveError;
+  if (saveError) {
+    // Two approvals of the same number at the same moment: the check above passed for both and the
+    // database guard (migration 0022) refused this save. Same answer as the check above, not a server error.
+    if (isUniqueViolation(saveError)) throw badRequest("This registration is already linked to another account.");
+    throw saveError;
+  }
   log({ event: "doctor_check", status: "verified" });
   return { status: "verified", match: null, checked_at: checkedAt };
 }
