@@ -77,6 +77,7 @@ export const NOT_EXPORTED: Record<string, string> = {
   tinyfish_monitors: "server configuration, not tied to a user",
   plans: "the plan catalogue, public information, not tied to a user",
   waitlist: "an email address given on a public form, keyed by address rather than by account, and no health content",
+  waitlist_attempts: "timestamps of anonymous waitlist attempts, kept only to rate limit the public form; they name no account and hold no content",
 };
 
 export interface ExportedFile {

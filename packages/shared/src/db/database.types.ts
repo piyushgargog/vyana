@@ -1587,6 +1587,22 @@ export type Database = {
           },
         ]
       }
+      waitlist_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+        }
+        ComputedFields: never
+        Insert: {
+          attempted_at?: string
+          id?: number
+        }
+        Update: {
+          attempted_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
       web_cache: {
         Row: {
           expires_at: string

@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(39);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000011', 'd@vyana.test', '{"full_name":"Patient D"}'),
@@ -77,34 +77,26 @@ select throws_ok(
 
 reset role;
 
--- Joining signed out: the address is stored lower-cased, and joining twice is harmless.
+-- Joining signed out. The whole file shares one transaction, so the claims an
+-- earlier tap_login set would otherwise still be present and these calls would
+-- take the signed-in path; clear them and drop to anon so the anonymous path
+-- (the attempts counter) is the one under test.
+select set_config('request.jwt.claims', '', true); set local role anon;
+
 select is(
   (select public.join_waitlist('Person@Example.com', 'family', 'for my parents')),
   true, 'a first join answers true');
 select is(
-  (select email from public.waitlist where plan_id = 'family' and email = 'person@example.com'),
-  'person@example.com', 'joining stores the address lower-cased');
-select is(
   (select public.join_waitlist('person@example.com', 'family')),
   false, 'joining twice answers false and adds no row');
 select is(
-  (select count(*)::int from public.waitlist where email = 'person@example.com'),
-  1, 'joining twice adds no second row');
-select is(
   (select public.join_waitlist('person@example.com', 'clinic')),
   true, 'the same address may wait for a second plan');
-select is(
-  (select count(*)::int from public.waitlist where email = 'person@example.com'),
-  2, 'the same address may wait for two plans');
-
 -- A second caller with somebody else's address learns nothing: the answer is
--- the boolean again, and the stored note does not move.
+-- the boolean again, never the stored row.
 select is(
   (select public.join_waitlist('person@example.com', 'family', 'a stranger''s note')),
   false, 'a repeat join by anyone answers false');
-select is(
-  (select note from public.waitlist where email = 'person@example.com' and plan_id = 'family'),
-  'for my parents', 'the stored note is never handed back or overwritten');
 
 -- Bad input is refused with a clear code, before anything is stored.
 select throws_ok(
@@ -119,18 +111,22 @@ select throws_ok(
 select throws_ok(
   $$ select * from public.join_waitlist(repeat('a', 243) || '@example.com', 'family') $$,
   '22023', null, 'an address over 254 characters is refused');
+
+reset role;
+
+-- What was stored, read back with the session's own rights.
+select is(
+  (select email from public.waitlist where plan_id = 'family' and email = 'person@example.com'),
+  'person@example.com', 'joining stores the address lower-cased');
+select is(
+  (select count(*)::int from public.waitlist where email = 'person@example.com'),
+  2, 'the address holds one row per plan, never two for one plan');
+select is(
+  (select note from public.waitlist where email = 'person@example.com' and plan_id = 'family'),
+  'for my parents', 'the stored note is never handed back or overwritten');
 select throws_ok(
   $$ insert into public.waitlist (email, plan_id) values (repeat('a', 243) || '@example.com', 'family') $$,
   '23514', null, 'the table itself refuses an address over 254 characters');
-
--- Anonymous joins as a whole are capped (30 an hour) through the attempts
--- counter, so the form cannot be flooded by varying the address.
-insert into public.waitlist_attempts (attempted_at)
-select now() from generate_series(1, 30);
-select throws_ok(
-  $$ select * from public.join_waitlist('someone-new@x.co', 'family') $$,
-  'P0001', null, 'the thirty-first anonymous join in an hour is refused');
-delete from public.waitlist_attempts;
 
 -- The hardening lines: anon holds nothing on user_plans, and the trigger
 -- function is not callable by the public.
@@ -140,6 +136,17 @@ select ok(
 select ok(
   not has_function_privilege('public', 'public.give_default_plan()', 'EXECUTE'),
   'give_default_plan is not executable by public');
+
+-- Anonymous joins as a whole are capped (30 an hour) through the attempts
+-- counter, so the form cannot be flooded by varying the address.
+insert into public.waitlist_attempts (attempted_at)
+select now() from generate_series(1, 30);
+select set_config('request.jwt.claims', '', true); set local role anon;
+select throws_ok(
+  $$ select * from public.join_waitlist('someone-new@x.co', 'family') $$,
+  'P0001', null, 'the thirty-first anonymous join in an hour is refused');
+reset role;
+delete from public.waitlist_attempts;
 
 -- The rate limit: patient F may join 5 times in an hour, the sixth is refused.
 select public.tap_login('10000000-0000-0000-0000-000000000013'); set local role authenticated;
