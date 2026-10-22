@@ -86,6 +86,15 @@ describe("POST /api/medicines/interactions", () => {
     expect(db.rows.ai_runs ?? []).toHaveLength(0);
   });
 
+  it("never answers an empty result without saying why", async () => {
+    db.rows.prescription_items = [];
+    const none = InteractionsRes.parse(await (await post()).json());
+    expect(none).toMatchObject({ checked_medicines: [], interactions: [], not_checked: ["No medicines were found to check"] });
+    db.rows.prescription_items = [item("Ecosprin", "75 mg")];
+    const one = InteractionsRes.parse(await (await post()).json());
+    expect(one.not_checked).toEqual(["Only one medicine is saved, so there is no pair to check"]);
+  });
+
   it("is for patients and the doctors who treat them", async () => {
     expect((await post({}, "")).status).toBe(401);
     expect((await post({ prescription_id: "nope" })).status).toBe(400);

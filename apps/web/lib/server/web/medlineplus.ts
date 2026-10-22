@@ -2,7 +2,7 @@ import "server-only";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
 import { isOnDomain, isWebMock } from "./domains";
-import { decodeEntities } from "./fetch-page";
+import { decodeEntities, readTextCapped } from "./fetch-page";
 
 /**
  * Health topic search of MedlinePlus (US National Library of Medicine), a free public web service (ADR-072). It replaces the
@@ -78,8 +78,8 @@ export async function searchHealthTopics(query: string, limit = 5): Promise<Topi
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) return null;
-      const xml = await res.text();
-      if (xml.length > MAX_BYTES) return null;
+      const xml = await readTextCapped(res, MAX_BYTES);
+      if (xml === null) return null;
       const topics = parseTopics(xml, limit);
       return topics.length ? topics : null;
     });

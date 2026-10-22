@@ -112,6 +112,10 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
   for (const pair of uncovered.slice(0, MAX_PAIRS)) notChecked.push(`${pair} (not in the reviewed list yet)`);
   if (uncovered.length > MAX_PAIRS) notChecked.push(`${uncovered.length - MAX_PAIRS} more pairs (not in the reviewed list yet)`);
 
+  // An answer with nothing in it must not read as "all clear": say what was not checked and why.
+  if (rows.length === 0) notChecked.push("No medicines were found to check");
+  else if (known.length === 1 && notChecked.length === 0) notChecked.push("Only one medicine is saved, so there is no pair to check");
+
   const sourcesChecked = new Map<string, SourceLink>();
   for (const i of interactions) for (const s of i.sources) sourcesChecked.set(s.url, s);
 

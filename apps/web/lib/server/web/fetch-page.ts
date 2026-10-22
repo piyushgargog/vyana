@@ -15,6 +15,11 @@ export interface FetchedPage {
   text: string;
 }
 
+interface CachedPage extends FetchedPage {
+  /** The address the text really came from, after redirects. */
+  finalUrl: string;
+}
+
 const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; reads public health pages)";
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 3_000_000;
@@ -45,6 +50,7 @@ const tidy = (s: string) => decodeEntities(s).replace(/[ \t\r\f\v]+/g, " ").repl
 
 /** A small tokenizer (no backtracking regexes on remote text): drops page chrome, keeps headings as "# " and list items as "- ". */
 export function htmlToText(html: string): { title: string; text: string } {
+  const lower = html.toLowerCase();
   let title = "";
   let out = "";
   let skip = 0;
@@ -76,6 +82,13 @@ export function htmlToText(html: string): { title: string; text: string } {
       else break;
     }
     if (name === "title") inTitle = !closing;
+    if (!closing && (name === "script" || name === "style") && !raw.endsWith("/")) {
+      // Raw text: a "<" or ">" inside it is code, not markup. Jump to the closing tag (or to the end when it never closes).
+      const close = lower.indexOf(`</${name}`, gt + 1);
+      const after = close === -1 ? -1 : lower.indexOf(">", close);
+      i = close === -1 || after === -1 ? html.length : after + 1;
+      continue;
+    }
     if (DROP.has(name)) {
       if (!closing && !raw.endsWith("/")) skip++;
       else if (closing && skip > 0) skip--;
@@ -91,7 +104,29 @@ export function htmlToText(html: string): { title: string; text: string } {
 
 // ---------------------------------------------------------------- http
 
-async function download(url: string, allowed: readonly string[]): Promise<string | null> {
+/** The body as text, or null when it is bigger than `max` bytes (checked on the header and while reading, never the whole body first). */
+export async function readTextCapped(res: Response, max: number): Promise<string | null> {
+  const declared = Number(res.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > max) return null;
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let out = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    out += decoder.decode(value, { stream: true });
+  }
+  return out + decoder.decode();
+}
+
+async function download(url: string, allowed: readonly string[]): Promise<{ html: string; finalUrl: string } | null> {
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (!current.startsWith("https://") || !isOnAnyDomain(current, allowed)) return null;
@@ -109,8 +144,8 @@ async function download(url: string, allowed: readonly string[]): Promise<string
     if (!res.ok) return null;
     const type = res.headers.get("content-type") ?? "";
     if (!/text\/(html|plain)|application\/xhtml/i.test(type)) return null;
-    const body = await res.text();
-    return body.length > MAX_BYTES ? null : body;
+    const body = await readTextCapped(res, MAX_BYTES);
+    return body === null ? null : { html: body, finalUrl: current };
   }
   return null;
 }
@@ -122,15 +157,16 @@ export async function fetchPage(url: string, allowed: readonly string[], maxChar
     return { url, title: `[mock] ${url}`, text: (mockPages.get(url) ?? `# [mock] Page\n\nFixture text for ${url}. No real content was fetched.`).slice(0, maxChars) };
   }
   try {
-    const hit = await cached<FetchedPage>(`page:${sha1(url)}`, "web_page", TTL.day, async () => {
-      const html = await download(url, allowed);
-      if (!html) return null;
-      const { title, text } = htmlToText(html);
-      return text.length >= MIN_TEXT_CHARS ? { url, title: title || url, text } : null;
+    const hit = await cached<CachedPage>(`page:${sha1(url)}`, "web_page", TTL.day, async () => {
+      const got = await download(url, allowed);
+      if (!got) return null;
+      const { title, text } = htmlToText(got.html);
+      return text.length >= MIN_TEXT_CHARS ? { url, finalUrl: got.finalUrl, title: title || url, text } : null;
     });
-    // The allow-list is checked again on the way out: a cached page is only returned to a caller that may read its host.
-    if (!hit || !isOnAnyDomain(hit.value.url, allowed)) return null;
-    return { ...hit.value, text: hit.value.text.slice(0, maxChars) };
+    // The allow-list is checked again on the way out, against the host that really served the text (a redirect may have
+    // led somewhere the first caller's list allowed and this caller's list does not).
+    if (!hit || !isOnAnyDomain(hit.value.finalUrl, allowed) || !isOnAnyDomain(hit.value.url, allowed)) return null;
+    return { url: hit.value.url, title: hit.value.title, text: hit.value.text.slice(0, maxChars) };
   } catch (err) {
     log({ event: "fetch_page_failed", error: err instanceof Error ? err.name : "unknown" });
     return null;

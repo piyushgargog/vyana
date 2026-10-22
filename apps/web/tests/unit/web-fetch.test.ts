@@ -35,6 +35,13 @@ describe("htmlToText", () => {
     expect(text).not.toMatch(/alert\(1\)|Login|Copyright|color:red/);
   });
 
+  it("keeps the text after a script that contains < and > (a loop, an arrow function)", () => {
+    const { text } = htmlToText("<p>before</p><script>for (let i = 0; i < n; i++) { f = (a) => a > 1 }</script><style>a > b { color: red }</style><p>after the script</p>");
+    expect(text).toContain("before");
+    expect(text).toContain("after the script");
+    expect(text).not.toMatch(/for \(let|color: red/);
+  });
+
   it("does not hang or throw on broken markup", () => {
     expect(htmlToText("<p>one <b>two").text).toBe("one two");
     expect(htmlToText("<div><script>never closed").text).toBe("");
@@ -53,6 +60,24 @@ describe("fetchPage", () => {
     expect(String((init.headers as Record<string, string>)["User-Agent"])).toContain("Vyana");
     await fetchPage("https://medlineplus.gov/diabetestype2.html", ALLOWED);
     expect(fetchFn).toHaveBeenCalledTimes(1); // the second read came from the cache
+  });
+
+  it("does not hand a page to a caller whose list does not allow the host it really came from", async () => {
+    const fetchFn = vi.fn<typeof fetch>(async (url) =>
+      String(url).startsWith("https://nhm.gov.in/") ? html(PAGE_HTML) : new Response(null, { status: 301, headers: { location: "https://nhm.gov.in/page" } }),
+    );
+    vi.stubGlobal("fetch", fetchFn);
+    const wide = ["medlineplus.gov", "nhm.gov.in"];
+    expect(await fetchPage("https://medlineplus.gov/moved", wide)).not.toBeNull(); // the first caller's list allows both hosts
+    expect(await fetchPage("https://medlineplus.gov/moved", ["medlineplus.gov"])).toBeNull(); // the narrower list does not allow nhm.gov.in
+  });
+
+  it("refuses a body that is too big, on the header or while reading", async () => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => html("x", 200, { "content-length": "99000000" })));
+    expect(await fetchPage("https://nhs.uk/huge", ALLOWED)).toBeNull();
+    const big = "<p>" + "word ".repeat(700_000) + "</p>";
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => html(big)));
+    expect(await fetchPage("https://nhs.uk/big", ALLOWED)).toBeNull();
   });
 
   it("never fetches a host that is not on the list, or a non-https address", async () => {
