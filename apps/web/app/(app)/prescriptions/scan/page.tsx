@@ -154,7 +154,7 @@ export default function PrescriptionScanPage() {
     }
     const prescriptionId = extracted?.prescription_id;
     if (!prescriptionId) {
-      showToast("Something went wrong. Please scan again.", "error");
+      showToast("The scan could not be read. Please scan again.", "error");
       return;
     }
     setIsSaving(true);

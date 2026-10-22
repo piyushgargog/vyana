@@ -8,9 +8,13 @@ Closes #
 
 - [ ] feat · [ ] fix · [ ] refactor · [ ] chore · [ ] docs · [ ] ci · [ ] test
 
-## Screenshots / demo
+## Screenshots (before / after)
 
-<!-- UI changes: add a screenshot or GIF (web and/or mobile). Delete if not UI. -->
+<!-- UI changes: one "before" and one "after" screenshot (web and/or mobile), at 390 px and 1366 px where it fits. Delete if not UI. -->
+
+**Before:**
+
+**After:**
 
 ## Checklist
 

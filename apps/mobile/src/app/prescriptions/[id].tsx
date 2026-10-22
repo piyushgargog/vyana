@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   interBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   interBadge: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   interEffect: { fontSize: 12, color: '#0F172A', fontWeight: '500' },
   interAdvice: { fontSize: 12, color: '#334155' },
   interQuote: { fontSize: 11, color: '#64748B', fontStyle: 'italic' },
-  interSources: { fontSize: 10, color: '#475569' },
+  interSources: { fontSize: 11, color: '#475569' },
   notCheckedText: { fontSize: 11, color: '#92400E', fontWeight: '600', paddingTop: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
   itemCard: {

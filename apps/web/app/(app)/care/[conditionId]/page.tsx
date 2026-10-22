@@ -126,7 +126,7 @@ export default function CarePlanPage() {
             Could not load your care plan
           </p>
           <p className="mt-1 text-[15px] text-label-2">
-            Something went wrong while fetching your care plan.
+            Your care plan could not be loaded. Check your connection and try again.
           </p>
           <Button
             variant="secondary"
