@@ -64,8 +64,8 @@ export default function MobileTabsLayout() {
     <NativeTabs
       iconColor={{ default: T.color.label3, selected: T.color.accent }}
       labelStyle={{
-        default: { fontSize: 10, fontWeight: '600', color: T.color.label3 },
-        selected: { fontSize: 10, fontWeight: '600', color: T.color.accent },
+        default: { fontSize: 11, fontWeight: '600', color: T.color.label3 },
+        selected: { fontSize: 11, fontWeight: '600', color: T.color.accent },
       }}
     >
       <NativeTabs.Trigger name="index">

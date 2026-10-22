@@ -115,10 +115,12 @@ export default function ConsentPage() {
                 3. AI Redaction & Verification
               </div>
               <p className="text-slate-600">
-                Before text is sent to an AI model for OCR or plain-language
-                explanation, phone numbers, emails, Aadhaar/PAN, and patient
-                header blocks are stripped. You always review extracted values
-                before saving.
+                Before text is sent to an AI model for extraction or
+                plain-language explanation, phone numbers, emails, Aadhaar/PAN,
+                and patient header blocks are removed from it. A photo is first
+                read by a vision model that sees the whole image, so photograph
+                only the document. You always review extracted values before
+                saving.
               </p>
             </div>
 

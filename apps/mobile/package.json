@@ -58,6 +58,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "check:permissions": "node ./scripts/check-android-permissions.mjs",
     "dev": "expo start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

@@ -20,6 +20,8 @@ import {
   createShareLink,
   daysAgoIso,
   getAdherence,
+  getCurrentPlan,
+  getMyAiUsageToday,
   getTokensLeft,
   listMyCaregivers,
   getSignedUrl,
@@ -41,6 +43,7 @@ import {
   revokeShareLink,
   isShareLinkActive,
   isShareUrlDead,
+  joinWaitlist,
   shareTokenFromUrl,
   savePushToken,
   shareUrl,
@@ -672,5 +675,43 @@ describe("realtime", () => {
     const f = fakeSupabase();
     subscribeTable(f.sb, "chan-2", "appointments", () => undefined, "patient_id=eq.u1");
     expect(f.channels[0].handlers[0].filter).toMatchObject({ filter: "patient_id=eq.u1" });
+  });
+});
+
+describe("ai usage", () => {
+  it("reads the caller's totals for today from the database function", async () => {
+    const f = fakeSupabase({ responses: { "rpc:my_ai_usage_today": [ok([{ calls: 3, input_tokens: 1200, output_tokens: 450 }])] } });
+    await expect(getMyAiUsageToday(f.sb)).resolves.toEqual({ calls: 3, input_tokens: 1200, output_tokens: 450 });
+    expect(f.argsOf("rpc")).toEqual(["my_ai_usage_today", undefined]);
+  });
+
+  it("reads an empty answer as zeros, so the app always has a total", async () => {
+    const f = fakeSupabase({ responses: { "rpc:my_ai_usage_today": [ok([])] } });
+    await expect(getMyAiUsageToday(f.sb)).resolves.toEqual({ calls: 0, input_tokens: 0, output_tokens: 0 });
+  });
+});
+
+describe("plans and the waitlist", () => {
+  it("reads the caller's plan with its limits", async () => {
+    const plan = { plan_id: "free", name: "Free", daily_ai_calls: 30, max_profiles: 1, features: { caregivers: false, care_agent_max_open: 3 }, since: "2026-10-22T00:00:00Z", source: "default" };
+    const f = fakeSupabase({ responses: { "rpc:current_plan": [ok([plan])] } });
+    await expect(getCurrentPlan(f.sb)).resolves.toEqual(plan);
+    expect(f.argsOf("rpc")).toEqual(["current_plan", undefined]);
+  });
+
+  it("reads no plan row as null", async () => {
+    const f = fakeSupabase({ responses: { "rpc:current_plan": [ok([])] } });
+    await expect(getCurrentPlan(f.sb)).resolves.toBeNull();
+  });
+
+  it("joins the waitlist through the function, the note left out when there is none", async () => {
+    const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok(true)] } });
+    await expect(joinWaitlist(f.sb, "person@example.com", "family")).resolves.toBe(true);
+    expect(f.argsOf("rpc")).toEqual(["join_waitlist", { p_email: "person@example.com", p_plan_id: "family", p_note: undefined }]);
+  });
+
+  it("reads an address that is already waiting as false, never as the stored row", async () => {
+    const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok(false)] } });
+    await expect(joinWaitlist(f.sb, "person@example.com", "family", "their private note")).resolves.toBe(false);
   });
 });

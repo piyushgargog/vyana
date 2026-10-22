@@ -453,7 +453,7 @@ function DoctorPrescribeContent({
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
               placeholder="e.g. Type 2 Diabetes Mellitus, Essential Hypertension, Upper Respiratory Tract Infection"
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-300 p-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-accent"
             />
             <p className="mt-1 text-[11px] text-teal-800">
               Saving this diagnosis automatically records the chronic condition and generates an AI draft care plan for your review.
@@ -473,7 +473,7 @@ function DoctorPrescribeContent({
               value={clinicalNotes}
               onChange={(e) => setClinicalNotes(e.target.value)}
               placeholder="General patient instructions, dietary restrictions, follow-up date…"
-              className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-300 p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-accent"
             />
           </div>
         </div>
@@ -567,11 +567,11 @@ function DoctorPrescribeContent({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {it.layer && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
                           Layer: {it.layer}
                         </span>
                       )}
-                      <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-white/80">
+                      <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-white/80">
                         {it.severity}
                       </span>
                     </div>
@@ -648,10 +648,11 @@ function DoctorPrescribeContent({
               {/* Row 1: Name, Strength, Form */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-medicine-name`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Medicine Name *
                   </label>
                   <input
+                    id={`${med.id}-medicine-name`}
                     type="text"
                     required
                     value={med.medicine_name}
@@ -659,22 +660,23 @@ function DoctorPrescribeContent({
                       handleUpdateMedicine(med.id, "medicine_name", e.target.value)
                     }
                     placeholder="e.g. Metformin, Paracetamol, Telmisartan"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 outline-none focus:border-accent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-strength`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Strength / Dose
                   </label>
                   <input
+                    id={`${med.id}-strength`}
                     type="text"
                     value={med.strength || ""}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "strength", e.target.value)
                     }
                     placeholder="e.g. 500 mg, 10 mg"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 p-2 text-xs sm:text-sm text-slate-900 outline-none focus:border-accent"
                   />
                 </div>
               </div>
@@ -682,15 +684,16 @@ function DoctorPrescribeContent({
               {/* Row 2: Form, Frequency, Food Timing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-form`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Form
                   </label>
                   <select
+                    id={`${med.id}-form`}
                     value={med.form}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "form", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 outline-none focus:border-accent"
                   >
                     <option value="tablet">Tablet</option>
                     <option value="capsule">Capsule</option>
@@ -702,15 +705,16 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-frequency`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Frequency
                   </label>
                   <select
+                    id={`${med.id}-frequency`}
                     value={med.frequency}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "frequency", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 outline-none focus:border-accent"
                   >
                     <option value="OD">OD — Once Daily (09:00)</option>
                     <option value="BD">BD — Twice Daily (09:00, 21:00)</option>
@@ -723,15 +727,16 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-with-food`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Relation to Food
                   </label>
                   <select
+                    id={`${med.id}-with-food`}
                     value={med.with_food}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "with_food", e.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-900 outline-none focus:border-accent"
                   >
                     <option value="after">After Food</option>
                     <option value="before">Before Food / Empty Stomach</option>
@@ -743,26 +748,28 @@ function DoctorPrescribeContent({
               {/* Row 3: Instructions & Quantity */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label htmlFor={`${med.id}-instructions`} className="block text-[11px] font-bold text-slate-700 mb-1">
                     Patient Instructions
                   </label>
                   <input
+                    id={`${med.id}-instructions`}
                     type="text"
                     value={med.instructions || ""}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "instructions", e.target.value)
                     }
                     placeholder="e.g. Take with warm water after dinner"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 outline-none focus:border-accent"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label htmlFor={`${med.id}-quantity-total`} className="block text-[11px] font-bold text-slate-700 mb-1">
                       Total Units
                     </label>
                     <input
+                      id={`${med.id}-quantity-total`}
                       type="number"
                       min="1"
                       value={med.quantity_total ?? ""}
@@ -773,14 +780,15 @@ function DoctorPrescribeContent({
                           parseInt(e.target.value) || 0
                         )
                       }
-                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 outline-none focus:border-accent"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label htmlFor={`${med.id}-duration-days`} className="block text-[11px] font-bold text-slate-700 mb-1">
                       Days
                     </label>
                     <input
+                      id={`${med.id}-duration-days`}
                       type="number"
                       min="1"
                       value={med.duration_days ?? ""}
@@ -791,7 +799,7 @@ function DoctorPrescribeContent({
                           parseInt(e.target.value) || 0
                         )
                       }
-                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 outline-none focus:border-accent"
                     />
                   </div>
                 </div>
