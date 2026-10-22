@@ -71,8 +71,9 @@ export function WaitlistForm() {
         id="waitlist-note"
         label="Anything you want Family to do? (optional)"
         value={note}
+        maxLength={200}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="For example: reminders for my father's medicines"
+        placeholder="For example: we are a family of four"
       />
       {join.isError && (
         <p className="text-[15px] text-danger-text" role="alert">
@@ -90,7 +91,8 @@ export function WaitlistForm() {
       </Button>
       <p className="text-[13px] text-label-3">
         Your email is used only to tell you when Family opens. It is not shared
-        and not used for anything else.
+        and not used for anything else. The note is read only to understand what
+        families want from the plan — please do not put health details in it.
       </p>
     </form>
   );

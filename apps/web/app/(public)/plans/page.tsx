@@ -7,7 +7,7 @@ import { PlansClient } from "./plans-client";
 export const metadata: Metadata = {
   title: "Plans · Vyana",
   description:
-    "Vyana is free. See what Free includes and what the Family plan will add, and join the waitlist to hear when Family opens. Nothing is charged yet.",
+    "Vyana costs nothing today. See what Free includes and what the Family plan will add, and join the waitlist to hear when Family opens. Nothing is charged yet.",
 };
 
 export default function PlansPage() {
@@ -20,7 +20,7 @@ export default function PlansPage() {
           <LargeTitle
             eyebrow="Plans"
             title="Free today. Family when families ask for it."
-            subtitle="Vyana is free to use. A Family plan is being prepared for households who look after each other — join the waitlist and we will email you if it opens."
+            subtitle="Using Vyana costs nothing today. A Family plan is being prepared for households who look after each other — join the waitlist and we will email you if it opens."
           />
         </div>
 

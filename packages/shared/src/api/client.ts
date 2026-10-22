@@ -125,7 +125,9 @@ type RequestSpec<Res> = {
   method: "GET" | "POST" | "DELETE";
   path: string;
   resSchema: ZodType<Res>;
-  mock: Res;
+  /** A mock value, or a thunk producing one — a thunk is only called in mock mode, so a
+   *  mock with side effects (a store write) never runs against the real API. */
+  mock: Res | (() => Res);
   body?: { schema: ZodType<unknown>; value: unknown };
   auth?: boolean;
 };
@@ -154,7 +156,8 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     if (opts.useMocks) {
       await sleep(minDelay + Math.random() * (maxDelay - minDelay));
       // Copy so a screen that mutates the result never changes the shared fixture.
-      return resSchema.parse(JSON.parse(JSON.stringify(mock)));
+      const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
+      return resSchema.parse(JSON.parse(JSON.stringify(mockValue)));
     }
 
     const headers: Record<string, string> = { Accept: "application/json", ...(auth ? await authHeaders() : {}) };
@@ -209,7 +212,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return parsed.data;
   }
 
-  const post = <Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, value: Req, mock: Res) =>
+  const post = <Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, value: Req, mock: Res | (() => Res)) =>
     request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
 
   return {
@@ -264,7 +267,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
           await sleep(minDelay + Math.random() * (maxDelay - minDelay));
           return JoinWaitlistRes.parse(mocks.joinWaitlistMock(req.data));
         }
-        return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, mocks.joinWaitlistMock(req.data));
+        return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, () => mocks.joinWaitlistMock(req.data));
       },
     },
     aiUsage: {

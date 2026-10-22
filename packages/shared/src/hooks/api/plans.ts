@@ -2,7 +2,8 @@
 
 // Plan, waitlist and AI-usage hooks (#305, mock-first). Names follow the issue (M1/M2): when
 // Vaibhav's hooks land on the real plans table, these are the surface the screens already use.
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 
 import type { ApiError } from "../../api/client";
 import { useApi } from "../../api/context";
@@ -39,4 +40,13 @@ export function useMyAiUsageToday() {
     queryKey: [QUERY_ROOTS.aiUsage, "today"],
     queryFn: () => api.aiUsage.today(),
   });
+}
+
+/** A callback that re-reads today's AI usage — called when an answer finishes, so the
+ *  "N left today" chip updates at once instead of on the next reload. */
+export function useRefreshAiUsage() {
+  const qc = useQueryClient();
+  return useCallback(() => {
+    void qc.invalidateQueries({ queryKey: [QUERY_ROOTS.aiUsage] });
+  }, [qc]);
 }

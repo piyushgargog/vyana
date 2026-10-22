@@ -181,7 +181,7 @@ export const PlansRes = z.object({
 });
 export const JoinWaitlistReq = z.object({
   email: z.string().email(),
-  note: z.string().max(500).optional(),
+  note: z.string().max(200).optional(),
 });
 export const JoinWaitlistRes = z.object({
   status: z.enum(["joined", "already_on_list"]),

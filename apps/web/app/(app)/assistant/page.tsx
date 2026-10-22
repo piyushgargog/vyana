@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { track, useApi, useChatMessages, useChatSessions, useMyAiUsageToday, useRefreshChatHistory } from "@vyana/shared";
+import { track, useApi, useChatMessages, useChatSessions, useMyAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
   Card,
@@ -64,8 +64,14 @@ export default function AssistantPage() {
     [api, sessionId]
   );
 
+  const refreshAiUsage = useRefreshAiUsage();
   const { messages, setMessages, sendMessage, status, error, clearError } =
-    useChat<AssistantMessage>({ transport });
+    useChat<AssistantMessage>({
+      transport,
+      // A finished answer spends one of today's uses: refresh the "N left" chip at once,
+      // not on the next reload.
+      onFinish: refreshAiUsage,
+    });
   useRefreshChatHistory(status);
 
   useEffect(() => {

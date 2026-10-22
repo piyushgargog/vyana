@@ -39,7 +39,7 @@ export default function MobileProfileTab() {
   const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
-  const { data: plansData } = useCurrentPlan();
+  const { data: plansData, isLoading: plansLoading } = useCurrentPlan();
   const currentPlan = plansData?.plans.find((p) => p.slug === plansData.current_slug);
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
   const updateProfileMutation = useUpdateProfile();
@@ -227,7 +227,7 @@ export default function MobileProfileTab() {
       <ListGroup header="Your plan">
         <ListRow
           icon={<IconTile ios="creditcard.fill" android="payment" color="indigo" />}
-          title={`Your plan: ${currentPlan?.name ?? 'Free'}`}
+          title={plansLoading ? 'Your plan' : `Your plan: ${currentPlan?.name ?? 'Free'}`}
           subtitle="See the Family plan"
           onPress={() =>
             Linking.openURL('https://vyanahealth.app/plans').catch(() =>

@@ -1,8 +1,9 @@
 // packages/shared/src/mocks/plans.ts
-// Mock-first plans, waitlist and AI usage (#305). PLACEHOLDER numbers: the real limits live in
-// the plans table (plans.features, M2) when it lands — the screens read everything from here,
-// so correcting a number is a one-line change in one place, never a page edit. No plan carries
-// a price or a date: Vyana charges nothing yet, and the waitlist is how that is tested.
+// Mock-first plans, waitlist and AI usage (#305). The numbers mirror the plans seeded in
+// #316 (30 and 150 AI answers a day), so mock mode never shows other numbers than the
+// database; the screens read everything from here, so a change stays a one-line edit in
+// one place. No plan carries a price or a date: Vyana charges nothing yet, and the
+// waitlist is how that is tested. Care suggestions are not listed until #312 is on main.
 
 import {
   PlansRes,
@@ -18,11 +19,10 @@ export const freePlanMock: Plan = {
   features: [
     "Your medicines and dose reminders",
     "Lab reports explained in plain words",
-    "10 AI answers a day",
-    "Care suggestions from your own records",
+    "30 AI answers a day",
     "For one person",
   ],
-  ai_uses_per_day: 10,
+  ai_uses_per_day: 30,
 };
 
 export const familyPlanMock: Plan = {
@@ -31,11 +31,10 @@ export const familyPlanMock: Plan = {
   features: [
     "Everything in Free",
     "Up to 5 family members, linked with their permission",
-    "100 AI answers a day, shared by the family",
-    "Care suggestions for each member",
+    "150 AI answers a day, shared by the family",
     "A caregiver view for the family",
   ],
-  ai_uses_per_day: 100,
+  ai_uses_per_day: 150,
 };
 
 /** Everyone is on Free until Family opens; that is the point of the waitlist. */

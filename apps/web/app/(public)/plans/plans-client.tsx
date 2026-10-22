@@ -5,7 +5,7 @@
 // yet and no date is promised anywhere; the waitlist is how interest is measured first.
 import React, { useEffect } from "react";
 import { track, useCurrentPlan, type Plan } from "@vyana/shared";
-import { Card, Pill, SkeletonLine } from "@/components/ui";
+import { Button, Card, Pill, SkeletonLine } from "@/components/ui";
 import { Check } from "lucide-react";
 import { WaitlistForm } from "./waitlist-form";
 
@@ -29,7 +29,7 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
 }
 
 export function PlansClient() {
-  const { data, isLoading } = useCurrentPlan();
+  const { data, isLoading, isError, refetch } = useCurrentPlan();
 
   useEffect(() => {
     track("plan_viewed");
@@ -40,7 +40,17 @@ export function PlansClient() {
 
   return (
     <div className="space-y-6">
-      {isLoading || plans.length === 0 ? (
+      {isError ? (
+        <Card className="space-y-3">
+          <p className="text-[15px] font-medium text-label">The plans could not be loaded.</p>
+          <p className="text-[15px] text-label-2">
+            Check your connection and try again.
+          </p>
+          <Button variant="secondary" size="md" className="min-h-[44px]" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </Card>
+      ) : isLoading || plans.length === 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Loading plans">
           {[0, 1].map((i) => (
             <Card key={i} className="space-y-3">
