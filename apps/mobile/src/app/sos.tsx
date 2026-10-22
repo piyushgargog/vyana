@@ -503,7 +503,6 @@ export default function MobileSosScreen() {
         <Button
           title="Open hospitals.pmjay.gov.in"
           variant="secondary"
-          size="sm"
           style={styles.smallBtn}
           label="Open the official PM-JAY hospital search portal"
           onPress={() =>
