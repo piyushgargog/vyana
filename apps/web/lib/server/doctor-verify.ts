@@ -16,6 +16,7 @@ interface DoctorRow {
   id: string;
   reg_no: string | null;
   state_council: string | null;
+  year_of_registration: number | null;
   verification_status: DoctorVerifyRes["status"];
 }
 
@@ -24,7 +25,7 @@ export async function submitDoctorRegistration({ sb, user, profile }: AuthedUser
   requireRole(profile, "doctor");
   const { data: doctor, error } = await sb
     .from("doctors")
-    .select("id, reg_no, state_council, verification_status")
+    .select("id, reg_no, state_council, year_of_registration, verification_status")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw error;
@@ -33,11 +34,13 @@ export async function submitDoctorRegistration({ sb, user, profile }: AuthedUser
   const admin = supabaseAdmin();
   const checkedAt = new Date().toISOString();
   const row = doctor as DoctorRow;
-  // A verified doctor who sends the same number and council again keeps `verified`; only a change re-opens the check.
+  // A verified doctor who sends the same number, council and year again keeps `verified`;
+  // a change to any of the three re-opens the check (issue #344, as amended for issue #359).
   const unchanged =
     row.verification_status === "verified" &&
     normalizeRegNo(row.reg_no ?? "") === normalizeRegNo(body.reg_no) &&
-    councilKey(row.state_council ?? "") === councilKey(body.state_council);
+    councilKey(row.state_council ?? "") === councilKey(body.state_council) &&
+    (row.year_of_registration ?? null) === (body.year_of_registration ?? null);
 
   const patch: Record<string, unknown> = {
     reg_no: body.reg_no.trim(),

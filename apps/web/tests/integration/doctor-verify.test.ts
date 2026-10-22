@@ -60,18 +60,39 @@ describe("POST /api/doctors/verify", () => {
     expect(json.submitted_at).toBeTruthy();
   });
 
-  it("keeps a verified doctor verified when they send the same number and council again", async () => {
+  it("keeps a verified doctor verified when they send the same number, council and year again", async () => {
     Object.assign(row(USER_ID), {
       reg_no: "12345",
+      year_of_registration: 2011,
       verification_status: "verified",
       verified_at: "2026-01-01T00:00:00.000Z",
       verification_json: { method: "manual", checked_by: "an-admin" },
     });
     // The same registration written the way the register writes it: still the same number and council.
-    const body = DoctorVerifyRes.parse(await (await post({ reg_no: "12-345", state_council: "Medical Council of Delhi" })).json());
+    const body = DoctorVerifyRes.parse(
+      await (await post({ reg_no: "12-345", state_council: "Medical Council of Delhi", year_of_registration: 2011 })).json(),
+    );
     expect(body.status).toBe("verified");
     expect(row(USER_ID).verification_status).toBe("verified");
     expect(row(USER_ID).verified_at).toBe("2026-01-01T00:00:00.000Z");
+    expect(row(USER_ID).year_of_registration).toBe(2011);
+  });
+
+  it("sends a verified doctor back to pending when only the year changes", async () => {
+    Object.assign(row(USER_ID), {
+      reg_no: "12345",
+      year_of_registration: 2011,
+      verification_status: "verified",
+      verified_at: "2026-01-01T00:00:00.000Z",
+    });
+    const body = DoctorVerifyRes.parse(
+      await (await post({ reg_no: "12345", state_council: "Delhi Medical Council", year_of_registration: 2015 })).json(),
+    );
+    expect(body.status).toBe("pending");
+    expect(row(USER_ID)).toMatchObject({ verification_status: "pending", year_of_registration: 2015, verified_at: null });
+    const json = row(USER_ID).verification_json as { method: string; submitted_at: string };
+    expect(json.method).toBe("manual");
+    expect(json.submitted_at).toBeTruthy();
   });
 
   it("sends a verified doctor back to pending when the number changes", async () => {
