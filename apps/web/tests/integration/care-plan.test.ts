@@ -92,7 +92,7 @@ describe("POST /api/care-plan", () => {
   it("caches the guideline pages per condition", async () => {
     await post({ condition_id: CONDITION_ID });
     await post({ condition_id: CONDITION_ID });
-    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:v2:type 2 diabetes"]);
+    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:v3:type 2 diabetes"]);
     expect(db.rows.care_plans).toHaveLength(2);
   });
 });
