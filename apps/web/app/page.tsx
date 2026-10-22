@@ -36,7 +36,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-canvas text-label">
       {/* 1. Glass Navigation Bar */}
       <header className="glass-bar sticky top-0 z-30 border-b border-separator">
-        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 rounded-full outline-none">
             <BrandMark size={32} />
             <span className="text-[19px] font-semibold tracking-tight text-label">
@@ -62,7 +62,7 @@ export default function LandingPage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <AuthActions plainSignIn />
           </div>
         </div>
