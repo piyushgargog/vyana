@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   AccessibilityInfo,
   Animated,
@@ -77,8 +78,15 @@ export function IndiaFlag({ width = 32 }: { width?: number }) {
 export function WelcomeSplash() {
   const [visible, setVisible] = useState(() => !shownThisLaunch);
   const [overlayOpacity] = useState(() => new Animated.Value(1));
-  const [contentScale] = useState(() => new Animated.Value(0.95));
-  const [contentOpacity] = useState(() => new Animated.Value(0));
+  const [contentScale] = useState(() => new Animated.Value(0.96));
+  // Visible from the first frame: the native splash is held until this screen has been laid out, so nothing blank shows in between.
+  const [contentOpacity] = useState(() => new Animated.Value(1));
+  const nativeHidden = useRef(false);
+  const hideNativeSplash = useCallback(() => {
+    if (nativeHidden.current) return;
+    nativeHidden.current = true;
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
   const closing = useRef(false);
 
   const close = useCallback(async () => {
@@ -109,38 +117,33 @@ export function WelcomeSplash() {
     AccessibilityInfo.isReduceMotionEnabled()
       .then((enabled) => {
         if (enabled) {
-          contentOpacity.setValue(1);
           contentScale.setValue(1);
         } else {
-          Animated.parallel([
-            Animated.timing(contentOpacity, {
-              toValue: 1,
-              duration: 400,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(contentScale, {
-              toValue: 1,
-              duration: 550,
-              easing: Easing.out(Easing.back(1.05)),
-              useNativeDriver: true,
-            }),
-          ]).start();
+          Animated.timing(contentScale, {
+            toValue: 1,
+            duration: 450,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }).start();
         }
       })
       .catch(() => {
-        contentOpacity.setValue(1);
         contentScale.setValue(1);
       });
 
     const timer = setTimeout(close, SHOW_MS);
     return () => clearTimeout(timer);
-  }, [visible, close, contentOpacity, contentScale]);
+  }, [visible, close, contentScale]);
+
+  // Nothing to show this launch (the screen was shown before): let the native splash go.
+  useEffect(() => {
+    if (!visible) hideNativeSplash();
+  }, [visible, hideNativeSplash]);
 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} onLayout={hideNativeSplash}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={WELCOME_STRINGS.accessibilityLabel}
@@ -188,14 +191,14 @@ export function WelcomeSplash() {
         </View>
 
         {/* Footer Pill: Flag + Made with love in India */}
-        <Animated.View style={[styles.footerContainer, { opacity: contentOpacity }]}>
+        <View style={styles.footerContainer}>
           <View style={styles.footerPill}>
             <IndiaFlag width={26} />
             <Text variant="subhead" tone="secondary" style={styles.footerText}>
               {WELCOME_STRINGS.madeInIndia}
             </Text>
           </View>
-        </Animated.View>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -232,7 +235,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
-    backgroundColor: T.color.glassFallback,
+    // Solid, not glass: on Android the shadow of `elevation` shows through a translucent background and the card looks dirty.
+    backgroundColor: T.color.surface,
     borderRadius: T.radius.feature,
     borderWidth: 1,
     borderColor: T.color.glassBorder,
@@ -291,7 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: T.space.sm,
-    backgroundColor: T.color.glassFallback,
+    backgroundColor: T.color.surface,
     borderRadius: T.radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: T.color.separator,

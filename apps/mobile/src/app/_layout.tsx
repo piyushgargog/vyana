@@ -192,8 +192,10 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  // The welcome screen lets the native splash go once it is on screen (so no blank frame shows); this is only the safety net.
   useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
+    const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => {}), 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
