@@ -19,6 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
       "package": "com.vyana.health",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
