@@ -16,12 +16,12 @@ export function ListGroup({ header, footer, children, className }: { header?: Re
 
 const TILES = {
   accent: "bg-accent",
-  blue: "bg-[#007aff]",
-  green: "bg-[#34c759]",
-  orange: "bg-[#ff9500]",
+  blue: "bg-tile-blue",
+  green: "bg-tile-green",
+  orange: "bg-tile-orange",
   red: "bg-danger",
-  gray: "bg-[#8e8e93]",
-  indigo: "bg-[#5856d6]",
+  gray: "bg-tile-gray",
+  indigo: "bg-tile-indigo",
 } as const;
 export type TileColor = keyof typeof TILES;
 
