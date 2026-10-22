@@ -20,6 +20,7 @@ import {
   createShareLink,
   daysAgoIso,
   getAdherence,
+  getMyAiUsageToday,
   getTokensLeft,
   listMyCaregivers,
   getSignedUrl,
@@ -672,5 +673,18 @@ describe("realtime", () => {
     const f = fakeSupabase();
     subscribeTable(f.sb, "chan-2", "appointments", () => undefined, "patient_id=eq.u1");
     expect(f.channels[0].handlers[0].filter).toMatchObject({ filter: "patient_id=eq.u1" });
+  });
+});
+
+describe("ai usage", () => {
+  it("reads the caller's totals for today from the database function", async () => {
+    const f = fakeSupabase({ responses: { "rpc:my_ai_usage_today": [ok([{ calls: 3, input_tokens: 1200, output_tokens: 450 }])] } });
+    await expect(getMyAiUsageToday(f.sb)).resolves.toEqual({ calls: 3, input_tokens: 1200, output_tokens: 450 });
+    expect(f.argsOf("rpc")).toEqual(["my_ai_usage_today", undefined]);
+  });
+
+  it("reads an empty answer as zeros, so the app always has a total", async () => {
+    const f = fakeSupabase({ responses: { "rpc:my_ai_usage_today": [ok([])] } });
+    await expect(getMyAiUsageToday(f.sb)).resolves.toEqual({ calls: 0, input_tokens: 0, output_tokens: 0 });
   });
 });
