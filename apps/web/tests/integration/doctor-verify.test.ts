@@ -16,6 +16,17 @@ const post = (body: unknown, token = VALID_TOKEN) =>
     undefined,
   );
 
+/** Sends a body that is not JSON at all, to see which check answers first. */
+const postRaw = (body: string, token = VALID_TOKEN) =>
+  POST(
+    new Request("http://localhost/api/doctors/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body,
+    }),
+    undefined,
+  );
+
 const THIRD_DOCTOR_ID = "11111111-2222-4333-8444-555555555555";
 const row = (id: string) => db.rows.doctors.find((d) => d.id === id) as Record<string, unknown>;
 const asDoctor = () => Object.assign(db.rows.profiles[0], { role: "doctor", full_name: "Dr. Sneha Gupta" });
@@ -49,18 +60,39 @@ describe("POST /api/doctors/verify", () => {
     expect(json.submitted_at).toBeTruthy();
   });
 
-  it("keeps a verified doctor verified when they send the same number and council again", async () => {
+  it("keeps a verified doctor verified when they send the same number, council and year again", async () => {
     Object.assign(row(USER_ID), {
       reg_no: "12345",
+      year_of_registration: 2011,
       verification_status: "verified",
       verified_at: "2026-01-01T00:00:00.000Z",
       verification_json: { method: "manual", checked_by: "an-admin" },
     });
     // The same registration written the way the register writes it: still the same number and council.
-    const body = DoctorVerifyRes.parse(await (await post({ reg_no: "12-345", state_council: "Medical Council of Delhi" })).json());
+    const body = DoctorVerifyRes.parse(
+      await (await post({ reg_no: "12-345", state_council: "Medical Council of Delhi", year_of_registration: 2011 })).json(),
+    );
     expect(body.status).toBe("verified");
     expect(row(USER_ID).verification_status).toBe("verified");
     expect(row(USER_ID).verified_at).toBe("2026-01-01T00:00:00.000Z");
+    expect(row(USER_ID).year_of_registration).toBe(2011);
+  });
+
+  it("sends a verified doctor back to pending when only the year changes", async () => {
+    Object.assign(row(USER_ID), {
+      reg_no: "12345",
+      year_of_registration: 2011,
+      verification_status: "verified",
+      verified_at: "2026-01-01T00:00:00.000Z",
+    });
+    const body = DoctorVerifyRes.parse(
+      await (await post({ reg_no: "12345", state_council: "Delhi Medical Council", year_of_registration: 2015 })).json(),
+    );
+    expect(body.status).toBe("pending");
+    expect(row(USER_ID)).toMatchObject({ verification_status: "pending", year_of_registration: 2015, verified_at: null });
+    const json = row(USER_ID).verification_json as { method: string; submitted_at: string };
+    expect(json.method).toBe("manual");
+    expect(json.submitted_at).toBeTruthy();
   });
 
   it("sends a verified doctor back to pending when the number changes", async () => {
@@ -98,6 +130,24 @@ describe("POST /api/doctors/verify", () => {
     expect(saved.verified_at).toBeTruthy();
     const json = saved.verification_json as { method: string; checked_by: string; note: string };
     expect(json).toMatchObject({ method: "manual", checked_by: USER_ID, note: "Found in the register." });
+  });
+
+  it("stores the values exactly as the admin typed them on approve, spaces and all", async () => {
+    asAdmin();
+    db.rows.doctors = [{ id: OTHER_USER_ID, reg_no: "claimed-1", state_council: "Delhi Medical Council", verification_status: "pending", verified_at: null }];
+    const res = await post({
+      doctor_id: OTHER_USER_ID,
+      decision: "approve",
+      reg_no: " DMC/2020/123 ",
+      state_council: " Delhi Medical Council ",
+      year: 2020,
+      note: "Found in the register.",
+    });
+    expect(res.status).toBe(200);
+    const body = DoctorVerifyRes.parse(await res.json());
+    expect(body.status).toBe("verified");
+    // No trimming on the admin side (issue #359): what the admin typed is what the row holds.
+    expect(row(OTHER_USER_ID)).toMatchObject({ reg_no: " DMC/2020/123 ", state_council: " Delhi Medical Council " });
   });
 
   it("records an admin's rejection as failed and keeps the saved number", async () => {
@@ -157,6 +207,17 @@ describe("POST /api/doctors/verify", () => {
     expect(row(OTHER_USER_ID)).toMatchObject({ verification_status: "verified", reg_no: "12345" });
   });
 
+  it("answers the same message, not a server error, when the database guard refuses the approval", async () => {
+    asAdmin();
+    db.rows.doctors = [{ id: THIRD_DOCTOR_ID, reg_no: "waiting", state_council: "Delhi Medical Council", verification_status: "pending", verified_at: null }];
+    db.failUpdate.add("doctors");
+    const res = await post({ doctor_id: THIRD_DOCTOR_ID, decision: "approve", reg_no: "12345", state_council: "Delhi Medical Council", year: 2011, note: "ok" });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toBe("This registration is already linked to another account.");
+    expect(row(THIRD_DOCTOR_ID)).toMatchObject({ verification_status: "pending" });
+  });
+
   it("answers 404 when an admin checks a doctor who does not exist", async () => {
     asAdmin();
     db.rows.doctors = [];
@@ -181,6 +242,17 @@ describe("POST /api/doctors/verify", () => {
     expect((await post({ reg_no: "", state_council: "x" })).status).toBe(400);
   });
 
+  it("settles the role before reading the body: a patient gets 403 even with a body that is not JSON", async () => {
+    // Before issue #359 the body was parsed first, so this answered 400 instead of 403.
+    db.rows.profiles[0].role = "patient";
+    expect((await postRaw("{not json")).status).toBe(403);
+    // Roles that may use the route still get 400 for a body that is not JSON.
+    asDoctor();
+    expect((await postRaw("{not json")).status).toBe(400);
+    asAdmin();
+    expect((await postRaw("{not json")).status).toBe(400);
+  });
+
   it("asks a doctor without a doctor profile to complete it first", async () => {
     db.rows.doctors = [];
     const res = await post(send);
@@ -200,5 +272,13 @@ describe("POST /api/doctors/verify", () => {
     const adminText = JSON.stringify(await adminRes.json()) + JSON.stringify(db.rows.doctors);
     expect(adminText).not.toContain("NMC");
     expect(adminText).not.toContain("verified automatically");
+    // The reject path writes text too (the saved row, the answer), so it gets the same check.
+    db.rows.doctors = [{ id: OTHER_USER_ID, reg_no: "claimed-1", state_council: "Delhi Medical Council", verification_status: "pending", verified_at: null }];
+    const rejectRes = await post({ doctor_id: OTHER_USER_ID, decision: "reject", reg_no: "not-in-the-register", state_council: "Delhi Medical Council", year: null, note: "Checked by hand." });
+    const rejectBody = DoctorVerifyRes.parse(await rejectRes.json());
+    expect(rejectBody.status).toBe("failed");
+    const rejectText = JSON.stringify(rejectBody) + JSON.stringify(db.rows.doctors);
+    expect(rejectText).not.toContain("NMC");
+    expect(rejectText).not.toContain("verified automatically");
   });
 });
