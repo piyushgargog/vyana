@@ -60,7 +60,7 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
               <h2 id={titleId} className="text-[20px] font-semibold tracking-tight text-label">
                 {title}
               </h2>
-              <IconButton label="Close" variant="secondary" className="h-9 w-9" onClick={onClose}>
+              <IconButton label="Close" variant="secondary" className="h-11 w-11" onClick={onClose}>
                 <X aria-hidden="true" className="h-4 w-4" />
               </IconButton>
             </div>

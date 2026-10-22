@@ -79,6 +79,14 @@ describe("basket job deadlines", () => {
     expect(cancelRunMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not time out a run that has started, however long it waited in the queue", async () => {
+    // The job is older than the queue deadline, but this run left the queue 10 s ago:
+    // the queue deadline counts the wait, not the run (its own deadline runs from startedAt).
+    getRunMock.mockResolvedValue({ status: "RUNNING", result: null, error: null, startedAt: NOW - 10_000 });
+    expect((await poll(job(QUEUE_DEADLINE_MS + 20_000))).status).toBe("pending");
+    expect(cancelRunMock).not.toHaveBeenCalled();
+  });
+
   it("maps failed runs and does not cache them", async () => {
     getRunMock.mockResolvedValueOnce({ status: "FAILED", result: null, error: "SITE_BLOCKED", startedAt: NOW });
     expect((await poll(job(10_000))).status).toBe("error");

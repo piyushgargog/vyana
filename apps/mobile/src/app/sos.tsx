@@ -337,7 +337,7 @@ export default function MobileSosScreen() {
         <View style={styles.blinkitRow}>
           <IconTile ios="bolt.fill" android="bolt" color="orange" />
           <View style={styles.blinkitText}>
-            <Pill text="RAPID DISPATCH PARTNER" tone="neutral" />
+            <Pill text="ALSO AVAILABLE, NOT RUN BY VYANA" tone="neutral" />
             <Text variant="headline">Blinkit Ambulance</Text>
             <Text variant="footnote" tone="secondary">
               {BLINKIT.note}

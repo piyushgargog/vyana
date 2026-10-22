@@ -15,7 +15,7 @@ import { ASK_DOCTOR_NOTE, DOSE_NOTE, NO_SOURCE_NOTE } from "./system-prompt";
  */
 
 /** Tools that answer from the user's own records or our price checks, so the reply needs no web source. */
-const DATA_TOOLS = new Set(["get_my_medicines", "get_my_lab_values", "get_my_conditions", "compare_medicine_prices"]);
+const DATA_TOOLS = new Set(["get_my_medicines", "get_my_lab_values", "get_my_conditions"]);
 
 /** Shorter replies (greetings, a clarifying question) don't need a source. */
 const MIN_CHARS_NEEDING_SOURCE = 200;
@@ -50,7 +50,7 @@ export function readyLength(buffer: string): number {
 }
 
 /** How much of `text` is whole sentences: up to the last ". ", "! ", "? ", "। " or line break. */
-export function sentencesLength(text: string): number {
+function sentencesLength(text: string): number {
   let end = 0;
   for (const m of text.matchAll(/[.!?।](?=\s)\s*|\n+/gu)) end = (m.index ?? 0) + m[0].length;
   return end;

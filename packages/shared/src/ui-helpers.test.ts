@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { relativeTime, shareLinkSubtitle, telHref } from "./ui-helpers";
+import {
+  computeItemRefill,
+  relativeTime,
+  shareLinkSubtitle,
+  telHref,
+} from "./ui-helpers";
 
 const NOW = new Date("2026-10-21T12:00:00Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -84,5 +89,31 @@ describe("telHref", () => {
     expect(telHref("12345")).toBeNull();
     expect(telHref("call the desk")).toBeNull();
     expect(telHref("+91-98110-12345-67890")).toBeNull();
+  });
+});
+
+describe("computeItemRefill", () => {
+  it("reports the refill date as the local calendar date in Asia/Kolkata", () => {
+    const prevTz = process.env.TZ;
+    process.env.TZ = "Asia/Kolkata";
+    try {
+      // 30 tablets, twice a day from 1 Oct 2026 -> the pack runs out on 16 Oct.
+      const r = computeItemRefill(
+        {
+          frequency: "BD",
+          times: [],
+          quantity_total: 30,
+          start_date: "2026-10-01",
+          end_date: null,
+          refill_alert_days: 5,
+        },
+        new Date("2026-10-05T12:00:00Z")
+      );
+      expect(r.refillDate).toBe("2026-10-16");
+      expect(r.daysLeft).toBe(11);
+    } finally {
+      if (prevTz === undefined) delete process.env.TZ;
+      else process.env.TZ = prevTz;
+    }
   });
 });

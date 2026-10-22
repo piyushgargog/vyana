@@ -10,3 +10,4 @@ export * from "./blood-request";
 export * from "./hospital-search";
 export * from "./source-links";
 export * from "./qr";
+export * from "./trends";

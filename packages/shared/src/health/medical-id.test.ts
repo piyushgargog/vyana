@@ -93,6 +93,60 @@ describe("buildMedicalIdQr", () => {
     expect(text).not.toContain("x".repeat(81));
   });
 
+  it("leaves ordinary payloads byte-for-byte unchanged, in any script", () => {
+    const text = buildMedicalIdQr(
+      { full_name: "आर्यन शर्मा", blood_group: "B+", allergies: ["पेनिसिलिन"] },
+      [{ medicine_name: "मेटफॉर्मिन" }],
+      { name: "सुनीता", phone: "9876500000" },
+    );
+    expect(text).toBe(
+      [
+        "VYANA EMERGENCY ID",
+        "Name: आर्यन शर्मा",
+        "Blood group: B+",
+        "Allergies: पेनिसिलिन",
+        "Medicines: मेटफॉर्मिन",
+        "Emergency contact: सुनीता 9876500000",
+      ].join("\n"),
+    );
+  });
+
+  it("fits the cap when the names alone are at their longest in a three-byte script", () => {
+    const longName = "अ".repeat(80); // the clean() cap for a name, three bytes a character
+    const longContactName = "स".repeat(50); // the clean() cap for a contact name
+    const text = buildMedicalIdQr({ full_name: longName, blood_group: "O+", allergies: [] }, [], { name: longContactName, phone: "+91 98765 43210" });
+    expect(bytes(text)).toBeLessThanOrEqual(MEDICAL_ID_MAX_LENGTH);
+    expect(text).toContain("Blood group: O+");
+    expect(text).toContain("+91 98765 43210"); // the number a responder dials stays whole
+    expect(text).toContain(`Name: ${longName}`); // the patient's name is given up last, so it survives here
+    expect(text).not.toContain(longContactName); // the contact's name is what gave way
+  });
+
+  it("fits the cap at the worst case: longest names with the longest lists", () => {
+    const text = buildMedicalIdQr(
+      { full_name: "अ".repeat(80), blood_group: "O+", allergies: Array.from({ length: 20 }, () => "क".repeat(60)) },
+      Array.from({ length: 30 }, () => ({ medicine_name: "म".repeat(80) })),
+      { name: "स".repeat(50), phone: "+91 98765 43210" },
+    );
+    expect(bytes(text)).toBeLessThanOrEqual(MEDICAL_ID_MAX_LENGTH);
+    expect(text).toContain("Blood group: O+");
+    expect(text).toContain("+91 98765 43210");
+  });
+
+  it("shortens the patient's name too when nothing else is left to give up", () => {
+    const longName = "अ".repeat(80);
+    const text = buildMedicalIdQr(
+      { full_name: longName, blood_group: "AB-", allergies: ["पेनिसिलिन"] },
+      [{ medicine_name: "मेटफॉर्मिन", strength: "500 mg" }],
+      { name: "स".repeat(50), phone: "+91 98765 43210" },
+      200,
+    );
+    expect(bytes(text)).toBeLessThanOrEqual(200);
+    expect(text).toContain("Blood group: AB-");
+    expect(text).toContain("Emergency contact: +91 98765 43210"); // the contact's name went first, the number stayed
+    expect(text).not.toContain(longName); // then the patient's own name had to give way
+  });
+
   it("always fits a QR code that a phone camera reads", () => {
     const many = Array.from({ length: 30 }, (_, i) => ({ medicine_name: `Medicine number ${i + 1}`, strength: "500 mg tablet" }));
     const text = buildMedicalIdQr({ ...profile, allergies: Array.from({ length: 20 }, (_, i) => `Allergy ${i + 1}`) }, many, contact);

@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   flagHigh: { backgroundColor: '#FEE2E2' },
   flagLow: { backgroundColor: '#FEF3C7' },
   flagNormal: { backgroundColor: '#D1FAE5' },
-  flagBadgeText: { fontSize: 10, fontWeight: '800' },
+  flagBadgeText: { fontSize: 11, fontWeight: '800' },
   flagHighText: { color: '#B91C1C' },
   flagLowText: { color: '#B45309' },
   flagNormalText: { color: '#065F46' },
