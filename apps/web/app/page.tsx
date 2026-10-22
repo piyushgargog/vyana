@@ -308,9 +308,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. “Careful by Design” Glass Strip */}
+        {/* 6. "Careful by Design" strip — a content section, so a solid surface like every other card (issue #288). */}
         <section id="careful" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          <div className="glass rounded-feature p-8 sm:p-10 border border-white/80 shadow-glass">
+          <div className="rounded-feature bg-surface p-8 sm:p-10 border border-separator">
             <div className="max-w-xl mb-8">
               <h2 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-label">
                 Careful by design.

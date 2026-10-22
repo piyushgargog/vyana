@@ -66,6 +66,35 @@
   }
 }
 
+/*
+ * Reduced transparency (issue #288): when the person asks the system for it, glass turns solid.
+ * There is nothing behind the surface to read any more, so the blur and the translucency both go.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: rgb(255 255 255 / 0.97);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-bar {
+    background: rgb(242 242 247 / 0.98);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Increased contrast (issue #288): the same surfaces, with a border that still reads as an edge. */
+@media (prefers-contrast: more) {
+  .glass {
+    background: rgb(255 255 255 / 0.92);
+    border-color: rgb(60 60 67 / 0.55);
+  }
+  .glass-bar {
+    background: rgb(242 242 247 / 0.94);
+    border-bottom: 1px solid rgb(60 60 67 / 0.55);
+  }
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
