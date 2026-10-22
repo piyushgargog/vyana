@@ -28,16 +28,31 @@ export function ShareVitals({ vitals }: { vitals: NonNullable<ShareMemory["vital
             p.value2 != null ? { date: formatChartDateTime(p.at), value: p.value2 } : null,
           );
           const hasSecond = points2.some((p) => p !== null);
+          // Device readings are marked as such in the line under the chart (issue
+          // #328); manual readings carry no mark and read exactly as before.
+          const latest = sorted[sorted.length - 1];
+          const latestValue = latest.value2 != null ? `${latest.value}/${latest.value2}` : `${latest.value}`;
+          const deviceNote = latest.from_device
+            ? " · from device"
+            : sorted.some((p) => p.from_device)
+              ? " · some readings from device"
+              : "";
           return (
-            <TrendChartSvg
-              key={vital.type}
-              title={vitalTitle(vital.type)}
-              unit={vital.unit ?? ""}
-              points={points}
-              points2={hasSecond ? points2 : undefined}
-              seriesLabel={isBp ? "Systolic" : "First reading"}
-              series2Label={isBp ? "Diastolic" : "Second reading"}
-            />
+            <div key={vital.type} className="space-y-2">
+              <TrendChartSvg
+                title={vitalTitle(vital.type)}
+                unit={vital.unit ?? ""}
+                points={points}
+                points2={hasSecond ? points2 : undefined}
+                seriesLabel={isBp ? "Systolic" : "First reading"}
+                series2Label={isBp ? "Diastolic" : "Second reading"}
+              />
+              <p className="px-4 text-[13px] text-label-2">
+                Latest: {latestValue}
+                {vital.unit ? ` ${vital.unit}` : ""} · {formatChartDateTime(latest.at)}
+                {deviceNote}
+              </p>
+            </div>
           );
         })}
       </Card>
