@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { subscribeAccessibilitySetting } from './use-accessibility-setting';
+import { subscribeAccessibilitySetting } from './accessibility-setting-core';
 
 type Listener = (enabled: boolean) => void;
 
@@ -33,7 +33,7 @@ describe('subscribeAccessibilitySetting — the plumbing behind useReduceTranspa
   it('reports the initial system value once it lands', async () => {
     const fake = fakeSource(true);
     const seen: boolean[] = [];
-    subscribeAccessibilitySetting(fake.source as never, { query: fake.query, event: 'reduceTransparencyChanged' }, (v) =>
+    subscribeAccessibilitySetting(fake.source, { query: fake.query, event: 'reduceTransparencyChanged' }, (v) =>
       seen.push(v),
     );
     await flush();
@@ -45,7 +45,7 @@ describe('subscribeAccessibilitySetting — the plumbing behind useReduceTranspa
     const fake = fakeSource(false);
     const seen: boolean[] = [];
     const stop = subscribeAccessibilitySetting(
-      fake.source as never,
+      fake.source,
       { query: fake.query, event: 'reduceTransparencyChanged' },
       (v) => seen.push(v),
     );
@@ -62,7 +62,7 @@ describe('subscribeAccessibilitySetting — the plumbing behind useReduceTranspa
     const fake = fakeSource(true);
     const seen: boolean[] = [];
     const stop = subscribeAccessibilitySetting(
-      fake.source as never,
+      fake.source,
       { query: fake.query, event: 'highTextContrastChanged' },
       (v) => seen.push(v),
     );
@@ -75,7 +75,7 @@ describe('subscribeAccessibilitySetting — the plumbing behind useReduceTranspa
     const fake = fakeSource(false);
     const seen: boolean[] = [];
     subscribeAccessibilitySetting(
-      fake.source as never,
+      fake.source,
       { query: () => Promise.reject(new Error('not on this platform')), event: 'reduceTransparencyChanged' },
       (v) => seen.push(v),
     );
