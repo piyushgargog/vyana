@@ -10,6 +10,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
 
 ### Fixed
+- Wording that claimed more than the app does: the consent text said identifying details are removed "before any AI analysis", but a photo is first read by a vision model that sees the whole image (the details are removed from the text after that); the SOS screen called Blinkit Ambulance a "rapid dispatch partner", but Vyana has no partnership (now "also available, not run by Vyana").
 - Accessibility pass (U1): no text under 11 px/pt anywhere — the phone tab bar labels (web and phone), the doctor pages' small badges and the phone's report and prescription details all move to 11. Tap targets that were 36 px are now 44: the header sign-out button, the sheet close button and the small icon button. On the phone, the secondary and tertiary text colours are aligned with the web tokens (label2 0.78, label3 0.74 opacity), because at the old values they measured 4.47:1 and 3.29:1 on the canvas — under the 4.5:1 that small text needs; they now measure 5.26:1 and 4.74:1.
 
 ### Changed
