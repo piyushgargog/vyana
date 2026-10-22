@@ -3,9 +3,8 @@
 # - `cooldown`: a release is not proposed until it is 5 days old, so a freshly published (possibly malicious)
 #   version does not reach us on its first day. Cooldown does not apply to security updates, which come at once.
 # - Minor and patch updates of one ecosystem come together in one pull request; a major update gets its own.
-# - npm routine version updates are OFF until 19 October 2026 (the v1 freeze: no upgrades while the app is being
-#   finished). Security updates are not affected by `open-pull-requests-limit: 0` and keep coming.
-#   ON 19 OCTOBER: set the npm limit below to 5.
+# - npm routine version updates are on (switched on after the v1 freeze, issue #133): at most 5 open pull
+#   requests, with minor and patch in one group. Security updates are not limited by that count.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -15,7 +14,7 @@ updates:
       day: monday
     cooldown:
       default-days: 5
-    open-pull-requests-limit: 0 # switch to 5 on 19 Oct 2026
+    open-pull-requests-limit: 5
     groups:
       security:
         applies-to: security-updates
