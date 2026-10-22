@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Linking,
   Pressable,
   StyleSheet,
   TextInput,
@@ -7,9 +8,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  useBasketJob,
+  pharmacySearchLinks,
   useCheckInteractions,
-  useCompareMedicine,
   usePrescriptions,
   useSetItemActive,
 } from '@vyana/shared';
@@ -29,13 +29,10 @@ export default function MobileMedsTab() {
 
   const { data: rxList = [], isLoading: rxLoading, isError: rxError, refetch: refetchRx } = usePrescriptions();
   const toggleMutation = useSetItemActive();
-  const compareSingleMutation = useCompareMedicine();
   const interactionsMutation = useCheckInteractions();
 
   const [singleMedQuery, setSingleMedQuery] = useState('');
   const [singleStrength, setSingleStrength] = useState('');
-  const [singleJobId, setSingleJobId] = useState<string | null>(null);
-  const { data: singleJobData } = useBasketJob(singleJobId);
 
   const allActiveMedNames = rxList
     .flatMap((rx) => rx.prescription_items.filter((i) => i.active))
@@ -98,23 +95,16 @@ export default function MobileMedsTab() {
     }
   };
 
-  const handleSingleMedicineSearch = async () => {
-    if (!singleMedQuery.trim()) return;
-    try {
-      const res = await compareSingleMutation.mutateAsync({
-        medicine: singleMedQuery.trim(),
-        strength: singleStrength.trim() || undefined,
-      });
-      setSingleJobId(res.job_id);
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : 'Price lookup failed',
-        'error'
-      );
-    }
-  };
+  const singleQuery = [singleMedQuery.trim(), singleStrength.trim()]
+    .filter(Boolean)
+    .join(' ');
+  const singleLinks = pharmacySearchLinks(singleQuery);
 
-  const singleResult = singleJobData ?? compareSingleMutation.data;
+  const handleOpenPharmacy = (url: string, name: string) => {
+    Linking.openURL(url).catch(() => {
+      showToast(`Could not open ${name}`, 'error');
+    });
+  };
 
   return (
     <Screen
@@ -136,12 +126,12 @@ export default function MobileMedsTab() {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Compare full prescription basket across pharmacies"
+          accessibilityLabel="Compare medicine prices on the pharmacy sites"
           onPress={() => router.push('/basket')}
           style={styles.basketBtn}
         >
           <Text variant="footnote" tone="white" style={styles.basketBtnText}>
-            Compare Full Basket →
+            Compare Medicine Prices →
           </Text>
         </Pressable>
       </View>
@@ -291,9 +281,9 @@ export default function MobileMedsTab() {
               style={styles.orderWholeBtn}
             >
               <Text variant="footnote" style={styles.orderWholeBtnText}>
-                Order All{' '}
+                Look Up All{' '}
                 {rx.prescription_items.filter((i) => i.active).length} Medicines
-                (Compare Full Basket) →
+                →
               </Text>
             </Pressable>
 
@@ -328,7 +318,7 @@ export default function MobileMedsTab() {
                   <View style={styles.medItemActions}>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Reorder ${item.medicine_name}`}
+                      accessibilityLabel={`Look up ${item.medicine_name} on the pharmacy sites`}
                       onPress={() =>
                         handleReorderSingle(
                           item.medicine_name,
@@ -339,7 +329,7 @@ export default function MobileMedsTab() {
                       style={styles.reorderSmallBtn}
                     >
                       <Text variant="caption" tone="white" style={styles.reorderSmallText}>
-                        Reorder
+                        Look up
                       </Text>
                     </Pressable>
 
@@ -366,12 +356,12 @@ export default function MobileMedsTab() {
         ))
       )}
 
-      {/* Single-Medicine Quick Price Lookup */}
+      {/* Single-medicine lookup on the pharmacy sites */}
       <View style={styles.card}>
-        <Text variant="headline">Single-Medicine Quick Price Lookup</Text>
+        <Text variant="headline">Look Up a Medicine</Text>
         <Text variant="caption" tone="tertiary" style={styles.cardSub}>
-          Search any individual medicine to compare across 1mg, PharmEasy,
-          Apollo, Netmeds & Jan Aushadhi
+          Look any medicine up on the pharmacy sites themselves. Prices are
+          on the shop&apos;s own page; Vyana does not show or check prices.
         </Text>
 
         <View style={styles.searchRow}>
@@ -403,43 +393,20 @@ export default function MobileMedsTab() {
           </View>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Compare single medicine price"
-          disabled={compareSingleMutation.isPending || !singleMedQuery.trim()}
-          onPress={handleSingleMedicineSearch}
-          style={styles.outlineBtnFull}
-        >
-          <Text variant="caption" style={styles.outlineBtnText}>
-            {compareSingleMutation.isPending
-              ? 'Checking pharmacies…'
-              : 'Compare Single Medicine'}
-          </Text>
-        </Pressable>
-
-        {singleResult && (
+        {singleLinks.length > 0 && (
           <View style={styles.singleResultWrap}>
-            {singleResult.baskets.map((b) => (
-              <View key={b.source} style={styles.singlePharmacyRow}>
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption" style={styles.singlePharmName}>
-                    {b.source.toUpperCase()} ·{' '}
-                    {b.status === 'pending'
-                      ? 'Agent is checking…'
-                      : b.total !== null
-                        ? `₹${b.total}`
-                        : 'Unavailable'}
-                  </Text>
-                  {b.lines[0] && !b.lines[0].price_verified && (
-                    <Text variant="caption" style={styles.unverifiedLabel}>
-                      price not confirmed
-                    </Text>
-                  )}
-                </View>
-                <Text variant="footnote" style={styles.singleTotal}>
-                  {b.total !== null ? `₹${b.total}` : '—'}
+            {singleLinks.map((link) => (
+              <Pressable
+                key={link.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Search on ${link.name} for ${singleQuery}`}
+                onPress={() => handleOpenPharmacy(link.url, link.name)}
+                style={styles.outlineBtnFull}
+              >
+                <Text variant="caption" style={styles.outlineBtnText}>
+                  Search on {link.name} →
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}

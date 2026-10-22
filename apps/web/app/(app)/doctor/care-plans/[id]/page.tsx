@@ -304,7 +304,7 @@ function DoctorCarePlanReviewContent({
           onChange={(e) =>
             setDraftPlan({ ...draftPlan, summary: e.target.value })
           }
-          className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label focus:outline-none"
+          className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label focus:border-accent focus:outline-none"
         />
       </Card>
 
@@ -335,7 +335,8 @@ function DoctorCarePlanReviewContent({
                     next[idx] = e.target.value;
                     setDraftPlan({ ...draftPlan, do: next });
                   }}
-                  className="flex-1 bg-transparent text-label focus:outline-none"
+                  aria-label={`Recommended action ${idx + 1}`}
+                  className="flex-1 bg-transparent text-label"
                 />
                 <button
                   type="button"
@@ -359,7 +360,8 @@ function DoctorCarePlanReviewContent({
               value={newDoItem}
               onChange={(e) => setNewDoItem(e.target.value)}
               placeholder="Add recommended action…"
-              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:outline-none"
+              aria-label="Add recommended action"
+              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
             <Button
               variant="secondary"
@@ -404,7 +406,8 @@ function DoctorCarePlanReviewContent({
                     next[idx] = e.target.value;
                     setDraftPlan({ ...draftPlan, dont: next });
                   }}
-                  className="flex-1 bg-transparent text-label focus:outline-none"
+                  aria-label={`Action to avoid ${idx + 1}`}
+                  className="flex-1 bg-transparent text-label"
                 />
                 <button
                   type="button"
@@ -428,7 +431,8 @@ function DoctorCarePlanReviewContent({
               value={newDontItem}
               onChange={(e) => setNewDontItem(e.target.value)}
               placeholder="Add restriction / contraindication…"
-              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:outline-none"
+              aria-label="Add restriction / contraindication"
+              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
             <Button
               variant="secondary"
@@ -478,7 +482,8 @@ function DoctorCarePlanReviewContent({
                         diet: { ...draftPlan.diet, eat_more: next },
                       });
                     }}
-                    className="flex-1 bg-transparent text-label focus:outline-none"
+                    aria-label={`Food to include ${idx + 1}`}
+                    className="flex-1 bg-transparent text-label"
                   />
                   <button
                     type="button"
@@ -505,7 +510,8 @@ function DoctorCarePlanReviewContent({
                 value={newEatMoreItem}
                 onChange={(e) => setNewEatMoreItem(e.target.value)}
                 placeholder="e.g. Green leafy vegetables…"
-                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:outline-none"
+                aria-label="Add food to include"
+                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
               <Button
                 variant="secondary"
@@ -550,7 +556,8 @@ function DoctorCarePlanReviewContent({
                         diet: { ...draftPlan.diet, limit: next },
                       });
                     }}
-                    className="flex-1 bg-transparent text-label focus:outline-none"
+                    aria-label={`Food to limit ${idx + 1}`}
+                    className="flex-1 bg-transparent text-label"
                   />
                   <button
                     type="button"
@@ -577,7 +584,8 @@ function DoctorCarePlanReviewContent({
                 value={newLimitItem}
                 onChange={(e) => setNewLimitItem(e.target.value)}
                 placeholder="e.g. Refined sugars, high-sodium snacks…"
-                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:outline-none"
+                aria-label="Add food to limit"
+                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
               <Button
                 variant="secondary"
@@ -627,7 +635,8 @@ function DoctorCarePlanReviewContent({
                   next[idx] = e.target.value;
                   setDraftPlan({ ...draftPlan, red_flags: next });
                 }}
-                className="flex-1 bg-transparent font-medium focus:outline-none"
+                aria-label={`Red flag symptom ${idx + 1}`}
+                className="flex-1 bg-transparent font-medium"
               />
               <button
                 type="button"
@@ -651,7 +660,8 @@ function DoctorCarePlanReviewContent({
             value={newRedFlagItem}
             onChange={(e) => setNewRedFlagItem(e.target.value)}
             placeholder="Add red flag symptom (e.g. Sudden severe chest pain, loss of consciousness)…"
-            className="flex-1 rounded-row border border-danger/30 bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:outline-none"
+            aria-label="Add red flag symptom"
+            className="flex-1 rounded-row border border-danger/30 bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
           <Button
             variant="secondary"
@@ -714,7 +724,8 @@ function DoctorCarePlanReviewContent({
             value={newTestName}
             onChange={(e) => setNewTestName(e.target.value)}
             placeholder="Test name (e.g. HbA1c, Serum Creatinine)…"
-            className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:outline-none"
+            aria-label="Follow-up test name"
+            className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
           <div className="flex items-center gap-1 text-xs text-label-2">
             <span>Every</span>
@@ -723,7 +734,8 @@ function DoctorCarePlanReviewContent({
               min="1"
               value={newTestDays}
               onChange={(e) => setNewTestDays(parseInt(e.target.value) || 30)}
-              className="w-16 rounded-row border border-separator bg-surface px-2 py-1.5 text-xs text-center text-label focus:outline-none"
+              aria-label="Days between follow-up tests"
+              className="w-16 rounded-row border border-separator bg-surface px-2 py-1.5 text-xs text-center text-label focus:border-accent focus:outline-none"
             />
             <span>days</span>
           </div>

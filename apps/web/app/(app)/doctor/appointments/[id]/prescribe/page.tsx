@@ -640,10 +640,11 @@ function DoctorPrescribeContent({
               {/* Row 1: Name, Strength, Form */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-medicine-name`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Medicine Name *
                   </label>
                   <input
+                    id={`${med.id}-medicine-name`}
                     type="text"
                     required
                     value={med.medicine_name}
@@ -656,10 +657,11 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-strength`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Strength / Dose
                   </label>
                   <input
+                    id={`${med.id}-strength`}
                     type="text"
                     value={med.strength || ""}
                     onChange={(e) =>
@@ -674,10 +676,11 @@ function DoctorPrescribeContent({
               {/* Row 2: Form, Frequency, Food Timing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-form`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Form
                   </label>
                   <select
+                    id={`${med.id}-form`}
                     value={med.form}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "form", e.target.value)
@@ -694,10 +697,11 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-frequency`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Frequency
                   </label>
                   <select
+                    id={`${med.id}-frequency`}
                     value={med.frequency}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "frequency", e.target.value)
@@ -715,10 +719,11 @@ function DoctorPrescribeContent({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-with-food`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Relation to Food
                   </label>
                   <select
+                    id={`${med.id}-with-food`}
                     value={med.with_food}
                     onChange={(e) =>
                       handleUpdateMedicine(med.id, "with_food", e.target.value)
@@ -735,10 +740,11 @@ function DoctorPrescribeContent({
               {/* Row 3: Instructions & Quantity */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-label-2 mb-1">
+                  <label htmlFor={`${med.id}-instructions`} className="block text-[11px] font-bold text-label-2 mb-1">
                     Patient Instructions
                   </label>
                   <input
+                    id={`${med.id}-instructions`}
                     type="text"
                     value={med.instructions || ""}
                     onChange={(e) =>
@@ -751,10 +757,11 @@ function DoctorPrescribeContent({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-label-2 mb-1">
+                    <label htmlFor={`${med.id}-quantity-total`} className="block text-[11px] font-bold text-label-2 mb-1">
                       Total Units
                     </label>
                     <input
+                      id={`${med.id}-quantity-total`}
                       type="number"
                       min="1"
                       value={med.quantity_total ?? ""}
@@ -769,10 +776,11 @@ function DoctorPrescribeContent({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-label-2 mb-1">
+                    <label htmlFor={`${med.id}-duration-days`} className="block text-[11px] font-bold text-label-2 mb-1">
                       Days
                     </label>
                     <input
+                      id={`${med.id}-duration-days`}
                       type="number"
                       min="1"
                       value={med.duration_days ?? ""}

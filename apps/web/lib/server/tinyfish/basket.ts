@@ -33,7 +33,7 @@ export const RUN_DEADLINE_MS = 190_000;
  * the flat AGENT_MAX_SECONDS. The run deadline keeps its 40 s grace over the agent
  * cap and stays under the queue deadline.
  */
-export function agentMaxSeconds(itemCount: number): number {
+function agentMaxSeconds(itemCount: number): number {
   return Math.min(420, AGENT_MAX_SECONDS + Math.max(0, itemCount - 1) * 30);
 }
 
@@ -371,7 +371,10 @@ async function basketForRun(run: z.infer<typeof JobRun>, job: JobPayload, counte
     }
     const now = Date.now();
     const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > runDeadlineMs(job.items.length);
-    const stuckQueued = now - job.started_at > QUEUE_DEADLINE_MS;
+    // The queue deadline counts only the wait for a browser: once a run has started (`startedAt` is set), its
+    // own deadline above is the one that applies, however long it waited. Timing a started run out by the job's
+    // age cancelled healthy runs that had queued behind the other pharmacies.
+    const stuckQueued = r.startedAt === null && now - job.started_at > QUEUE_DEADLINE_MS;
     if (stuckRunning || stuckQueued) {
       await cancelRun(runId, { counter });
       state = "timeout";
