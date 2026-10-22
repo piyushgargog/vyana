@@ -17,9 +17,9 @@ import { LABS, type LabSource, absoluteUrl, isOnDomain } from "./sources";
 
 const VERIFY_TIMEOUT_MS = 45_000;
 
-export const labQuery = (test: string, city: string) => `${normalizeKeyPart(test)} · ${normalizeKeyPart(city)}`;
+const labQuery = (test: string, city: string) => `${normalizeKeyPart(test)} · ${normalizeKeyPart(city)}`;
 
-export function labGoal(test: string, city: string, lab: LabSource): string {
+function labGoal(test: string, city: string, lab: LabSource): string {
   return [
     `On this ${lab.name} website, find the lab test "${test}" offered in ${city}.`,
     "If this page is not that test, use the site's search to open it. Return the test's exact name as shown, its selling price in rupees, the MRP if shown, and the URL of the test's page.",
@@ -28,7 +28,7 @@ export function labGoal(test: string, city: string, lab: LabSource): string {
   ].join(" ");
 }
 
-export const LAB_OUTPUT_SCHEMA: OutputSchema = {
+const LAB_OUTPUT_SCHEMA: OutputSchema = {
   type: "object",
   properties: {
     found: { type: "boolean" },
@@ -167,7 +167,11 @@ async function outcomeForRun(run: z.infer<typeof JobRun>, job: LabJob, counter: 
       return null;
     }
     const now = Date.now();
-    if ((r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS) || now - job.started_at > QUEUE_DEADLINE_MS) {
+    // Same rule as the basket: the queue deadline counts only the wait for a browser. Once a run has started
+    // (`startedAt` is set), only its own run deadline applies, however long it waited in the queue.
+    const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS;
+    const stuckQueued = r.startedAt === null && now - job.started_at > QUEUE_DEADLINE_MS;
+    if (stuckRunning || stuckQueued) {
       await cancelRun(runId, { counter });
       state = "timeout";
     }

@@ -3,6 +3,7 @@
 import React, { use } from "react";
 import { useRouter } from "next/navigation";
 import {
+  labSearchLinks,
   useLabReport,
   useLabValueHistory,
   type DbLabValue,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui-primitives";
 import {
   Button,
+  ButtonLink,
   Card,
   CardHeader,
   EmptyState,
@@ -22,7 +24,47 @@ import {
   Reveal,
   SkeletonLine,
 } from "@/components/ui";
-import { ArrowLeft, FileWarning, FlaskConical, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  FileWarning,
+  FlaskConical,
+  TrendingUp,
+} from "lucide-react";
+
+/** Look a test up on the lab sites themselves (v1.2): a search where the lab has one, its home page where it does not. */
+function LabLookupLinks({ testName }: { testName: string }) {
+  const links = labSearchLinks(testName);
+  if (links.length === 0) return null;
+  return (
+    <div className="mt-3 border-t border-separator pt-3">
+      <p className="text-[13px] font-medium text-label-3">
+        Look up this test
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {links.map((link) => (
+          <ButtonLink
+            key={link.id}
+            variant="plain"
+            size="sm"
+            className="min-h-[44px]"
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={
+              link.searchesTest
+                ? `Search on ${link.name} for ${testName}`
+                : `Open ${link.name}`
+            }
+            icon={<ExternalLink className="h-4 w-4" aria-hidden="true" />}
+          >
+            {link.searchesTest ? `Search on ${link.name}` : `Open ${link.name}`}
+          </ButtonLink>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function flagTone(flag: string): "danger" | "warn" | "ok" | "neutral" {
   if (flag === "high") return "danger";
@@ -224,7 +266,7 @@ export default function LabReportDetailPage({
               Could not load this report
             </p>
             <p className="text-[15px] text-label-2">
-              Something went wrong while loading this report. Please try again.
+              This report could not be loaded. Please try again.
             </p>
             <Button variant="secondary" onClick={() => refetch()}>
               Try again
@@ -331,6 +373,7 @@ export default function LabReportDetailPage({
                         {v.unit || ""}
                       </span>
                     </p>
+                    <LabLookupLinks testName={v.test_name} />
                   </Card>
                 </Reveal>
               );

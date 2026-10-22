@@ -2,10 +2,10 @@ import { EmergencyNearbyReq, EmergencyNearbyRes, rateLimitOf } from "@vyana/shar
 import { requireUser } from "@/lib/server/auth";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { log } from "@/lib/server/log";
-import { findNearbyHospitals } from "@/lib/server/tinyfish/hospitals";
+import { findNearbyHospitals } from "@/lib/server/web/overpass";
 
-// Search + Fetch + one model call; well under a minute.
-export const maxDuration = 60;
+// One public map request with a 12 s timeout, then the seeded table.
+export const maxDuration = 30;
 
 export const POST = withRoute("emergency/nearby", async (req, ctx) => {
   const { user } = await requireUser(req);
@@ -13,7 +13,7 @@ export const POST = withRoute("emergency/nearby", async (req, ctx) => {
   const body = await parseBody(req, EmergencyNearbyReq);
   let res: EmergencyNearbyRes;
   try {
-    res = await findNearbyHospitals(body.lat, body.lng, { userId: user.id, counter: ctx });
+    res = await findNearbyHospitals(body.lat, body.lng);
   } catch (err) {
     // Never 5xx here: the SOS screen must keep working and still shows 108 (SPEC §5).
     log({ event: "nearby_failed", error: err instanceof Error ? err.name : "Error" });

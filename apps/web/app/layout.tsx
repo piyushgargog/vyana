@@ -3,11 +3,15 @@ import "./globals.css";
 import { KeyboardGuard } from "@/components/keyboard-guard";
 import { WebAppProviders } from "@/components/providers";
 
-/** `resizes-content`: the page shrinks when the phone keyboard opens, so a field at the bottom is never hidden under it. */
+/**
+ * `interactiveWidget: "resizes-content"` (#245: the page shrinks when the phone keyboard opens, so a field at the
+ * bottom is never hidden under it) is deliberately not set here. WebKit does not know that viewport key and logs
+ * it as a console error on every page load (#362), so the key is kept out of the static meta tag and
+ * `KeyboardGuard` adds it at runtime in Chromium, the engine that understands it.
+ */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {

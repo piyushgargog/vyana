@@ -498,13 +498,13 @@ paths:
     post:
       tags:
         - Doctors
-      summary: Verify a doctor against the NMC Indian Medical Register
+      summary: Send a doctor's registration, or record an admin's manual check of it
       description: |-
-        A web agent reads the official register; code decides. `verified` only when the registration number, council, surname and name (initials allowed) all match, and the year too when both give one. `failed` shows the closest register row (or none). `pending` when the register can't be read; a CAPTCHA is never automated. A number already verified on another account fails. Register answers are cached for 30 days.
+        Two cases, by the caller's role; nothing is looked up or verified automatically. A doctor sends their own registration number, state council and (when known) year of registration and stays `pending` (a doctor who is already `verified` and sends the same number and council stays `verified`). An admin who has checked the number in the public register by hand sends the doctor's id, a decision (`approve` or `reject`), the number, council and year exactly as the register shows them, and a note; `approve` marks the doctor `verified` (unless that number is already verified on another account, which answers 400), `reject` marks them `failed` and leaves the saved number as it was.
 
-        **Who can call it:** doctor (verifies self).
+        **Who can call it:** doctor (sends own registration), admin (records a manual check).
 
-        **TinyFish:** Agent.
+        **TinyFish:** none (an admin checks the public register by hand).
       operationId: post_doctors_verify
       requestBody:
         required: true
@@ -538,7 +538,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "429":
-          description: Over the limit of 10 calls per user in 1 hour, shared with the other routes of the `agent` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          description: Over the limit of 20 calls per user in 10 minutes, shared with the other routes of the `lookup` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -737,7 +737,7 @@ paths:
 
         **Who can call it:** patient, or the patient's doctor.
 
-        **TinyFish:** Search, Fetch.
+        **TinyFish:** none (MedlinePlus topic search and an own page fetch).
       operationId: post_care_plan
       requestBody:
         required: true
@@ -794,11 +794,11 @@ paths:
         - Care
       summary: Check a patient's medicines for interactions
       description: |-
-        A patient checks their own medicines (all current ones, or one prescription). A doctor checks a patient they treat by sending `prescription_id` or `patient_id`; any other doctor gets 403. Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. A reviewed table of well-known interactions is checked first (`layer: table`); other pairs are looked up on trusted medicine pages, and an interaction is reported only with the exact sentence that states it (`layer: sources`). When none is found, the response lists the sources that were checked; it never calls a combination safe.
+        A patient checks their own medicines (all current ones, or one prescription). A doctor checks a patient they treat by sending `prescription_id` or `patient_id`; any other doctor gets 403. Brand names are mapped to salts from a reviewed list (or a salt written in brackets); medicines that can't be mapped are listed in `not_checked`. Only a reviewed table of well-known interactions is checked (`layer: table`); every other pair of known medicines is listed in `not_checked` ("not in the reviewed list yet"). A combination is never called safe, and an empty result never means that nothing interacts.
 
         **Who can call it:** patient, doctor of the patient.
 
-        **TinyFish:** Search, Fetch.
+        **TinyFish:** none.
       operationId: post_medicines_interactions
       requestBody:
         required: true

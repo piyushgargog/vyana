@@ -52,11 +52,14 @@ function query(name: string) {
   let pendingUpdate: Row | null = null;
   let pendingDelete = false;
   let limitN = Infinity;
-  const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v));
+  const notNull: string[] = [];
+  const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v) && notNull.every((c) => r[c] != null));
 
   const chain = {
     select: () => chain,
     eq: (col: string, value: unknown) => (filters.push([col, value]), chain),
+    // only `.not(col, "is", null)` is understood
+    not: (col: string) => (notNull.push(col), chain),
     gt: (_col: string, value: string) => ((gtExpires = value), chain),
     order: () => chain,
     limit: (n: number) => ((limitN = n), chain),
