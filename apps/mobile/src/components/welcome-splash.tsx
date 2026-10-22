@@ -166,7 +166,7 @@ export function WelcomeSplash() {
             {/* Logo container with rounded elevation */}
             <View style={styles.logoWrapper}>
               <Image
-                source={require('../../assets/images/splash-icon.png')}
+                source={require('../../assets/images/splash-logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -245,20 +245,16 @@ const styles = StyleSheet.create({
     ...T.shadow.float,
   },
   logoWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: T.radius.card,
-    backgroundColor: T.color.surface,
+    width: 104,
+    height: 104,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: T.space.md,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    ...T.shadow.float,
   },
   logo: {
-    width: 92,
-    height: 92,
+    width: 104,
+    height: 104,
+    borderRadius: 24,
   },
   name: {
     fontSize: 32,
