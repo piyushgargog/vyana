@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import {
   isShareUrlDead,
   shareScopeLabel,
@@ -177,6 +178,7 @@ export default function TimelineScreen() {
     if (!shareUrl) return;
     try {
       await Clipboard.setStringAsync(shareUrl);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       showToast('Link copied for your doctor', 'success');
     } catch {
       showToast('Could not copy the link', 'error');

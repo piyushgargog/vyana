@@ -1,5 +1,5 @@
 /**
- * Re-checks the curated care plan red flags against the live source pages (free TinyFish Fetch calls):
+ * Re-checks the curated care plan red flags against the live source pages (read with the app's own page reader):
  *   - every item's quote appears word for word on its source
  *   - every number in an item's text appears in its quote
  * Run after any change to apps/web/lib/server/safety/condition-red-flags.ts, and before a release.
@@ -9,24 +9,26 @@
 import { fileURLToPath } from "node:url";
 import { CONDITION_RED_FLAGS } from "../apps/web/lib/server/safety/condition-red-flags";
 import { evidenceFound, hasNumber, numbersIn } from "../apps/web/lib/server/safety/verbatim";
-import { fetchPages } from "../apps/web/lib/server/tinyfish/client";
+import { fetchPage } from "../apps/web/lib/server/web/fetch-page";
 
 try {
   process.loadEnvFile(fileURLToPath(new URL("../apps/web/.env.local", import.meta.url)));
 } catch {
   // Fall back to variables already in the environment.
 }
-if (process.env.TINYFISH_MOCK === "1") {
-  console.error("TINYFISH_MOCK=1 is set: unset it to check the live pages.");
+if (process.env.WEB_MOCK === "1") {
+  console.error("WEB_MOCK=1 is set: unset it to check the live pages.");
   process.exit(1);
 }
 
 const urls = [...new Set(CONDITION_RED_FLAGS.flatMap((c) => c.items.map((i) => i.source.url)))];
 const pages = new Map<string, string>();
-for (let i = 0; i < urls.length; i += 10) {
-  const res = await fetchPages({ urls: urls.slice(i, i + 10), purpose: "Check quotes in a curated list of care plan red flags" }, { timeoutMs: 120_000 });
-  for (const r of res.results) pages.set(r.url, r.text ?? "");
-  for (const e of res.errors) console.log(`FETCH FAILED ${e.url}: ${e.error}`);
+// Only the hosts of the curated source URLs may be read (the allow-list of this check).
+const allowed = [...new Set(urls.map((u) => new URL(u).hostname))];
+for (const url of urls) {
+  const page = await fetchPage(url, allowed, 400_000);
+  if (page) pages.set(url, page.text);
+  else console.log(`FETCH FAILED ${url}: the page could not be read`);
 }
 
 let failures = 0;

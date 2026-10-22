@@ -1,5 +1,5 @@
 /**
- * Re-checks the curated interaction table against the live source pages (free TinyFish Fetch calls):
+ * Re-checks the curated interaction table against the live source pages (read with the app's own page reader):
  *   - each entry's quote appears word for word on its first source
  *   - each of its two salts (or an alias) appears on at least one of its sources
  *   - a "major" entry's quote uses wording that justifies it
@@ -10,24 +10,26 @@
 import { fileURLToPath } from "node:url";
 import { INTERACTION_TABLE, MAJOR_WORDING, SALT_ALIASES } from "../apps/web/lib/server/safety/interactions-table";
 import { evidenceFound, normalizeText } from "../apps/web/lib/server/safety/verbatim";
-import { fetchPages } from "../apps/web/lib/server/tinyfish/client";
+import { fetchPage } from "../apps/web/lib/server/web/fetch-page";
 
 try {
   process.loadEnvFile(fileURLToPath(new URL("../apps/web/.env.local", import.meta.url)));
 } catch {
   // Fall back to variables already in the environment.
 }
-if (process.env.TINYFISH_MOCK === "1") {
-  console.error("TINYFISH_MOCK=1 is set: unset it to check the live pages.");
+if (process.env.WEB_MOCK === "1") {
+  console.error("WEB_MOCK=1 is set: unset it to check the live pages.");
   process.exit(1);
 }
 
 const urls = [...new Set(INTERACTION_TABLE.flatMap((e) => e.sources.map((s) => s.url)))];
 const pages = new Map<string, string>();
-for (let i = 0; i < urls.length; i += 10) {
-  const res = await fetchPages({ urls: urls.slice(i, i + 10), purpose: "Check quotes in a curated drug interaction table" }, { timeoutMs: 120_000 });
-  for (const r of res.results) pages.set(r.url, r.text ?? "");
-  for (const e of res.errors) console.log(`FETCH FAILED ${e.url}: ${e.error}`);
+// Only the hosts of the curated source URLs may be read (the allow-list of this check).
+const allowed = [...new Set(urls.map((u) => new URL(u).hostname))];
+for (const url of urls) {
+  const page = await fetchPage(url, allowed, 400_000);
+  if (page) pages.set(url, page.text);
+  else console.log(`FETCH FAILED ${url}: the page could not be read`);
 }
 
 const namesFor = (salt: string) => [salt, ...Object.entries(SALT_ALIASES).filter(([, main]) => main === salt).map(([alias]) => alias)];

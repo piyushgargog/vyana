@@ -4,7 +4,7 @@
 // Mock-first against the provisional contract in @vyana/shared; wording comes from the proposal
 // itself (rules wrote it), never from this component.
 import React, { useEffect, useRef, useState } from "react";
-import { useDecideProposal, useMyProposals, type AgentProposal } from "@vyana/shared";
+import { useDecideAgentProposal, useMyAgentProposals, type AgentProposal } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
 import { Button, Card, CardHeader, SkeletonLine } from "@/components/ui";
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
@@ -94,8 +94,8 @@ function ProposalCard({
 
 export function SuggestionsForYou() {
   const { showToast } = useVyanaWeb();
-  const { data, isLoading, isError, refetch } = useMyProposals();
-  const decide = useDecideProposal();
+  const { data, isLoading, isError, refetch } = useMyAgentProposals();
+  const decide = useDecideAgentProposal();
   const [showAll, setShowAll] = useState(false);
   // Every dismissal keeps its own undo slot and timer, so dismissing a second card
   // never makes the first one permanent early.
@@ -220,7 +220,7 @@ export function SuggestionsForYou() {
               role="status"
             >
               <span className="text-[15px] text-label-2">Dismissed: {u.title}</span>
-              <Button variant="secondary" size="sm" onClick={() => handleUndo(u.id)}>
+              <Button variant="secondary" size="sm" className="min-h-11" onClick={() => handleUndo(u.id)}>
                 Undo
               </Button>
             </div>

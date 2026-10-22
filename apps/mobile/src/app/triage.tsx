@@ -178,7 +178,7 @@ export default function TriageScreen() {
                 keyboardType="numeric"
                 value={age}
                 onChangeText={setAge}
-                placeholder={profile?.dob ? 'Auto from profile or type' : 'Years'}
+                placeholder={profile?.dob ? 'Auto-filled' : 'Years'}
                 placeholderTextColor={T.color.label3}
                 style={styles.input}
               />

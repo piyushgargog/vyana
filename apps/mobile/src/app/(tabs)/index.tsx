@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import {
   DEFAULT_TIMES,
   QUERY_ROOTS,
@@ -148,6 +149,10 @@ export default function PatientHomeScreen() {
         scheduled_for: scheduledIso,
         status,
       });
+      // A confirmation tap for a logged dose (U2): success for taken, nothing for skipped.
+      if (status === 'taken') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
       showToast(
         `${medicineLabel} marked as ${status.toUpperCase()}`,
         status === 'taken' ? 'success' : 'warning'

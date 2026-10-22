@@ -34,9 +34,9 @@ export function QrCodeSvg({
       viewBox={`0 0 ${grid + quiet * 2} ${grid + quiet * 2}`}
       role="img"
       aria-label={label}
-      className="rounded-xl bg-white p-2 border border-slate-200 shadow-sm"
+      className="rounded-xl bg-surface p-2 border border-separator shadow-sm"
     >
-      <rect width={grid + quiet * 2} height={grid + quiet * 2} fill="#ffffff" />
+      <rect width={grid + quiet * 2} height={grid + quiet * 2} fill="var(--color-surface)" />
       {matrix.map((row, r) =>
         row.map((cell, c) =>
           cell ? (
@@ -46,7 +46,7 @@ export function QrCodeSvg({
               y={r + quiet}
               width={1}
               height={1}
-              fill="#0f172a"
+              fill="var(--color-label)"
             />
           ) : null
         )
@@ -83,7 +83,7 @@ export function TrendChartSvg({
 }) {
   if (points.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+      <div className="rounded-xl border border-separator bg-fill p-4 text-sm text-label-2">
         No historical data points recorded for {title} yet.
       </div>
     );
@@ -125,14 +125,14 @@ export function TrendChartSvg({
   const bandBottom = typeof refLow === "number" ? toY(refLow) : null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-xl border border-separator bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-semibold text-label">
             {title} Trend{unit ? ` (${unit})` : ""}
           </h3>
           {typeof refLow === "number" && typeof refHigh === "number" && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-label-2">
               Reference range: {refLow} – {refHigh} {unit} (shaded band)
             </p>
           )}
@@ -140,28 +140,28 @@ export function TrendChartSvg({
         <div className="flex flex-wrap items-center gap-3 text-xs">
           {points2 && points2.length > 0 && (
             <>
-              <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
-                <span className="h-0.5 w-4 rounded bg-teal-600" /> {seriesLabel ?? "First reading"}
+              <span className="inline-flex items-center gap-1 text-accent-strong font-medium">
+                <span className="h-0.5 w-4 rounded bg-accent" /> {seriesLabel ?? "First reading"}
               </span>
-              <span className="inline-flex items-center gap-1 text-blue-700 font-medium">
-                <span className="h-0.5 w-4 rounded bg-blue-600" /> {series2Label ?? "Second reading"}
+              <span className="inline-flex items-center gap-1 text-label-2 font-medium">
+                <span className="h-0.5 w-4 rounded bg-label-3" /> {series2Label ?? "Second reading"}
               </span>
             </>
           )}
           {/* The Normal / High / Low key only appears when the points carry a stored flag (vitals have none). */}
           {[...points, ...(points2 ?? [])].some((p) => p?.flag) && (
             <>
-              <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> Normal
+              <span className="inline-flex items-center gap-1 text-accent-strong font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-accent" /> Normal
               </span>
-              <span className="inline-flex items-center gap-1 text-red-700 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-600" /> High / Low
+              <span className="inline-flex items-center gap-1 text-danger-text font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-danger" /> High / Low
               </span>
             </>
           )}
           {[...points, ...(points2 ?? [])].some((p) => p?.flag === "unknown") && (
-            <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-500" /> Not flagged
+            <span className="inline-flex items-center gap-1 text-label-2 font-medium">
+              <span className="h-2.5 w-2.5 rounded-full bg-label-3" /> Not flagged
             </span>
           )}
         </div>
@@ -180,8 +180,7 @@ export function TrendChartSvg({
             y={bandTop}
             width={plotW}
             height={Math.max(4, bandBottom - bandTop)}
-            fill="#ccfbf1"
-            opacity={0.55}
+            fill="var(--color-accent-soft)"
             rx={4}
           />
         )}
@@ -191,13 +190,13 @@ export function TrendChartSvg({
           y1={padTop + plotH}
           x2={padLeft + plotW}
           y2={padTop + plotH}
-          stroke="#cbd5e1"
+          stroke="var(--color-separator)"
           strokeWidth={1}
         />
 
         <polyline
           fill="none"
-          stroke="#0d9488"
+          stroke="var(--color-accent)"
           strokeWidth={2.5}
           points={polylinePoints}
         />
@@ -222,7 +221,7 @@ export function TrendChartSvg({
                 <polyline
                   key={`s2-line-${i}`}
                   fill="none"
-                  stroke="#2563eb"
+                  stroke="var(--color-label-3)"
                   strokeWidth={2}
                   points={seg.map((p) => `${p.x},${p.y}`).join(" ")}
                 />
@@ -236,8 +235,8 @@ export function TrendChartSvg({
                 cx={toX(idx)}
                 cy={toY(pt.value)}
                 r={4}
-                fill="#2563eb"
-                stroke="#ffffff"
+                fill="var(--color-label-3)"
+                stroke="var(--color-surface)"
                 strokeWidth={1.5}
               >
                 <title>{`${series2Label ?? "Second reading"}: ${pt.value} ${unit} on ${pt.date}`}</title>
@@ -259,8 +258,8 @@ export function TrendChartSvg({
                 cx={cx}
                 cy={cy}
                 r={5}
-                fill={isAbnormal ? "#dc2626" : isUnknown ? "#64748b" : "#0d9488"}
-                stroke="#ffffff"
+                fill={isAbnormal ? "var(--color-danger)" : isUnknown ? "var(--color-label-3)" : "var(--color-accent)"}
+                stroke="var(--color-surface)"
                 strokeWidth={1.5}
               />
               <text
@@ -269,7 +268,7 @@ export function TrendChartSvg({
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="600"
-                fill={isAbnormal ? "#b91c1c" : isUnknown ? "#475569" : "#0f766e"}
+                fill={isAbnormal ? "var(--color-danger-text)" : isUnknown ? "var(--color-label-2)" : "var(--color-accent-strong)"}
               >
                 {pt.value}
                 {flagLabel}
@@ -279,7 +278,7 @@ export function TrendChartSvg({
                 y={padTop + plotH + 18}
                 textAnchor="middle"
                 fontSize="10"
-                fill="#475569"
+                fill="var(--color-label-2)"
               >
                 {pt.date}
               </text>

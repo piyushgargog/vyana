@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useDecideProposal, useMyProposals, type AgentProposal } from '@vyana/shared';
+import { useDecideAgentProposal, useMyAgentProposals, type AgentProposal } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
 import { Button, Card, CardHeader, Symbol, Text } from '@/components/ui';
@@ -99,8 +99,8 @@ function ProposalCard({
 
 export function SuggestionsForYou() {
   const { showToast } = useVyanaMobile();
-  const { data, isLoading, isError, refetch } = useMyProposals();
-  const decide = useDecideProposal();
+  const { data, isLoading, isError, refetch } = useMyAgentProposals();
+  const decide = useDecideAgentProposal();
   const [showAll, setShowAll] = useState(false);
   // Every dismissal keeps its own undo slot and timer, so dismissing a second card
   // never makes the first one permanent early.
@@ -199,7 +199,7 @@ export function SuggestionsForYou() {
               <Text variant="footnote" tone="secondary" style={styles.undoText}>
                 Dismissed: {u.title}
               </Text>
-              <Button title="Undo" variant="secondary" size="sm" label="Undo the dismissal" onPress={() => handleUndo(u.id)} />
+              <Button title="Undo" variant="secondary" size="md" label="Undo the dismissal" onPress={() => handleUndo(u.id)} />
             </View>
           ))}
         </>

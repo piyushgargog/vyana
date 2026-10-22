@@ -19,8 +19,8 @@ function fixtures(): AgentProposal[] {
   return [
     {
       id: "proposal-refill-metformin",
-      kind: "refill_reminder",
-      title: "Your metformin may run out in 4 days",
+      kind: "refill_due",
+      title: "Your metformin pack: 30 tablets, started 26 days ago",
       reason: "Your dose log and the pack size on your prescription say the current pack is nearly finished.",
       evidence: [
         { label: "Last 7 dose logs", detail: "6 taken, 1 missed" },
@@ -45,7 +45,7 @@ function fixtures(): AgentProposal[] {
     },
     {
       id: "proposal-notify-caregiver",
-      kind: "notify_caregiver",
+      kind: "missed_dose_pattern",
       title: "Share this week's dose summary with your caregiver",
       reason: "You missed 3 doses this week. Your caregiver can see the summary only if you send it.",
       evidence: [
@@ -58,7 +58,7 @@ function fixtures(): AgentProposal[] {
     },
     {
       id: "proposal-expired-refill",
-      kind: "refill_reminder",
+      kind: "refill_due",
       title: "Your vitamin D may have run out",
       reason: "This suggestion has expired, so it is never shown.",
       evidence: [{ label: "Pack size from your prescription", detail: "8 tablets, finished last week" }],

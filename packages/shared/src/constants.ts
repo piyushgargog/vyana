@@ -64,7 +64,7 @@ export const MEAL_CALORIES_MAX = 5000;
 export const RATE_LIMITS = {
   /** The assistant chat. */
   ai_chat: { windowSeconds: 10 * 60, max: 20 },
-  /** Reading a prescription or a lab report (a vision model). */
+  /** Reading a prescription or a lab report (a vision model); correcting a value of a report shares this envelope. */
   ai_document: { windowSeconds: 60 * 60, max: 10 },
   /** Care plan, symptom check and interaction check. */
   ai_other: { windowSeconds: 60 * 60, max: 20 },
@@ -80,19 +80,16 @@ export type RateLimitBucket = keyof typeof RATE_LIMITS;
 /** A bucket with its name, for `withRoute`'s `rateLimit` option. */
 export const rateLimitOf = (bucket: RateLimitBucket) => ({ bucket, ...RATE_LIMITS[bucket] });
 
-/** Which routes (without `/api/`) are limited, and in which bucket. The routes that start a job (basket, labs) are limited; polling a job is not. */
+/** Which routes (without `/api/`) are limited, and in which bucket. The routes that start a job (blood search) are limited; polling a job is not. */
 export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "assistant/chat": "ai_chat",
   "prescriptions/extract": "ai_document",
   "reports/analyze": "ai_document",
+  "reports/values/correct": "ai_document",
   "care-plan": "ai_other",
   triage: "ai_other",
   "medicines/interactions": "ai_other",
-  "prescriptions/basket": "agent",
-  "labs/compare": "agent",
   "blood/search": "lookup",
-  "doctors/verify": "agent",
-  "hospitals/info": "agent",
-  "schemes/pmjay-hospitals": "agent",
+  "doctors/verify": "lookup",
   "emergency/nearby": "public",
 };

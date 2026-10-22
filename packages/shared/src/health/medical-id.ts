@@ -33,6 +33,9 @@ const clean = (text: string | null | undefined, max: number) => (text ?? "").rep
 
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 
+/** Drops the last character — a whole code point, so a multi-byte character is never split in half. */
+const dropLastChar = (text: string) => [...text].slice(0, -1).join("");
+
 /** "A; B; +3 more" when only the first `kept.length` of `total` entries fit. */
 function listLine(label: string, kept: string[], total: number): string {
   if (total === 0) return `${label}: ${NOT_RECORDED}`;
@@ -42,10 +45,12 @@ function listLine(label: string, kept: string[], total: number): string {
 
 /**
  * Builds the QR text from the basics of a patient: name, blood group, allergies, medicines and one emergency
- * contact, one per line. Nothing in it needs the internet. It is meant to fit in `MEDICAL_ID_MAX_LENGTH` bytes, so it
- * gives things up in this order until it does: the medicines from the last one on, then the allergies from the last
- * one on (the line says "+N more" so nobody thinks the list is complete). The name, the blood group and the contact
- * always stay. Whatever is missing says "not recorded", never "none".
+ * contact, one per line. Nothing in it needs the internet. It fits in `MEDICAL_ID_MAX_LENGTH` bytes, so it gives
+ * things up in this order until it does: the medicines from the last one on, then the allergies from the last
+ * one on (the line says "+N more" so nobody thinks the list is complete), then the contact's name a character
+ * at a time and the patient's name the same way — a long name in a three-byte script can pass the cap on its
+ * own. The blood group and the contact's phone number always stay whole. Whatever is missing says
+ * "not recorded", never "none".
  */
 export function buildMedicalIdQr(
   profile: MedicalIdProfile,
@@ -59,10 +64,11 @@ export function buildMedicalIdQr(
     .slice(0, 30);
   const allergies = profile.allergies.map((a) => clean(a, 60)).filter((a) => a !== "").slice(0, 20);
 
-  const name = clean(profile.full_name, 80) || NOT_RECORDED;
   const blood = clean(profile.blood_group, 10) || NOT_RECORDED;
   const phone = contact ? clean(contact.phone, 30) : "";
-  const contactLine = contact && phone ? `Emergency contact: ${clean(contact.name, 50) || "contact"} ${phone}` : `Emergency contact: ${NOT_RECORDED}`;
+  const hasContact = Boolean(contact && phone);
+  let name = clean(profile.full_name, 80) || NOT_RECORDED;
+  let contactName = contact ? clean(contact.name, 50) || "contact" : "";
 
   const make = (m: number, a: number) =>
     [
@@ -71,7 +77,7 @@ export function buildMedicalIdQr(
       `Blood group: ${blood}`,
       listLine("Allergies", allergies.slice(0, a), allergies.length),
       listLine("Medicines", medicines.slice(0, m), medicines.length),
-      contactLine,
+      hasContact ? `Emergency contact: ${contactName ? `${contactName} ${phone}` : phone}` : `Emergency contact: ${NOT_RECORDED}`,
     ].join("\n");
 
   let keptMedicines = medicines.length;
@@ -81,5 +87,10 @@ export function buildMedicalIdQr(
     else if (keptAllergies > 0) keptAllergies--;
     else break;
   }
+  // Still too long: the always-stay text on its own is over the cap. Give up the contact's name a character at
+  // a time — the phone number is what a responder dials, so it stays whole — then the patient's name the
+  // same way. The blood group and the phone number are never shortened.
+  while (byteLength(make(keptMedicines, keptAllergies)) > maxLength && contactName !== "") contactName = dropLastChar(contactName);
+  while (byteLength(make(keptMedicines, keptAllergies)) > maxLength && name !== "") name = dropLastChar(name);
   return make(keptMedicines, keptAllergies);
 }

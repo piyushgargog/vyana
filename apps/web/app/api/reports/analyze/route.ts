@@ -1,5 +1,6 @@
-import { Language, ReportAnalyzeReq, ReportAnalyzeRes, rateLimitOf } from "@vyana/shared";
+import { ReportAnalyzeReq, ReportAnalyzeRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
+import { enforceDailyAiLimit } from "@/lib/server/entitlements";
 import { parseBody, withRoute } from "@/lib/server/errors";
 import { analyzeReport } from "@/lib/server/reports";
 
@@ -7,11 +8,11 @@ import { analyzeReport } from "@/lib/server/reports";
 export const maxDuration = 120;
 
 export const POST = withRoute("reports/analyze", async (req, ctx) => {
-  const { user, profile } = await requireUser(req);
-  ctx.userId = user.id;
-  requireRole(profile, "patient");
+  const authed = await requireUser(req);
+  ctx.userId = authed.user.id;
+  requireRole(authed.profile, "patient");
+  await enforceDailyAiLimit(authed);
   const body = await parseBody(req, ReportAnalyzeReq);
-  const language = Language.safeParse(profile.preferred_language).data ?? "en";
-  const res = await analyzeReport({ id: user.id, fullName: profile.full_name, language }, body.file_path, body.report_date);
+  const res = await analyzeReport(authed, body.file_path, body.report_date);
   return Response.json(process.env.NODE_ENV === "production" ? res : ReportAnalyzeRes.parse(res));
 }, { rateLimit: rateLimitOf("ai_document") });

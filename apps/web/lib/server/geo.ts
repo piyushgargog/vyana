@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { log } from "./log";
+import { isWebMock } from "./web/domains";
 
 /**
  * Reverse geocoding with OpenStreetMap Nominatim (SPEC §5). Its usage policy asks for an identifying
@@ -28,7 +29,7 @@ const Reverse = z.object({
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   // Mock mode makes no outbound web calls at all.
-  if (process.env.TINYFISH_MOCK === "1") return "[mock] Preet Vihar, Delhi";
+  if (isWebMock()) return "[mock] Preet Vihar, Delhi";
   try {
     const url = `${NOMINATIM}?format=jsonv2&zoom=14&addressdetails=1&lat=${lat}&lon=${lng}`;
     const res = await fetch(url, {
