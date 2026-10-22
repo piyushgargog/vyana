@@ -19,12 +19,13 @@ export type MarkdownBlock =
   | { kind: "bullet-list"; items: InlineSegment[][] }
   | { kind: "numbered-list"; items: InlineSegment[][] };
 
-// The link alternative comes first so a linked label is never read as emphasis. The
+// The link label cannot contain a bracket and label and address are length-capped: an unbounded `[^\]]+` made a string of
+// many `[` slow (quadratic, CodeQL js/polynomial-redos). The link alternative comes first so a linked label is never read as emphasis. The
 // single * and _ rules match the web renderer: they only count at a word edge with
 // text right after the opener, so snake_case_name and "2 * 3 * 4" stay as typed.
 const INLINE_RE =
-  /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|(?<![\w*])\*[^*\s][^*]*\*(?![\w*])|(?<![\w_])_[^_\s][^_]*_(?![\w_]))/g;
-const LINK_RE = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/;
+  /(\[[^\][]{1,300}\]\(https?:\/\/[^\s)]{1,2000}\)|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|(?<![\w*])\*[^*\s][^*]*\*(?![\w*])|(?<![\w_])_[^_\s][^_]*_(?![\w_]))/g;
+const LINK_RE = /^\[([^\][]{1,300})\]\((https?:\/\/[^\s)]{1,2000})\)$/;
 
 export function parseInlineMarkdown(text: string): InlineSegment[] {
   const segments: InlineSegment[] = [];

@@ -61,3 +61,23 @@ describe("parseMarkdownBlocks", () => {
     expect(parseMarkdownBlocks("\n\n")).toEqual([]);
   });
 });
+
+describe("parseInlineMarkdown on hostile input", () => {
+  it("stays fast on very long runs of brackets and half-open links (no polynomial backtracking)", () => {
+    for (const input of ["[".repeat(60_000), "[!](http://".repeat(6_000), "[\](http://".repeat(6_000)]) {
+      const started = performance.now();
+      const out = parseInlineMarkdown(input);
+      expect(performance.now() - started).toBeLessThan(500);
+      expect(out.map((s) => ("text" in s ? s.text : "")).join("").length).toBeGreaterThan(0);
+    }
+  });
+
+  it("still reads a normal link, and a label with a bracket is plain text", () => {
+    expect(parseInlineMarkdown("see [MedlinePlus](https://medlineplus.gov/a) now")).toEqual([
+      { kind: "text", text: "see " },
+      { kind: "link", text: "MedlinePlus", url: "https://medlineplus.gov/a" },
+      { kind: "text", text: " now" },
+    ]);
+    expect(parseInlineMarkdown("[a [b] c](https://x.test)").some((s) => s.kind === "link" && s.text === "a [b] c")).toBe(false);
+  });
+});
