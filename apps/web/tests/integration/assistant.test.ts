@@ -63,7 +63,7 @@ function modelSaying(text: string) {
 }
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   testModel = null;
@@ -201,7 +201,7 @@ describe("POST /api/assistant/chat", () => {
     await settled();
     expect(chunks.some((c) => c.type === "error")).toBe(true);
     // The patient sees a sentence, never an empty answer (P24).
-    expect(chunks.some((c) => c.type === "text-delta" && "delta" in c && c.delta === "Something went wrong while answering. Please try again.")).toBe(true);
+    expect(chunks.some((c) => c.type === "text-delta" && "delta" in c && c.delta === "The answer could not be finished. Please try again.")).toBe(true);
     expect(chunks.some((c) => c.type === "finish")).toBe(false);
     expect(db.rows.chat_messages.map((m) => m.role)).toEqual(["user"]);
     expect(db.rows.ai_runs[0].status).toBe("rejected");

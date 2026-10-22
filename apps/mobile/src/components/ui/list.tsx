@@ -52,6 +52,7 @@ export function ListRow({
   onPress,
   trailing,
   label,
+  wrapTitle = false,
 }: {
   title: string;
   subtitle?: string;
@@ -60,12 +61,15 @@ export function ListRow({
   onPress?: () => void;
   trailing?: ReactNode;
   label?: string;
+  /** Let the title wrap in full instead of cutting it with "…" — for consent and
+   *  privacy lines that must be readable word for word (#332). */
+  wrapTitle?: boolean;
 }) {
   const body = (
     <>
       {icon}
       <View style={styles.texts}>
-        <Text variant="body" numberOfLines={1}>
+        <Text variant="body" numberOfLines={wrapTitle ? undefined : 1}>
           {title}
         </Text>
         {subtitle ? (

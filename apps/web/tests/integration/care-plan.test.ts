@@ -19,7 +19,7 @@ const post = (body: unknown, token = VALID_TOKEN) =>
   );
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
+  vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   db.rows.conditions = [{ id: CONDITION_ID, patient_id: USER_ID, name: "Type 2 Diabetes", source: "patient" }];
@@ -92,7 +92,7 @@ describe("POST /api/care-plan", () => {
   it("caches the guideline pages per condition", async () => {
     await post({ condition_id: CONDITION_ID });
     await post({ condition_id: CONDITION_ID });
-    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:v2:type 2 diabetes"]);
+    expect([...db.web_cache.keys()].filter((k) => k.startsWith("careplan_pages:"))).toEqual(["careplan_pages:v3:type 2 diabetes"]);
     expect(db.rows.care_plans).toHaveLength(2);
   });
 });

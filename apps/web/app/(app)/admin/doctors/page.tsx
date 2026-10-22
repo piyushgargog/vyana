@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  useHospitalInfo,
   useHospitals,
   useMyProfile,
   type DbDoctor,
@@ -11,6 +10,7 @@ import {
 import { useVyanaWeb } from "@/components/providers";
 import {
   Button,
+  ButtonLink,
   Card,
   CardHeader,
   EmptyState,
@@ -21,7 +21,7 @@ import {
   SkeletonLine,
   cn,
 } from "@/components/ui";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface DoctorWithRelations extends DbDoctor {
   profile: { full_name: string | null } | null;
@@ -30,7 +30,7 @@ interface DoctorWithRelations extends DbDoctor {
 }
 
 export default function AdminDoctorsPage() {
-  const { supabase, showToast } = useVyanaWeb();
+  const { supabase } = useVyanaWeb();
   const { data: myProfile } = useMyProfile();
 
   const [activeTab, setActiveTab] = useState<"doctors" | "hospitals">("doctors");
@@ -84,36 +84,7 @@ export default function AdminDoctorsPage() {
     data: hospitals,
     isLoading: hospitalsLoading,
     error: hospitalsError,
-    refetch: refetchHospitals,
   } = useHospitals();
-
-  // Mutation to verify hospital OPD info via TinyFish
-  const hospitalInfoMutation = useHospitalInfo();
-  const [verifyingHospitalId, setVerifyingHospitalId] = useState<string | null>(null);
-
-  // Trigger TinyFish Hospital OPD verification
-  const handleVerifyHospitalOpd = async (hospitalId: string) => {
-    try {
-      setVerifyingHospitalId(hospitalId);
-      await hospitalInfoMutation.mutateAsync({
-        hospital_id: hospitalId,
-      });
-      showToast(
-        "Hospital OPD timings verified and updated via TinyFish.",
-        "success"
-      );
-      await refetchHospitals();
-    } catch (err) {
-      showToast(
-        err instanceof Error
-          ? err.message
-          : "Could not fetch verified hospital OPD timings",
-        "error"
-      );
-    } finally {
-      setVerifyingHospitalId(null);
-    }
-  };
 
   const filteredDoctors = doctors.filter((doc: DoctorWithRelations) => {
     if (statusFilter !== "all" && doc.verification_status !== statusFilter) {
@@ -137,7 +108,7 @@ export default function AdminDoctorsPage() {
       <LargeTitle
         eyebrow="Administration"
         title="Doctors & Hospitals Registry"
-        subtitle="Administrative oversight of verified medical practitioners and verified hospital OPD timings."
+        subtitle="Administrative oversight of verified medical practitioners and registered hospitals."
         actions={
           <Pill tone="neutral">
             Admin: {myProfile?.full_name || "Administrator"}
@@ -169,7 +140,7 @@ export default function AdminDoctorsPage() {
               : "text-label-2 hover:text-label"
           )}
         >
-          Hospital OPD Timings ({hospitals?.length ?? 0})
+          Hospitals ({hospitals?.length ?? 0})
         </button>
       </div>
 
@@ -304,16 +275,9 @@ export default function AdminDoctorsPage() {
       {activeTab === "hospitals" && (
         <div className="space-y-4">
           <Card>
-            <CardHeader
-              title="Hospital OPD Operating Hours & Verification"
-              trailing={
-                <span className="text-[13px] text-label-3">
-                  Autonomous Web Query
-                </span>
-              }
-            />
+            <CardHeader title="Registered hospitals" />
             <p className="text-[15px] text-label-2">
-              Verified hospital hours sourced directly via TinyFish autonomous web agents.
+              OPD timings are checked on each hospital&apos;s own website.
             </p>
           </Card>
 
@@ -338,17 +302,8 @@ export default function AdminDoctorsPage() {
           ) : (
             <div className="space-y-4">
               {hospitals.map((hosp: DbHospital) => {
-                const opdInfo = hosp.opd_info as
-                  | { opd?: Array<{ department?: string; days?: string; timings?: string }> }
-                  | Array<{ department?: string; days?: string; timings?: string }>
-                  | null;
-                const opdList = Array.isArray((opdInfo as { opd?: Array<{ department?: string; days?: string; timings?: string }> })?.opd)
-                  ? (opdInfo as { opd: Array<{ department?: string; days?: string; timings?: string }> }).opd
-                  : Array.isArray(opdInfo)
-                    ? (opdInfo as Array<{ department?: string; days?: string; timings?: string }>)
-                    : [];
-                const isVerifying = verifyingHospitalId === hosp.id;
-                const isVerified = opdList.length > 0;
+                const website =
+                  hosp.website && hosp.website.startsWith("https://") ? hosp.website : null;
 
                 return (
                   <Card key={hosp.id} className="space-y-4">
@@ -358,9 +313,6 @@ export default function AdminDoctorsPage() {
                           <h3 className="text-[17px] font-semibold text-label">
                             {hosp.name}
                           </h3>
-                          <Pill tone={isVerified ? "ok" : "warn"}>
-                            {isVerified ? "Verified OPD Hours" : "Unverified / Pending"}
-                          </Pill>
                           {hosp.ors_enabled && (
                             <Pill tone="accent">ORS Enabled</Pill>
                           )}
@@ -371,59 +323,17 @@ export default function AdminDoctorsPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
+                      {website && (
+                        <ButtonLink
                           variant="secondary"
-                          size="sm"
-                          disabled={isVerifying}
-                          onClick={() => handleVerifyHospitalOpd(hosp.id)}
-                          icon={
-                            isVerifying ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                            ) : undefined
-                          }
+                          href={website}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          {isVerifying ? "Verifying with TinyFish…" : "Refresh / Verify OPD"}
-                        </Button>
-                      </div>
+                          Open the hospital&apos;s own website
+                        </ButtonLink>
+                      )}
                     </div>
-
-                    {/* Verified OPD Timings Details */}
-                    {opdList.length > 0 ? (
-                      <div>
-                        <span className="block text-[13px] font-semibold text-label mb-2">
-                          Verified Department OPD Schedules:
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                          {opdList.map((entry: { department?: string; days?: string; timings?: string }, i: number) => (
-                            <div
-                              key={i}
-                              className="rounded-row bg-fill/60 p-3"
-                            >
-                              <strong className="block font-semibold text-[14px] text-label">
-                                {entry.department || "General OPD"}
-                              </strong>
-                              <span className="block text-[12px] text-label-2 mt-0.5">
-                                {entry.days || "Mon–Sat"}
-                              </span>
-                              <span className="block text-[12px] font-semibold text-accent-strong mt-0.5">
-                                {entry.timings || "8:00 AM – 1:00 PM"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {hosp.opd_info_fetched_at && (
-                          <p className="mt-2 text-[12px] text-label-3">
-                            Last verified on: {hosp.opd_info_fetched_at.slice(0, 16).replace("T", " ")}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="rounded-row bg-warn-soft p-3 text-[13px] text-warn">
-                        No verified OPD hours on record for this hospital yet. Click &quot;Refresh / Verify OPD&quot; to query the official hospital directory via TinyFish.
-                      </div>
-                    )}
                   </Card>
                 );
               })}

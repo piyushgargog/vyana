@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/login" },
   title: "Sign in — Vyana",
   description:
     "Sign in to Vyana to access your health records, medicine reminders, and doctor OPD queue.",

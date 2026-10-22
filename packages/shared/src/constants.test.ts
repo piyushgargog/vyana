@@ -106,10 +106,11 @@ describe("Scope v2 constants", () => {
 
   it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
     expect(Object.keys(RATE_LIMITED_ROUTES).sort()).toEqual([
-      "assistant/chat", "blood/search", "care-plan", "doctors/verify", "emergency/nearby", "hospitals/info", "labs/compare",
-      "medicines/interactions", "prescriptions/basket", "prescriptions/extract", "reports/analyze", "schemes/pmjay-hospitals", "triage",
+      "assistant/chat", "blood/search", "care-plan", "doctors/verify", "emergency/nearby",
+      "medicines/interactions", "prescriptions/extract", "reports/analyze", "reports/values/correct", "triage",
     ]);
     expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();
+    expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("lookup");
     for (const bucket of Object.values(RATE_LIMITED_ROUTES)) expect(RATE_LIMITS[bucket]).toBeDefined();
   });
 

@@ -3,7 +3,7 @@ import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
 import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
-import { isTrustedHealthUrl } from "@/lib/server/tinyfish/sources";
+import { isTrustedHealthUrl } from "@/lib/server/web/domains";
 
 type Part = TextStreamPart<ToolSet>;
 
@@ -136,7 +136,7 @@ describe("ReplyGuard", () => {
 });
 
 describe("historyFrom", () => {
-  const m = (role: string, text: string) => ({ role, parts: [{ type: "text", text }] });
+  const m = (role: "system" | "user" | "assistant", text: string) => ({ role, parts: [{ type: "text", text }] });
   it("keeps only user and assistant text, the last 20", () => {
     const msgs = [m("system", "rules"), ...Array.from({ length: 25 }, (_, i) => m(i % 2 ? "assistant" : "user", `t${i}`)), m("user", "last")];
     const h = historyFrom(msgs);
