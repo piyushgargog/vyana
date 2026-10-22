@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVyanaWeb } from "@/components/providers";
@@ -12,8 +12,14 @@ import {
   Field,
   SiteFooter,
 } from "@/components/ui";
-
-type SignupRole = "patient" | "doctor";
+import {
+  RESEND_CONFIRMATION_COOLDOWN_SECONDS,
+  resendConfirmationLabel,
+  resendSignupConfirmation,
+  signupConfirmationUrl,
+  submitSignup,
+  type SignupRole,
+} from "./signup-flow";
 
 export function SignupForm() {
   useRedirectIfSignedIn();
@@ -27,6 +33,36 @@ export function SignupForm() {
   const [role, setRole] = useState<SignupRole>("patient");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendSending, setResendSending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
+    null,
+  );
+  const [now, setNow] = useState(() => Date.now());
+
+  const confirmationUrl = () =>
+    signupConfirmationUrl(window.location.origin);
+  const resendSeconds =
+    resendAvailableAt === null
+      ? 0
+      : Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+
+  useEffect(() => {
+    if (!pendingEmail || resendAvailableAt === null) return;
+    if (resendAvailableAt <= Date.now()) return;
+
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pendingEmail, resendAvailableAt]);
+
+  const startResendCooldown = () => {
+    const nextAvailableAt =
+      Date.now() + RESEND_CONFIRMATION_COOLDOWN_SECONDS * 1000;
+    setNow(Date.now());
+    setResendAvailableAt(nextAvailableAt);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,30 +70,63 @@ export function SignupForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            phone: phone.trim() || undefined,
-            role,
-          },
-        },
-      });
-      if (error) {
-        setErrorMsg(error.message);
-        setLoading(false);
+      const result = await submitSignup(
+        supabase.auth,
+        { email, password, fullName, phone, role },
+        confirmationUrl(),
+      );
+
+      if (result.status === "error") {
+        setErrorMsg(result.message);
+        return;
+      }
+
+      if (result.status === "confirmation") {
+        setPendingEmail(result.email);
+        setResendMessage(null);
+        setResendError(null);
+        startResendCooldown();
         return;
       }
 
       showToast("Account created! Please review DPDP consent.", "success");
       router.push("/consent");
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Could not sign up");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    if (!pendingEmail || resendSeconds > 0) return;
+    setResendSending(true);
+    setResendMessage(null);
+    setResendError(null);
+
+    try {
+      const result = await resendSignupConfirmation(
+        supabase.auth,
+        pendingEmail,
+        confirmationUrl(),
+      );
+      if (result.status === "error") {
+        setResendError(result.message);
+        return;
+      }
+
+      setResendMessage(
+        `Another confirmation email was sent to ${result.email}. Use the newest email.`,
+      );
+      startResendCooldown();
+    } finally {
+      setResendSending(false);
+    }
+  };
+
+  const resetPendingConfirmation = () => {
+    setPendingEmail(null);
+    setResendMessage(null);
+    setResendError(null);
+    setResendAvailableAt(null);
   };
 
   return (
@@ -66,15 +135,91 @@ export function SignupForm() {
 
       <main className="flex-1 flex items-center justify-center p-4 py-12 sm:py-16">
         <div className="w-full max-w-md rounded-card border border-separator bg-surface p-6 sm:p-8 shadow-float space-y-6">
-          <div className="flex flex-col items-center text-center">
-            <BrandMark size={48} />
-            <h1 className="mt-4 text-[24px] sm:text-[28px] font-bold tracking-tight text-label">
-              Create your account
-            </h1>
-            <p className="mt-1.5 text-[15px] text-label-2 leading-relaxed">
-              Register as a patient (or family caregiver) or as a doctor.
-            </p>
-          </div>
+          {pendingEmail ? (
+            <div className="space-y-6">
+              <div className="flex flex-col items-center text-center">
+                <BrandMark size={48} />
+                <h1 className="mt-4 text-[24px] sm:text-[28px] font-bold tracking-tight text-label">
+                  Check your inbox
+                </h1>
+                <p className="mt-1.5 text-[15px] text-label-2 leading-relaxed">
+                  We sent a confirmation email to{" "}
+                  <strong className="font-semibold text-label">
+                    {pendingEmail}
+                  </strong>
+                  . Open it and choose “Confirm Email Address” to finish
+                  creating your account.
+                </p>
+                <p className="mt-3 text-[14px] text-label-3 leading-relaxed">
+                  The link expires. If you send another email, use the newest
+                  one. Check your spam or promotions folder if you do not see
+                  the email.
+                </p>
+              </div>
+
+              {resendMessage && (
+                <div
+                  role="status"
+                  className="rounded-row border border-separator bg-accent-soft p-3.5 text-[14px] font-medium text-accent-strong"
+                >
+                  {resendMessage}
+                </div>
+              )}
+
+              {resendError && (
+                <div
+                  role="alert"
+                  className="rounded-row border border-separator bg-danger-soft p-3.5 text-[14px] font-medium text-danger-text"
+                >
+                  {resendError}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  disabled={resendSending || resendSeconds > 0}
+                  onClick={handleResend}
+                  className="w-full"
+                >
+                  {resendSending
+                    ? "Sending…"
+                    : resendConfirmationLabel(resendSeconds)}
+                </Button>
+                <Button
+                  type="button"
+                  variant="plain"
+                  size="md"
+                  onClick={resetPendingConfirmation}
+                  className="w-full"
+                >
+                  Use a different email
+                </Button>
+              </div>
+
+              <p className="text-center text-[14px] text-label-2">
+                Already confirmed?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-accent-strong hover:underline"
+                >
+                  Sign in here
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col items-center text-center">
+                <BrandMark size={48} />
+                <h1 className="mt-4 text-[24px] sm:text-[28px] font-bold tracking-tight text-label">
+                  Create your account
+                </h1>
+                <p className="mt-1.5 text-[15px] text-label-2 leading-relaxed">
+                  Register as a patient (or family caregiver) or as a doctor.
+                </p>
+              </div>
 
           {errorMsg && (
             <div
@@ -184,15 +329,17 @@ export function SignupForm() {
             </Button>
           </form>
 
-          <p className="text-center text-[14px] text-label-2">
-            Already registered?{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-accent-strong hover:underline"
-            >
-              Sign in here
-            </Link>
-          </p>
+              <p className="text-center text-[14px] text-label-2">
+                Already registered?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-accent-strong hover:underline"
+                >
+                  Sign in here
+                </Link>
+              </p>
+            </>
+          )}
         </div>
       </main>
 
