@@ -3,8 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmergencySosReq, EmergencySosRes, Hospital } from "@vyana/shared";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
-import type { CallCounter } from "./tinyfish/client";
-import { findNearbyHospitals } from "./tinyfish/hospitals";
+import { findNearbyHospitals } from "./web/overpass";
 
 /**
  * SOS (SPEC §6). The ambulance status is SIMULATED until a real ambulance integration exists; the UI labels it.
@@ -18,9 +17,9 @@ export const ARRIVING_AFTER_MS = 60_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Nearby hospitals within the SOS time budget; an empty list on timeout or error (SOS must never fail). */
-async function nearbyWithin(lat: number, lng: number, ctx: { userId: string; counter: CallCounter }): Promise<{ area: string | null; hospitals: Hospital[] }> {
+async function nearbyWithin(lat: number, lng: number): Promise<{ area: string | null; hospitals: Hospital[] }> {
   const timeout = sleep(NEARBY_BUDGET_MS).then(() => ({ area: null, hospitals: [] as Hospital[] }));
-  const lookup = findNearbyHospitals(lat, lng, ctx).catch(() => ({ area: null, hospitals: [] as Hospital[] }));
+  const lookup = findNearbyHospitals(lat, lng).catch(() => ({ area: null, hospitals: [] as Hospital[] }));
   return Promise.race([lookup, timeout]);
 }
 
@@ -32,7 +31,6 @@ export async function startSos(
   user: { id: string; fullName: string | null },
   sb: SupabaseClient,
   body: EmergencySosReq,
-  counter: CallCounter,
 ): Promise<EmergencySosRes> {
   const eta = 8 + Math.floor(Math.random() * 8); // 8–15 min, simulated
   const { data: row, error } = await supabaseAdmin()
@@ -44,7 +42,7 @@ export async function startSos(
   const requestId = (row as { id: string }).id;
 
   const [nearby, contacts] = await Promise.all([
-    nearbyWithin(body.lat, body.lng, { userId: user.id, counter }),
+    nearbyWithin(body.lat, body.lng),
     sb
       .from("emergency_contacts")
       .select("name, phone")

@@ -11,8 +11,7 @@ import { redFlagsForCondition } from "./safety/condition-red-flags";
 import { RED_FLAG_RULES } from "./safety/red-flags";
 import { evidenceFound, hasNumber, normalizeText, numbersIn } from "./safety/verbatim";
 import { supabaseAdmin } from "./supabase-admin";
-import type { CallCounter } from "./tinyfish/client";
-import { guidelinePages, type Page } from "./tinyfish/guideline-pages";
+import { guidelinePages, type Page } from "./web/guideline-pages";
 
 /**
  * Care plans (SPEC §13, PLAN §2A, ADR-044): built only from fetched guideline pages, every bullet quoting its page,
@@ -67,7 +66,7 @@ export function intervalDays(quote: string): number | null {
 
 // ---------------------------------------------------------------- checks
 
-export { CARE_PLAN_DOMAINS, guidelinePages, type Page } from "./tinyfish/guideline-pages";
+export { CARE_PLAN_DOMAINS, guidelinePages, type Page } from "./web/guideline-pages";
 
 export interface VerifiedPlan {
   plan: CarePlan;
@@ -178,13 +177,16 @@ const MOCK_PLAN: CarePlanLlm = {
 /**
  * Groq's free tier gives a model 8,000 tokens a minute, prompt and answer together: with three pages of 12,000
  * characters the prompt alone is about 9,000 tokens, and Groq cut every answer short ("max completion tokens reached
- * before generating a valid document", 21 Oct). So the model sees the first part of each page. The quotes of the plan are
- * checked against this same text, so a quote must still be on what the model was given.
+ * before generating a valid document", 21 Oct). So the model sees the start of each page: the first page (the topic that matches
+ * the condition best) in full, since a MedlinePlus summary only reaches "treatments" after about 4,500 characters, and the
+ * other pages in part. The quotes of the plan are checked against this same text, so a quote must still be on what the model was given.
  */
-export const PROMPT_PAGE_CHARS = 3_500;
-export const forPrompt = (pages: Page[]): Page[] => pages.map((p) => ({ ...p, text: p.text.slice(0, PROMPT_PAGE_CHARS) }));
+export const PROMPT_FIRST_PAGE_CHARS = 5_500;
+export const PROMPT_OTHER_PAGE_CHARS = 2_500;
+export const forPrompt = (pages: Page[]): Page[] =>
+  pages.map((p, i) => ({ ...p, text: p.text.slice(0, i === 0 ? PROMPT_FIRST_PAGE_CHARS : PROMPT_OTHER_PAGE_CHARS) }));
 
-export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePlanReq, counter: CallCounter): Promise<GenerateCarePlanRes> {
+export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> {
   const { sb, user, profile } = authed;
   requireRole(profile, "patient", "doctor");
 
@@ -203,7 +205,7 @@ export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePla
 
   let pages: Page[];
   try {
-    pages = await guidelinePages(condition.name, counter);
+    pages = await guidelinePages(condition.name);
   } catch {
     log({ event: "care_plan_pages_failed" });
     pages = [];

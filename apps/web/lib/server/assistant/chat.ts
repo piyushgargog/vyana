@@ -123,7 +123,6 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   const { messages, placeholders } = redactHistory(turns, profile.full_name ? [profile.full_name] : []);
   const guard = new ReplyGuard({ language, placeholders, doseQuestion: isDoseQuestion(question) });
   // The reply streams after the route has logged its line, so TinyFish calls are counted and logged here.
-  const counter = { tinyfishCalls: 0 };
   const runId = await startAiRun(
     { feature: "assistant_chat", userId: user.id, promptVersion: ASSISTANT_PROMPT_VERSION, inputRef: `chat_sessions/${sessionId}`, sources: [] },
     "text",
@@ -155,7 +154,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         model: chatModel(),
         instructions: assistantSystemPrompt(language, { emergency }),
         messages,
-        tools: assistantTools({ userId: user.id, sb, guard, counter }),
+        tools: assistantTools({ userId: user.id, sb, guard }),
         stopWhen: isStepCount(5),
         temperature: 0,
         experimental_transform: guard.transform(),
@@ -183,7 +182,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         sources: guard.sources,
         status,
       });
-      log({ event: "assistant_reply", status, tinyfish_calls: counter.tinyfishCalls, links: guard.sources.length, removed: guard.removed.length });
+      log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved
       const { error } = await sb
         .from("chat_messages")

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROMPT_PAGE_CHARS, forPrompt, intervalDays, verifyCarePlan, type CarePlanLlm, type Page } from "@/lib/server/care-plan";
+import { PROMPT_FIRST_PAGE_CHARS, PROMPT_OTHER_PAGE_CHARS, forPrompt, intervalDays, verifyCarePlan, type CarePlanLlm, type Page } from "@/lib/server/care-plan";
 import { CONDITION_RED_FLAGS, redFlagsForCondition } from "@/lib/server/safety/condition-red-flags";
 import { hasNumber, numbersIn } from "@/lib/server/safety/verbatim";
 
@@ -16,13 +16,14 @@ const b = (text: string, quote: string, source = 1) => ({ text, quote, source })
 const empty: CarePlanLlm = { summary: null, do: [], dont: [], diet: { eat_more: [], limit: [], sample_day: [] }, red_flags: [], follow_up_tests: [] };
 
 describe("forPrompt", () => {
-  it("gives the model only the start of each page, so prompt and answer fit a free Groq minute", () => {
-    const long: Page = { title: "t", url: "https://www.who.int/x", text: "a".repeat(PROMPT_PAGE_CHARS + 500) };
+  it("gives the model the start of each page (more of the first), so prompt and answer fit a free Groq minute", () => {
+    const long: Page = { title: "t", url: "https://www.who.int/x", text: "a".repeat(PROMPT_FIRST_PAGE_CHARS + 500) };
     const short: Page = { title: "s", url: "https://www.nhs.uk/y", text: "short page" };
-    const [cut, kept] = forPrompt([long, short]);
-    expect(cut.text).toHaveLength(PROMPT_PAGE_CHARS);
+    const [cut, kept, otherCut] = forPrompt([long, short, { ...long, url: "https://www.nhs.uk/z" }]);
+    expect(cut.text).toHaveLength(PROMPT_FIRST_PAGE_CHARS);
     expect(cut.url).toBe(long.url);
     expect(kept).toEqual(short);
+    expect(otherCut.text).toHaveLength(PROMPT_OTHER_PAGE_CHARS);
   });
 });
 
