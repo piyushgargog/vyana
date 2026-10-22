@@ -63,13 +63,14 @@ async function signIn(email: string, password: string): Promise<{ token: string;
   return { token: body.access_token, id: body.user.id };
 }
 
-/** A call to the app's API. */
-async function api(method: string, path: string, token: string | null, body?: unknown) {
+/** A call to the app's API. `timeoutMs` shortens the two-minute default for a call that may
+ *  wait on a public service; the caller decides what an abort means (the blood check skips). */
+async function api(method: string, path: string, token: string | null, body?: unknown, timeoutMs = 120_000) {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: { ...(body ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
   let json: unknown = null;
@@ -137,7 +138,7 @@ await check("cron: the scheduled route refuses a request without the secret", as
 
 await check("emergency: nearby hospitals never fail; SOS (patient only) returns contacts and an SMS text", async () => {
   const near = await api("POST", "/api/emergency/nearby", P, { lat: 28.5672, lng: 77.21 });
-  expect(near.status === 200 && Array.isArray(near.json?.hospitals), `nearby ${near.status}`);
+  expect(near.status === 200 && Array.isArray(near.json?.hospitals) && near.json.hospitals.length >= 1, `nearby ${near.status}: ${near.json?.hospitals?.length ?? "no"} hospitals`);
   const sos = await api("POST", "/api/emergency/sos", P, { lat: 28.5672, lng: 77.21, note: "live check" });
   const mapLink = String(sos.json?.sms_body ?? "").match(/https?:\/\/\S+/)?.[0];
   expect(sos.status === 200 && sos.json?.request_id && mapLink && new URL(mapLink).hostname === "maps.google.com", `sos ${sos.status} ${sos.text.slice(0, 120)}`);
@@ -154,7 +155,17 @@ await check("web_cache: a second identical request is served from the cache", as
 
 await check("blood search: Delhi is answered within 5 seconds from the public stock service, at least one bank, every row holds a unit count", async () => {
   const t0 = Date.now();
-  const res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" });
+  // 15 s rather than the api() default of two minutes: if the public service hangs, the
+  // request aborts and the check skips — a dead service says nothing about Vyana (#298).
+  let res: Awaited<ReturnType<typeof api>>;
+  try {
+    res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" }, 15_000);
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new SkipCheck("the public stock service did not answer within 15 seconds");
+    }
+    throw err;
+  }
   const seconds = (Date.now() - t0) / 1000;
   expect(res.status === 200 && res.json?.status === "done", `blood ${res.status} ${res.text.slice(0, 120)}`);
   const banks = res.json?.banks ?? [];
