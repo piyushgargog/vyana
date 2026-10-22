@@ -96,6 +96,9 @@ describe("POST /api/doctors/verify", () => {
     db.rows.profiles[0].role = "patient";
     expect((await post(delhi)).status).toBe(403);
     expect((await post(delhi, "")).status).toBe(401);
+    // The role is settled in the route, before the body is read: a patient is refused whatever the body holds.
+    expect((await post({ reg_no: "" , state_council: "x"})).status).toBe(403);
+    db.rows.profiles[0].role = "doctor";
     expect((await post({ reg_no: "" , state_council: "x"})).status).toBe(400);
   });
 });

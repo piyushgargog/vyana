@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import type { Language, LabValue, LabValueCorrectReq, LabValueCorrectRes, ReportAnalyzeRes } from "@vyana/shared";
+import { Language, type LabValue, type LabValueCorrectReq, type LabValueCorrectRes, type ReportAnalyzeRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
@@ -239,10 +239,12 @@ export async function correctLabValue({ sb, user }: Pick<AuthedUser, "sb" | "use
 }
 
 export async function analyzeReport(
-  user: { id: string; fullName: string | null; language: Language },
+  authed: Pick<AuthedUser, "user" | "profile">,
   filePath: string,
   requestDate: string | undefined,
 ): Promise<ReportAnalyzeRes> {
+  // The caller's language, settled here like the other services settle it, not in the route.
+  const user = { id: authed.user.id, fullName: authed.profile.full_name, language: Language.catch("en").parse(authed.profile.preferred_language) };
   const { mime } = checkUploadPath(user.id, filePath);
   const bytes = await downloadUpload("lab-reports", filePath);
   const admin = supabaseAdmin();

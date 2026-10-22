@@ -1,6 +1,6 @@
 import "server-only";
 import type { DoctorVerifyReq, DoctorVerifyRes } from "@vyana/shared";
-import { requireRole, type AuthedUser } from "./auth";
+import type { AuthedUser } from "./auth";
 import { cached, normalizeKeyPart } from "./cache";
 import { notFound } from "./errors";
 import { log } from "./log";
@@ -16,7 +16,6 @@ const toMatch = (r: NmcRecord | null): DoctorVerifyRes["match"] =>
   r ? { name: r.name, reg_no: r.reg_no, state_council: r.state_council, year_of_registration: r.year_of_registration ?? null } : null;
 
 export async function verifyDoctor({ sb, user, profile }: AuthedUser, body: DoctorVerifyReq, counter: CallCounter): Promise<DoctorVerifyRes> {
-  requireRole(profile, "doctor");
   const { data: doctor, error } = await sb.from("doctors").select("id").eq("id", user.id).maybeSingle();
   if (error) throw error;
   if (!doctor) throw notFound("Complete your doctor profile first.");

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ApiErrorBody } from "@vyana/shared";
-import { AppError, notFound, parseBody, withRoute } from "@/lib/server/errors";
+import { AppError, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
 
 const call = (handler: Parameters<typeof withRoute>[1], body?: string) =>
   withRoute("test", handler)(new Request("http://localhost/api/test", { method: "POST", body }), undefined);
@@ -58,6 +58,22 @@ describe("withRoute", () => {
       throw new AppError("FORBIDDEN", "No", 403);
     });
     expect(res.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
+describe("toErrorResponse with caller headers", () => {
+  it("keeps the caller's headers on the error and still adds the request id (the share page's 404)", async () => {
+    const res = toErrorResponse(notFound("This link has expired or was turned off."), "req-1", { "cache-control": "no-store", "x-robots-tag": "noindex, nofollow" });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(res.headers.get("x-request-id")).toBe("req-1");
+    expect(await errorOf(res)).toEqual({ code: "NOT_FOUND", message: "This link has expired or was turned off." });
+  });
+
+  it("lets the error's own headers win on a clash", async () => {
+    const res = toErrorResponse(new AppError("RATE_LIMITED", "Slow down", 429, { "retry-after": "30" }), "req-2", { "retry-after": "1" });
+    expect(res.headers.get("retry-after")).toBe("30");
   });
 });
 

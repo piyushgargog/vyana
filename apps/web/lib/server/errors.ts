@@ -55,15 +55,18 @@ function isTimeout(err: unknown): boolean {
   return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
 }
 
-/** Maps any thrown error to the documented error shape (SPEC §0). */
-export function toErrorResponse(err: unknown, requestId: string): Response {
-  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, err.headers);
+/**
+ * Maps any thrown error to the documented error shape (SPEC §0). `headers` adds headers the caller must keep on
+ * the error too (the share page's 404 carries its no-store headers); an `AppError`'s own headers win on a clash.
+ */
+export function toErrorResponse(err: unknown, requestId: string, headers: Record<string, string> = {}): Response {
+  if (err instanceof AppError) return errorResponse(err.code, err.message, err.status, requestId, { ...headers, ...err.headers });
   if (err instanceof ZodError) {
     const message = err.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ");
-    return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId);
+    return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId, headers);
   }
-  if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId);
-  return errorResponse("INTERNAL", "Something went wrong", 500, requestId);
+  if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId, headers);
+  return errorResponse("INTERNAL", "Something went wrong", 500, requestId, headers);
 }
 
 /**

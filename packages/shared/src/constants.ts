@@ -64,7 +64,7 @@ export const MEAL_CALORIES_MAX = 5000;
 export const RATE_LIMITS = {
   /** The assistant chat. */
   ai_chat: { windowSeconds: 10 * 60, max: 20 },
-  /** Reading a prescription or a lab report (a vision model). */
+  /** Reading a prescription or a lab report (a vision model); correcting a value of a report shares this envelope. */
   ai_document: { windowSeconds: 60 * 60, max: 10 },
   /** Care plan, symptom check and interaction check. */
   ai_other: { windowSeconds: 60 * 60, max: 20 },
@@ -85,6 +85,7 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "assistant/chat": "ai_chat",
   "prescriptions/extract": "ai_document",
   "reports/analyze": "ai_document",
+  "reports/values/correct": "ai_document",
   "care-plan": "ai_other",
   triage: "ai_other",
   "medicines/interactions": "ai_other",

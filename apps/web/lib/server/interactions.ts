@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { AiMeta, Interaction, InteractionsReq, InteractionsRes, SourceLink } from "@vyana/shared";
-import { requireRole, type AuthedUser } from "./auth";
+import type { AuthedUser } from "./auth";
 import { badRequest, forbidden } from "./errors";
 import { log } from "./log";
 import { saltsFor } from "./safety/brand-salts";
@@ -28,9 +28,11 @@ const display = (r: { medicine_name: string; strength: string | null }) => (r.st
 const meta = (): AiMeta => ({ model: "none", prompt_version: INTERACTIONS_VERSION, generated_at: new Date().toISOString() });
 const joined = (m: Medicine) => m.salts.join(" + ");
 
-/** Whose medicines are checked: the patient themselves, or a patient of the calling doctor (ADR-061). */
+/**
+ * Whose medicines are checked: the patient themselves, or a patient of the calling doctor (ADR-061).
+ * The caller is a patient or a doctor — the route checks the role; this only settles whose record it is.
+ */
 export async function patientFor({ sb, user, profile }: Pick<AuthedUser, "sb" | "user" | "profile">, body: InteractionsReq): Promise<string> {
-  requireRole(profile, "patient", "doctor");
   if (profile.role === "patient") {
     if (body.patient_id && body.patient_id !== user.id) throw forbidden();
     return user.id;

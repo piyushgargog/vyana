@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKETS } from "@vyana/shared";
-import { forbidden } from "../errors";
+import { forbidden, upstream } from "../errors";
 
 /** The private buckets; every file is kept under `{user_id}/` (supabase/migrations/0003_storage.sql). */
 const FILE_BUCKETS = [BUCKETS.prescriptions, BUCKETS.labReports] as const;
@@ -219,10 +219,10 @@ async function removeUserFiles(sb: SupabaseClient, bucket: string, userId: strin
     if (paths.length === 0) return removed;
     const { data, error } = await sb.storage.from(bucket).remove(paths);
     if (error) throw error;
-    if (!data || data.length === 0) throw new Error(`Could not remove the files in ${bucket}`);
+    if (!data || data.length === 0) throw upstream("Your files couldn't be removed. Try again.");
     removed += data.length;
   }
-  throw new Error(`Too many files in ${bucket}`);
+  throw upstream("Your files couldn't be removed. Try again.");
 }
 
 /**
