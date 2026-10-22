@@ -1,23 +1,22 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEFAULT_TIMES, type PrescriptionExtractRes, type PrescriptionItem } from "@vyana/shared";
+import { DEFAULT_TIMES, PrescriptionItem, isoDate, type PrescriptionExtractRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
 import { RX_EXTRACT_PROMPT_VERSION, RX_EXTRACT_SYSTEM, rxExtractPrompt } from "./prompts/documents";
 import { redact, restore } from "./safety/redact";
-import { evidenceFound, hasNumber } from "./safety/verbatim";
+import { evidenceFound, field, hasNumber } from "./safety/verbatim";
 
 /**
  * Prescription scan (SPEC §3, §2A, ADR-041): document text → redaction → extraction where every field quotes the
  * text → checks in code → saved for the patient to review before any reminder is set.
  */
 
-const FORMS = ["tablet", "capsule", "syrup", "injection", "drops", "inhaler", "other"] as const;
-const FREQUENCIES = ["OD", "BD", "TDS", "QID", "HS", "SOS", "custom"] as const;
-const FOOD = ["before", "after", "any"] as const;
-
-const field = <T extends z.ZodTypeAny>(value: T) => z.object({ value: value.nullable(), evidence: z.string().nullable() });
+// The form / frequency / with-food lists live in the PrescriptionItem contract; the model is held to the same lists.
+const FORMS = PrescriptionItem.shape.form.options;
+const FREQUENCIES = PrescriptionItem.shape.frequency.options;
+const FOOD = PrescriptionItem.shape.with_food.options;
 
 export const RxLlm = z.object({
   doctor_name: field(z.string()),
@@ -41,7 +40,6 @@ export const RxLlm = z.object({
 export type RxLlm = z.infer<typeof RxLlm>;
 type Field<T> = { value: T | null; evidence: string | null };
 
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const todayIst = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -94,7 +92,7 @@ export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, 
   const warnings: string[] = [];
   const back = (s: string | null) => (s === null ? null : restore(s, map).trim());
   const issuedRaw = proven(text, out.issued_on);
-  const issued_on = issuedRaw && ISO.test(issuedRaw) ? issuedRaw : today;
+  const issued_on = issuedRaw && isoDate.safeParse(issuedRaw).success ? issuedRaw : today;
   const items: VerifiedItem[] = [];
   let anyReview = false;
 
