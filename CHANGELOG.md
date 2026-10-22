@@ -6,6 +6,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ### Changed
 - Phone navigation pass (U2): sheets now show a grabber and the Android sheet closes by tapping the dimmed area behind it, not only the close button. Haptics land on the moments that confirm something — a success tap when a dose is marked taken and when a share link is copied, and the warning tap when an SOS starts — never on ordinary taps. The hospital picker in appointment booking gets a real search field (search keyboard, clear button, results under it, a "no match" line).
+### Fixed
+- Error wording pass (U5): no screen says "Something went wrong" any more — the basket, care plan, prescription, report and upload errors now say what could not be loaded or finished and what to do next, and the phone's start-up loading screen says "Loading your Vyana…" under its spinner instead of showing a bare spinner. A scan test keeps the old phrase out of the apps.
 
 ### Added
 - A fixed-sentence trend helper for device readings (`computeTrend`, `describeTrend` in `@vyana/shared`): the 7-day average against the week before for steps, resting heart rate and sleep, with five fixed sentences, no model and no judging words.

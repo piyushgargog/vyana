@@ -61,7 +61,7 @@ function toErrorResponse(err: unknown, requestId: string): Response {
     return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId);
   }
   if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId);
-  return errorResponse("INTERNAL", "Something went wrong", 500, requestId);
+  return errorResponse("INTERNAL", "The request could not be finished. Please try again.", 500, requestId);
 }
 
 /**

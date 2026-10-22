@@ -224,7 +224,7 @@ export default function LabReportDetailPage({
               Could not load this report
             </p>
             <p className="text-[15px] text-label-2">
-              Something went wrong while loading this report. Please try again.
+              This report could not be loaded. Please try again.
             </p>
             <Button variant="secondary" onClick={() => refetch()}>
               Try again
