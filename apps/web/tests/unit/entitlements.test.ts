@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("server-only", () => ({}));
 
-import { checkDailyAiLimit, secondsUntilIstMidnight } from "@/lib/server/entitlements";
+import { checkDailyAiLimit, enforceDailyAiLimit, secondsUntilIstMidnight } from "@/lib/server/entitlements";
 import { AppError } from "@/lib/server/errors";
 
 const fake = (limit: number | null, calls: number, fail = false) =>
@@ -45,5 +45,29 @@ describe("checkDailyAiLimit", () => {
   it("fails closed when there is no plan row", async () => {
     const sb = { rpc: async () => ({ data: [], error: null }) } as unknown as SupabaseClient;
     await expect(checkDailyAiLimit(sb)).rejects.toMatchObject({ status: 429 });
+  });
+});
+
+describe("plans and roles", () => {
+  it("lets the 31st call through on a family plan (150)", async () => {
+    await expect(checkDailyAiLimit(fake(150, 30))).resolves.toBeUndefined();
+  });
+  it("fails closed when an rpc throws", async () => {
+    const sb = {
+      rpc: async () => {
+        throw new Error("network");
+      },
+    } as unknown as SupabaseClient;
+    await expect(checkDailyAiLimit(sb)).rejects.toMatchObject({ status: 429, code: "RATE_LIMITED" });
+  });
+  it("does not limit or count a doctor or admin", async () => {
+    for (const role of ["doctor", "admin"]) {
+      const rpc = vi.fn(async () => ({ data: [{ daily_ai_calls: 30, calls: 999 }], error: null }));
+      await expect(enforceDailyAiLimit({ profile: { role }, sb: { rpc } as unknown as SupabaseClient })).resolves.toBeUndefined();
+      expect(rpc).not.toHaveBeenCalled();
+    }
+  });
+  it("limits a patient", async () => {
+    await expect(enforceDailyAiLimit({ profile: { role: "patient" }, sb: fake(30, 30) })).rejects.toMatchObject({ status: 429 });
   });
 });

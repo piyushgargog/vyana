@@ -46,3 +46,9 @@ export async function checkDailyAiLimit(sb: SupabaseClient, now: Date = new Date
   }
   if (limit !== null && calls >= limit) throw rateLimited(secondsUntilIstMidnight(now));
 }
+
+/** The daily limit is a patient plan rule: doctors and admins are neither limited nor counted. Call after the role check. */
+export async function enforceDailyAiLimit(authed: { profile: { role: string }; sb: SupabaseClient }, now: Date = new Date()): Promise<void> {
+  if (authed.profile.role !== "patient") return;
+  await checkDailyAiLimit(authed.sb, now);
+}

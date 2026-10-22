@@ -23,7 +23,7 @@ export const unauthorized = (message = "Sign in to continue") => new AppError("U
 export const forbidden = (message = "You don't have access to this") => new AppError("FORBIDDEN", message, 403);
 export const notFound = (message = "Not found") => new AppError("NOT_FOUND", message, 404);
 /** Over a per-user limit (issue 138): 429 with a plain message and a `Retry-After` header in seconds. */
-export const rateLimited =(retryAfterSeconds: number) => {
+export const rateLimited = (retryAfterSeconds: number) => {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return new AppError(
     "RATE_LIMITED",
