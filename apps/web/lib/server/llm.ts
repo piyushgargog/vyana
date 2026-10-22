@@ -132,6 +132,15 @@ export function isRetryable(err: unknown): boolean {
   return e?.isRetryable === true;
 }
 
+/**
+ * Groq answers 400 `json_validate_failed` when a model's output does not fit the schema or is cut by its token limit (a long
+ * care plan). That is the model's limit, not a bug in the request: another model may manage, so the pool goes on.
+ */
+export function isOutputRejected(err: unknown): boolean {
+  const e = err as { statusCode?: unknown; responseBody?: unknown } | null;
+  return e?.statusCode === 400 && typeof e.responseBody === "string" && e.responseBody.includes("json_validate_failed");
+}
+
 const label = (c: Candidate) => `${c.provider}:${c.id}`;
 
 /**
@@ -176,22 +185,36 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
   if (rest.length === 0) return wrapLanguageModel({ model: primary, middleware: dropReasoning });
 
   const others = rest.map((c) => ({ c, model: build(c) }));
+  // An error that stops the pool is logged with its status, so "AI_APICallError" in a route log is never the whole story.
+  const model = (c: Candidate) => `${c.provider}:${c.id}`;
+  // The provider's own short message ("max completion tokens reached", "Failed to generate JSON"): it never carries the prompt.
+  const reasonOf = (err: unknown) => (typeof (err as { message?: unknown } | null)?.message === "string" ? (err as { message: string }).message.slice(0, 160) : null);
+  const failed = (err: unknown) => {
+    const e = err as { statusCode?: number; responseBody?: unknown } | null;
+    const code = typeof e?.responseBody === "string" ? /"code"\s*:\s*"([a-z_]+)"/.exec(e.responseBody)?.[1] : undefined;
+    log({ event: "llm_error", status: e?.statusCode ?? null, code: code ?? null, reason: reasonOf(err) });
+    return err;
+  };
   // Tries the other candidates in order after a retryable failure of the first; an unretryable error is thrown at once.
   async function fallBack<T>(err: unknown, aborted: boolean, call: (m: ModelV4, c: Candidate) => PromiseLike<T>): Promise<T> {
     let last = err;
-    if (!isRetryable(err) || aborted) throw err;
+    if (!(isRetryable(err) || isOutputRejected(err)) || aborted) throw failed(err);
     let from = first;
-    for (const { c, model } of others) {
-      log({ event: "llm_fallback", from: label(from), to: label(c), status: (last as { statusCode?: number })?.statusCode ?? null });
+    // A model that rejected its output rejects it on every key: skip its other keys and go to the next model (each try costs seconds).
+    const rejected = new Set<string>(isOutputRejected(err) ? [model(first)] : []);
+    for (const { c, model: m } of others) {
+      if (rejected.has(model(c))) continue;
+      log({ event: "llm_fallback", from: label(from), to: label(c), status: (last as { statusCode?: number })?.statusCode ?? null, reason: reasonOf(last) });
       try {
-        return await call(model, c);
+        return await call(m, c);
       } catch (next) {
         last = next;
         from = c;
-        if (!isRetryable(next) || aborted) throw next;
+        if (isOutputRejected(next)) rejected.add(model(c));
+        if (!(isRetryable(next) || isOutputRejected(next)) || aborted) throw failed(next);
       }
     }
-    throw last;
+    throw failed(last);
   }
 
   return wrapLanguageModel({

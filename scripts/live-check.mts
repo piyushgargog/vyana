@@ -151,6 +151,18 @@ await check("web_cache: a second identical request is served from the cache", as
   return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (needs a model or TINYFISH_MOCK=1)";
 });
 
+await check("blood search: Delhi is answered within 8 seconds from the public stock service, every row holds a unit count", async () => {
+  const t0 = Date.now();
+  const res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" });
+  const seconds = (Date.now() - t0) / 1000;
+  expect(res.status === 200 && res.json?.status === "done", `blood ${res.status} ${res.text.slice(0, 120)}`);
+  expect(seconds < 8, `took ${seconds.toFixed(1)} s`);
+  const banks = res.json?.banks ?? [];
+  if (banks.length === 0) return `no banks listed right now (sources: ${res.json?.sources.map((s: any) => s.status).join(", ")}); the public service may be down`;
+  expect(banks.every((b: any) => Number.isInteger(b.units) && b.units > 0 && b.verified), "every row should hold a unit count");
+  return `${banks.length} banks in ${seconds.toFixed(1)} s, most units ${banks[0].units}`;
+});
+
 let shareToken = "";
 await check("share links: create as the patient, read without signing in, revoke → 404", async () => {
   const made = await rest("POST", "share_links", P, { patient_id: patient!.id, kind: "medical_id", expires_at: new Date(Date.now() + 3_600_000).toISOString() });

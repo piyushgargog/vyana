@@ -98,6 +98,7 @@ describe("Scope v2 constants", () => {
       ai_document: { windowSeconds: 3600, max: 10 },
       ai_other: { windowSeconds: 3600, max: 20 },
       agent: { windowSeconds: 3600, max: 10 },
+      lookup: { windowSeconds: 600, max: 20 },
       public: { windowSeconds: 600, max: 30 },
     });
     expect(rateLimitOf("agent")).toEqual({ bucket: "agent", windowSeconds: 3600, max: 10 });

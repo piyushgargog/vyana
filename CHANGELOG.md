@@ -4,6 +4,18 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- Plain links to look up a price yourself (`pharmacySearchLinks`, `labSearchLinks`), the e-RaktKosh stock page and WhatsApp / SMS share links in `@vyana/shared`. The app reads no price from these sites; the screens that use them follow in the next releases.
+
+### Changed
+- RapidBlood reads the stock directly from the public e-RaktKosh service instead of a web agent: results come in about a second (before: 2 to 3 minutes), the city is matched to a district of the source (Gurugram and Noida work too), rows with several blood groups in one cell or without a count are not shown, answers are cached for 15 minutes and requests carry an identifying User-Agent. The wording stays: "listed", call to confirm. Blood search has its own rate-limit bucket (20 per 10 minutes).
+
+### Fixed
+- Chat history stays in step between the phone and the web: a chat started on one device is listed on the other when the assistant opens (the history is no longer kept for 5 minutes without a check), the saved chat is read again after every reply, and on the phone the first reply of a new chat no longer disappears (the guard the web already had).
+- A care plan no longer fails with a server error when the first model rejects its long answer (Groq `400 json_validate_failed`): the next model in the pool is tried. Every error that stops the model pool is now logged with its status and code.
+- When a model rejects its answer, the pool skips that model's other keys and goes straight to the next model, and the log line carries the provider's short reason.
+- The care plan works again on the free Groq tier: the model gets the first 3,500 characters of each guideline page instead of 12,000, because prompt and answer together must fit 8,000 tokens a minute (before, every answer was cut short and the request ended in a timeout).
+
 ## [1.1.0] - 2026-10-22
 
 ### Added

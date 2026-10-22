@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiErrorBody, BloodSearchRes } from "@vyana/shared";
 import { OTHER_TOKEN, VALID_TOKEN, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
+import { fakeERaktKosh } from "../fixtures/eraktkosh";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
 const { POST } = await import("@/app/api/blood/search/route");
 const { GET } = await import("@/app/api/blood/search/[job_id]/route");
-const { processBloodResult, summarizeBlood } = await import("@/lib/server/tinyfish/blood");
-const { bloodAreas } = await import("@/lib/server/tinyfish/sources");
+const { bloodAreas } = await import("@/lib/server/blood");
 
 const start = (body: unknown, token = VALID_TOKEN) =>
   POST(
@@ -23,40 +23,70 @@ const poll = (jobId: string, token = VALID_TOKEN) =>
     params: Promise.resolve({ job_id: jobId }),
   } as never);
 
-const search = { blood_group: "B-", component: "red_cells", city: "Delhi" };
+const search = { blood_group: "B-", component: "whole_blood", city: "Delhi" };
+let source: ReturnType<typeof fakeERaktKosh>;
 
 beforeEach(() => {
-  vi.stubEnv("TINYFISH_MOCK", "1");
   vi.stubEnv("JOB_TOKEN_SECRET", "x".repeat(40));
   resetDb();
+  source = fakeERaktKosh();
+  vi.stubGlobal("fetch", vi.fn(source.fetchFn));
 });
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("POST /api/blood/search + GET /{job_id}", () => {
-  it("starts one agent per area, then returns the rows with verified ones first", async () => {
+  it("reads the stock directly and returns the rows with the most units first, finished at once", async () => {
     const res = await start(search);
     expect(res.status).toBe(200);
-    const started = BloodSearchRes.parse(await res.json());
-    expect(started).toMatchObject({ status: "running", area: "Delhi", banks: [], cached: false });
-    expect(started.sources).toEqual(["Delhi", "Gurugram", "Noida", "Ghaziabad"].map((area) => ({ area, status: "pending" })));
-
-    const done = BloodSearchRes.parse(await (await poll(started.job_id)).json());
-    expect(done.status).toBe("done");
-    expect(done.banks).toHaveLength(8);
-    expect(done.banks.every((b) => b.verified && b.name.startsWith("[mock]"))).toBe(true);
-    expect(done.banks.map((b) => b.units)).toEqual([4, 4, 4, 4, 0, 0, 0, 0]);
-
-    const again = BloodSearchRes.parse(await (await start({ ...search, city: " delhi " })).json());
-    expect(again).toMatchObject({ status: "done", cached: true });
+    const body = BloodSearchRes.parse(await res.json());
+    expect(body).toMatchObject({ status: "done", area: "Delhi", cached: false });
+    // 3 rows in the fixture have a stock number; "Not Available" and the 99,999 misread are dropped
+    expect(body.banks.map((b) => [b.name, b.units])).toEqual([
+      ["Fictional Medical College", 16],
+      ["A & B Blood Bank", 7],
+      ["Test Hospital Blood Centre", 5],
+      ["Dummy Institute", 2],
+    ]);
+    expect(body.banks.every((b) => b.verified && b.source_url.startsWith("https://eraktkosh.mohfw.gov.in/"))).toBe(true);
+    expect(body.banks[0]).toMatchObject({ phone: "011-2000002", last_updated_text: null, component: "Whole Blood" });
+    expect(body.sources.map((s) => s.status)).toContain("ok");
   });
 
-  it("keeps a job private to the user who started it", async () => {
+  it("asks the source politely: its own page's parameters, a User-Agent, and each answer once (cached)", async () => {
+    await start(search);
+    const stockCalls = source.calls.filter((u) => u.includes("GETNEARBYSTOCKDETAILS"));
+    expect(stockCalls.length).toBeGreaterThan(0);
+    expect(stockCalls[0]).toContain("stateCode=97");
+    expect(stockCalls[0]).toContain("bloodGroup=14");
+    expect(stockCalls[0]).toContain("bloodComponent=11");
+    const calls = source.calls.length;
+    await start({ ...search, city: " delhi " });
+    expect(source.calls.length).toBe(calls); // the second search came from the cache
+    const init = (fetch as unknown as { mock: { calls: [unknown, RequestInit][] } }).mock.calls[0]?.[1];
+    expect(String((init?.headers as Record<string, string>)["User-Agent"])).toContain("Vyana");
+  });
+
+  it("answers the poll route from the same data, and keeps a job private to the user who started it", async () => {
     const started = BloodSearchRes.parse(await (await start(search)).json());
+    const again = BloodSearchRes.parse(await (await poll(started.job_id)).json());
+    expect(again.banks).toEqual(started.banks);
     const res = await poll(started.job_id, OTHER_TOKEN);
     expect(res.status).toBe(404);
     expect(ApiErrorBody.parse(await res.json()).error.message).toContain("not found");
+  });
+
+  it("says not_found for a city the source has no district for, and error when the source fails", async () => {
+    const unknown = BloodSearchRes.parse(await (await start({ ...search, city: "Atlantis" })).json());
+    expect(unknown).toMatchObject({ banks: [], status: "done", sources: [{ area: "Atlantis", status: "not_found" }] });
+
+    resetDb();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));
+    const down = BloodSearchRes.parse(await (await start(search)).json());
+    expect(down.banks).toEqual([]);
+    expect(down.sources.every((s) => s.status === "error" || s.status === "not_found")).toBe(true);
   });
 
   it("needs a signed-in user and a valid blood group, component and city", async () => {
@@ -67,45 +97,16 @@ describe("POST /api/blood/search + GET /{job_id}", () => {
   });
 });
 
-describe("processBloodResult / summarizeBlood / bloodAreas", () => {
-  const row = (over: Record<string, unknown> = {}) => ({ name: "City Blood Bank", phone: "011 2222 3333", units: 5, units_text: "5", component: "Whole Blood", updated: "21-10-2026 09:10", row_text: "City Blood Bank 011 2222 3333 5 Whole Blood", ...over });
-
-  it("verifies a row only when the stock cell reads as the number and the copied row holds the name and the cell", () => {
-    const out = processBloodResult("Delhi", { found: true, banks: [row(), row({ name: "No Text Bank", phone: "1", row_text: null }), row({ name: "Wrong Units Bank", phone: "2", row_text: "Wrong Units Bank 9" })] });
-    expect(out.status).toBe("ok");
-    expect(out.banks.map((b) => [b.name, b.verified])).toEqual([["City Blood Bank", true], ["No Text Bank", false], ["Wrong Units Bank", false]]);
+describe("areas", () => {
+  it("searches the city and its nearby cities, each matched to a district of the source", async () => {
+    const areas = await bloodAreas("Delhi");
+    expect(areas.map((a) => a.label)).toEqual(["Delhi", "Gurgaon, Haryana", "Gautam Buddha Nagar, Uttar Pradesh", "Ghaziabad, Uttar Pradesh"]);
+    expect(areas[0]).toMatchObject({ stateCode: "97", districtCode: "-1" });
   });
 
-  it("does not take 15 for 5, and ignores an impossible or fractional unit count", () => {
-    const out = processBloodResult("Delhi", { found: true, banks: [row({ units: 5, units_text: "15", row_text: "City Blood Bank 15" }), row({ name: "B", phone: "2", units: 5000, units_text: "5000", row_text: "B 5000" }), row({ name: "C", phone: "3", units: 2.5, units_text: "2.5", row_text: "C 2.5" })] });
-    expect(out.banks.map((b) => [b.units, b.verified])).toEqual([[5, false], [null, false], [null, false]]);
-  });
-
-  it("a stray number in the row is not a confirmation: without the stock cell nothing is verified", () => {
-    const out = processBloodResult("Delhi", { found: true, banks: [row({ name: "Block 1 Bank", phone: "7", units: 1, units_text: null, row_text: "Block 1 Bank 1" }), row({ name: "Gate 2 Bank", phone: "8", units: 2, units_text: "2", row_text: "Gate 2 Bank 2" })] });
-    expect(out.banks.map((b) => [b.name, b.verified])).toEqual([["Block 1 Bank", false], ["Gate 2 Bank", true]]);
-  });
-
-  it("drops duplicates, a missing name, found=false and a bad shape", () => {
-    expect(processBloodResult("Delhi", { found: true, banks: [row(), row(), row({ name: "  " })] }).banks).toHaveLength(1);
-    expect(processBloodResult("Delhi", { found: false, banks: [row()] })).toEqual({ status: "not_found", banks: [] });
-    expect(processBloodResult("Delhi", { banks: "none" })).toEqual({ status: "error", banks: [] });
-    expect(processBloodResult("Delhi", null).status).toBe("error");
-  });
-
-  it("puts verified rows first, then more units, and the job is running while an area is pending", () => {
-    const bank = (name: string, units: number | null, verified: boolean) => processBloodResult("X", { found: true, banks: [{ name, units, units_text: verified ? String(units) : null, row_text: verified ? `${name} ${units}` : null }] }).banks[0];
-    const s = summarizeBlood([
-      { area: "A", status: "ok", banks: [bank("low", 1, true), bank("unconfirmed", 50, false)] },
-      { area: "B", status: "ok", banks: [bank("high", 9, true)] },
-      { area: "C", status: "pending", banks: [] },
-    ]);
-    expect(s.banks.map((b) => b.name)).toEqual(["high", "low", "unconfirmed"]);
-    expect(s.status).toBe("running");
-  });
-
-  it("searches the city and up to three nearby ones", () => {
-    expect(bloodAreas("Delhi")).toEqual(["Delhi", "Gurugram", "Noida", "Ghaziabad"]);
-    expect(bloodAreas("Jaipur")).toEqual(["Jaipur"]);
+  it("knows the new names of cities, and a district typed in part", async () => {
+    expect((await bloodAreas("Gurugram"))[0]?.label).toBe("Gurgaon, Haryana");
+    expect((await bloodAreas("pune"))[0]).toMatchObject({ label: "Pune, Maharashtra", districtCode: "31" });
+    expect(await bloodAreas("Atlantis")).toEqual([]);
   });
 });

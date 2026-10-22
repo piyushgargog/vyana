@@ -7,7 +7,7 @@ import { MockLanguageModelV4 } from "ai/test";
  * tests show which key / model answered and when the next candidate is tried.
  */
 
-type Behaviour = number | "ok"; // an HTTP status to fail with, or "ok"
+type Behaviour = number | "json_validate_failed" | "ok"; // an HTTP status to fail with, a Groq 400 that rejects the model's output, or "ok"
 const script = new Map<string, Behaviour>(); // "provider|key|model" -> behaviour (default "ok")
 const calls: string[] = [];
 const prompts = new Map<string, unknown>(); // "provider|key|model" -> the last prompt it received
@@ -22,6 +22,7 @@ function scripted(provider: string, apiKey: string, id: string) {
   const attempt = () => {
     calls.push(name);
     const b = script.get(name) ?? "ok";
+    if (b === "json_validate_failed") throw new APICallError({ message: "status 400", url: "https://x.test", requestBodyValues: {}, statusCode: 400, responseBody: '{"error":{"code":"json_validate_failed"}}' });
     if (b !== "ok") throw new APICallError({ message: `status ${b}`, url: "https://x.test", requestBodyValues: {}, statusCode: b });
   };
   return new MockLanguageModelV4({
@@ -56,7 +57,7 @@ vi.mock("@ai-sdk/google", () => ({
   createGoogleGenerativeAI: (o: { apiKey: string }) => (id: string) => scripted("google", o.apiKey, id),
 }));
 
-const { getModel, isRetryable, keysFor, resetKeyRotation } = await import("@/lib/server/llm");
+const { getModel, isRetryable, isOutputRejected, keysFor, resetKeyRotation } = await import("@/lib/server/llm");
 
 beforeEach(() => {
   resetKeyRotation();
@@ -128,6 +129,23 @@ describe("failover (retryable failures only)", () => {
     expect(calls).toEqual(["groq|k1|main-model"]);
   });
 
+  it("goes on after a 400 that only says the model's output was rejected (a long care plan), not after other 400s", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1");
+    vi.stubEnv("NVIDIA_API_KEY", "n1");
+    vi.stubEnv("LLM_FALLBACKS", "nvidia:big-model");
+    vi.stubEnv("LLM_ALLOW_UNAPPROVED", "1");
+    script.set("groq|k1|main-model", "json_validate_failed");
+    expect(await ask("public")).toBe("nvidia|n1|big-model");
+  });
+
+  it("after a model rejected its output it skips that model's other keys and goes to the next model", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:second-model");
+    script.set("groq|k1|main-model", "json_validate_failed");
+    expect(await ask("public")).toBe("groq|k1|second-model");
+    expect(calls).toEqual(["groq|k1|main-model", "groq|k1|second-model"]); // groq|k2|main-model was never tried
+  });
+
   it("throws the last error when every candidate fails", async () => {
     vi.stubEnv("GROQ_API_KEYS", "k1,k2");
     script.set("groq|k1|main-model", 429);
@@ -181,6 +199,10 @@ describe("failover (retryable failures only)", () => {
     expect(isRetryable(new TypeError("fetch failed"))).toBe(true);
     expect(isRetryable(Object.assign(new Error("t"), { name: "TimeoutError" }))).toBe(true);
     expect(isRetryable(new Error("boom"))).toBe(false);
+    const rejected = new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 400, responseBody: '{"error":{"code":"json_validate_failed"}}' });
+    expect(isOutputRejected(rejected)).toBe(true);
+    expect(isOutputRejected(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 400, responseBody: '{"error":{"code":"invalid_request"}}' }))).toBe(false);
+    expect(isOutputRejected(new Error("boom"))).toBe(false);
   });
 });
 

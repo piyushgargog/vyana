@@ -70,6 +70,8 @@ export const RATE_LIMITS = {
   ai_other: { windowSeconds: 60 * 60, max: 20 },
   /** Anything that starts a web agent or a live-web search for the user. */
   agent: { windowSeconds: 60 * 60, max: 10 },
+  /** Reading a public source for the user (blood bank stock): cached, cheap, but polite to the source. */
+  lookup: { windowSeconds: 10 * 60, max: 20 },
   /** Nearby emergency hospitals. SOS itself is never limited. */
   public: { windowSeconds: 10 * 60, max: 30 },
 } as const;
@@ -88,7 +90,7 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "medicines/interactions": "ai_other",
   "prescriptions/basket": "agent",
   "labs/compare": "agent",
-  "blood/search": "agent",
+  "blood/search": "lookup",
   "doctors/verify": "agent",
   "hospitals/info": "agent",
   "schemes/pmjay-hospitals": "agent",
