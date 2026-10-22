@@ -10,6 +10,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ### Added
 - When a plan's daily AI limit is used up, AI features answer with the usual 'try again later' message until midnight (India time).
+- Wearables W4 (issue #328): an Activity card on Today in the phone app and on the web dashboard — today's steps (a ring only when a step goal exists, otherwise the plain number), resting heart rate with a plain arrow against the 7-day average when at least 4 days of readings back it up, and last night's sleep, every value naming the device it came from — plus a Health trends screen (phone) and page (web) with 7/30/90-day charts per device metric, the trend sentences of `describeTrend`, the fixed line "A device reading is not a medical test." under the SpO2, blood pressure and glucose charts, and "from device" marks on the share page's vitals. Until the device data layer (issue #325) lands, the screens are fed by the shared builders: full fictional data in mock mode, an honest empty state otherwise.
 
 ### Changed
 - Web: appointment booking and the admin hospitals tab no longer look up OPD timings with an agent; they show an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
@@ -17,6 +18,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Trend chart, QR code and phone screens now read the shared design tokens (issue #365): the trend chart's second series changes colour, and the phone screens change look slightly, to match the web theme.
 - Phone navigation pass (U2): sheets now show a grabber and the Android sheet closes by tapping the dimmed area behind it, not only the close button. Haptics land on the moments that confirm something — a success tap when a dose is marked taken and when a share link is copied, and the warning tap when an SOS starts — never on ordinary taps. The hospital picker in appointment booking gets a real search field (search keyboard, clear button, results under it, a "no match" line).
 ### Fixed
+- The OpenAPI generator (`pnpm docs:openapi`) runs again: the vendor-removal change had cut its assistant-chat block in half, leaving the script unparseable on main; the block is restored (without the vendor sentence) and `apps/web/openapi.yaml` is back in sync with the contracts.
 - The live check of the care plan adds a condition the demo patient does not have yet (a condition can exist only once per patient since migration 0020) and deletes it again.
 - Sign-up errors no longer show the provider's text on web and phone (issue #405): every failure says "We could not create your account. Check your details and try again." (password-too-short and invalid-email keep their own lines), and an address that already has an account gets the same "Check your inbox" screen as a new one, so a visitor cannot tell whether an email is registered.
 - The chat and care text renderer can no longer be slowed down by a message made of thousands of `[` (CodeQL alert 53, polynomial regular expression): a link label cannot contain a bracket and label and address are length-capped.
