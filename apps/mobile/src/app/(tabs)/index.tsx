@@ -5,8 +5,10 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_TIMES,
+  QUERY_ROOTS,
   parseCarePlanJson,
   useActiveItems,
   useAdherence,
@@ -71,10 +73,14 @@ export default function PatientHomeScreen() {
   const { data: appointments = [], refetch: refetchAppts } = useMyAppointments();
   const logDoseMutation = useLogDose();
 
+  const queryClient = useQueryClient();
+
   const onRefresh = () => {
     refetchItems();
     refetchLogs();
     refetchAppts();
+    // The suggestions list has its own query; a pull-to-refresh refreshes it too.
+    void queryClient.invalidateQueries({ queryKey: [QUERY_ROOTS.agentProposals] });
   };
 
   const scheduledSlots = activeItems.flatMap((item) => {

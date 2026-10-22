@@ -97,18 +97,34 @@ export function SuggestionsForYou() {
   const { data, isLoading, isError, refetch } = useMyProposals();
   const decide = useDecideProposal();
   const [showAll, setShowAll] = useState(false);
-  const [undo, setUndo] = useState<{ id: string; title: string } | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Every dismissal keeps its own undo slot and timer, so dismissing a second card
+  // never makes the first one permanent early.
+  const [undos, setUndos] = useState<{ id: string; title: string }[]>([]);
+  const undoTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // A ticking clock, so a card whose expiry passes while the page sits open leaves the
+  // list without waiting for a refetch.
+  const [now, setNow] = useState(() => Date.now());
 
-  useEffect(
-    () => () => {
-      if (undoTimer.current) clearTimeout(undoTimer.current);
-    },
-    []
+  useEffect(() => {
+    const timers = undoTimers.current;
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      clearInterval(tick);
+      timers.forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
+  const proposals = (data?.proposals ?? []).filter(
+    (p) => p.expires_at === null || new Date(p.expires_at).getTime() > now
   );
-
-  const proposals = data?.proposals ?? [];
   const visible = showAll ? proposals : proposals.slice(0, MAX_COLLAPSED);
+
+  const dropUndo = (id: string) => {
+    const timer = undoTimers.current.get(id);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.delete(id);
+    setUndos((prev) => prev.filter((u) => u.id !== id));
+  };
 
   const handleDecide = (p: AgentProposal, decision: "approve" | "reject") => {
     decide.mutate(
@@ -118,9 +134,11 @@ export function SuggestionsForYou() {
           if (decision === "approve") {
             showToast(res.result_text ?? "Done", "success");
           } else if (res.undo_seconds > 0) {
-            setUndo({ id: p.id, title: p.title });
-            if (undoTimer.current) clearTimeout(undoTimer.current);
-            undoTimer.current = setTimeout(() => setUndo(null), res.undo_seconds * 1000);
+            setUndos((prev) => [...prev.filter((u) => u.id !== p.id), { id: p.id, title: p.title }]);
+            undoTimers.current.set(
+              p.id,
+              setTimeout(() => dropUndo(p.id), res.undo_seconds * 1000)
+            );
           }
         },
         onError: (err) => showToast(err.message, "error"),
@@ -128,11 +146,8 @@ export function SuggestionsForYou() {
     );
   };
 
-  const handleUndo = () => {
-    if (!undo) return;
-    const id = undo.id;
-    setUndo(null);
-    if (undoTimer.current) clearTimeout(undoTimer.current);
+  const handleUndo = (id: string) => {
+    dropUndo(id);
     decide.mutate(
       { id, decision: "restore" },
       { onError: (err) => showToast(err.message, "error") }
@@ -198,19 +213,18 @@ export function SuggestionsForYou() {
               See all {proposals.length} suggestions
             </Button>
           )}
-          {undo && (
+          {undos.map((u) => (
             <div
+              key={u.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-row bg-fill px-3 py-2"
               role="status"
             >
-              <span className="text-[15px] text-label-2">
-                Dismissed: {undo.title}
-              </span>
-              <Button variant="secondary" size="sm" onClick={handleUndo}>
+              <span className="text-[15px] text-label-2">Dismissed: {u.title}</span>
+              <Button variant="secondary" size="sm" onClick={() => handleUndo(u.id)}>
                 Undo
               </Button>
             </div>
-          )}
+          ))}
         </div>
       )}
     </section>

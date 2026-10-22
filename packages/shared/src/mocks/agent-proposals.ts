@@ -34,10 +34,10 @@ function fixtures(): AgentProposal[] {
       id: "proposal-lab-hba1c",
       kind: "lab_recheck",
       title: "Your HbA1c was last measured 3 months ago",
-      reason: "Your care plan asks for this test every 3 months, and the last report on your record is from 3 months ago.",
+      reason: "No HbA1c report has been added in the last 3 months.",
       evidence: [
         { label: "Last HbA1c report", detail: "Uploaded 3 months ago" },
-        { label: "From your care plan", detail: "Repeat HbA1c every 3 months" },
+        { label: "Reports added since then", detail: "None" },
       ],
       created_at: iso(-5 * 60 * 60 * 1000),
       expires_at: iso(6 * DAY),
