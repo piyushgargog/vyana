@@ -26,6 +26,10 @@ RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /us
 # overflow in gz_vacate()). The fix is already in Alpine main; pin it (issue #154).
 # Remove this pin once node:26-alpine ships zlib >= 1.3.2-r1 (re-check 2026-10-14).
 RUN apk add --no-cache zlib=1.3.2-r1
+# Trivy flags musl 1.2.6-r2 in the node:26-alpine base image (CVE-2026-107891,
+# integer overflows in regcomp()). The fix is already in Alpine; pin it.
+# Remove this pin once node:26-alpine ships musl >= 1.2.6-r3.
+RUN apk add --no-cache musl=1.2.6-r3 musl-utils=1.2.6-r3
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
