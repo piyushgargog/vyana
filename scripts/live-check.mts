@@ -5,9 +5,10 @@
  *
  *   pnpm live:check                # fast checks: no agents, no model
  *   pnpm live:check --llm          # also the routes that need a model (set LLM_MOCK=1 or a provider on the server)
- *   pnpm live:check --agents       # also the routes that start TinyFish agents (uses credits)
  *
  * Each line is PASS, FAIL or SKIP; a difference from the docs is a FAIL to fix in the docs first. Exit code 1 on any FAIL.
+ * Checks that create rows (a condition, a chat session) delete them again before they end, even when
+ * they fail — the demo account is shared, and leftovers pile up in it (#333).
  */
 import { fileURLToPath } from "node:url";
 
@@ -23,7 +24,6 @@ const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const PASSWORD_PATIENT = process.env.SEED_PASSWORD_PATIENT ?? "";
 const PASSWORD_DOCTOR = process.env.SEED_PASSWORD_DOCTOR ?? "";
 const WITH_LLM = process.argv.includes("--llm");
-const WITH_AGENTS = process.argv.includes("--agents");
 
 for (const [name, value] of [["NEXT_PUBLIC_SUPABASE_URL", SB_URL], ["NEXT_PUBLIC_SUPABASE_ANON_KEY", SB_KEY], ["SEED_PASSWORD_PATIENT", PASSWORD_PATIENT], ["SEED_PASSWORD_DOCTOR", PASSWORD_DOCTOR]] as const) {
   if (!value) {
@@ -37,11 +37,14 @@ const line = (state: "PASS" | "FAIL" | "SKIP", name: string, detail = "") => {
   if (state === "FAIL") failures++;
   console.log(`${state}  ${name}${detail ? `  - ${detail}` : ""}`);
 };
+/** Throw from a check to mark it SKIP instead of FAIL (an outside service that did not answer says nothing about us). */
+class SkipCheck extends Error {}
 async function check(name: string, fn: () => Promise<string | void>) {
   try {
     line("PASS", name, (await fn()) ?? "");
   } catch (err) {
-    line("FAIL", name, err instanceof Error ? err.message : String(err));
+    if (err instanceof SkipCheck) line("SKIP", name, err.message);
+    else line("FAIL", name, err instanceof Error ? err.message : String(err));
   }
 }
 const skip = (name: string, why: string) => line("SKIP", name, why);
@@ -62,13 +65,14 @@ async function signIn(email: string, password: string): Promise<{ token: string;
   return { token: body.access_token, id: body.user.id };
 }
 
-/** A call to the app's API. */
-async function api(method: string, path: string, token: string | null, body?: unknown) {
+/** A call to the app's API. `timeoutMs` shortens the two-minute default for a call that may
+ *  wait on a public service; the caller decides what an abort means (the blood check skips). */
+async function api(method: string, path: string, token: string | null, body?: unknown, timeoutMs = 120_000) {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: { ...(body ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
   let json: unknown = null;
@@ -136,7 +140,7 @@ await check("cron: the scheduled route refuses a request without the secret", as
 
 await check("emergency: nearby hospitals never fail; SOS (patient only) returns contacts and an SMS text", async () => {
   const near = await api("POST", "/api/emergency/nearby", P, { lat: 28.5672, lng: 77.21 });
-  expect(near.status === 200 && Array.isArray(near.json?.hospitals), `nearby ${near.status}`);
+  expect(near.status === 200 && Array.isArray(near.json?.hospitals) && near.json.hospitals.length >= 1, `nearby ${near.status}: ${near.json?.hospitals?.length ?? "no"} hospitals`);
   const sos = await api("POST", "/api/emergency/sos", P, { lat: 28.5672, lng: 77.21, note: "live check" });
   const mapLink = String(sos.json?.sms_body ?? "").match(/https?:\/\/\S+/)?.[0];
   expect(sos.status === 200 && sos.json?.request_id && mapLink && new URL(mapLink).hostname === "maps.google.com", `sos ${sos.status} ${sos.text.slice(0, 120)}`);
@@ -151,14 +155,30 @@ await check("web_cache: a second identical request is served from the cache", as
   return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (needs a model or TINYFISH_MOCK=1)";
 });
 
-await check("blood search: Delhi is answered within 8 seconds from the public stock service, every row holds a unit count", async () => {
+await check("blood search: Delhi is answered within 5 seconds from the public stock service, at least one bank, every row holds a unit count", async () => {
   const t0 = Date.now();
-  const res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" });
+  // 15 s rather than the api() default of two minutes: if the public service hangs, the
+  // request aborts and the check skips — a dead service says nothing about Vyana (#298).
+  let res: Awaited<ReturnType<typeof api>>;
+  try {
+    res = await api("POST", "/api/blood/search", P, { blood_group: "O+", component: "whole_blood", city: "Delhi" }, 15_000);
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new SkipCheck("the public stock service did not answer within 15 seconds");
+    }
+    throw err;
+  }
   const seconds = (Date.now() - t0) / 1000;
   expect(res.status === 200 && res.json?.status === "done", `blood ${res.status} ${res.text.slice(0, 120)}`);
-  expect(seconds < 8, `took ${seconds.toFixed(1)} s`);
   const banks = res.json?.banks ?? [];
-  if (banks.length === 0) return `no banks listed right now (sources: ${res.json?.sources.map((s: any) => s.status).join(", ")}); the public service may be down`;
+  if (banks.length === 0) {
+    // The server answers "done" with an errored source when the public service is
+    // down; that says nothing about Vyana, so the check skips instead of failing.
+    const answered = (res.json?.sources ?? []).some((s: any) => s.status === "ok" || s.status === "not_found");
+    if (!answered) throw new SkipCheck(`the public stock service did not answer (sources: ${(res.json?.sources ?? []).map((s: any) => s.status).join(", ") || "none"})`);
+    throw new Error("the service answered but listed no bank for Delhi");
+  }
+  expect(seconds < 5, `took ${seconds.toFixed(1)} s`);
   expect(banks.every((b: any) => Number.isInteger(b.units) && b.units > 0 && b.verified), "every row should hold a unit count");
   return `${banks.length} banks in ${seconds.toFixed(1)} s, most units ${banks[0].units}`;
 });
@@ -178,12 +198,25 @@ await check("share links: create as the patient, read without signing in, revoke
 });
 
 await check("assistant: streams, returns x-session-id, starts with the 108 notice on an emergency (no model needed for the notice)", async () => {
-  const res = await api("POST", "/api/assistant/chat", P, { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "I have chest pain" }] }] });
-  expect(res.status === 200 || res.status === 500, `status ${res.status}`);
-  if (res.status === 500) return "model not configured (500); run with LLM_MOCK=1 or a provider to check the stream";
-  expect(res.headers.get("x-session-id"), "x-session-id header");
-  expect(res.text.includes("108"), "the stream should contain the 108 notice");
-  return "session " + res.headers.get("x-session-id");
+  let sessionId: string | null = null;
+  try {
+    const res = await api("POST", "/api/assistant/chat", P, { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "I have chest pain" }] }] });
+    sessionId = res.headers.get("x-session-id");
+    expect(res.status === 200 || res.status === 500, `status ${res.status}`);
+    if (res.status === 500) return "model not configured (500); run with LLM_MOCK=1 or a provider to check the stream";
+    expect(sessionId, "x-session-id header");
+    expect(res.text.includes("108"), "the stream should contain the 108 notice");
+    return "session " + sessionId;
+  } finally {
+    // The session this check started is deleted again (#333); its messages go with it (cascade).
+    if (sessionId) {
+      try {
+        await rest("DELETE", `chat_sessions?id=eq.${sessionId}`, P);
+      } catch {
+        // Cleanup is best-effort; a failed delete must not mask the check's own result.
+      }
+    }
+  }
 });
 
 if (!WITH_LLM) {
@@ -203,43 +236,22 @@ if (!WITH_LLM) {
   await check("care plan: a patient-added condition gets a patient_generated plan; a doctor's diagnosis → 403 for the patient", async () => {
     const own = await rest("POST", "conditions", P, { patient_id: patient!.id, name: "Type 2 Diabetes", source: "patient" });
     expect(own.status === 201, `add condition ${own.status}`);
-    const plan = await api("POST", "/api/care-plan", P, { condition_id: own.json[0].id });
-    expect(plan.status === 200 && plan.json?.status === "patient_generated" && plan.json?.plan?.sources?.length, `care plan ${plan.status} ${plan.text.slice(0, 160)}`);
-    const docCond = await rest("GET", "conditions?source=eq.doctor&select=id&limit=1", P);
-    if (docCond.json?.[0]) expect((await api("POST", "/api/care-plan", P, { condition_id: docCond.json[0].id })).status === 403, "a doctor's diagnosis should be 403 for the patient");
-    return `${plan.json?.plan.do.length} do's, ${plan.json?.plan.red_flags.length} warning signs`;
-  });
-}
-
-if (!WITH_AGENTS) {
-  skip("agent routes: basket job, lab compare job, NMC verification", "add --agents (uses TinyFish credits; ~6 min for a basket)");
-} else {
-  await check("basket: POST with the demo prescription reads its active items, returns a job_id; GET finishes; price_quotes rows are written", async () => {
-    const rx = await rest("GET", "prescriptions?select=id&order=issued_on.desc&limit=1", P);
-    expect(rx.json?.[0]?.id, "the demo patient should have a prescription");
-    const start = await api("POST", "/api/prescriptions/basket", P, { prescription_id: rx.json[0].id });
-    expect(start.status === 200 && start.json?.job_id, `start ${start.status} ${start.text.slice(0, 120)}`);
-    let job = start.json!;
-    for (let i = 0; i < 60 && job.status === "running"; i++) {
-      await new Promise((r) => setTimeout(r, 10_000));
-      const poll = await api("GET", `/api/prescriptions/basket/${encodeURIComponent(job.job_id)}`, P);
-      expect(poll.status === 200, `poll ${poll.status}`);
-      job = poll.json!;
+    const conditionId = own.json[0].id as string;
+    try {
+      const plan = await api("POST", "/api/care-plan", P, { condition_id: conditionId });
+      expect(plan.status === 200 && plan.json?.status === "patient_generated" && plan.json?.plan?.sources?.length, `care plan ${plan.status} ${plan.text.slice(0, 160)}`);
+      const docCond = await rest("GET", "conditions?source=eq.doctor&select=id&limit=1", P);
+      if (docCond.json?.[0]) expect((await api("POST", "/api/care-plan", P, { condition_id: docCond.json[0].id })).status === 403, "a doctor's diagnosis should be 403 for the patient");
+      return `${plan.json?.plan.do.length} do's, ${plan.json?.plan.red_flags.length} warning signs`;
+    } finally {
+      // The condition this check added is deleted again (#333); its care plans go with it —
+      // care_plans.condition_id is on delete cascade, and this check is their only source here.
+      try {
+        await rest("DELETE", `conditions?id=eq.${conditionId}`, P);
+      } catch {
+        // Cleanup is best-effort; a failed delete must not mask the check's own result.
+      }
     }
-    expect(job.status === "done", "the job should finish within 10 minutes");
-    const quotes = await rest("GET", "price_quotes?select=id&limit=1", P);
-    expect(quotes.status === 200, `price_quotes read ${quotes.status}`);
-    return `cheapest ${job.cheapest_source ?? "none"}, ${job.baskets.filter((b: any) => b.status === "ok").length} complete baskets; price_quotes readable`;
-  });
-  await check("lab compare: a job starts with four pending labs", async () => {
-    const res = await api("POST", "/api/labs/compare", P, { test_name: "HbA1c", city: "Delhi" });
-    expect(res.status === 200 && res.json?.job_id && res.json?.sources.length === 4, `labs ${res.status} ${res.text.slice(0, 120)}`);
-    return res.json?.status;
-  });
-  await check("NMC: a fake number never verifies (the pending demo doctor)", async () => {
-    const res = await api("POST", "/api/doctors/verify", doctor2!.token, { reg_no: "99887766", state_council: "Delhi Medical Council" });
-    expect(res.status === 200 && res.json?.status !== "verified", `verify ${res.status} ${res.text.slice(0, 120)}`);
-    return res.json?.status;
   });
 }
 

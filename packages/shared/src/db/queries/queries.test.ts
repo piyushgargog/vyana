@@ -19,6 +19,7 @@ import {
   createDoctorPrescription,
   createShareLink,
   daysAgoIso,
+  decideProposal,
   getAdherence,
   getCurrentPlan,
   getMyAiUsageToday,
@@ -31,6 +32,7 @@ import {
   listHospitals,
   listItemDoseLogs,
   listMyAppointments,
+  listMyProposals,
   listPrescriptions,
   listVerifiedDoctors,
   liveChannelName,
@@ -688,6 +690,28 @@ describe("ai usage", () => {
   it("reads an empty answer as zeros, so the app always has a total", async () => {
     const f = fakeSupabase({ responses: { "rpc:my_ai_usage_today": [ok([])] } });
     await expect(getMyAiUsageToday(f.sb)).resolves.toEqual({ calls: 0, input_tokens: 0, output_tokens: 0 });
+  });
+});
+
+describe("care agent proposals", () => {
+  it("lists the user's proposals, newest first, with no filter by default", async () => {
+    const f = fakeSupabase({ responses: { agent_proposals: [ok([{ id: "p-2" }, { id: "p-1" }])] } });
+    expect(await listMyProposals(f.sb)).toEqual([{ id: "p-2" }, { id: "p-1" }]);
+    expect(f.argsOf("order")).toEqual(["created_at", { ascending: false }]);
+    expect(f.argsOf("eq")).toEqual([]);
+  });
+
+  it("filters the list by status when one is given", async () => {
+    const f = fakeSupabase({ responses: { agent_proposals: [ok([{ id: "p-1" }])] } });
+    expect(await listMyProposals(f.sb, "pending")).toEqual([{ id: "p-1" }]);
+    expect(f.argsOf("eq")).toEqual(["status", "pending"]);
+  });
+
+  it("decides a proposal through the function and returns the row", async () => {
+    const row = { id: "p-1", status: "approved", decided_at: "2026-10-22T00:00:00Z" };
+    const f = fakeSupabase({ responses: { "rpc:decide_proposal": [ok(row)] } });
+    await expect(decideProposal(f.sb, "p-1", true)).resolves.toEqual(row);
+    expect(f.argsOf("rpc")).toEqual(["decide_proposal", { p_proposal_id: "p-1", p_approve: true }]);
   });
 });
 
