@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(32);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000021', 'p1@vyana.test', '{"full_name":"Patient One"}'),
@@ -60,6 +60,10 @@ select throws_ok(
 select throws_ok(
   $$ update public.agent_proposals set status = 'approved' where id = '50000000-0000-0000-0000-000000000001' $$,
   '42501', null, 'a patient cannot decide by writing the table');
+select throws_ok(
+  $$ insert into public.agent_actions (proposal_id, patient_id, action, status)
+     values ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000021', 'create_reminder', 'ok') $$,
+  '42501', null, 'a patient cannot write the actions log');
 
 reset role;
 
@@ -120,6 +124,38 @@ select lives_ok(
      values ('10000000-0000-0000-0000-000000000021', 'lab_recheck', 'HbA1c again', 'Due again.', 'lab-hba1c') $$,
   'the same suggestion may be proposed again after expiry');
 
+-- Rejecting is the same shape as approving, and a decided row cannot be
+-- decided a second time — the second call always loses, in both directions.
+select public.tap_login('10000000-0000-0000-0000-000000000022'); set local role authenticated;
+
+select results_eq(
+  $$ select status from public.decide_proposal('50000000-0000-0000-0000-000000000003', false) $$,
+  $$ values ('rejected') $$,
+  'rejecting sets the status');
+select throws_ok(
+  $$ select * from public.decide_proposal('50000000-0000-0000-0000-000000000003', true) $$,
+  'P0001', null, 'a second call cannot flip a rejection into an approval');
+
+reset role;
+
+-- The sweep touches only what is pending and overdue.
+select is(
+  (select status from public.agent_proposals where id = '50000000-0000-0000-0000-000000000001'),
+  'approved', 'the sweep leaves an approved proposal alone');
+select is(
+  (select status from public.agent_proposals where id = '50000000-0000-0000-0000-000000000003'),
+  'rejected', 'the sweep leaves a rejected proposal alone');
+
+-- With no signed-in user the function refuses by name (42501), before any
+-- status check: the service role cannot decide on a patient's behalf.
+select set_config('request.jwt.claims', '', true); set local role service_role;
+
+select throws_ok(
+  $$ select * from public.decide_proposal('50000000-0000-0000-0000-000000000001', true) $$,
+  '42501', null, 'deciding with no signed-in user is refused');
+
+reset role;
+
 -- The doctor of patient one reads their proposals and actions; patient two,
 -- who has no appointment with this doctor, stays invisible.
 select public.tap_login('10000000-0000-0000-0000-000000000023'); set local role authenticated;
@@ -134,6 +170,25 @@ select is(
 select throws_ok(
   $$ select * from public.expire_proposals() $$,
   '42501', null, 'the sweep is not a user function');
+select throws_ok(
+  $$ insert into public.agent_proposals (patient_id, kind, title, reason) values ('10000000-0000-0000-0000-000000000021', 'refill_due', 'From the doctor', 'No.') $$,
+  '42501', null, 'a doctor cannot insert a proposal');
+select throws_ok(
+  $$ select * from public.decide_proposal(
+       (select id from public.agent_proposals where dedupe_key = 'lab-hba1c' and status = 'pending'), true) $$,
+  '42501', null, 'a doctor cannot decide a patient''s proposal');
+
+reset role;
+
+-- Signed out entirely: nothing to read, nothing to call.
+select set_config('request.jwt.claims', '', true); set local role anon;
+
+select throws_ok(
+  $$ select * from public.agent_proposals $$,
+  '42501', null, 'anon cannot read proposals');
+select throws_ok(
+  $$ select * from public.decide_proposal('50000000-0000-0000-0000-000000000001', true) $$,
+  '42501', null, 'anon cannot decide a proposal');
 
 reset role;
 

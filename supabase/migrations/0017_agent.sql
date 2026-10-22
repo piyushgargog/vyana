@@ -43,6 +43,7 @@ create unique index uq_agent_proposals_pending_dedupe
   where status = 'pending';
 
 create index idx_agent_proposals_patient on public.agent_proposals (patient_id, created_at);
+create index idx_agent_proposals_expiry on public.agent_proposals (expires_at) where status = 'pending';
 
 create table public.agent_actions (
   id uuid primary key default gen_random_uuid(),
@@ -64,20 +65,26 @@ alter table public.agent_proposals enable row level security;
 create policy "agent_proposals_select" on public.agent_proposals
   for select to authenticated
   using ((select auth.uid()) = patient_id or public.is_doctor_of(patient_id));
-grant select on public.agent_proposals to authenticated, service_role;
-revoke insert, update, delete on public.agent_proposals from anon, authenticated;
 
 alter table public.agent_actions enable row level security;
 create policy "agent_actions_select" on public.agent_actions
   for select to authenticated
   using ((select auth.uid()) = patient_id or public.is_doctor_of(patient_id));
-grant select on public.agent_actions to authenticated, service_role;
-revoke insert, update, delete on public.agent_actions from anon, authenticated;
+
+-- An audit trail holds no write privileges at all for user roles (the same
+-- shape as 0016): everything is revoked first, then select alone is granted.
+revoke all on public.agent_proposals, public.agent_actions from anon, authenticated;
+grant select on public.agent_proposals, public.agent_actions to authenticated, service_role;
 
 -- Decide a proposal: approve or reject. Only the patient it belongs to, only
 -- while it is pending, and only before it expires — past its expiry the call
 -- is refused and the row is left for expire_proposals() to close, so a late
 -- tap never approves a stale suggestion. Sets decided_at and hands the row back.
+-- The decision is a single guarded update: the row is claimed only while it
+-- is the caller's, pending and unexpired, so two calls at the same time
+-- cannot both win (the loser updates nothing and gets the "already decided"
+-- error from the read that follows) and a call racing expire_proposals()
+-- can never flip an expired row back.
 -- search_path is empty on purpose (the issue asks for it): every name below
 -- is fully qualified.
 create or replace function public.decide_proposal(p_proposal_id uuid, p_approve boolean)
@@ -88,26 +95,41 @@ set search_path = ''
 as $$
 declare
   v_row public.agent_proposals;
+  v_uid uuid := (select auth.uid());
 begin
-  select * into v_row from public.agent_proposals where id = p_proposal_id;
-  if not found then
-    raise exception 'decide_proposal: proposal not found' using errcode = 'P0002';
-  end if;
-  if v_row.patient_id <> (select auth.uid()) then
-    raise exception 'decide_proposal: not your proposal' using errcode = '42501';
-  end if;
-  if v_row.status <> 'pending' then
-    raise exception 'decide_proposal: proposal already decided' using errcode = 'P0001';
-  end if;
-  if v_row.expires_at is not null and v_row.expires_at <= now() then
-    raise exception 'decide_proposal: proposal expired' using errcode = 'P0001';
+  -- The caller must be a signed-in user. auth.uid() is null for the anon key
+  -- and would make the ownership comparison below quietly not-true rather
+  -- than false, so the null case is refused here by name.
+  if v_uid is null then
+    raise exception 'decide_proposal: sign-in required' using errcode = '42501';
   end if;
 
   update public.agent_proposals
   set status = case when p_approve then 'approved' else 'rejected' end,
       decided_at = now()
   where id = p_proposal_id
+    and patient_id = v_uid
+    and status = 'pending'
+    and (expires_at is null or expires_at > now())
   returning * into v_row;
+
+  if not found then
+    -- Nothing was claimed. Read the row once to answer with the right error;
+    -- a proposal can never move back to pending, so this classification
+    -- cannot be raced into a wrong success.
+    select * into v_row from public.agent_proposals where id = p_proposal_id;
+    if not found then
+      raise exception 'decide_proposal: proposal not found' using errcode = 'P0002';
+    end if;
+    if v_row.patient_id <> v_uid then
+      raise exception 'decide_proposal: not your proposal' using errcode = '42501';
+    end if;
+    if v_row.status <> 'pending' then
+      raise exception 'decide_proposal: proposal already decided' using errcode = 'P0001';
+    end if;
+    raise exception 'decide_proposal: proposal expired' using errcode = 'P0001';
+  end if;
+
   return v_row;
 end;
 $$;
