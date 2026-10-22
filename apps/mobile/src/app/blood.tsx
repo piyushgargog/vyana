@@ -136,10 +136,13 @@ function BankCard({ bank }: { bank: BloodBank }) {
         {units} · {bank.component}
       </Text>
       <Text variant="footnote" tone="tertiary">
-        {bank.last_updated_text
-          ? `Updated ${bank.last_updated_text}`
-          : `Read ${relativeTime(bank.fetched_at)}`}
+        Read {relativeTime(bank.fetched_at)}
       </Text>
+      {bank.last_updated_text ? (
+        <Text variant="footnote" tone="tertiary">
+          Source page says: {bank.last_updated_text}
+        </Text>
+      ) : null}
       <Text variant="footnote" tone="secondary" style={styles.strong}>
         Call to confirm
       </Text>
@@ -341,7 +344,7 @@ export default function BloodScreen() {
   const shareMessage = buildBloodRequestMessage({
     blood_group: groupValue,
     component,
-    units: unitsOk ? unitsNumber : 1,
+    units: unitsOk ? unitsNumber : undefined,
     hospital_name: hospital.trim(),
     city: cityValue.trim(),
     contact_name: nameValue.trim(),

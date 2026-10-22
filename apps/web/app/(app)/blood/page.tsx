@@ -69,9 +69,8 @@ function BankRow({ bank }: { bank: BloodBank }) {
         <p>
           {units} · {bank.component}
         </p>
-        <p>
-          {bank.last_updated_text ? `Updated ${bank.last_updated_text}` : `Read ${relativeTime(bank.fetched_at)}`}
-        </p>
+        <p>Read {relativeTime(bank.fetched_at)}</p>
+        {bank.last_updated_text ? <p>Source page says: {bank.last_updated_text}</p> : null}
         <p className="font-medium text-label-2">Call to confirm</p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -228,7 +227,7 @@ export default function BloodPage() {
   const shareMessage = buildBloodRequestMessage({
     blood_group: groupValue,
     component,
-    units: unitsOk ? unitsNumber : 1,
+    units: unitsOk ? unitsNumber : undefined,
     hospital_name: hospital.trim(),
     city: cityValue.trim(),
     contact_name: nameValue.trim(),
