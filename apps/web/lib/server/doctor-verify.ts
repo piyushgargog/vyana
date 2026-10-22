@@ -100,8 +100,9 @@ export async function adminCheckDoctor({ user, profile }: AuthedUser, body: Admi
     .update({
       verification_status: "verified",
       verified_at: checkedAt,
-      reg_no: body.reg_no.trim(),
-      state_council: body.state_council.trim(),
+      // The admin-typed values, stored exactly as typed (issue #359); matching stays normalisation-based.
+      reg_no: body.reg_no,
+      state_council: body.state_council,
       year_of_registration: body.year,
       verification_json: verificationJson,
     })
