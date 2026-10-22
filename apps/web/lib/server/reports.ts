@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { Language, type LabValue, type LabValueCorrectReq, type LabValueCorrectRes, type ReportAnalyzeRes } from "@vyana/shared";
+import { isoDate, Language, type LabValue, type LabValueCorrectReq, type LabValueCorrectRes, type ReportAnalyzeRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
@@ -16,15 +16,13 @@ import {
 } from "./prompts/documents";
 import { hasDiagnosisLanguage, hasDosePattern } from "./safety/blocklists";
 import { redact, restore } from "./safety/redact";
-import { evidenceFound, hasNumber } from "./safety/verbatim";
+import { evidenceFound, field, hasNumber } from "./safety/verbatim";
 import { supabaseAdmin } from "./supabase-admin";
 
 /**
  * Lab report reading (SPEC §4, §2A, ADR-041/042): values quote the report, flags are computed in code, the summary
  * is written from verified values only and checked for diagnosis or dose wording.
  */
-
-const field = <T extends z.ZodTypeAny>(value: T) => z.object({ value: value.nullable(), evidence: z.string().nullable() });
 
 export const ReportLlm = z.object({
   lab_name: field(z.string()),
@@ -43,8 +41,6 @@ export const ReportLlm = z.object({
 });
 export type ReportLlm = z.infer<typeof ReportLlm>;
 const Summary = z.object({ summary: z.string() });
-
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Flags come from code only (§2A rule 4). One-sided ranges compare the side that exists. */
 export function flagFor(value: number | null, low: number | null, high: number | null): LabValue["flag"] {
@@ -91,7 +87,7 @@ export function verifyReport(out: ReportLlm, text: string, map: Record<string, s
   const proven = (f: { value: string | null; evidence: string | null }) =>
     f.value && evidenceFound(text, f.evidence) ? restore(f.value.trim(), map) : null;
   const date = proven(out.report_date);
-  return { lab_name: proven(out.lab_name), report_date: date && ISO.test(date) ? date : null, values, anyReview };
+  return { lab_name: proven(out.lab_name), report_date: date && isoDate.safeParse(date).success ? date : null, values, anyReview };
 }
 
 const describeRow = (v: LabValue) => {
