@@ -123,10 +123,10 @@ const ChatBubble = memo(function ChatBubble({
             return (
               <Button
                 key={`tool-${idx}`}
-                title="See prices"
+                title="Open price links"
                 variant="secondary"
                 size="sm"
-                label="See medicine prices in basket comparison"
+                label="Open price links"
                 onPress={() => onSeePrices(output.job_id as string)}
                 icon={<Symbol ios="tag.fill" android="sell" size={14} color={T.color.accentStrong} />}
                 style={styles.inlineAction}

@@ -27,6 +27,7 @@ export const DB_KEYS = {
   chatSessions: "chat-sessions",
   chatMessages: "chat-messages",
   bloodRequests: "blood-requests",
+  plan: "current-plan",
   consent: "consent",
   timeline: "timeline",
 } as const;

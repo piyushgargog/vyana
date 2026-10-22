@@ -34,7 +34,7 @@ export { QUEUE_DEADLINE_MS };
  * the flat AGENT_MAX_SECONDS. The run deadline keeps its 40 s grace over the agent
  * cap and stays under the queue deadline.
  */
-export function agentMaxSeconds(itemCount: number): number {
+function agentMaxSeconds(itemCount: number): number {
   return Math.min(420, AGENT_MAX_SECONDS + Math.max(0, itemCount - 1) * 30);
 }
 
