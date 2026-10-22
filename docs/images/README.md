@@ -10,13 +10,18 @@ person's data.
 |---|---|---|
 | `home-desktop.png` | The public home page at 1366 px | `capture-screens.mjs`, no login |
 | `home-phone.png` | The public home page at 390 px | `capture-screens.mjs`, no login |
+| `share-desktop.png` | The public share page (a patient's timeline link, fictional demo patient) at 1366 px | `capture-screens.mjs`, no login, app running with `NEXT_PUBLIC_USE_MOCKS=true` |
+| `share-phone.png` | The same share page at 390 px | `capture-screens.mjs`, no login, mock mode as above |
 
 ## Capturing the rest
 
 The app screens (Today, Ask Vyana with a cited answer, prescription scan
 result, a care plan with sources, medicine interactions, blood search
-results, the SOS / emergency card, the Health Memory Graph share page, and —
-once C1 is merged — care suggestions) need a signed-in demo session:
+results, the SOS / emergency card, and — once C1 is merged — care
+suggestions) need a signed-in demo session. Mock mode alone is not enough:
+with no Supabase session the app shell sends every signed-in route to
+/login, so those screens can only be captured against a real (seeded)
+backend, like this:
 
 ```sh
 # 1. Run the web app (mock env is enough for the public shell; the demo data
