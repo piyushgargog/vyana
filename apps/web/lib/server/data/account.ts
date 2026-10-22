@@ -61,6 +61,9 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "chat_sessions", owner: ["user_id"], order: "id" },
   { table: "chat_messages", owner: ["user_id"], order: "id" },
   { table: "ai_runs", owner: ["user_id"], order: "id" },
+  { table: "agent_proposals", owner: ["patient_id"], order: "id" },
+  { table: "agent_actions", owner: ["patient_id"], order: "id" },
+  { table: "user_plans", owner: ["user_id"], order: "user_id" },
   { table: "push_tokens", owner: ["user_id"], order: "token", omit: ["token"] },
 ];
 
@@ -74,6 +77,8 @@ export const NOT_EXPORTED: Record<string, string> = {
   price_quotes: "public prices, not tied to a user",
   web_cache: "server cache, not tied to a user",
   tinyfish_monitors: "server configuration, not tied to a user",
+  plans: "the plan catalogue, public information, not tied to a user",
+  waitlist: "an email address given on a public form, keyed by address rather than by account, and no health content",
 };
 
 export interface ExportedFile {
