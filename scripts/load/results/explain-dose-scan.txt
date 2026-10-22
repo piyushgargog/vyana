@@ -1,0 +1,94 @@
+Dose-log scans, migration 0018's index: before and after
+Local PostgreSQL 18.6; Vyana migrations 0001-0018 + demo seed + synthetic volume:
+107,615 dose_logs (statuses taken/skipped/missed), 100,000 ai_runs, 102,000 chat_messages,
+5,004 share_links, 1,075 profiles. Re-measured 2026-10-22 for PR #321.
+
+== Scan A: a status window read in time order (adherence / status pages) ==
+-- without idx_dose_logs_status_scheduled:
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=5207.51..5230.30 rows=200 width=14) (actual time=37.620..41.505 rows=200.00 loops=1)
+   Buffers: shared hit=1367
+   ->  Gather Merge  (cost=5207.51..13145.44 rows=69649 width=14) (actual time=37.617..41.480 rows=200.00 loops=1)
+         Workers Planned: 1
+         Workers Launched: 1
+         Buffers: shared hit=1367
+         ->  Sort  (cost=4207.50..4309.92 rows=40970 width=14) (actual time=28.307..28.328 rows=159.00 loops=2)
+               Sort Key: scheduled_for DESC
+               Sort Method: top-N heapsort  Memory: 37kB
+               Buffers: shared hit=1367
+               Worker 0:  Sort Method: top-N heapsort  Memory: 37kB
+               ->  Parallel Seq Scan on dose_logs  (cost=0.00..2436.80 rows=40970 width=14) (actual time=0.013..20.336 rows=34941.00 loops=2)
+                     Filter: ((status = ANY ('{missed,skipped}'::text[])) AND (scheduled_for < now()))
+                     Rows Removed by Filter: 18866
+                     Buffers: shared hit=1329
+ Planning:
+   Buffers: shared hit=172
+ Planning Time: 0.908 ms
+ Execution Time: 41.619 ms
+(19 rows)
+
+-- with idx_dose_logs_status_scheduled (migration 0018):
+                                                                                        QUERY PLAN                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=4457.72..4480.52 rows=200 width=14) (actual time=26.662..30.601 rows=200.00 loops=1)
+   Buffers: shared hit=12 read=190
+   ->  Gather Merge  (cost=4457.72..12395.66 rows=69649 width=14) (actual time=26.660..30.577 rows=200.00 loops=1)
+         Workers Planned: 1
+         Workers Launched: 1
+         Buffers: shared hit=12 read=190
+         ->  Sort  (cost=3457.71..3560.14 rows=40970 width=14) (actual time=21.767..21.773 rows=100.50 loops=2)
+               Sort Key: scheduled_for DESC
+               Sort Method: top-N heapsort  Memory: 40kB
+               Buffers: shared hit=12 read=190
+               Worker 0:  Sort Method: top-N heapsort  Memory: 40kB
+               ->  Parallel Index Only Scan using idx_dose_logs_status_scheduled on dose_logs  (cost=0.42..1687.02 rows=40970 width=14) (actual time=0.216..14.562 rows=34941.00 loops=2)
+                     Index Cond: ((status = ANY ('{missed,skipped}'::text[])) AND (scheduled_for < now()))
+                     Heap Fetches: 11
+                     Index Searches: 1
+                     Buffers: shared hit=4 read=190
+ Planning:
+   Buffers: shared hit=195 read=1
+ Planning Time: 1.310 ms
+ Execution Time: 30.672 ms
+(20 rows)
+
+
+== Scan B: yesterday's missed-dose count ==
+-- without the index:
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1707.49..1707.50 rows=1 width=8) (actual time=2.812..2.814 rows=1.00 loops=1)
+   Buffers: shared hit=419
+   ->  Bitmap Heap Scan on dose_logs  (cost=302.38..1704.52 rows=1188 width=0) (actual time=1.412..2.725 rows=1175.00 loops=1)
+         Recheck Cond: (scheduled_for >= (now() - '1 day'::interval))
+         Filter: (status = 'missed'::text)
+         Rows Removed by Filter: 2384
+         Heap Blocks: exact=169
+         Buffers: shared hit=419
+         ->  Bitmap Index Scan on dose_logs_item_id_scheduled_for_key  (cost=0.00..302.09 rows=3657 width=0) (actual time=1.371..1.372 rows=3561.00 loops=1)
+               Index Cond: (scheduled_for >= (now() - '1 day'::interval))
+               Index Searches: 64
+               Buffers: shared hit=250
+ Planning:
+   Buffers: shared hit=106
+ Planning Time: 1.032 ms
+ Execution Time: 2.920 ms
+(16 rows)
+
+-- with the index:
+                                                                          QUERY PLAN                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=47.15..47.16 rows=1 width=8) (actual time=0.284..0.285 rows=1.00 loops=1)
+   Buffers: shared hit=1 read=6
+   ->  Index Only Scan using idx_dose_logs_status_scheduled on dose_logs  (cost=0.42..44.18 rows=1188 width=0) (actual time=0.073..0.205 rows=1175.00 loops=1)
+         Index Cond: ((status = 'missed'::text) AND (scheduled_for >= (now() - '1 day'::interval)))
+         Heap Fetches: 0
+         Index Searches: 1
+         Buffers: shared hit=1 read=6
+ Planning:
+   Buffers: shared hit=127 read=1
+ Planning Time: 0.782 ms
+ Execution Time: 0.355 ms
+(11 rows)
+
