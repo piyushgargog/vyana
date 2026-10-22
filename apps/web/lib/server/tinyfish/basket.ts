@@ -371,7 +371,10 @@ async function basketForRun(run: z.infer<typeof JobRun>, job: JobPayload, counte
     }
     const now = Date.now();
     const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > runDeadlineMs(job.items.length);
-    const stuckQueued = now - job.started_at > QUEUE_DEADLINE_MS;
+    // The queue deadline counts only the wait for a browser: once a run has started (`startedAt` is set), its
+    // own deadline above is the one that applies, however long it waited. Timing a started run out by the job's
+    // age cancelled healthy runs that had queued behind the other pharmacies.
+    const stuckQueued = r.startedAt === null && now - job.started_at > QUEUE_DEADLINE_MS;
     if (stuckRunning || stuckQueued) {
       await cancelRun(runId, { counter });
       state = "timeout";

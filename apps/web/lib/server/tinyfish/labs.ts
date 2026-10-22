@@ -167,7 +167,11 @@ async function outcomeForRun(run: z.infer<typeof JobRun>, job: LabJob, counter: 
       return null;
     }
     const now = Date.now();
-    if ((r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS) || now - job.started_at > QUEUE_DEADLINE_MS) {
+    // Same rule as the basket: the queue deadline counts only the wait for a browser. Once a run has started
+    // (`startedAt` is set), only its own run deadline applies, however long it waited in the queue.
+    const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS;
+    const stuckQueued = r.startedAt === null && now - job.started_at > QUEUE_DEADLINE_MS;
+    if (stuckRunning || stuckQueued) {
       await cancelRun(runId, { counter });
       state = "timeout";
     }
