@@ -33,11 +33,13 @@ export function useJoinWaitlist() {
   });
 }
 
-/** AI answers used today, the plan's daily limit, and when the count resets. */
-export function useMyAiUsageToday() {
+/** AI answers used today against the plan's daily limit, and when the count resets.
+ *  (The DB hook named `useMyAiUsageToday` in hooks/db reads the cost totals from
+ *  #313 instead — calls and tokens, without a limit.) */
+export function usePlanAiUsageToday() {
   const api = useApi();
   return useQuery<AiUsageTodayRes, ApiError>({
-    queryKey: [QUERY_ROOTS.aiUsage, "today"],
+    queryKey: [QUERY_ROOTS.planAiUsage, "today"],
     queryFn: () => api.aiUsage.today(),
   });
 }
@@ -47,6 +49,6 @@ export function useMyAiUsageToday() {
 export function useRefreshAiUsage() {
   const qc = useQueryClient();
   return useCallback(() => {
-    void qc.invalidateQueries({ queryKey: [QUERY_ROOTS.aiUsage] });
+    void qc.invalidateQueries({ queryKey: [QUERY_ROOTS.planAiUsage] });
   }, [qc]);
 }

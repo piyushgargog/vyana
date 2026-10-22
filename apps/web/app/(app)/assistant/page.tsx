@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { track, useApi, useChatMessages, useChatSessions, useMyAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
+import { track, useApi, useChatMessages, useChatSessions, usePlanAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
   Card,
@@ -99,8 +99,8 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const isStreaming = status === "submitted" || status === "streaming";
 
-  // "AI uses left today" (#305): the count comes from useMyAiUsageToday and the plan limit.
-  const { data: aiUsage } = useMyAiUsageToday();
+  // "AI uses left today" (#305): the count comes from usePlanAiUsageToday and the plan limit.
+  const { data: aiUsage } = usePlanAiUsageToday();
   const limitReached = aiUsage !== undefined && aiUsage.used >= aiUsage.limit;
   const limitTrackedRef = useRef(false);
   useEffect(() => {

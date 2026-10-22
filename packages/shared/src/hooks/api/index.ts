@@ -42,7 +42,7 @@ import type {
 import { QUERY_ROOTS } from "./query-roots";
 
 export { QUERY_ROOTS } from "./query-roots";
-export { useCurrentPlan, useJoinWaitlist, useMyAiUsageToday, useRefreshAiUsage } from "./plans";
+export { useCurrentPlan, useJoinWaitlist, usePlanAiUsageToday, useRefreshAiUsage } from "./plans";
 
 export function useCompareMedicine() {
   const api = useApi();
