@@ -27,6 +27,31 @@ describe("computeTrend and describeTrend", () => {
     expect(text).toBe("About 2000 steps a day more than the week before.");
   });
 
+  it("is flat when the unrounded change is just under the flat limit, even though it rounds onto it", () => {
+    // The proof case of issue #372: an average of 7499.96 against 7000 is a raw change of 499.96,
+    // under the 500 flat limit, but the rounded change is exactly 500.
+    const { trend, text } = run(days([...repeat(7, 7499.96), ...repeat(7, 7000)]), "steps");
+    expect(trend).toMatchObject({ change: 500, direction: "flat" });
+    expect(text).toBe("About the same as the week before.");
+  });
+
+  it("is flat when the unrounded change is just over the negative flat limit, even though it rounds onto it", () => {
+    const { trend, text } = run(days([...repeat(7, 6500.04), ...repeat(7, 7000)]), "steps");
+    expect(trend).toMatchObject({ change: -500, direction: "flat" });
+    expect(text).toBe("About the same as the week before.");
+  });
+
+  it("is up when the change is exactly the flat limit", () => {
+    const { trend, text } = run(days([...repeat(7, 7500), ...repeat(7, 7000)]), "steps");
+    expect(trend).toMatchObject({ change: 500, direction: "up" });
+    expect(text).toBe("About 500 steps a day more than the week before.");
+  });
+
+  it("is flat just under the sleep flat limit, even though the change rounds onto it", () => {
+    const { trend } = run(days([...repeat(7, 464.96), ...repeat(7, 450)]), "sleep_minutes");
+    expect(trend).toMatchObject({ change: 15, direction: "flat" });
+  });
+
   it("is down when the resting heart rate falls by 3", () => {
     const { trend, text } = run(days([...repeat(7, 62), ...repeat(7, 65)]), "resting_hr");
     expect(trend).toMatchObject({ change: -3, direction: "down" });

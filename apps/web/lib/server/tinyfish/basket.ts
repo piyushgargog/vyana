@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { BasketCompareRes, BasketLine, PharmacyBasket, PriceSource } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart, sha1 } from "../cache";
 import { notFound } from "../errors";
-import { openJob, sealJob } from "../jobs";
+import { FLAT_RUN_DEADLINE_MS, QUEUE_DEADLINE_MS, cacheJobResult, cachedJobResult, openJobForUser, pollAgentRun, sealJob } from "../jobs";
 import { log } from "../log";
 import { supabaseAdmin } from "../supabase-admin";
 import { type CallCounter, type OutputSchema, cancelRun, fetchPages, getRun, startAgent } from "./client";
@@ -24,7 +24,8 @@ export interface BasketItem {
 
 /** The remote run is stopped after this long; we give up on a running run a little later. */
 export const AGENT_MAX_SECONDS = 150;
-export const RUN_DEADLINE_MS = 190_000;
+export const RUN_DEADLINE_MS = FLAT_RUN_DEADLINE_MS;
+export { QUEUE_DEADLINE_MS };
 
 /**
  * A basket agent searches every item on one pharmacy site, so its budget grows with
@@ -33,18 +34,13 @@ export const RUN_DEADLINE_MS = 190_000;
  * the flat AGENT_MAX_SECONDS. The run deadline keeps its 40 s grace over the agent
  * cap and stays under the queue deadline.
  */
-export function agentMaxSeconds(itemCount: number): number {
+function agentMaxSeconds(itemCount: number): number {
   return Math.min(420, AGENT_MAX_SECONDS + Math.max(0, itemCount - 1) * 30);
 }
 
 export function runDeadlineMs(itemCount: number): number {
   return Math.min(QUEUE_DEADLINE_MS, agentMaxSeconds(itemCount) * 1000 + 40_000);
 }
-/**
- * TinyFish queues runs beyond the account's browser limit (2 at once on our plan, measured 12 Oct), so a run may
- * wait for another pharmacy to finish before it starts. Give queued runs this long from the job's start.
- */
-export const QUEUE_DEADLINE_MS = 480_000;
 const VERIFY_TIMEOUT_MS = 45_000;
 const PRICE_CAP_WITHOUT_MRP = 5000;
 
@@ -357,47 +353,40 @@ async function basketForRun(run: z.infer<typeof JobRun>, job: JobPayload, counte
   if (!pharmacy || !run.run_id) return emptyBasket(source, "error");
   const runId = run.run_id;
 
-  let state: "pending" | "timeout" | "error" = "pending";
-  const done = await cached<PharmacyBasket>(`basketrun:${runId}`, "basket_run", TTL.day, async () => {
-    const r = await getRun(runId, { counter });
-    if (r.status === "COMPLETED") {
-      const basket = await processPharmacyResult(pharmacy, job.items, r.result, counter);
+  const outcome = await pollAgentRun({
+    runId,
+    cacheKey: `basketrun:${runId}`,
+    cacheKind: "basket_run",
+    jobStartedAt: job.started_at,
+    // The basket's own deadline choice: an agent prices every item of the basket, so its budget grows with
+    // the basket (see runDeadlineMs) instead of the flat single-task deadline labs use.
+    runDeadlineMs: runDeadlineMs(job.items.length),
+    counter,
+    getRun,
+    cancelRun,
+    processResult: async (result) => {
+      const basket = await processPharmacyResult(pharmacy, job.items, result, counter);
       await savePriceQuotes(basket);
       return basket;
-    }
-    if (r.status === "FAILED" || r.status === "CANCELLED") {
-      state = r.error === "TIMEOUT" || r.error === "MAX_STEPS_EXCEEDED" || r.status === "CANCELLED" ? "timeout" : "error";
-      return null;
-    }
-    const now = Date.now();
-    const stuckRunning = r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > runDeadlineMs(job.items.length);
-    const stuckQueued = now - job.started_at > QUEUE_DEADLINE_MS;
-    if (stuckRunning || stuckQueued) {
-      await cancelRun(runId, { counter });
-      state = "timeout";
-    }
-    return null;
+    },
   });
-  return done?.value ?? emptyBasket(source, state);
+  return outcome.state === "completed" ? outcome.value : emptyBasket(source, outcome.state);
 }
 
 /** GET: reports the job; finished pharmacies are processed once and cached. */
 export async function pollBasketJob(uid: string, jobId: string, counter: CallCounter): Promise<BasketCompareRes> {
-  const parsed = JobPayload.safeParse(openJob(jobId));
-  if (!parsed.success || parsed.data.uid !== uid) throw notFound("This price check was not found. Start a new one.");
-  const job = parsed.data;
+  const job = openJobForUser(JobPayload, jobId, uid, "This price check was not found. Start a new one.");
 
   if (job.runs.length === 0) {
-    const hit = await cached<StoredResult>(`basket:${job.key}`, "basket", TTL.day, async () => null);
-    if (!hit) throw notFound("This price check has expired. Start a new one.");
-    return { ...hit.value, job_id: jobId, cached: true };
+    const hit = await cachedJobResult<StoredResult>(`basket:${job.key}`, "basket", "This price check has expired. Start a new one.");
+    return { ...hit, job_id: jobId, cached: true };
   }
 
   const baskets = await Promise.all(job.runs.map((r) => basketForRun(r, job, counter)));
   const summary = summarize(baskets);
   const result: StoredResult = { ...summary, generic: null };
   if (summary.status === "done" && baskets.some((b) => b.lines.some((l) => l.price_verified))) {
-    await cached<StoredResult>(`basket:${job.key}`, "basket", TTL.day, async () => result);
+    await cacheJobResult(`basket:${job.key}`, "basket", result);
   }
   return { ...result, job_id: jobId, cached: false };
 }

@@ -9,6 +9,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   addDays,
+  filterHospitalsByQuery,
   formatLocalDate,
   useBookAppointment,
   useHospital,
@@ -38,11 +39,24 @@ export default function AppointmentBookScreen() {
     }>();
   const { showToast } = useVyanaMobile();
 
-  const { data: hospitals = [] } = useHospitals();
+  const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals();
+  const [hospitalQuery, setHospitalQuery] = useState('');
+  const filteredHospitals = useMemo(
+    () => filterHospitalsByQuery(hospitals, hospitalQuery),
+    [hospitals, hospitalQuery]
+  );
   const [userHospitalId, setUserHospitalId] = useState<string>(
     initialHospitalId || ''
   );
   const selectedHospitalId = userHospitalId || hospitals[0]?.id || '';
+  // The hospital that will be booked stays on screen while searching, even when the
+  // search text does not match it — it is pinned above the results.
+  const visibleHospitals = useMemo(() => {
+    const selected = hospitals.find((h) => h.id === selectedHospitalId);
+    if (!selected || filteredHospitals.some((h) => h.id === selected.id))
+      return filteredHospitals;
+    return [selected, ...filteredHospitals];
+  }, [hospitals, filteredHospitals, selectedHospitalId]);
 
   const { data: hospital, isLoading: hospLoading } =
     useHospital(selectedHospitalId);
@@ -116,19 +130,7 @@ export default function AppointmentBookScreen() {
   const opdInfo = infoMutation.data;
 
   return (
-    <Screen
-      eyebrow="New booking"
-      title="Book OPD Token"
-      trailing={
-        <Button
-          title="Cancel"
-          variant="plain"
-          size="sm"
-          label="Back to appointments list"
-          onPress={() => router.back()}
-        />
-      }
-    >
+    <Screen eyebrow="New booking" title="Book OPD Token">
       {confirmedAppt ? (
         /* Booking Confirmation Card */
         <View style={styles.stack}>
@@ -202,8 +204,44 @@ export default function AppointmentBookScreen() {
           {/* 1. Select Hospital */}
           <Card>
             <CardHeader title="1. Select Hospital" />
+            {/* A real search field (U2): search keyboard, a clear button, results under it. */}
+            <View style={styles.searchRow}>
+              <TextInput
+                accessibilityLabel="Search hospitals"
+                placeholder="Search hospitals"
+                placeholderTextColor={T.color.label3}
+                value={hospitalQuery}
+                onChangeText={setHospitalQuery}
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.searchInput}
+              />
+              {hospitalQuery.length > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear the hospital search"
+                  onPress={() => setHospitalQuery('')}
+                  style={styles.clearBtn}
+                >
+                  <Symbol ios="xmark.circle.fill" android="cancel" size={20} color={T.color.label3} />
+                </Pressable>
+              )}
+            </View>
             <View style={styles.stackSm}>
-              {hospitals.map((h) => {
+              {hospitalsLoading ? (
+                <ActivityIndicator size="small" color={T.color.accent} />
+              ) : hospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospitals are listed yet.
+                </Text>
+              ) : hospitalQuery.trim().length > 0 &&
+                filteredHospitals.length === 0 ? (
+                <Text variant="footnote" tone="tertiary" style={styles.italic}>
+                  No hospital matches that search.
+                </Text>
+              ) : null}
+              {visibleHospitals.map((h) => {
                 const isSelected = h.id === selectedHospitalId;
                 return (
                   <Pressable
@@ -501,5 +539,22 @@ const styles = StyleSheet.create({
     minHeight: 44,
     ...T.text.subhead,
     color: T.color.label,
+  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  searchInput: {
+    flex: 1,
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    borderCurve: 'continuous',
+    paddingHorizontal: T.space.md,
+    minHeight: 44,
+    ...T.text.subhead,
+    color: T.color.label,
+  },
+  clearBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

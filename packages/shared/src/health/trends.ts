@@ -49,13 +49,17 @@ export function computeTrend(values: DayValue[], today: string, metric: TrendMet
   const a = averageOf(byDay, addDays(today, -6), today);
   const b = averageOf(byDay, addDays(today, -13), addDays(today, -7));
   const bothEnough = a.days >= MIN_DAYS && b.days >= MIN_DAYS;
-  const change = bothEnough ? round1((a.avg as number) - (b.avg as number)) : null;
+  const rawChange = bothEnough ? (a.avg as number) - (b.avg as number) : null;
+  // Direction is decided from the unrounded change: a raw change just under the flat limit can
+  // round up onto it, and the rounded number is only for the words.
+  const change = rawChange === null ? null : round1(rawChange);
   return {
     enough_data: a.days >= MIN_DAYS,
     current_avg: a.avg === null ? null : round1(a.avg),
     previous_avg: b.avg === null ? null : round1(b.avg),
     change,
-    direction: change === null ? null : Math.abs(change) < FLAT_LIMIT[metric] ? "flat" : change > 0 ? "up" : "down",
+    direction:
+      rawChange === null ? null : Math.abs(rawChange) < FLAT_LIMIT[metric] ? "flat" : rawChange > 0 ? "up" : "down",
   };
 }
 

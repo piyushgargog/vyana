@@ -2,8 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { BloodSearchReq, type BloodBank, type BloodSearchRes, type BloodSearchSource } from "@vyana/shared";
 import { normalizeKeyPart } from "./cache";
-import { notFound } from "./errors";
-import { openJob, sealJob } from "./jobs";
+import { openJobForUser, sealJob } from "./jobs";
 import { type Area, type AreaResult, resolveAreas, searchArea } from "./web/eraktkosh";
 
 /**
@@ -25,7 +24,7 @@ const NEARBY_CITIES: Record<string, string[]> = {
 };
 const MAX_AREAS = 4;
 
-export const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeKeyPart(r.city)}`;
+const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeKeyPart(r.city)}`;
 
 /** The searched city first, then nearby cities; a name that matches no district of the source is dropped. */
 export async function bloodAreas(city: string): Promise<Area[]> {
@@ -44,7 +43,7 @@ export async function bloodAreas(city: string): Promise<Area[]> {
 }
 
 /** Most units first (every row is read from the response itself, so all are verified). */
-export function summarizeBlood(results: AreaResult[]): { banks: BloodBank[]; sources: BloodSearchSource[]; status: "done" } {
+function summarizeBlood(results: AreaResult[]): { banks: BloodBank[]; sources: BloodSearchSource[]; status: "done" } {
   const seen = new Set<string>();
   const banks = results
     .flatMap((r) => r.banks)
@@ -91,8 +90,7 @@ export async function startBloodJob(uid: string, reqIn: BloodSearchReq): Promise
 
 /** GET: the same search again (served from the 15 minute cache); a token from another person or an old version is not found. */
 export async function pollBloodJob(uid: string, jobId: string): Promise<BloodSearchRes> {
-  const parsed = BloodJob.safeParse(openJob(jobId));
-  if (!parsed.success || parsed.data.uid !== uid) throw notFound("This blood search was not found. Start a new one.");
-  const req = BloodSearchReq.parse({ blood_group: parsed.data.blood_group, component: parsed.data.component, city: parsed.data.city });
+  const job = openJobForUser(BloodJob, jobId, uid, "This blood search was not found. Start a new one.");
+  const req = BloodSearchReq.parse({ blood_group: job.blood_group, component: job.component, city: job.city });
   return { ...(await run(req)), job_id: jobId, cached: true };
 }

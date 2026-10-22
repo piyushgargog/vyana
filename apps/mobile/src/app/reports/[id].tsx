@@ -59,14 +59,6 @@ export default function LabReportDetailScreen() {
             Tested on {report.report_date || '—'}
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back</Text>
-        </Pressable>
       </View>
 
       {/* AI Plain-Language Summary */}

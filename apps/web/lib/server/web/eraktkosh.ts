@@ -70,16 +70,28 @@ interface DistrictEntry {
 
 // ---------------------------------------------------------------- http
 
-async function getJson(query: string): Promise<unknown> {
-  const res = await fetch(`${ENDPOINT}?${query}`, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    redirect: "follow",
-  });
-  if (!res.ok) throw new Error(`eraktkosh_http_${res.status}`);
-  const text = await res.text();
-  if (text.length > MAX_BYTES) throw new Error("eraktkosh_too_large");
-  return JSON.parse(text);
+/** One answer of the source, or null when it did not answer — the shape the other files under `web/` use: log and return null. */
+async function getJson(query: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(`${ENDPOINT}?${query}`, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      log({ event: "eraktkosh_http", status: res.status });
+      return null;
+    }
+    const text = await res.text();
+    if (text.length > MAX_BYTES) {
+      log({ event: "eraktkosh_too_large" });
+      return null;
+    }
+    return JSON.parse(text) as unknown;
+  } catch (err) {
+    log({ event: "eraktkosh_failed", error: err instanceof Error ? err.name : "unknown" });
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- areas
@@ -87,16 +99,19 @@ async function getJson(query: string): Promise<unknown> {
 /** Every district of every state, from the page's own lists; cached for a week. */
 export async function districtIndex(): Promise<DistrictEntry[]> {
   const hit = await cached<DistrictEntry[]>("erk:districts:v1", "erk_index", WEEK, async () => {
-    const states = (await getJson("hmode=GETSTATELIST&statetype=")) as { value: string; label: string }[];
+    const states = (await getJson("hmode=GETSTATELIST&statetype=")) as { value: string; label: string }[] | null;
+    if (!states) return null;
     const out: DistrictEntry[] = [];
     for (let i = 0; i < states.length; i += 6) {
       const batch = await Promise.all(
         states.slice(i, i + 6).map(async (s) => {
-          const body = (await getJson(`hmode=GETDISTRICTLIST&selectedStateCode=${encodeURIComponent(s.value)}`)) as { records?: { id: string; value: string }[] };
-          return (body.records ?? []).map((d) => ({ state: s.label, stateCode: s.value, district: d.id.trim(), districtCode: d.value }));
+          const body = (await getJson(`hmode=GETDISTRICTLIST&selectedStateCode=${encodeURIComponent(s.value)}`)) as { records?: { id: string; value: string }[] } | null;
+          return body === null ? null : (body.records ?? []).map((d) => ({ state: s.label, stateCode: s.value, district: d.id.trim(), districtCode: d.value }));
         }),
       );
-      out.push(...batch.flat());
+      // One unreadable list makes the whole index untrustworthy, as a failed load did before: no partial index.
+      if (batch.includes(null)) return null;
+      out.push(...batch.flatMap((b) => b ?? []));
     }
     return out.length ? out : null;
   });
@@ -201,13 +216,15 @@ export interface AreaResult {
   banks: BloodBank[];
 }
 
-async function stockFor(area: Area, group: BloodGroup, c: { code: string; label: string }): Promise<BloodBank[]> {
+/** The banks of one component code, or null when the source did not answer — an empty answer is a list, not null. */
+async function stockFor(area: Area, group: BloodGroup, c: { code: string; label: string }): Promise<BloodBank[] | null> {
   const q = `hmode=GETNEARBYSTOCKDETAILS&stateCode=${encodeURIComponent(area.stateCode)}&districtCode=${encodeURIComponent(area.districtCode)}&bloodGroup=${GROUP_CODE[group]}&bloodComponent=${c.code}&lang=0`;
   const hit = await cached<{ rows: unknown[]; at: string }>(`erk:stock:${q}`, "erk_stock", TTL.quarter, async () => {
-    const body = (await getJson(q)) as { data?: unknown[] };
+    const body = (await getJson(q)) as { data?: unknown[] } | null;
+    if (!body) return null;
     return { rows: Array.isArray(body.data) ? body.data : [], at: new Date().toISOString() };
   });
-  if (!hit) return [];
+  if (!hit) return null;
   return hit.value.rows.map((r) => parseRow(r, area, c.label, hit.value.at)).filter((b): b is BloodBank => b !== null);
 }
 
@@ -215,9 +232,13 @@ async function stockFor(area: Area, group: BloodGroup, c: { code: string; label:
 export async function searchArea(area: Area, group: BloodGroup, component: BloodComponent): Promise<AreaResult> {
   try {
     const lists = await Promise.all(COMPONENT_CODES[component].map((c) => stockFor(area, group, c)));
+    if (lists.includes(null)) {
+      log({ event: "eraktkosh_error", area: area.label });
+      return { area: area.label, status: "error", banks: [] };
+    }
     const seen = new Set<string>();
     const banks = lists
-      .flat()
+      .flatMap((l) => l ?? [])
       .filter((b) => {
         const k = `${b.name.toLowerCase()}|${b.component}`;
         if (seen.has(k)) return false;

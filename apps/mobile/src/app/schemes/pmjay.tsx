@@ -5,7 +5,6 @@ import * as Location from 'expo-location';
 import { usePmjayHospitals } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
-  MobileAiSafetyBanner,
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
 import {
@@ -111,8 +110,6 @@ export default function PmjayHospitalsScreen() {
         Ayushman Bharat Pradhan Mantri Jan Arogya Yojana empanelled
         healthcare providers.
       </Text>
-
-      <MobileAiSafetyBanner />
 
       {/* Official Government Verification Banner */}
       <Card>

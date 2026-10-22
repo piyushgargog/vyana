@@ -2,10 +2,9 @@ import "server-only";
 import { z } from "zod";
 import type { LabsCompareRes, PriceQuote, SourceStatus } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart } from "../cache";
-import { notFound } from "../errors";
-import { openJob, sealJob } from "../jobs";
+import { FLAT_RUN_DEADLINE_MS, cacheJobResult, cachedJobResult, openJobForUser, pollAgentRun, sealJob } from "../jobs";
 import { log } from "../log";
-import { AGENT_MAX_SECONDS, QUEUE_DEADLINE_MS, RUN_DEADLINE_MS, plausiblePrice, pricesOnPage } from "./basket";
+import { AGENT_MAX_SECONDS, plausiblePrice, pricesOnPage } from "./basket";
 import { type CallCounter, type OutputSchema, cancelRun, fetchPages, getRun, search, startAgent } from "./client";
 import { registerMockPage } from "./fixtures";
 import { LABS, type LabSource, absoluteUrl, isOnDomain } from "./sources";
@@ -17,9 +16,9 @@ import { LABS, type LabSource, absoluteUrl, isOnDomain } from "./sources";
 
 const VERIFY_TIMEOUT_MS = 45_000;
 
-export const labQuery = (test: string, city: string) => `${normalizeKeyPart(test)} · ${normalizeKeyPart(city)}`;
+const labQuery = (test: string, city: string) => `${normalizeKeyPart(test)} · ${normalizeKeyPart(city)}`;
 
-export function labGoal(test: string, city: string, lab: LabSource): string {
+function labGoal(test: string, city: string, lab: LabSource): string {
   return [
     `On this ${lab.name} website, find the lab test "${test}" offered in ${city}.`,
     "If this page is not that test, use the site's search to open it. Return the test's exact name as shown, its selling price in rupees, the MRP if shown, and the URL of the test's page.",
@@ -28,7 +27,7 @@ export function labGoal(test: string, city: string, lab: LabSource): string {
   ].join(" ");
 }
 
-export const LAB_OUTPUT_SCHEMA: OutputSchema = {
+const LAB_OUTPUT_SCHEMA: OutputSchema = {
   type: "object",
   properties: {
     found: { type: "boolean" },
@@ -158,40 +157,35 @@ async function outcomeForRun(run: z.infer<typeof JobRun>, job: LabJob, counter: 
   const lab = LABS.find((l) => l.source === run.source);
   if (!lab || !run.run_id) return { source: run.source as LabSource["source"], status: "error" as const, quote: null };
   const runId = run.run_id;
-  let state: "pending" | "timeout" | "error" = "pending";
-  const done = await cached<LabOutcome>(`labrun:${runId}`, "lab_run", TTL.day, async () => {
-    const r = await getRun(runId, { counter });
-    if (r.status === "COMPLETED") return processLabResult(lab, job.test, job.city, run.start_url, r.result, counter);
-    if (r.status === "FAILED" || r.status === "CANCELLED") {
-      state = r.error === "TIMEOUT" || r.error === "MAX_STEPS_EXCEEDED" || r.status === "CANCELLED" ? "timeout" : "error";
-      return null;
-    }
-    const now = Date.now();
-    if ((r.status === "RUNNING" && r.startedAt !== null && now - r.startedAt > RUN_DEADLINE_MS) || now - job.started_at > QUEUE_DEADLINE_MS) {
-      await cancelRun(runId, { counter });
-      state = "timeout";
-    }
-    return null;
+  const outcome = await pollAgentRun({
+    runId,
+    cacheKey: `labrun:${runId}`,
+    cacheKind: "lab_run",
+    jobStartedAt: job.started_at,
+    // The labs' own deadline choice: one agent reads one test's price, a single-task run, so it keeps the
+    // flat deadline instead of the basket's per-item scaling.
+    runDeadlineMs: FLAT_RUN_DEADLINE_MS,
+    counter,
+    getRun,
+    cancelRun,
+    processResult: (result) => processLabResult(lab, job.test, job.city, run.start_url, result, counter),
   });
-  return done ? { source: lab.source, ...done.value } : { source: lab.source, status: state, quote: null };
+  return outcome.state === "completed" ? { source: lab.source, ...outcome.value } : { source: lab.source, status: outcome.state, quote: null };
 }
 
 /** GET: the job's progress; finished labs are processed once and cached. */
 export async function pollLabJob(uid: string, jobId: string, counter: CallCounter): Promise<LabsCompareRes> {
-  const parsed = LabJob.safeParse(openJob(jobId));
-  if (!parsed.success || parsed.data.uid !== uid) throw notFound("This price check was not found. Start a new one.");
-  const job = parsed.data;
+  const job = openJobForUser(LabJob, jobId, uid, "This price check was not found. Start a new one.");
 
   if (job.runs.length === 0) {
-    const hit = await cached<Stored>(cacheKey(job.test, job.city), "labs", TTL.day, async () => null);
-    if (!hit) throw notFound("This price check has expired. Start a new one.");
-    return { ...hit.value, job_id: jobId, cached: true };
+    const hit = await cachedJobResult<Stored>(cacheKey(job.test, job.city), "labs", "This price check has expired. Start a new one.");
+    return { ...hit, job_id: jobId, cached: true };
   }
 
   const outcomes = await Promise.all(job.runs.map((r) => outcomeForRun(r, job, counter)));
   const result: Stored = { query: labQuery(job.test, job.city), city: job.city, ...summarizeLabs(outcomes) };
   if (result.status === "done" && result.quotes.some((q) => q.price_verified)) {
-    await cached<Stored>(cacheKey(job.test, job.city), "labs", TTL.day, async () => result);
+    await cacheJobResult(cacheKey(job.test, job.city), "labs", result);
   }
   return { ...result, job_id: jobId, cached: false };
 }

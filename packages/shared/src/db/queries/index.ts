@@ -2,6 +2,7 @@
 // Direct-DB query functions (plan 7.2 and 7.5): fn(sb, ...args), typed rows, throws a DbError.
 // Owner: Vaibhav Parmar
 
+export * from "./agentProposals";
 export * from "./aiRuns";
 export * from "./appointments";
 export * from "./bloodRequests";
@@ -17,6 +18,7 @@ export * from "./emergency";
 export * from "./helpers";
 export * from "./hospitals";
 export * from "./meals";
+export * from "./plans";
 export * from "./prescriptions";
 export * from "./profile";
 export * from "./push";
@@ -26,3 +28,4 @@ export * from "./shareLinks";
 export * from "./storage";
 export * from "./timeline";
 export * from "./vitals";
+export * from "./waitlist";

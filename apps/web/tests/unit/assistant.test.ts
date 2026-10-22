@@ -136,7 +136,7 @@ describe("ReplyGuard", () => {
 });
 
 describe("historyFrom", () => {
-  const m = (role: string, text: string) => ({ role, parts: [{ type: "text", text }] });
+  const m = (role: "system" | "user" | "assistant", text: string) => ({ role, parts: [{ type: "text", text }] });
   it("keeps only user and assistant text, the last 20", () => {
     const msgs = [m("system", "rules"), ...Array.from({ length: 25 }, (_, i) => m(i % 2 ? "assistant" : "user", `t${i}`)), m("user", "last")];
     const h = historyFrom(msgs);
