@@ -31,7 +31,8 @@ create table public.plans (
 insert into public.plans (id, name, daily_ai_calls, max_profiles, features) values
   ('free',   'Free',   30,   1,    '{"caregivers": false, "care_agent_max_open": 3}'::jsonb),
   ('family', 'Family', 150,  5,    '{"caregivers": true, "care_agent_max_open": null}'::jsonb),
-  ('clinic', 'Clinic', null, null, '{}'::jsonb);
+  ('clinic', 'Clinic', null, null, '{}'::jsonb)
+on conflict (id) do nothing;
 
 -- Plans are prices on a page: anyone may read them, nobody but the service
 -- role may change them.
@@ -55,6 +56,7 @@ create policy "user_plans_select_own" on public.user_plans
   for select to authenticated using (user_id = auth.uid());
 grant select on public.user_plans to authenticated, service_role;
 revoke insert, update, delete on public.user_plans from anon, authenticated;
+revoke all on public.user_plans from anon;
 create index idx_user_plans_plan on public.user_plans (plan_id);
 
 -- Every new profile starts on free. The profile row itself is created by the
@@ -76,6 +78,9 @@ $$;
 create trigger trg_profiles_default_plan
   after insert on public.profiles
   for each row execute function public.give_default_plan();
+
+-- A trigger function needs no execute grant for anyone: the trigger fires it.
+revoke execute on function public.give_default_plan() from public;
 
 -- Everyone who is already here gets free too.
 insert into public.user_plans (user_id, plan_id, source)
@@ -110,7 +115,7 @@ grant execute on function public.current_plan() to authenticated, service_role;
 -- unique per plan: the same person may wait for two plans, never twice for one.
 create table public.waitlist (
   id uuid primary key default gen_random_uuid(),
-  email text not null check (email = lower(email)),
+  email text not null check (email = lower(email)) check (char_length(email) <= 254),
   plan_id text not null references public.plans(id),
   note text check (note is null or char_length(note) <= 200),
   created_at timestamptz not null default now(),
@@ -124,28 +129,47 @@ revoke all on public.waitlist from anon, authenticated;
 grant select, insert, update, delete on public.waitlist to service_role;
 create index idx_waitlist_plan on public.waitlist (plan_id);
 
+-- Anonymous joins need a counter that is not keyed by the address itself:
+-- counting rows of the same email can never reach a limit when an address
+-- holds at most one row per plan. This table holds nothing but a timestamp
+-- per anonymous attempt (signed-in callers are counted by hit_rate_limit,
+-- against their profile). No role can touch it directly.
+create table public.waitlist_attempts (
+  id bigint generated always as identity primary key,
+  attempted_at timestamptz not null default now()
+);
+
+alter table public.waitlist_attempts enable row level security;
+revoke all on public.waitlist_attempts from anon, authenticated;
+grant select, insert, update, delete on public.waitlist_attempts to service_role;
+create index idx_waitlist_attempts_time on public.waitlist_attempts (attempted_at);
+
 -- Join the waitlist. Open to anyone (the pricing page is public), so it
--- defends itself: the address must look like an address, the plan must exist,
--- the note is capped by the table, and joins are rate limited — 5 an hour.
--- A signed-in caller is counted by hit_rate_limit like every other bucket.
--- An anonymous caller has no profile to count against (rate_limits.user_id
--- is a profile key), so their joins are counted on the waitlist itself: the
--- same address may add at most 5 rows in an hour, across plans.
--- Joining twice with the same address and plan is not an error: the first
--- row is handed back, so a double tap or a retry is harmless.
+-- defends itself: the address must look like an address and fit in 254
+-- characters, the plan must exist, and the note is capped by the table.
+-- Rate limits: a signed-in caller is counted by hit_rate_limit like every
+-- other bucket (5 an hour); an anonymous caller has no profile to count
+-- against (rate_limits.user_id is a profile key), so anonymous joins as a
+-- whole are capped at 30 an hour through waitlist_attempts — the form
+-- cannot be flooded, and no per-address counter can be gamed by varying
+-- the address.
+-- The answer is only whether the address is new to this plan. An earlier
+-- version handed back the stored row on a repeat join, which gave anyone
+-- who submitted somebody else's address that person's note and join date;
+-- the note is free text, so nothing of the stored row is returned now.
 create or replace function public.join_waitlist(p_email text, p_plan_id text, p_note text default null)
-returns table (id uuid, email text, plan_id text, note text, created_at timestamptz)
+returns boolean
 language plpgsql
 security definer
 set search_path = public
 as $$
-#variable_conflict use_column
 declare
   v_email text := lower(trim(coalesce(p_email, '')));
   v_uid uuid := auth.uid();
   v_allowed boolean;
+  v_new_id uuid;
 begin
-  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+  if char_length(v_email) > 254 or v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
     raise exception 'join_waitlist: invalid email' using errcode = '22023';
   end if;
   if p_plan_id is null or not exists (select 1 from public.plans p where p.id = p_plan_id) then
@@ -162,20 +186,20 @@ begin
       raise exception 'join_waitlist: rate limited, try again later' using errcode = 'P0001';
     end if;
   else
-    if (select count(*) from public.waitlist w
-         where w.email = v_email and w.created_at > now() - interval '1 hour') >= 5 then
+    delete from public.waitlist_attempts where attempted_at < now() - interval '1 day';
+    if (select count(*) from public.waitlist_attempts
+         where attempted_at > now() - interval '1 hour') >= 30 then
       raise exception 'join_waitlist: rate limited, try again later' using errcode = 'P0001';
     end if;
+    insert into public.waitlist_attempts default values;
   end if;
 
   insert into public.waitlist (email, plan_id, note)
   values (v_email, p_plan_id, p_note)
-  on conflict (email, plan_id) do nothing;
+  on conflict (email, plan_id) do nothing
+  returning id into v_new_id;
 
-  return query
-  select w.id, w.email, w.plan_id, w.note, w.created_at
-  from public.waitlist w
-  where w.email = v_email and w.plan_id = p_plan_id;
+  return v_new_id is not null;
 end;
 $$;
 

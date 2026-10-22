@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(37);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000011', 'd@vyana.test', '{"full_name":"Patient D"}'),
@@ -78,18 +78,33 @@ select throws_ok(
 reset role;
 
 -- Joining signed out: the address is stored lower-cased, and joining twice is harmless.
-select results_eq(
-  $$ select email, plan_id from public.join_waitlist('Person@Example.com', 'family', 'for my parents') $$,
-  $$ values ('person@example.com', 'family') $$,
-  'joining stores the address lower-cased');
-select public.join_waitlist('person@example.com', 'family');
+select is(
+  (select public.join_waitlist('Person@Example.com', 'family', 'for my parents')),
+  true, 'a first join answers true');
+select is(
+  (select email from public.waitlist where plan_id = 'family' and email = 'person@example.com'),
+  'person@example.com', 'joining stores the address lower-cased');
+select is(
+  (select public.join_waitlist('person@example.com', 'family')),
+  false, 'joining twice answers false and adds no row');
 select is(
   (select count(*)::int from public.waitlist where email = 'person@example.com'),
   1, 'joining twice adds no second row');
-select public.join_waitlist('person@example.com', 'clinic');
+select is(
+  (select public.join_waitlist('person@example.com', 'clinic')),
+  true, 'the same address may wait for a second plan');
 select is(
   (select count(*)::int from public.waitlist where email = 'person@example.com'),
   2, 'the same address may wait for two plans');
+
+-- A second caller with somebody else's address learns nothing: the answer is
+-- the boolean again, and the stored note does not move.
+select is(
+  (select public.join_waitlist('person@example.com', 'family', 'a stranger''s note')),
+  false, 'a repeat join by anyone answers false');
+select is(
+  (select note from public.waitlist where email = 'person@example.com' and plan_id = 'family'),
+  'for my parents', 'the stored note is never handed back or overwritten');
 
 -- Bad input is refused with a clear code, before anything is stored.
 select throws_ok(
@@ -101,17 +116,41 @@ select throws_ok(
 select throws_ok(
   $$ select * from public.join_waitlist('x@y.co', 'family', repeat('a', 201)) $$,
   '22023', null, 'a note over 200 characters is refused');
+select throws_ok(
+  $$ select * from public.join_waitlist(repeat('a', 243) || '@example.com', 'family') $$,
+  '22023', null, 'an address over 254 characters is refused');
+select throws_ok(
+  $$ insert into public.waitlist (email, plan_id) values (repeat('a', 243) || '@example.com', 'family') $$,
+  '23514', null, 'the table itself refuses an address over 254 characters');
+
+-- Anonymous joins as a whole are capped (30 an hour) through the attempts
+-- counter, so the form cannot be flooded by varying the address.
+insert into public.waitlist_attempts (attempted_at)
+select now() from generate_series(1, 30);
+select throws_ok(
+  $$ select * from public.join_waitlist('someone-new@x.co', 'family') $$,
+  'P0001', null, 'the thirty-first anonymous join in an hour is refused');
+delete from public.waitlist_attempts;
+
+-- The hardening lines: anon holds nothing on user_plans, and the trigger
+-- function is not callable by the public.
+select ok(
+  not has_table_privilege('anon', 'public.user_plans', 'SELECT'),
+  'anon has no privilege at all on user_plans');
+select ok(
+  not has_function_privilege('public', 'public.give_default_plan()', 'EXECUTE'),
+  'give_default_plan is not executable by public');
 
 -- The rate limit: patient F may join 5 times in an hour, the sixth is refused.
 select public.tap_login('10000000-0000-0000-0000-000000000013'); set local role authenticated;
 
-select lives_ok($$ select * from public.join_waitlist('f1@x.co', 'family') $$, 'join 1 of 5');
-select lives_ok($$ select * from public.join_waitlist('f2@x.co', 'family') $$, 'join 2 of 5');
-select lives_ok($$ select * from public.join_waitlist('f3@x.co', 'family') $$, 'join 3 of 5');
-select lives_ok($$ select * from public.join_waitlist('f4@x.co', 'family') $$, 'join 4 of 5');
-select lives_ok($$ select * from public.join_waitlist('f5@x.co', 'family') $$, 'join 5 of 5');
+select lives_ok($$ select public.join_waitlist('f1@x.co', 'family') $$, 'join 1 of 5');
+select lives_ok($$ select public.join_waitlist('f2@x.co', 'family') $$, 'join 2 of 5');
+select lives_ok($$ select public.join_waitlist('f3@x.co', 'family') $$, 'join 3 of 5');
+select lives_ok($$ select public.join_waitlist('f4@x.co', 'family') $$, 'join 4 of 5');
+select lives_ok($$ select public.join_waitlist('f5@x.co', 'family') $$, 'join 5 of 5');
 select throws_ok(
-  $$ select * from public.join_waitlist('f6@x.co', 'family') $$,
+  $$ select public.join_waitlist('f6@x.co', 'family') $$,
   'P0001', null, 'the sixth join in an hour is refused');
 
 reset role;

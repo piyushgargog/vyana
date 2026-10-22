@@ -1750,13 +1750,7 @@ export type Database = {
       is_doctor_of: { Args: { p: string }; Returns: boolean }
       join_waitlist: {
         Args: { p_email: string; p_note?: string; p_plan_id: string }
-        Returns: {
-          created_at: string
-          email: string
-          id: string
-          note: string
-          plan_id: string
-        }[]
+        Returns: boolean
       }
       my_ai_usage_today: {
         Args: Record<PropertyKey, never>

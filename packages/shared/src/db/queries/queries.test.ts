@@ -705,9 +705,13 @@ describe("plans and the waitlist", () => {
   });
 
   it("joins the waitlist through the function, the note left out when there is none", async () => {
-    const entry = { id: "w-1", email: "person@example.com", plan_id: "family", note: null, created_at: "2026-10-22T00:00:00Z" };
-    const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok([entry])] } });
-    await expect(joinWaitlist(f.sb, "person@example.com", "family")).resolves.toEqual(entry);
+    const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok(true)] } });
+    await expect(joinWaitlist(f.sb, "person@example.com", "family")).resolves.toBe(true);
     expect(f.argsOf("rpc")).toEqual(["join_waitlist", { p_email: "person@example.com", p_plan_id: "family", p_note: undefined }]);
+  });
+
+  it("reads an address that is already waiting as false, never as the stored row", async () => {
+    const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok(false)] } });
+    await expect(joinWaitlist(f.sb, "person@example.com", "family", "their private note")).resolves.toBe(false);
   });
 });

@@ -61,8 +61,6 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "chat_sessions", owner: ["user_id"], order: "id" },
   { table: "chat_messages", owner: ["user_id"], order: "id" },
   { table: "ai_runs", owner: ["user_id"], order: "id" },
-  { table: "agent_proposals", owner: ["patient_id"], order: "id" },
-  { table: "agent_actions", owner: ["patient_id"], order: "id" },
   { table: "user_plans", owner: ["user_id"], order: "user_id" },
   { table: "push_tokens", owner: ["user_id"], order: "token", omit: ["token"] },
 ];
