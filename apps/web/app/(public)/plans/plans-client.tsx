@@ -1,10 +1,10 @@
 "use client";
 
 // The plans themselves (#305): Free and Family side by side, read from the plan data
-// (plans.features via useCurrentPlan) — no number is typed into this page. Nothing is charged
+// (plans.features via useCurrentPlanPage) — no number is typed into this page. Nothing is charged
 // yet and no date is promised anywhere; the waitlist is how interest is measured first.
 import React, { useEffect } from "react";
-import { track, useCurrentPlan, type Plan } from "@vyana/shared";
+import { track, useCurrentPlanPage, type Plan } from "@vyana/shared";
 import { Button, Card, Pill, SkeletonLine } from "@/components/ui";
 import { Check } from "lucide-react";
 import { WaitlistForm } from "./waitlist-form";
@@ -29,7 +29,7 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
 }
 
 export function PlansClient() {
-  const { data, isLoading, isError, refetch } = useCurrentPlan();
+  const { data, isLoading, isError, refetch } = useCurrentPlanPage();
 
   useEffect(() => {
     track("plan_viewed");
@@ -70,9 +70,9 @@ export function PlansClient() {
       )}
 
       <p className="text-[15px] text-label-2">
-        Nothing is charged yet. Family is a plan we are preparing; if enough
-        families ask for it, we will build it. Joining the list is free and
-        promises nothing but one email.
+        Nothing is charged yet. Family is a plan we are considering; nothing is
+        decided or promised. Joining the list is free and means one email, no
+        more.
       </p>
 
       {family && (

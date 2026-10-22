@@ -5,8 +5,6 @@ import type { ZodType } from "zod";
 import {
   AiUsageTodayRes,
   ApiErrorBody,
-  BasketCompareReq,
-  BasketCompareRes,
   BloodSearchReq,
   BloodSearchRes,
   DoctorVerifyReq,
@@ -17,20 +15,13 @@ import {
   EmergencySosRes,
   GenerateCarePlanReq,
   GenerateCarePlanRes,
-  HospitalInfoReq,
-  HospitalInfoRes,
   InteractionsReq,
   InteractionsRes,
   JoinWaitlistReq,
   JoinWaitlistRes,
-  LabsCompareReq,
-  LabsCompareRes,
-  MedicinesCompareReq,
   MeExportRes,
   OkRes,
   PlansRes,
-  PmjayHospitalsReq,
-  PmjayHospitalsRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
@@ -79,17 +70,9 @@ export type ApiClientOptions = {
 };
 
 export type ApiClient = {
-  /** A one-item basket job: poll `basket.job(job_id)` like a basket. */
-  medicines: { compare(body: MedicinesCompareReq): Promise<BasketCompareRes> };
-  /** `compare` starts a basket job; poll `job(job_id)` until `status === "done"`. */
-  basket: { compare(body: BasketCompareReq): Promise<BasketCompareRes>; job(jobId: string): Promise<BasketCompareRes> };
-  /** `compare` starts a lab job; poll `job(job_id)` until `status === "done"` (ADR-050). */
-  labs: { compare(body: LabsCompareReq): Promise<LabsCompareRes>; job(jobId: string): Promise<LabsCompareRes> };
   /** RapidBlood: `search` starts a blood bank search job; poll `job(job_id)` until `status === "done"`. */
   blood: { search(body: BloodSearchReq): Promise<BloodSearchRes>; job(jobId: string): Promise<BloodSearchRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
-  hospitals: { info(body: HospitalInfoReq): Promise<HospitalInfoRes> };
-  schemes: { pmjayHospitals(body: PmjayHospitalsReq): Promise<PmjayHospitalsRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
   /** Plans, the Family waitlist and today's AI usage (#305, provisional contract). */
   plans: { current(): Promise<PlansRes> };
@@ -216,28 +199,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
 
   return {
-    medicines: {
-      compare: (body) => {
-        const req = MedicinesCompareReq.safeParse(body);
-        if (!req.success) {
-          return Promise.reject(new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400));
-        }
-        const item = req.data.strength ? { medicine: req.data.medicine, strength: req.data.strength } : { medicine: req.data.medicine };
-        return post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, { items: [item] }, mocks.singleMedicineJobMock);
-      },
-    },
-    basket: {
-      compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketJobRunningMock),
-      job: (jobId) => {
-        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
-        return request({ method: "GET", path: `/api/prescriptions/basket/${encodeURIComponent(jobId)}`, resSchema: BasketCompareRes, mock: mocks.basketCompareMock });
-      },
-    },
-    labs: {
-      compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsJobRunningMock),
-      job: (jobId) =>
-        request({ method: "GET", path: `/api/labs/compare/${encodeURIComponent(jobId)}`, resSchema: LabsCompareRes, mock: mocks.labsCompareMock }),
-    },
     blood: {
       search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
       job: (jobId) => {
@@ -249,8 +210,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
       sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
     },
-    hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, mocks.hospitalInfoMock) },
-    schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     plans: {
       current: () =>

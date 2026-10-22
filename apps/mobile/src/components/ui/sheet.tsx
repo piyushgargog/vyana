@@ -12,7 +12,16 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
   return (
     <Modal visible={visible} onRequestClose={onClose} animationType="slide" presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'} transparent={Platform.OS !== 'ios'}>
       <View style={Platform.OS === 'ios' ? styles.iosRoot : styles.androidRoot}>
+        {Platform.OS !== 'ios' && (
+          <Pressable
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.backdrop}
+            onPress={onClose}
+          />
+        )}
         <View style={styles.panel}>
+          <View style={styles.grabber} accessibilityElementsHidden importantForAccessibility="no" />
           <View style={styles.header}>
             <Text variant="title3" accessibilityRole="header">
               {title}
@@ -40,6 +49,15 @@ const styles = StyleSheet.create({
     backgroundColor: T.color.canvas,
     borderTopLeftRadius: T.radius.feature,
     borderTopRightRadius: T.radius.feature,
+  },
+  backdrop: { flex: 1 },
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: T.color.fillStrong,
+    marginTop: T.space.sm,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: T.space.lg },
   close: { width: 30, height: 30, borderRadius: 15, backgroundColor: T.color.fill, alignItems: 'center', justifyContent: 'center' },

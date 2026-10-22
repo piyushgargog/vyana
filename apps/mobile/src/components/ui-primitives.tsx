@@ -74,6 +74,16 @@ export interface MobileTrendPoint {
   flag?: 'low' | 'normal' | 'high' | null;
 }
 
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2025-10-20" → "20 Oct", so a date label never wraps in the middle (#332). */
+export function shortChartDate(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!match) return date;
+  const month = SHORT_MONTHS[Number(match[2]) - 1];
+  return month ? `${Number(match[3])} ${month}` : date;
+}
+
 export function MobileTrendChart({
   title,
   unit,
@@ -124,16 +134,28 @@ export function MobileTrendChart({
         {points.map((pt, idx) => {
           const ratio = Math.min(1, Math.max(0.18, pt.value / (maxVal * 1.15)));
           const barHeight = Math.round(ratio * 110);
-          const isAbnormal = pt.flag === 'high' || pt.flag === 'low';
           const flagText =
             pt.flag === 'high' ? 'High' : pt.flag === 'low' ? 'Low' : 'Normal';
+          // The bar takes the colour of the flag the report itself gave (#332):
+          // a calm warning tone for "above range", the strong red only for "low",
+          // never one alarm colour for everything.
+          const barColor =
+            pt.flag === 'high'
+              ? T.color.warn
+              : pt.flag === 'low'
+                ? T.color.danger
+                : T.color.accent;
+          // With more than four bars the labels touch (#332): show every second
+          // one, plus always the latest. Hidden labels keep their space so the
+          // bars stay on one baseline.
+          const crowded = points.length > 4;
+          const showLabel = !crowded || idx % 2 === 0 || idx === points.length - 1;
 
           return (
             <View key={`${pt.date}-${idx}`} style={styles.barColumn}>
               <Text
                 variant="caption"
-                tone={isAbnormal ? 'danger' : 'accent'}
-                style={styles.barValText}
+                style={[styles.barValText, { color: barColor }, !showLabel && styles.hiddenLabel]}
               >
                 {pt.value} ({flagText})
               </Text>
@@ -142,14 +164,12 @@ export function MobileTrendChart({
                   styles.barFill,
                   {
                     height: barHeight,
-                    backgroundColor: isAbnormal
-                      ? T.color.danger
-                      : T.color.accent,
+                    backgroundColor: barColor,
                   },
                 ]}
               />
-              <Text variant="caption" tone="tertiary">
-                {pt.date}
+              <Text variant="caption" tone="tertiary" style={!showLabel ? styles.hiddenLabel : undefined}>
+                {shortChartDate(pt.date)}
               </Text>
             </View>
           );
@@ -390,6 +410,9 @@ const styles = StyleSheet.create({
   barValText: {
     fontWeight: '700',
     textAlign: 'center',
+  },
+  hiddenLabel: {
+    opacity: 0,
   },
   barFill: {
     width: 26,

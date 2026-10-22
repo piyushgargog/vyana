@@ -3,12 +3,12 @@
 // "Tell me when Family opens" (#305): email + an optional note, one join per email. The email
 // is used only for this — the line under the form says so, and nothing else is sent anywhere.
 import React, { useState } from "react";
-import { track, useJoinWaitlist } from "@vyana/shared";
+import { track, useJoinWaitlistPage } from "@vyana/shared";
 import { Button, Field, TextAreaField } from "@/components/ui";
 import { CheckCircle2 } from "lucide-react";
 
 export function WaitlistForm() {
-  const join = useJoinWaitlist();
+  const join = useJoinWaitlistPage();
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [done, setDone] = useState<"joined" | "already_on_list" | null>(null);

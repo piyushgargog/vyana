@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { T } from '@/constants/theme';
 import {
   useCheckInteractions,
   usePrescription,
@@ -95,7 +96,7 @@ export default function PrescriptionDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0D9488" />
+        <ActivityIndicator size="large" color={T.color.accent} />
         <Text style={styles.loadingText}>Loading prescription…</Text>
       </View>
     );
@@ -137,14 +138,6 @@ export default function PrescriptionDetailScreen() {
               : 'Scanned Paper Rx'}
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back</Text>
-        </Pressable>
       </View>
 
       {/* Diagnosis & Action Banner */}
@@ -364,7 +357,7 @@ export default function PrescriptionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+  screen: { flex: 1, backgroundColor: T.color.canvas },
   content: { padding: 16, gap: 14 },
   loadingContainer: {
     flex: 1,
@@ -373,7 +366,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
   },
-  loadingText: { fontSize: 13, color: '#64748B' },
+  loadingText: { fontSize: 13, color: T.color.label2 },
   notFoundContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -381,73 +374,73 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
   },
-  notFoundTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingBottom: 4,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
-  headerSub: { fontSize: 12, color: '#64748B' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: T.color.label },
+  headerSub: { fontSize: 12, color: T.color.label2 },
   backBtn: {
-    backgroundColor: '#0F766E',
+    backgroundColor: T.color.accentStrong,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
   },
-  backBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  backBtnText: { color: T.color.white, fontWeight: '700', fontSize: 12 },
   overviewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 16,
     padding: 16,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.color.separator,
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: T.color.separator,
   },
-  metaLabel: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  metaValue: { fontSize: 13, color: '#0F172A', fontWeight: '700', flex: 1, textAlign: 'right' },
+  metaLabel: { fontSize: 12, color: T.color.label2, fontWeight: '500' },
+  metaValue: { fontSize: 13, color: T.color.label, fontWeight: '700', flex: 1, textAlign: 'right' },
   actionRow: { gap: 8, marginTop: 4 },
   orderWholeBtn: {
-    backgroundColor: '#0D9488',
+    backgroundColor: T.color.accent,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  orderWholeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  orderWholeBtnText: { color: T.color.white, fontSize: 14, fontWeight: '700' },
   interactionsBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.color.fill,
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  interactionsBtnText: { color: '#0F172A', fontSize: 13, fontWeight: '600' },
+  interactionsBtnText: { color: T.color.label, fontSize: 13, fontWeight: '600' },
   interactionsCard: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
+    backgroundColor: T.color.warnSoft,
+    borderColor: T.color.separator,
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
     gap: 8,
   },
-  interactionsTitle: { fontSize: 14, fontWeight: '800', color: '#92400E' },
+  interactionsTitle: { fontSize: 14, fontWeight: '800', color: T.color.warn },
   noInteractionsBox: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: T.color.okSoft,
+    borderColor: T.color.separator,
     borderWidth: 1,
     borderRadius: 10,
     padding: 10,
   },
-  noInteractionsText: { fontSize: 12, color: '#065F46', fontWeight: '600' },
+  noInteractionsText: { fontSize: 12, color: T.color.ok, fontWeight: '600' },
   interactionRow: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 10,
     padding: 10,
     gap: 4,
@@ -459,55 +452,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    color: '#FFFFFF',
+    color: T.color.white,
   },
-  interMajor: { backgroundColor: '#DC2626' },
-  interModerate: { backgroundColor: '#D97706' },
-  interMinor: { backgroundColor: '#64748B' },
-  interNames: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
-  interLayer: { fontSize: 11, fontWeight: '700', color: '#0D9488' },
-  interEffect: { fontSize: 12, color: '#0F172A', fontWeight: '500' },
-  interAdvice: { fontSize: 12, color: '#334155' },
-  interQuote: { fontSize: 11, color: '#64748B', fontStyle: 'italic' },
-  interSources: { fontSize: 11, color: '#475569' },
-  notCheckedText: { fontSize: 11, color: '#92400E', fontWeight: '600', paddingTop: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  interMajor: { backgroundColor: T.color.danger },
+  interModerate: { backgroundColor: T.color.warn },
+  interMinor: { backgroundColor: T.color.label3 },
+  interNames: { fontSize: 13, fontWeight: '700', color: T.color.label },
+  interLayer: { fontSize: 11, fontWeight: '700', color: T.color.accent },
+  interEffect: { fontSize: 12, color: T.color.label, fontWeight: '500' },
+  interAdvice: { fontSize: 12, color: T.color.label },
+  interQuote: { fontSize: 11, color: T.color.label2, fontStyle: 'italic' },
+  interSources: { fontSize: 11, color: T.color.label2 },
+  notCheckedText: { fontSize: 11, color: T.color.warn, fontWeight: '600', paddingTop: 2 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: T.color.label },
   itemCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.color.surface,
     borderRadius: 16,
     padding: 16,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.color.separator,
   },
   itemCardPaused: { opacity: 0.65 },
-  itemCardReview: { borderColor: '#F59E0B', borderWidth: 2 },
+  itemCardReview: { borderColor: T.color.warn, borderWidth: 2 },
   reviewBanner: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: T.color.warnSoft,
     borderRadius: 8,
     padding: 8,
     gap: 2,
   },
-  reviewBannerText: { fontSize: 11, fontWeight: '800', color: '#92400E' },
-  reviewEvidenceText: { fontSize: 11, color: '#78350F', fontStyle: 'italic' },
+  reviewBannerText: { fontSize: 11, fontWeight: '800', color: T.color.warn },
+  reviewEvidenceText: { fontSize: 11, color: T.color.warn, fontStyle: 'italic' },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
   },
-  medName: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  medSchedule: { fontSize: 12, color: '#64748B' },
+  medName: { fontSize: 16, fontWeight: '700', color: T.color.label },
+  medSchedule: { fontSize: 12, color: T.color.label2 },
   toggleBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
   },
-  toggleActive: { backgroundColor: '#ECFDF5' },
-  togglePaused: { backgroundColor: '#F1F5F9' },
+  toggleActive: { backgroundColor: T.color.okSoft },
+  togglePaused: { backgroundColor: T.color.fill },
   toggleBtnText: { fontSize: 11, fontWeight: '700' },
-  toggleBtnTextActive: { color: '#059669' },
-  toggleBtnTextPaused: { color: '#64748B' },
+  toggleBtnTextActive: { color: T.color.ok },
+  toggleBtnTextPaused: { color: T.color.label2 },
   refillRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -515,14 +508,14 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   refillText: { fontSize: 12, fontWeight: '600' },
-  refillDueText: { color: '#DC2626' },
-  refillOkText: { color: '#0D9488' },
+  refillDueText: { color: T.color.dangerText },
+  refillOkText: { color: T.color.accent },
   reorderBtn: {
-    backgroundColor: '#0F766E',
+    backgroundColor: T.color.accentStrong,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  reorderBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  instructionsText: { fontSize: 12, color: '#64748B', fontStyle: 'italic' },
+  reorderBtnText: { color: T.color.white, fontSize: 12, fontWeight: '700' },
+  instructionsText: { fontSize: 12, color: T.color.label2, fontStyle: 'italic' },
 });

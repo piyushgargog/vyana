@@ -19,7 +19,7 @@ export default function PlansPage() {
         <div className="mb-8">
           <LargeTitle
             eyebrow="Plans"
-            title="Free today. Family when families ask for it."
+            title="Free today. A Family plan is on the waitlist."
             subtitle="Using Vyana costs nothing today. A Family plan is being prepared for households who look after each other — join the waitlist and we will email you if it opens."
           />
         </div>

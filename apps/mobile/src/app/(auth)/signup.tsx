@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -9,6 +9,14 @@ import {
 import { useRouter } from 'expo-router';
 import { useVyanaMobile } from '@/components/providers';
 import {
+  RESEND_CONFIRMATION_COOLDOWN_SECONDS,
+  resendConfirmationLabel,
+  resendSignupConfirmation,
+  signupConfirmationUrl,
+  submitSignup,
+  type SignupRole,
+} from '@/components/signup-flow';
+import {
   Button,
   Card,
   Screen,
@@ -17,11 +25,9 @@ import {
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 import { T } from '@/constants/theme';
 
-type SignupRole = 'patient' | 'doctor';
-
 export default function MobileSignupScreen() {
   const router = useRouter();
-  const { supabase, showToast } = useVyanaMobile();
+  const { supabase, baseUrl, showToast } = useVyanaMobile();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,6 +36,41 @@ export default function MobileSignupScreen() {
   const [selectedRole, setSelectedRole] = useState<SignupRole>('patient');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendSending, setResendSending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
+    null,
+  );
+  // Starts at 0 and is set in the resend handlers and the interval (same
+  // pattern as the web form, where the clock cannot be read during render).
+  const [now, setNow] = useState(0);
+
+  const confirmationUrl = signupConfirmationUrl(baseUrl);
+  const resendSeconds =
+    resendAvailableAt === null
+      ? 0
+      : Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+
+  useEffect(() => {
+    if (!pendingEmail || resendAvailableAt === null) return;
+    if (resendAvailableAt <= Date.now()) return;
+
+    const timer = setInterval(() => {
+      const tick = Date.now();
+      setNow(tick);
+      if (tick >= resendAvailableAt) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [pendingEmail, resendAvailableAt]);
+
+  const startResendCooldown = () => {
+    setNow(Date.now());
+    setResendAvailableAt(
+      Date.now() + RESEND_CONFIRMATION_COOLDOWN_SECONDS * 1000,
+    );
+  };
 
   const handleSignup = async () => {
     setErrorMsg(null);
@@ -39,39 +80,135 @@ export default function MobileSignupScreen() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            phone: phone.trim() || undefined,
-            role: selectedRole,
-          },
+      const result = await submitSignup(
+        supabase.auth,
+        {
+          email,
+          password,
+          fullName,
+          phone,
+          role: selectedRole,
         },
-      });
-      if (error) {
-        setErrorMsg(error.message);
-        setLoading(false);
+        confirmationUrl,
+      );
+
+      if (result.status === 'error') {
+        setErrorMsg(result.message);
+        return;
+      }
+
+      if (result.status === 'confirmation') {
+        setPendingEmail(result.email);
+        setResendMessage(null);
+        setResendError(null);
+        startResendCooldown();
         return;
       }
 
       showToast('Account created! Please review DPDP consent.', 'success');
       router.replace('/consent');
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResend = async () => {
+    if (!pendingEmail || resendSeconds > 0) return;
+    setResendSending(true);
+    setResendMessage(null);
+    setResendError(null);
+
+    try {
+      const result = await resendSignupConfirmation(
+        supabase.auth,
+        pendingEmail,
+        confirmationUrl,
+      );
+      if (result.status === 'error') {
+        setResendError(result.message);
+        return;
+      }
+
+      setResendMessage(
+        `Another confirmation email was sent to ${result.email}. Use the newest email.`,
+      );
+      startResendCooldown();
+    } finally {
+      setResendSending(false);
+    }
+  };
+
+  const resetPendingConfirmation = () => {
+    setPendingEmail(null);
+    setResendMessage(null);
+    setResendError(null);
+    setResendAvailableAt(null);
+  };
+
   return (
-    <Screen eyebrow="Vyana" title="Create account">
+    <Screen
+      eyebrow="Vyana"
+      title={pendingEmail ? 'Check your inbox' : 'Create account'}
+    >
       <Card>
-        <Text variant="subhead" tone="secondary">
-          Join as a patient, family caregiver, or doctor. Your data is protected
-          under India&apos;s DPDP Act 2023.
-        </Text>
+        {pendingEmail ? (
+          <>
+            <Text variant="subhead" tone="secondary">
+              We sent a confirmation email to{' '}
+              <Text variant="subhead" style={styles.pendingEmail}>
+                {pendingEmail}
+              </Text>
+              . Open it and choose “Confirm Email Address” to finish creating
+              your account.
+            </Text>
+            <Text variant="footnote" tone="tertiary">
+              The link expires. If you send another email, use the newest one.
+              Check your spam or promotions folder if you do not see the
+              email.
+            </Text>
+
+            {resendMessage && (
+              <View accessibilityRole="text" style={styles.successBox}>
+                <Text variant="footnote" tone="ok" style={styles.successText}>
+                  {resendMessage}
+                </Text>
+              </View>
+            )}
+
+            {resendError && (
+              <View accessibilityRole="alert" style={styles.errorBox}>
+                <Text variant="footnote" tone="danger" style={styles.errorText}>
+                  {resendError}
+                </Text>
+              </View>
+            )}
+
+            <Button
+              title={resendConfirmationLabel(resendSeconds)}
+              label={resendConfirmationLabel(resendSeconds)}
+              loading={resendSending}
+              disabled={resendSeconds > 0}
+              onPress={handleResend}
+            />
+
+            <Button
+              title="Use a different email"
+              variant="plain"
+              onPress={resetPendingConfirmation}
+            />
+
+            <Button
+              title="Already confirmed? Sign in"
+              variant="plain"
+              onPress={() => router.push('/(auth)/login')}
+            />
+          </>
+        ) : (
+          <>
+            <Text variant="subhead" tone="secondary">
+              Join as a patient, family caregiver, or doctor. Your data is
+              protected under India&apos;s DPDP Act 2023.
+            </Text>
 
         {errorMsg && (
           <View accessibilityRole="alert" style={styles.errorBox}>
@@ -207,11 +344,13 @@ export default function MobileSignupScreen() {
           onPress={handleSignup}
         />
 
-        <Button
-          title="Already registered? Sign in"
-          variant="plain"
-          onPress={() => router.push('/(auth)/login')}
-        />
+            <Button
+              title="Already registered? Sign in"
+              variant="plain"
+              onPress={() => router.push('/(auth)/login')}
+            />
+          </>
+        )}
       </Card>
 
       <MobileDisclaimerFooter />
@@ -227,6 +366,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontWeight: '600',
+  },
+  successBox: {
+    backgroundColor: T.color.okSoft,
+    borderRadius: T.radius.row,
+    padding: T.space.md,
+  },
+  successText: {
+    fontWeight: '600',
+  },
+  pendingEmail: {
+    fontWeight: '700',
   },
   fieldGroup: {
     gap: T.space.xs,

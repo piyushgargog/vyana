@@ -117,18 +117,22 @@ export default function CaregiverInviteScreen() {
         <ListRow
           icon={<IconTile ios="checkmark" android="check" color="accent" />}
           title="Today's scheduled medicines, dosage logs, and adherence rate"
+          wrapTitle
         />
         <ListRow
           icon={<IconTile ios="checkmark" android="check" color="accent" />}
           title="Missed-dose push notifications if a dose is not logged within 60 minutes"
+          wrapTitle
         />
         <ListRow
           icon={<IconTile ios="checkmark" android="check" color="accent" />}
           title="Approved disease care plans, follow-up tests, and dietary guidelines"
+          wrapTitle
         />
         <ListRow
           icon={<IconTile ios="checkmark" android="check" color="accent" />}
           title="Emergency SOS trigger and offline medical summary"
+          wrapTitle
         />
       </ListGroup>
 
@@ -136,10 +140,12 @@ export default function CaregiverInviteScreen() {
         <ListRow
           icon={<IconTile ios="lock.fill" android="lock" color="gray" />}
           title="Read-only access: caregivers cannot change prescriptions or medical notes"
+          wrapTitle
         />
         <ListRow
           icon={<IconTile ios="lock.fill" android="lock" color="gray" />}
           title="You can revoke access at any time from your Caregiver Circle"
+          wrapTitle
         />
       </ListGroup>
 

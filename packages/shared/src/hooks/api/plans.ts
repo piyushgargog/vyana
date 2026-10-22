@@ -16,7 +16,7 @@ import type {
 import { QUERY_ROOTS } from "./query-roots";
 
 /** The plans and which one the signed-in user is on. */
-export function useCurrentPlan() {
+export function useCurrentPlanPage() {
   const api = useApi();
   return useQuery<PlansRes, ApiError>({
     queryKey: [QUERY_ROOTS.plans, "current"],
@@ -25,7 +25,7 @@ export function useCurrentPlan() {
 }
 
 /** Join the Family waitlist once; a repeat join answers "already_on_list". */
-export function useJoinWaitlist() {
+export function useJoinWaitlistPage() {
   const api = useApi();
   return useMutation<JoinWaitlistRes, ApiError, JoinWaitlistReq>({
     mutationKey: [QUERY_ROOTS.plans, "waitlist", "join"],

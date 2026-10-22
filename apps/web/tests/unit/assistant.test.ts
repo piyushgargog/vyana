@@ -3,7 +3,7 @@ import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
 import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
-import { isTrustedHealthUrl } from "@/lib/server/tinyfish/sources";
+import { isTrustedHealthUrl } from "@/lib/server/web/domains";
 
 type Part = TextStreamPart<ToolSet>;
 
@@ -136,7 +136,7 @@ describe("ReplyGuard", () => {
 });
 
 describe("historyFrom", () => {
-  const m = (role: string, text: string) => ({ role, parts: [{ type: "text", text }] });
+  const m = (role: "system" | "user" | "assistant", text: string) => ({ role, parts: [{ type: "text", text }] });
   it("keeps only user and assistant text, the last 20", () => {
     const msgs = [m("system", "rules"), ...Array.from({ length: 25 }, (_, i) => m(i % 2 ? "assistant" : "user", `t${i}`)), m("user", "last")];
     const h = historyFrom(msgs);
@@ -162,7 +162,7 @@ describe("historyFrom", () => {
 });
 
 describe("assistant tools", () => {
-  const tools = assistantTools({ userId: "u1", sb: {} as never, guard: guardFor(), counter: { tinyfishCalls: 0 } });
+  const tools = assistantTools({ userId: "u1", sb: {} as never, guard: guardFor() });
   const opts = { toolCallId: "c", messages: [] } as never;
 
   it("trusts only the listed health sites", () => {
@@ -179,7 +179,7 @@ describe("assistant tools", () => {
 
   it("search_health_web only searches trusted sites and registers the results", async () => {
     const guard = guardFor();
-    const t = assistantTools({ userId: "u1", sb: {} as never, guard, counter: { tinyfishCalls: 0 } });
+    const t = assistantTools({ userId: "u1", sb: {} as never, guard });
     const out = (await t.search_health_web.execute!({ query: "dolo alcohol" }, opts)) as { results: { url: string }[] };
     expect(out.results.every((r) => isTrustedHealthUrl(r.url))).toBe(true);
     guard.clean(`${out.results[0].url} `);
