@@ -11,10 +11,10 @@ import {
 } from "ai";
 import { z } from "zod";
 import { Language } from "@vyana/shared";
-import { finishAiRun, startAiRun } from "../ai";
+import { finishAiRun, providerOf, startAiRun, type AiUsage } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
-import { getModel, isLlmMock } from "../llm";
+import { getModel, isLlmMock, modelName } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
@@ -108,6 +108,7 @@ async function openSession({ sb, user }: AuthedUser, sessionId: string | undefin
 }
 
 export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise<Response> {
+  const startedAt = Date.now();
   const { sb, user, profile } = authed;
   const turns = historyFrom(body.messages);
   const question = turns[turns.length - 1].text;
@@ -130,6 +131,8 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
 
   // Only a stream error fails the reply. A bad tool call is reported to the model, which carries on.
   let failed = false;
+  // Filled by the stream's onFinish, then written to the ai_runs row by finishAiRun (migration 0015).
+  let streamUsage: AiUsage | undefined;
   const errorText = (err: unknown) => {
     log({ event: "assistant_stream_error", error: err instanceof Error ? err.name : "Error" });
     return SAFE_ERROR;
@@ -158,6 +161,14 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         stopWhen: isStepCount(5),
         temperature: 0,
         experimental_transform: guard.transform(),
+        onFinish: ({ usage }) => {
+          streamUsage = {
+            provider: providerOf(modelName("text")),
+            input_tokens: usage.inputTokens ?? null,
+            output_tokens: usage.outputTokens ?? null,
+            latency_ms: Date.now() - startedAt,
+          };
+        },
       });
       // Copied chunk by chunk (not merged) so the notes can follow the model's last chunk and come before "finish".
       const reader = toUIMessageStream({ stream: result.stream, sendStart: false, sendFinish: false, onError: errorText }).getReader();
@@ -181,6 +192,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         output: { text: guard.text, notes: guard.notes, removed_urls: guard.removed, emergency_notice: emergency },
         sources: guard.sources,
         status,
+        usage: streamUsage,
       });
       log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved

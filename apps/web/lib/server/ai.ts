@@ -14,6 +14,18 @@ import { supabaseAdmin } from "./supabase-admin";
 
 export type AiRunStatus = "ok" | "needs_review" | "rejected";
 
+/** What one AI call cost, written to `ai_runs` (migration 0015): a provider name and numbers only, never any content. */
+export type AiUsage = { provider: string | null; input_tokens: number | null; output_tokens: number | null; latency_ms: number | null };
+
+/**
+ * The provider that answered, from a `"<provider>:<id>"` model string. A pool fallback is recorded in `ai_runs`
+ * as `"fallback:<provider>:<id>"`, so the prefix is skipped first.
+ */
+export function providerOf(model: string): string {
+  const plain = model.startsWith("fallback:") ? model.slice("fallback:".length) : model;
+  return plain.split(":")[0];
+}
+
 interface RunAiBase<T> {
   /** What this run is for, e.g. "rx_extract", "hospitals_nearby" (stored in ai_runs.feature). */
   feature: string;
@@ -47,7 +59,9 @@ export interface RunAiResult<T> {
 /** Sent to the user when the model's answer can't be used: never a half-guess (PLAN §2A rule 2). */
 export const UNREADABLE_MESSAGE = "Couldn't read this. Please enter it manually.";
 
-async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback: string | null }> {
+async function generate<T>(
+  input: RunAiInput<T>,
+): Promise<{ object: T; fallback: string | null; provider: string; usage: { input_tokens: number | null; output_tokens: number | null } }> {
   const call = () =>
     generateText({
       model: getModel(input.kind, { data: input.data ?? "patient" }),
@@ -61,7 +75,12 @@ async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback:
     try {
       const result = await call();
       const used = (result.providerMetadata?.[POOL_KEY] as { fallback?: string } | undefined)?.fallback;
-      return { object: result.output as T, fallback: used ?? null };
+      return {
+        object: result.output as T,
+        fallback: used ?? null,
+        provider: providerOf(used ?? modelName(input.kind)),
+        usage: { input_tokens: result.usage.inputTokens ?? null, output_tokens: result.usage.outputTokens ?? null },
+      };
     } catch (err) {
       if (NoObjectGeneratedError.isInstance(err) && attempt === 1) {
         log({ event: "ai_retry", feature: input.feature });
@@ -75,7 +94,7 @@ async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback:
 
 type RunRecord = Pick<RunAiBase<unknown>, "feature" | "userId" | "promptVersion" | "inputRef" | "sources">;
 
-async function recordRun(input: RunRecord, model: string, object: unknown, status: AiRunStatus): Promise<string | null> {
+async function recordRun(input: RunRecord, model: string, object: unknown, status: AiRunStatus, usage?: AiUsage): Promise<string | null> {
   try {
     const { data, error } = await supabaseAdmin()
       .from("ai_runs")
@@ -88,6 +107,9 @@ async function recordRun(input: RunRecord, model: string, object: unknown, statu
         output_json: object,
         sources: input.sources,
         status,
+        ...(usage
+          ? { provider: usage.provider, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, latency_ms: usage.latency_ms }
+          : {}),
       })
       .select("id")
       .single();
@@ -108,12 +130,27 @@ export async function startAiRun(input: RunRecord, kind: ModelKind): Promise<str
   return recordRun(input, modelName(kind), null, "ok");
 }
 
-export async function finishAiRun(runId: string | null, result: { output: unknown; sources: SourceLink[]; status: AiRunStatus }): Promise<void> {
+export async function finishAiRun(
+  runId: string | null,
+  result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage },
+): Promise<void> {
   if (!runId) return;
   try {
     const { error } = await supabaseAdmin()
       .from("ai_runs")
-      .update({ output_json: result.output, sources: result.sources, status: result.status })
+      .update({
+        output_json: result.output,
+        sources: result.sources,
+        status: result.status,
+        ...(result.usage
+          ? {
+              provider: result.usage.provider,
+              input_tokens: result.usage.input_tokens,
+              output_tokens: result.usage.output_tokens,
+              latency_ms: result.usage.latency_ms,
+            }
+          : {}),
+      })
       .eq("id", runId);
     if (error) throw error;
   } catch {
@@ -124,12 +161,19 @@ export async function finishAiRun(runId: string | null, result: { output: unknow
 export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
   const started = Date.now();
   const configured = modelName(input.kind);
-  const out = isLlmMock() ? { object: input.schema.parse(input.mock), fallback: null } : await generate(input);
+  const out = isLlmMock()
+    ? { object: input.schema.parse(input.mock), fallback: null, provider: "mock", usage: { input_tokens: null, output_tokens: null } }
+    : await generate(input);
   const object = out.object;
   // The model that actually answered (ADR-056): a fallback shows up in ai_runs as "fallback:<id>".
   const model = out.fallback ? `fallback:${out.fallback}` : configured;
   const status = input.statusOf?.(object) ?? "ok";
-  const runId = await recordRun(input, model, object, status);
+  const runId = await recordRun(input, model, object, status, {
+    provider: out.provider,
+    input_tokens: out.usage.input_tokens,
+    output_tokens: out.usage.output_tokens,
+    latency_ms: Date.now() - started,
+  });
   log({ event: "ai_run", feature: input.feature, model, status, duration_ms: Date.now() - started });
   return { object, ai: { model, prompt_version: input.promptVersion, generated_at: new Date().toISOString(), run_id: runId }, runId };
 }
