@@ -119,7 +119,7 @@ export default function PrescriptionDetailPage() {
         <Card>
           <EmptyState
             icon={<AlertTriangle aria-hidden="true" />}
-            title="Something went wrong"
+            title="Could not load this prescription"
             body="We could not load this prescription. Please try again."
             action={
               <Button

@@ -50,7 +50,7 @@ describe("withRoute", () => {
     });
     expect(res.status).toBe(500);
     const err = await errorOf(res);
-    expect(err).toEqual({ code: "INTERNAL", message: "Something went wrong" });
+    expect(err).toEqual({ code: "INTERNAL", message: "The request could not be finished. Please try again." });
   });
 
   it("adds a request id header to errors", async () => {

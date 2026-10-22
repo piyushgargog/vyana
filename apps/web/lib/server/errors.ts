@@ -23,7 +23,7 @@ export const unauthorized = (message = "Sign in to continue") => new AppError("U
 export const forbidden = (message = "You don't have access to this") => new AppError("FORBIDDEN", message, 403);
 export const notFound = (message = "Not found") => new AppError("NOT_FOUND", message, 404);
 /** Over a per-user limit (issue 138): 429 with a plain message and a `Retry-After` header in seconds. */
-export const rateLimited = (retryAfterSeconds: number) => {
+const rateLimited = (retryAfterSeconds: number) => {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return new AppError(
     "RATE_LIMITED",
@@ -33,8 +33,6 @@ export const rateLimited = (retryAfterSeconds: number) => {
   );
 };
 export const upstream = (message = "A source we depend on failed. Try again.") => new AppError("UPSTREAM_ERROR", message, 502);
-export const upstreamTimeout = (message = "A source we depend on took too long. Try again.") =>
-  new AppError("UPSTREAM_TIMEOUT", message, 504);
 
 /** Facts a handler can add to its single log line. Never put tokens or health data here. */
 export interface RouteContext {
@@ -66,7 +64,7 @@ export function toErrorResponse(err: unknown, requestId: string, headers: Record
     return errorResponse("BAD_REQUEST", message || "Invalid request", 400, requestId, headers);
   }
   if (isTimeout(err)) return errorResponse("UPSTREAM_TIMEOUT", "A source we depend on took too long. Try again.", 504, requestId, headers);
-  return errorResponse("INTERNAL", "Something went wrong", 500, requestId, headers);
+  return errorResponse("INTERNAL", "The request could not be finished. Please try again.", 500, requestId, headers);
 }
 
 /**
