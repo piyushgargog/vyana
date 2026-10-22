@@ -5,7 +5,8 @@
  * Steps that need no AI provider:
  *   1. Medicine baskets (4 pharmacy agents each): the demo prescription, then each of its medicines alone (the
  *      "Reorder" flow). Run one at a time, because the agents queue anyway.
- *   2. Care plan guideline pages for the demo conditions (Search + Fetch, free).
+ *   2. Care plan guideline pages for the demo conditions (MedlinePlus search + the app's own page fetch, free),
+ *      through the same `guidelinePages` the app itself calls, so the cache keys warmed are the keys it reads.
  *
  * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (the cache lives in the database), TINYFISH_API_KEY and
  * JOB_TOKEN_SECRET in apps/web/.env.local. Uses agent credits (about 4 runs per uncached basket).
@@ -14,7 +15,7 @@
  *   pnpm prewarm              # runs it
  */
 import { fileURLToPath } from "node:url";
-import { guidelinePages } from "../apps/web/lib/server/tinyfish/guideline-pages";
+import { guidelinePages } from "../apps/web/lib/server/web/guideline-pages";
 import { itemLabel, normalizeItems, pollBasketJob, startBasketJob, type BasketItem } from "../apps/web/lib/server/tinyfish/basket";
 import { PHARMACIES } from "../apps/web/lib/server/tinyfish/sources";
 
@@ -45,9 +46,11 @@ for (const c of DEMO_CONDITIONS) console.log(`  pages    care plan: ${c}  (Searc
 console.log(`At most ${baskets.length * PHARMACIES.length} agent runs; cached baskets cost nothing.\n`);
 if (dryRun) process.exit(0);
 
-if (process.env.TINYFISH_MOCK === "1") {
-  console.error("TINYFISH_MOCK=1 is set: unset it to prewarm with live data.");
-  process.exit(1);
+for (const mock of ["TINYFISH_MOCK", "WEB_MOCK"]) {
+  if (process.env[mock] === "1") {
+    console.error(`${mock}=1 is set: unset it to prewarm with live data.`);
+    process.exit(1);
+  }
 }
 for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "TINYFISH_API_KEY", "JOB_TOKEN_SECRET"]) {
   if (!process.env[name]) {
@@ -82,7 +85,10 @@ for (const b of baskets) {
 
 for (const c of DEMO_CONDITIONS) {
   try {
-    const pages = await guidelinePages(c, counter);
+    // The app's own function (care-plan.ts calls the same one), so this writes the key the app reads:
+    // careplan_pages:v3:<condition> in apps/web/lib/server/web/guideline-pages.ts. The old vendor copy wrote
+    // careplan_pages:<condition>, which nothing reads (issue #379).
+    const pages = await guidelinePages(c);
     console.log(`${pages.length ? "WARM   " : "FAILED "} care plan pages: ${c}  (${pages.length} pages)`);
     if (!pages.length) failures++;
   } catch (err) {

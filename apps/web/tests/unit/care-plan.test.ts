@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PROMPT_FIRST_PAGE_CHARS, PROMPT_OTHER_PAGE_CHARS, forPrompt, intervalDays, verifyCarePlan, type CarePlanLlm, type Page } from "@/lib/server/care-plan";
+import { PROMPT_FIRST_PAGE_CHARS, PROMPT_OTHER_PAGE_CHARS, forPrompt, intervalDays, verifyCarePlan, type CarePlanLlm } from "@/lib/server/care-plan";
+import type { Page } from "@/lib/server/web/guideline-pages";
 import { CONDITION_RED_FLAGS, redFlagsForCondition } from "@/lib/server/safety/condition-red-flags";
 import { hasNumber, numbersIn } from "@/lib/server/safety/verbatim";
 

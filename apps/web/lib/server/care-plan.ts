@@ -66,8 +66,6 @@ export function intervalDays(quote: string): number | null {
 
 // ---------------------------------------------------------------- checks
 
-export { CARE_PLAN_DOMAINS, guidelinePages, type Page } from "./web/guideline-pages";
-
 export interface VerifiedPlan {
   plan: CarePlan;
   dropped: number;
