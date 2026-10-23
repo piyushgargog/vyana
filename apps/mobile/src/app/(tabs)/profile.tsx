@@ -221,6 +221,12 @@ export default function MobileProfileTab() {
           subtitle="Check symptoms before you visit a doctor"
           onPress={() => router.push('/triage')}
         />
+        <ListRow
+          icon={<IconTile ios="applewatch" android="watch" color="gray" />}
+          title="Connected devices"
+          subtitle="Health Connect or Apple Health"
+          onPress={() => router.push('/devices')}
+        />
       </ListGroup>
 
       {/* Your plan (#305): the plan card opens the web page; no payments in the app. */}

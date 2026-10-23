@@ -1,8 +1,8 @@
 "use client";
 
 // The plans themselves (#305): Free and Family side by side, read from the plan data
-// (plans.features via useCurrentPlanPage) — no number is typed into this page. Nothing is charged
-// yet and no date is promised anywhere; the waitlist is how interest is measured first.
+// (plans.features via useCurrentPlanPage) — no number is typed into this page. No price
+// or date is promised anywhere; the waitlist is how interest is measured first.
 import React, { useEffect } from "react";
 import { track, useCurrentPlanPage, type Plan } from "@vyana/shared";
 import { Button, Card, Pill, SkeletonLine } from "@/components/ui";
@@ -70,8 +70,7 @@ export function PlansClient() {
       )}
 
       <p className="text-[15px] text-label-2">
-        Nothing is charged yet. Family is a plan we are considering; nothing is
-        decided or promised. Joining the list is free and means one email, no
+        Family is a plan we are considering; nothing is decided or promised. Joining the list is free and means one email, no
         more.
       </p>
 

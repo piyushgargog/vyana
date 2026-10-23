@@ -34,8 +34,7 @@ export function WaitlistForm() {
         <div>
           <p className="text-[15px] font-semibold text-label">You are on the list.</p>
           <p className="text-[15px] text-label-2">
-            We will email {email.trim()} when Family opens. Nothing is charged —
-            there is nothing to pay yet.
+            Family is being considered. We will tell {email.trim()} if it opens.
           </p>
         </div>
       </div>
@@ -49,7 +48,7 @@ export function WaitlistForm() {
           That email is already on the list.
         </p>
         <p className="text-[15px] text-label-2">
-          One entry is enough — we will write to you when Family opens.
+          One entry is enough — we will tell you if Family opens.
         </p>
       </div>
     );

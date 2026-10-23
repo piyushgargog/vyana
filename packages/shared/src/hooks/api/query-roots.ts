@@ -16,4 +16,5 @@ export const QUERY_ROOTS = {
   sharedRecord: "shared-record",
   plans: "plans",
   planAiUsage: "plan-ai-usage",
+  devices: "devices",
 } as const;
