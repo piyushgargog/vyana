@@ -98,7 +98,7 @@ export default function LandingPage() {
 
           {/* 4. The App Displayed Inside a Phone Frame */}
           <div className="mt-14 sm:mt-18 flex justify-center">
-            <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
+            <div aria-hidden="true" className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
               {/* Phone Dynamic Island */}
               <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
 
@@ -109,13 +109,11 @@ export default function LandingPage() {
                     Today
                   </p>
                 </div>
-                <span className="rounded-full bg-danger-soft px-2.5 py-1 text-[11px] font-bold text-danger-text">
-                  SOS 108
-                </span>
+                <Pill tone="danger">SOS 108</Pill>
               </div>
 
               {/* Doses Card */}
-              <div className="rounded-card bg-surface p-4 shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3">
+              <Card padded={false} className="p-4 mb-3">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[15px] font-semibold text-label">
                     Doses today
@@ -149,10 +147,10 @@ export default function LandingPage() {
                     <span className="text-[11px] font-semibold text-label-3">Due</span>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Your Health Group */}
-              <div className="rounded-card bg-surface overflow-hidden shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3 text-[13px]">
+              <Card padded={false} className="overflow-hidden mb-3 text-[13px]">
                 <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
                   Your health
                 </div>
@@ -166,7 +164,7 @@ export default function LandingPage() {
                     <Pill tone="accent" className="text-[11px]">Token #14</Pill>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Floating Glass Scan Button */}
               <div className="glass rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-[13px] font-semibold text-accent-strong shadow-glass">

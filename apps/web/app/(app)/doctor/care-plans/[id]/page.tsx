@@ -87,7 +87,7 @@ function DoctorCarePlanReviewContent({
       }
     } catch (err) {
       setPlanError(
-        err instanceof Error ? err.message : "Failed to load care plan"
+        err instanceof Error ? err.message : "Please try again in a moment."
       );
     } finally {
       setPlanLoading(false);
@@ -141,7 +141,7 @@ function DoctorCarePlanReviewContent({
       } catch (err) {
         if (!ignore) {
           setPlanError(
-            err instanceof Error ? err.message : "Failed to load care plan"
+            err instanceof Error ? err.message : "Please try again in a moment."
           );
         }
       } finally {
