@@ -11,10 +11,30 @@ describe("upsertDailyActivity (#325)", () => {
     const f = fakeSupabase({ responses: { daily_activity: [ok([{ id: "a1" }])] } });
     await upsertDailyActivity(f.sb, [{ day: "2026-10-21", steps: 8_000, sleep_minutes: 420, source: "health_connect", device_name: "Phone" }]);
     const [rows, opts] = f.argsOf("upsert");
-    expect(rows).toEqual([
-      { patient_id: "user-1", day: "2026-10-21", steps: 8_000, active_minutes: null, distance_m: null, sleep_minutes: 420, resting_hr: null, source: "health_connect", device_name: "Phone" },
-    ]);
+    expect(rows).toEqual([{ patient_id: "user-1", day: "2026-10-21", steps: 8_000, sleep_minutes: 420, source: "health_connect", device_name: "Phone" }]);
     expect(opts).toEqual({ onConflict: "patient_id,day,source" });
+  });
+
+  it("a second, partial read does not clear the stored day: fields it did not return are not sent", async () => {
+    const f = fakeSupabase({ responses: { daily_activity: [ok([{ id: "a1" }])] } });
+    // The re-read could only produce steps this time — no distance, no sleep. Those
+    // columns are absent from the payload, so the upsert leaves the stored values alone.
+    await upsertDailyActivity(f.sb, [{ day: "2026-10-21", steps: 300, source: "health_connect" }]);
+    const [rows] = f.argsOf("upsert");
+    expect(rows).toEqual([{ patient_id: "user-1", day: "2026-10-21", steps: 300, source: "health_connect" }]);
+  });
+
+  it("groups a mixed batch by the fields each row carries, one upsert per shape", async () => {
+    const f = fakeSupabase({ responses: { daily_activity: [ok([{ id: "a1", day: "2026-10-21" }]), ok([{ id: "a2", day: "2026-10-22" }])] } });
+    await upsertDailyActivity(f.sb, [
+      { day: "2026-10-21", steps: 8_000, distance_m: 5_300, source: "health_connect" },
+      { day: "2026-10-22", steps: 1_250, source: "health_connect" },
+    ]);
+    const payloads = f.calls.filter((c) => c.name === "upsert").map((c) => c.args[0]);
+    expect(payloads).toEqual([
+      [{ patient_id: "user-1", day: "2026-10-21", steps: 8_000, distance_m: 5_300, source: "health_connect" }],
+      [{ patient_id: "user-1", day: "2026-10-22", steps: 1_250, source: "health_connect" }],
+    ]);
   });
 
   it("does nothing for an empty batch (no call, no sign-in needed)", async () => {
