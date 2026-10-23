@@ -1498,6 +1498,40 @@ export type Database = {
         }
         Relationships: []
       }
+      price_observations: {
+        Row: {
+          id: string
+          medicine_key: string
+          observed_at: string
+          pack: string | null
+          price_inr: number | null
+          source: string
+          status: string
+          url: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          id?: string
+          medicine_key: string
+          observed_at?: string
+          pack?: string | null
+          price_inr?: number | null
+          source: string
+          status: string
+          url?: string | null
+        }
+        Update: {
+          id?: string
+          medicine_key?: string
+          observed_at?: string
+          pack?: string | null
+          price_inr?: number | null
+          source?: string
+          status?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           allergies: string[]
