@@ -60,7 +60,7 @@ describe("Shared Constants", () => {
 
 describe("Scope v2 constants", () => {
   it("versions the consent text", () => {
-    expect(CONSENT_VERSION).toBe("2026-10-11");
+    expect(CONSENT_VERSION).toBe("2026-10-23");
   });
 
   it("lists the emergency numbers and keeps EMERGENCY_NUMBER in step", () => {
