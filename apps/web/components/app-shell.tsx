@@ -10,8 +10,8 @@ import {
   useSession,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { MedicalDisclaimerFooter, SkeletonCard } from "@/components/ui-primitives";
-import { BrandMark, cn, SegmentedNav, SiteFooter } from "@/components/ui";
+import { SkeletonCard } from "@/components/ui-primitives";
+import { BrandMark, cn, SegmentedNav, SiteFooter, SkeletonLine } from "@/components/ui";
 import { BadgeCheck, CalendarDays, FlaskConical, House, LogOut, MessageCircleQuestion, Pill, ShieldCheck, ShoppingBasket, Stethoscope, UserRound, Users } from "lucide-react";
 
 function AppShellContent({
@@ -93,22 +93,12 @@ function AppShellContent({
       pathname !== "/consent") ||
     isUnauthorizedRoute;
 
-  if (
-    sessionLoading ||
-    !user ||
-    consentLoading ||
-    profileLoading ||
-    isGatedRoute
-  ) {
-    return (
-      <div className="min-h-screen flex flex-col bg-canvas">
-        <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-12">
-          <SkeletonCard lines={4} />
-        </main>
-        <MedicalDisclaimerFooter />
-      </div>
-    );
-  }
+  // The layout renders at once (issue #157): the header, footer and tab bar are on screen
+  // immediately, with skeletons only where session, consent or profile data is still
+  // loading — the page itself waits for all three, and for the gate checks above, so
+  // nothing behind a redirect is ever shown early.
+  const stillLoading = sessionLoading || consentLoading || profileLoading;
+  const showChildren = !stillLoading && Boolean(user) && !isGatedRoute;
 
   const role = profile?.role ?? "patient";
 
@@ -161,7 +151,11 @@ function AppShellContent({
           </Link>
 
           <div className="hidden flex-1 justify-center md:flex">
-            <SegmentedNav items={navItems.map(({ href, label }) => ({ href, label }))} current={pathname ?? ""} label="Workspace" />
+            {stillLoading || !profile ? (
+              <SkeletonLine className="h-9 w-96 max-w-full rounded-full" />
+            ) : (
+              <SegmentedNav items={navItems.map(({ href, label }) => ({ href, label }))} current={pathname ?? ""} label="Workspace" />
+            )}
           </div>
           <div className="flex-1 md:hidden" />
 
@@ -169,29 +163,53 @@ function AppShellContent({
             <a href="tel:108" aria-label="Emergency: call 108 for an ambulance" className="rounded-full bg-danger-soft px-3.5 py-1.5 text-[14px] font-semibold text-danger-text transition-colors hover:bg-danger/15">
               SOS 108
             </a>
-            <span aria-hidden="true" title={profile?.full_name ?? undefined} className="hidden h-8 w-8 items-center justify-center rounded-full bg-fill-strong text-[13px] font-semibold text-label-2 sm:flex">
-              {initials || "·"}
-            </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              aria-label="Sign out"
-              title="Sign out"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-label-3 transition-colors hover:bg-fill hover:text-label"
-            >
-              <LogOut aria-hidden="true" className="h-[18px] w-[18px]" />
-            </button>
+            {profile ? (
+              <span aria-hidden="true" title={profile.full_name ?? undefined} className="hidden h-8 w-8 items-center justify-center rounded-full bg-fill-strong text-[13px] font-semibold text-label-2 sm:flex">
+                {initials || "·"}
+              </span>
+            ) : (
+              <SkeletonLine className="hidden h-8 w-8 rounded-full sm:block" />
+            )}
+            {user ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-label-3 transition-colors hover:bg-fill hover:text-label"
+              >
+                <LogOut aria-hidden="true" className="h-[18px] w-[18px]" />
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:pt-8 md:pb-10">{children}</main>
+      <main aria-busy={!showChildren} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:pt-8 md:pb-10">
+        {showChildren ? (
+          children
+        ) : (
+          <div className="space-y-4">
+            <SkeletonCard lines={3} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SkeletonCard lines={2} />
+              <SkeletonCard lines={2} />
+            </div>
+          </div>
+        )}
+      </main>
 
       <SiteFooter withTabBar />
 
       {/* Phone: a floating glass tab bar, like iOS 26. */}
       <nav aria-label="Workspace" data-tabbar className="glass fixed inset-x-4 bottom-4 z-30 flex items-center justify-around rounded-full px-2 py-1.5 md:hidden">
-        {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
+        {stillLoading || !profile
+          ? Array.from({ length: 5 }, (_, i) => (
+              <span key={i} className="flex min-h-11 flex-1 items-center justify-center px-1 py-1.5">
+                <SkeletonLine className="h-6 w-6 rounded-full" />
+              </span>
+            ))
+          : navItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <Link
