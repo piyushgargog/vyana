@@ -250,10 +250,10 @@ export default function TimelinePage() {
           </div>
           <p className="mt-3 break-all text-[14px] font-semibold text-accent-strong">{shareUrl}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onClick={handleCopyShare}>
+            <Button variant="secondary" onClick={handleCopyShare}>
               Copy link
             </Button>
-            <Button variant="plain" size="sm" onClick={() => window.open(shareUrl, "_blank", "noopener")}>
+            <Button variant="plain" onClick={() => window.open(shareUrl, "_blank", "noopener")}>
               Open web view
             </Button>
           </div>
