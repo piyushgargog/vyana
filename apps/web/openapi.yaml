@@ -707,8 +707,6 @@ paths:
         Answers cite pages from trusted health sites only; any other link is removed before it is sent. Emergency messages start with a fixed 108 / SOS notice.
 
         **Who can call it:** any signed-in user.
-
-        **TinyFish:** Search, Fetch (as assistant tools).
       operationId: assistant_chat
       requestBody:
         required: true

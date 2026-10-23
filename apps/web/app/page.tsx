@@ -36,7 +36,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col bg-canvas text-label">
       {/* 1. Glass Navigation Bar */}
       <header className="glass-bar sticky top-0 z-30 border-b border-separator">
-        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 rounded-full outline-none">
             <BrandMark size={32} />
             <span className="text-[19px] font-semibold tracking-tight text-label">
@@ -62,7 +62,7 @@ export default function LandingPage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <AuthActions plainSignIn />
           </div>
         </div>
@@ -308,9 +308,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. “Careful by Design” Glass Strip */}
+        {/* 6. "Careful by Design" strip — a content section, so a solid surface like every other card (issue #288). */}
         <section id="careful" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          <div className="glass rounded-feature p-8 sm:p-10 border border-white/80 shadow-glass">
+          <div className="rounded-feature bg-surface p-8 sm:p-10 border border-separator">
             <div className="max-w-xl mb-8">
               <h2 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-label">
                 Careful by design.
