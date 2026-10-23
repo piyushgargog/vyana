@@ -1,15 +1,50 @@
 "use client";
 
-// The plans themselves (#305): Free and Family side by side, read from the plan data
-// (plans.features via useCurrentPlanPage) — no number is typed into this page. No price
-// or date is promised anywhere; the waitlist is how interest is measured first.
+// The plans themselves (#305, #418): Free and Family side by side, read from the
+// plans table — usePlans for the catalogue, useCurrentPlan for which one is the
+// signed-in user's — and every number on a card comes from that plan's row, so
+// no number is typed into this page. No price or date is promised anywhere; the
+// waitlist is how interest is measured first.
 import React, { useEffect } from "react";
-import { track, useCurrentPlanPage, type Plan } from "@vyana/shared";
+import { track, useCurrentPlan, usePlans, type PlanRow } from "@vyana/shared";
 import { Button, Card, Pill, SkeletonLine } from "@/components/ui";
 import { Check } from "lucide-react";
 import { WaitlistForm } from "./waitlist-form";
 
-function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
+/** The card's lines, in the page's words; every number in them is read from the plan row. */
+function planFeatures(plan: PlanRow): string[] {
+  const switches =
+    plan.features && typeof plan.features === "object" && !Array.isArray(plan.features)
+      ? (plan.features as { caregivers?: unknown })
+      : {};
+  const lines: string[] = [];
+  if (plan.id === "free") {
+    lines.push("Your medicines and dose reminders", "Lab reports explained in plain words");
+  }
+  if (plan.id === "family") {
+    lines.push("Everything in Free");
+    if (plan.max_profiles !== null) {
+      lines.push(`Up to ${plan.max_profiles} family members, linked with their permission`);
+    }
+  }
+  if (plan.daily_ai_calls !== null) {
+    lines.push(
+      plan.id === "family"
+        ? `${plan.daily_ai_calls} AI answers a day, shared by the family`
+        : `${plan.daily_ai_calls} AI answers a day`,
+    );
+  }
+  if (plan.id === "free") {
+    if (plan.max_profiles === 1) lines.push("For one person");
+    else if (plan.max_profiles !== null) lines.push(`For up to ${plan.max_profiles} people`);
+  }
+  if (plan.id === "family" && switches.caregivers === true) {
+    lines.push("A caregiver view for the family");
+  }
+  return lines;
+}
+
+function PlanCard({ plan, current }: { plan: PlanRow; current: boolean }) {
   return (
     <Card className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
@@ -17,7 +52,7 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
         {current && <Pill tone="accent">Your plan</Pill>}
       </div>
       <ul className="space-y-2.5">
-        {plan.features.map((f) => (
+        {planFeatures(plan).map((f) => (
           <li key={f} className="flex items-start gap-2 text-[15px] text-label-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden="true" />
             <span>{f}</span>
@@ -29,14 +64,17 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
 }
 
 export function PlansClient() {
-  const { data, isLoading, isError, refetch } = useCurrentPlanPage();
+  const { data: catalogue, isLoading, isError, refetch } = usePlans();
+  // The signed-in user's own plan. Null when signed out or when the read fails:
+  // then no card is marked as theirs — the page never defaults to Free.
+  const { data: currentPlan } = useCurrentPlan();
 
   useEffect(() => {
     track("plan_viewed");
   }, []);
 
-  const plans = data?.plans ?? [];
-  const family = plans.find((p) => p.slug === "family");
+  const plans = (catalogue ?? []).filter((p) => p.id === "free" || p.id === "family");
+  const family = plans.find((p) => p.id === "family");
 
   return (
     <div className="space-y-6">
@@ -64,7 +102,7 @@ export function PlansClient() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {plans.map((p) => (
-            <PlanCard key={p.slug} plan={p} current={data?.current_slug === p.slug} />
+            <PlanCard key={p.id} plan={p} current={currentPlan?.plan_id === p.id} />
           ))}
         </div>
       )}

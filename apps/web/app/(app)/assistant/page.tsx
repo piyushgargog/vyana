@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { track, useApi, useChatMessages, useChatSessions, usePlanAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
+import { track, useApi, useChatMessages, useChatSessions, useCurrentPlan, useMyAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
   Card,
@@ -23,6 +23,14 @@ import {
 import { Loader2, MessageCircleQuestion } from "lucide-react";
 import { ChatBubble } from "./chat-bubble";
 import type { AssistantMessage } from "./chat-helpers";
+
+/** The next midnight in India (Asia/Kolkata) as an ISO instant — when today's AI count resets. */
+function nextIstMidnightIso(from: Date = new Date()): string {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(from.getTime() + IST_OFFSET_MS);
+  const next = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1, 0, 0, 0);
+  return new Date(next - IST_OFFSET_MS).toISOString();
+}
 
 export default function AssistantPage() {
   const api = useApi();
@@ -99,8 +107,17 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const isStreaming = status === "submitted" || status === "streaming";
 
-  // "AI uses left today" (#305): the count comes from usePlanAiUsageToday and the plan limit.
-  const { data: aiUsage } = usePlanAiUsageToday();
+  // "AI uses left today" (#305, #418): the count is my_ai_usage_today — the same
+  // count the server limits by — and the limit is the signed-in plan's own daily
+  // limit (useCurrentPlan). When either cannot be read, or the plan sets no
+  // limit, there is no honest number to show and the chip stays hidden.
+  const { data: currentPlan } = useCurrentPlan();
+  const { data: usageToday } = useMyAiUsageToday();
+  const aiLimit = currentPlan?.daily_ai_calls ?? null;
+  const aiUsage =
+    usageToday && aiLimit !== null
+      ? { used: usageToday.calls, limit: aiLimit, resets_at: nextIstMidnightIso() }
+      : undefined;
   const limitReached = aiUsage !== undefined && aiUsage.used >= aiUsage.limit;
   const limitTrackedRef = useRef(false);
   useEffect(() => {

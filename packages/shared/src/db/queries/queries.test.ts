@@ -33,6 +33,7 @@ import {
   listItemDoseLogs,
   listMyAppointments,
   listMyProposals,
+  listPlans,
   listPrescriptions,
   listVerifiedDoctors,
   liveChannelName,
@@ -726,6 +727,15 @@ describe("plans and the waitlist", () => {
   it("reads no plan row as null", async () => {
     const f = fakeSupabase({ responses: { "rpc:current_plan": [ok([])] } });
     await expect(getCurrentPlan(f.sb)).resolves.toBeNull();
+  });
+
+  it("lists the plans catalogue with its limits, Free before Family", async () => {
+    const family = { id: "family", name: "Family", daily_ai_calls: 150, max_profiles: 5, features: { caregivers: true, care_agent_max_open: null } };
+    const free = { id: "free", name: "Free", daily_ai_calls: 30, max_profiles: 1, features: { caregivers: false, care_agent_max_open: 3 } };
+    const f = fakeSupabase({ responses: { plans: [ok([family, free])] } });
+    await expect(listPlans(f.sb)).resolves.toEqual([free, family]);
+    expect(f.argsOf("from")).toEqual(["plans"]);
+    expect(f.argsOf("select")).toEqual(["id, name, daily_ai_calls, max_profiles, features"]);
   });
 
   it("joins the waitlist through the function, the note left out when there is none", async () => {
