@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
   useAddContact,
-  useCurrentPlanPage,
+  useCurrentPlan,
   useConsent,
   useDeleteAccount,
   useDeleteContact,
@@ -39,8 +39,9 @@ export default function MobileProfileTab() {
   const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
-  const { data: plansData, isLoading: plansLoading } = useCurrentPlanPage();
-  const currentPlan = plansData?.plans.find((p) => p.slug === plansData.current_slug);
+  // The signed-in user's real plan (#418): null while it loads, signed out or
+  // unreadable — the row below then shows a bare "Your plan", never a guessed name.
+  const { data: currentPlan, isLoading: plansLoading } = useCurrentPlan();
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
   const updateProfileMutation = useUpdateProfile();
   const { data: contacts = [] } = useEmergencyContacts();

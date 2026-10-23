@@ -3,7 +3,8 @@
 // packages/shared/src/hooks/db/aiRuns.ts
 // Owner: Vaibhav Parmar
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 
 import { getMyAiUsageToday, reportAiMistake, type MyAiUsageToday } from "../../db/queries/aiRuns";
 import type { DbError } from "../../db/queries/helpers";
@@ -26,4 +27,13 @@ export function useMyAiUsageToday() {
     queryFn: () => getMyAiUsageToday(sb),
     enabled: ready,
   });
+}
+
+/** A callback that re-reads today's AI usage — called when an answer finishes, so the
+ *  "AI uses left today" chip updates at once instead of on the next reload. */
+export function useRefreshAiUsage() {
+  const qc = useQueryClient();
+  return useCallback(() => {
+    void qc.invalidateQueries({ queryKey: [DB_KEYS.aiUsage] });
+  }, [qc]);
 }

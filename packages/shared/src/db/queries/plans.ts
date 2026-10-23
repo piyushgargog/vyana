@@ -25,3 +25,29 @@ export async function getCurrentPlan(sb: Sb): Promise<CurrentPlan | null> {
   const rows = unwrap(await sb.rpc("current_plan")) as CurrentPlan[];
   return rows[0] ?? null;
 }
+
+/** One row of the plans catalogue (migration 0016): a plan and its limits. A limit of null means the plan sets none. */
+export interface PlanRow {
+  id: string;
+  name: string;
+  daily_ai_calls: number | null;
+  max_profiles: number | null;
+  features: Json;
+}
+
+/** The order the plans page shows the catalogue in; a plan added later sorts after these. */
+const PLAN_ORDER = ["free", "family", "clinic"];
+
+/**
+ * Every plan in the catalogue with its limits, in display order. The plans
+ * table is readable signed out (it is the public price page's data), so this
+ * answers for signed-out visitors too.
+ */
+export async function listPlans(sb: Sb): Promise<PlanRow[]> {
+  const rows = unwrap(await sb.from("plans").select("id, name, daily_ai_calls, max_profiles, features")) as PlanRow[];
+  const rank = (id: string) => {
+    const i = PLAN_ORDER.indexOf(id);
+    return i === -1 ? PLAN_ORDER.length : i;
+  };
+  return [...rows].sort((a, b) => rank(a.id) - rank(b.id));
+}
