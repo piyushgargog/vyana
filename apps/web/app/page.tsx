@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   title: "Vyana — Your health, in one calm place",
   description:
-    "Complete healthcare that connects patients, doctors, and families. Medicine reminders, emergency SOS, whole-prescription price comparison, and doctor-approved care plans.",
+    "Complete healthcare that connects patients, doctors, and families. Medicine reminders, emergency SOS, pharmacy and lab links, and doctor-approved care plans.",
 };
 
 export default function LandingPage() {
@@ -81,8 +81,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="mt-5 text-[17px] sm:text-[20px] text-label-2 max-w-2xl mx-auto leading-relaxed">
-            From daily dose schedules and 108 emergency SOS to whole-prescription
-            pharmacy comparison and doctor-approved care plans.
+            From daily dose schedules and 108 emergency SOS to links for finding
+            your medicines and doctor-approved care plans.
           </p>
 
           {/* Primary CTA (Rule: one primary action per screen) */}
@@ -98,7 +98,7 @@ export default function LandingPage() {
 
           {/* 4. The App Displayed Inside a Phone Frame */}
           <div className="mt-14 sm:mt-18 flex justify-center">
-            <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
+            <div aria-hidden="true" className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
               {/* Phone Dynamic Island */}
               <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
 
@@ -109,13 +109,11 @@ export default function LandingPage() {
                     Today
                   </p>
                 </div>
-                <span className="rounded-full bg-danger-soft px-2.5 py-1 text-[11px] font-bold text-danger-text">
-                  SOS 108
-                </span>
+                <Pill tone="danger">SOS 108</Pill>
               </div>
 
               {/* Doses Card */}
-              <div className="rounded-card bg-surface p-4 shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3">
+              <Card padded={false} className="p-4 mb-3">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[15px] font-semibold text-label">
                     Doses today
@@ -149,10 +147,10 @@ export default function LandingPage() {
                     <span className="text-[11px] font-semibold text-label-3">Due</span>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Your Health Group */}
-              <div className="rounded-card bg-surface overflow-hidden shadow-[0_2px_8px_rgb(0_0_0/0.04)] mb-3 text-[13px]">
+              <Card padded={false} className="overflow-hidden mb-3 text-[13px]">
                 <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
                   Your health
                 </div>
@@ -166,7 +164,7 @@ export default function LandingPage() {
                     <Pill tone="accent" className="text-[11px]">Token #14</Pill>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Floating Glass Scan Button */}
               <div className="glass rounded-full py-2.5 px-4 flex items-center justify-center gap-2 text-[13px] font-semibold text-accent-strong shadow-glass">
@@ -200,23 +198,23 @@ export default function LandingPage() {
                   <Receipt className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <CardHeader
-                  title="Whole-prescription pharmacy comparison"
+                  title="Find your medicines at pharmacies"
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Scan printed or handwritten prescriptions. Vyana checks every
-                  medicine against the photo and compares your whole prescription
-                  on 1mg, PharmEasy, Netmeds and Apollo.
+                  medicine against the photo, then opens it on 1mg, PharmEasy,
+                  Netmeds or Apollo so you can look up the price yourself.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Whole-Prescription Basket</span>
-                  <span className="text-accent-strong font-medium">Live prices</span>
+                  <span>Pharmacy links</span>
+                  <span className="text-accent-strong font-medium">You check the price</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Compares 1mg, PharmEasy, Netmeds and Apollo</p>
-                  <p>• A price counts only when it is on the product page</p>
+                  <p>• Opens 1mg, PharmEasy, Netmeds and Apollo</p>
+                  <p>• Vyana shows no price: the pharmacy&apos;s own page does</p>
                 </div>
               </div>
             </Card>
@@ -257,23 +255,23 @@ export default function LandingPage() {
                   <Building2 className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <CardHeader
-                  title="Hospital OPD queues & verified timings"
+                  title="Hospital OPD tokens & website links"
                 />
                 <p className="text-[15px] leading-relaxed text-label-2">
                   Book government and private hospital OPD tokens before leaving
-                  home. Check real operating schedules and clinic timings checked
-                  on the hospital&apos;s own pages, so you wait less at the hospital.
+                  home, and open the hospital&apos;s own website for its timings,
+                  so you wait less at the hospital.
                 </p>
               </div>
 
               <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
                 <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Hospital OPD Schedules</span>
-                  <span className="text-accent-strong font-medium">Clinic timings</span>
+                  <span>Hospital OPD tokens</span>
+                  <span className="text-accent-strong font-medium">Token booking</span>
                 </div>
                 <div className="space-y-1 text-[12px] text-label-3">
                   <p>• General Medicine and specialty departments</p>
-                  <p>• Token booking and operating days</p>
+                  <p>• The hospital&apos;s own website for its timings</p>
                 </div>
               </div>
             </Card>
@@ -395,11 +393,12 @@ export default function LandingPage() {
               <div className="rounded-card bg-white/5 border border-white/10 p-6 space-y-2">
                 <ShieldCheck className="h-6 w-6 text-accent mb-2" aria-hidden="true" />
                 <h3 className="text-[17px] font-semibold text-white">
-                  NMC Statutory Verification
+                  Registration checked by an admin
                 </h3>
                 <p className="text-[14px] text-white/70 leading-relaxed">
-                  Registration checked against the National Medical
-                  Commission and State Medical Council registers.
+                  Every doctor&apos;s registration number is checked by a Vyana admin
+                  against the public medical council register before the doctor
+                  is marked verified.
                 </p>
               </div>
 
@@ -425,7 +424,7 @@ export default function LandingPage() {
                 size="md"
                 className="bg-white/10 text-white border-white/20 hover:bg-white/20"
               >
-                Verify NMC credentials
+                Send your registration
               </ButtonLink>
             </div>
           </div>

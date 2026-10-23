@@ -11,7 +11,6 @@ import {
 import {
   buildQrMatrix,
   computeItemRefill,
-  generateQrMatrix,
   parseCarePlanJson,
   useReportAiMistake,
 } from '@vyana/shared';
@@ -19,7 +18,7 @@ import { T } from '@/constants/theme';
 import { Button, Pill, Symbol, Text } from '@/components/ui';
 import { useVyanaMobile } from './providers';
 
-export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
+export { buildQrMatrix, computeItemRefill, parseCarePlanJson };
 
 export function MobileQrGrid({
   data,

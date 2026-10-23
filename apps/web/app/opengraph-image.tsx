@@ -91,7 +91,7 @@ export default function Image() {
               maxWidth: 920,
             }}
           >
-            Medicine reminders, emergency SOS, whole-prescription pharmacy comparison, and doctor-approved care plans.
+            Medicine reminders, emergency SOS, pharmacy links, and doctor-approved care plans.
           </div>
         </div>
 

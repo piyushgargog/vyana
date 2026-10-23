@@ -61,45 +61,45 @@
  * This block comes before the accessibility blocks below so that reduced-transparency
  * and increased-contrast can restate their dark surfaces after it.
  */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-canvas: #000000;
-    --color-surface: #1c1c1e;
-    --color-ink: #f2f2f7;
-    --color-label: #ffffff;
-    --color-label-2: rgb(235 235 245 / 0.68);
-    --color-label-3: rgb(235 235 245 / 0.55);
-    --color-separator: rgb(84 84 88 / 0.65);
-    --color-fill: rgb(120 120 128 / 0.24);
-    --color-fill-strong: rgb(120 120 128 / 0.36);
-    --color-accent: #2dd4bf;
-    --color-accent-strong: #3ec6b8;
-    --color-accent-soft: rgb(45 212 191 / 0.18);
-    --color-danger: #ff453a;
-    --color-danger-text: #ff6961;
-    --color-danger-soft: rgb(255 69 58 / 0.16);
-    --color-ok: #30d158;
-    --color-ok-soft: rgb(48 209 88 / 0.16);
-    --color-warn: #ff9f0a;
-    --color-warn-soft: rgb(255 159 10 / 0.18);
-    --color-tile-blue: #0a84ff;
-    --color-tile-green: #30d158;
-    --color-tile-orange: #ff9f0a;
-    --color-tile-gray: #98989f;
-    --color-tile-indigo: #5e5ce6;
-    --shadow-glass:
-      0 8px 32px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
-      inset 0 1px 0 rgb(255 255 255 / 0.12);
-    --shadow-float: 0 10px 30px rgb(0 0 0 / 0.5);
-  }
-  .glass {
-    background: rgb(28 28 30 / 0.62);
-    border-color: rgb(255 255 255 / 0.16);
-  }
-  .glass-bar {
-    background: rgb(22 22 24 / 0.72);
-  }
+/* Dark appearance (issue #287): NOT automatic. The page is light until `data-theme="dark"` is set on <html>
+ * (a toggle that sets it comes later; the phone app is light only for now). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #000000;
+  --color-surface: #1c1c1e;
+  --color-ink: #f2f2f7;
+  --color-label: #ffffff;
+  --color-label-2: rgb(235 235 245 / 0.68);
+  --color-label-3: rgb(235 235 245 / 0.55);
+  --color-separator: rgb(84 84 88 / 0.65);
+  --color-fill: rgb(120 120 128 / 0.24);
+  --color-fill-strong: rgb(120 120 128 / 0.36);
+  --color-accent: #2dd4bf;
+  --color-accent-strong: #3ec6b8;
+  --color-accent-soft: rgb(45 212 191 / 0.18);
+  --color-danger: #ff453a;
+  --color-danger-text: #ff6961;
+  --color-danger-soft: rgb(255 69 58 / 0.16);
+  --color-ok: #30d158;
+  --color-ok-soft: rgb(48 209 88 / 0.16);
+  --color-warn: #ff9f0a;
+  --color-warn-soft: rgb(255 159 10 / 0.18);
+  --color-tile-blue: #0a84ff;
+  --color-tile-green: #30d158;
+  --color-tile-orange: #ff9f0a;
+  --color-tile-gray: #98989f;
+  --color-tile-indigo: #5e5ce6;
+  --shadow-glass:
+    0 8px 32px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
+    inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --shadow-float: 0 10px 30px rgb(0 0 0 / 0.5);
+}
+:root[data-theme="dark"] .glass {
+  background: rgb(28 28 30 / 0.62);
+  border-color: rgb(255 255 255 / 0.16);
+}
+:root[data-theme="dark"] .glass-bar {
+  background: rgb(22 22 24 / 0.72);
 }
 
 /* Liquid Glass: only for chrome (nav, tab bar, floating buttons, sheets). Content sits on solid surfaces. */
@@ -164,30 +164,30 @@
 }
 
 /* The same two states in the dark appearance (issue #287): solid dark surfaces, light edges. */
-@media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce) {
-  .glass {
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme="dark"] .glass {
     background: var(--color-surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  .glass-bar {
+  :root[data-theme="dark"] .glass-bar {
     background: var(--color-canvas);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }
 
-@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
-  :root {
+@media (prefers-contrast: more) {
+  :root[data-theme="dark"] {
     /* More contrast strengthens the text tokens too, not only the surfaces. */
     --color-label-2: rgb(255 255 255 / 0.95);
     --color-label-3: rgb(235 235 245 / 0.85);
   }
-  .glass {
+  :root[data-theme="dark"] .glass {
     background: rgb(28 28 30 / 0.94);
     border-color: rgb(255 255 255 / 0.55);
   }
-  .glass-bar {
+  :root[data-theme="dark"] .glass-bar {
     background: rgb(0 0 0 / 0.96);
     border-bottom: 1px solid rgb(255 255 255 / 0.55);
   }
