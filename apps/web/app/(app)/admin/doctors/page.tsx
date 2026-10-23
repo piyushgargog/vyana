@@ -18,9 +18,10 @@ import {
   Field,
   LargeTitle,
   Pill,
+  Chip,
+  ChipGroup,
   Sheet,
   SkeletonLine,
-  cn,
 } from "@/components/ui";
 import { Search } from "lucide-react";
 
@@ -120,55 +121,27 @@ export default function AdminDoctorsPage() {
       />
 
       {/* Primary Section Switcher */}
-      <div className="inline-flex rounded-full bg-fill p-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab("doctors")}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
-            activeTab === "doctors"
-              ? "bg-surface text-label ring-1 ring-separator"
-              : "text-label-2 hover:text-label"
-          )}
-        >
+      <ChipGroup label="Section">
+        <Chip selected={activeTab === "doctors"} onSelect={() => setActiveTab("doctors")}>
           Doctors Registry ({doctors.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("hospitals")}
-          className={cn(
-            "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
-            activeTab === "hospitals"
-              ? "bg-surface text-label ring-1 ring-separator"
-              : "text-label-2 hover:text-label"
-          )}
-        >
+        </Chip>
+        <Chip selected={activeTab === "hospitals"} onSelect={() => setActiveTab("hospitals")}>
           Hospitals ({hospitals?.length ?? 0})
-        </button>
-      </div>
+        </Chip>
+      </ChipGroup>
 
       {/* TAB 1: DOCTORS REGISTRY */}
       {activeTab === "doctors" && (
         <div className="space-y-4">
           {/* Filter Toolbar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-1 overflow-x-auto rounded-full bg-fill p-1">
+            <ChipGroup label="Show doctors">
               {(["all", "verified", "pending", "failed"] as const).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={cn(
-                    "rounded-full px-3.5 py-1 text-[13px] font-semibold capitalize transition-colors",
-                    statusFilter === st
-                      ? "bg-surface text-label ring-1 ring-separator"
-                      : "text-label-2 hover:text-label"
-                  )}
-                >
+                <Chip key={st} selected={statusFilter === st} onSelect={() => setStatusFilter(st)} className="capitalize">
                   {st}
-                </button>
+                </Chip>
               ))}
-            </div>
+            </ChipGroup>
 
             <div className="w-full sm:w-72">
               <Field

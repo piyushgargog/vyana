@@ -15,6 +15,8 @@ import {
   Button,
   ButtonLink,
   Card,
+  Chip,
+  ChipGroup,
   EmptyState,
   ErrorState,
   Pill,
@@ -240,22 +242,13 @@ export default function DoctorQueuePage() {
 
       {/* Filter and Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <ChipGroup label="Show appointments" className="flex-nowrap overflow-x-auto pb-1 sm:pb-0">
           {(["all", "requested", "confirmed", "completed"] as const).map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${
-                statusFilter === st
-                  ? "bg-label text-white"
-                  : "bg-surface border border-separator text-label-2 hover:bg-fill"
-              }`}
-            >
+            <Chip key={st} selected={statusFilter === st} onSelect={() => setStatusFilter(st)} className="shrink-0 capitalize">
               {st}
-            </button>
+            </Chip>
           ))}
-        </div>
+        </ChipGroup>
 
         <div className="w-full sm:w-72">
           <label htmlFor="search-queue" className="sr-only">

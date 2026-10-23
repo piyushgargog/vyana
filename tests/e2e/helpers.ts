@@ -15,8 +15,14 @@ export async function signIn(page: Page, email: string, password: string): Promi
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  // The app redirects to /dashboard, /doctor or /onboarding after sign-in.
-  await page.waitForURL(/\/(dashboard|doctor|onboarding)/, { timeout: 15000 });
+  // The app redirects to /dashboard, /doctor or /onboarding after sign-in, or to /consent when the account has not
+  // accepted the current consent version yet (the demo accounts after every version bump, issue #472).
+  await page.waitForURL(/\/(dashboard|doctor|onboarding|consent)/, { timeout: 15000 });
+  if (/\/consent/.test(page.url())) {
+    for (const box of await page.getByRole("checkbox").all()) await box.check();
+    await page.getByRole("button", { name: /i consent/i }).click();
+    await page.waitForURL(/\/(dashboard|doctor|onboarding)/, { timeout: 15000 });
+  }
 }
 
 /** Signs out via the profile menu. */

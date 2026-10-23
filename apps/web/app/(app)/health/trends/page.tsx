@@ -11,9 +11,8 @@ import React, { useState } from "react";
 import type { TrendChartModel, TrendRangeDays } from "@vyana/shared";
 
 import { TrendChartSvg } from "@/components/ui-primitives";
-import { Card, EmptyState, LargeTitle, Reveal } from "@/components/ui";
+import { Card, Chip, ChipGroup, EmptyState, LargeTitle, Reveal } from "@/components/ui";
 import { useTrendCharts } from "@/components/use-device-activity";
-import { cn } from "@/components/ui/cn";
 
 const RANGES: { days: TrendRangeDays; label: string }[] = [
   { days: 7, label: "7 days" },
@@ -74,27 +73,13 @@ export default function HealthTrendsPage() {
         <LargeTitle eyebrow="From your devices" title="Health trends" />
       </Reveal>
 
-      <div className="flex flex-wrap gap-1 rounded-full bg-fill p-1" role="group" aria-label="Days to show">
-        {RANGES.map((r) => {
-          const selected = range === r.days;
-          return (
-            <button
-              key={r.days}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setRange(r.days)}
-              className={cn(
-                "inline-flex min-h-[44px] items-center rounded-full px-4 text-[14px] transition-colors",
-                selected
-                  ? "bg-surface font-semibold text-label shadow-float"
-                  : "text-label-2 hover:text-label",
-              )}
-            >
-              {r.label}
-            </button>
-          );
-        })}
-      </div>
+      <ChipGroup label="Days to show">
+        {RANGES.map((r) => (
+          <Chip key={r.days} selected={range === r.days} onSelect={() => setRange(r.days)}>
+            {r.label}
+          </Chip>
+        ))}
+      </ChipGroup>
 
       {charts.length === 0 ? (
         <Card>

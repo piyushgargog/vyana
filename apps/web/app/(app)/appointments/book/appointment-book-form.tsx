@@ -27,6 +27,8 @@ import {
   Field,
   LargeTitle,
   Pill,
+  Chip,
+  ChipGroup,
   Reveal,
   Sheet,
   SkeletonLine,
@@ -481,25 +483,18 @@ export function AppointmentBookForm() {
                 {departments.map((dept) => {
                   const isSelected = dept.id === selectedDeptId;
                   return (
-                    <button
+                    <Chip
                       key={dept.id}
-                      type="button"
                       role="radio"
-                      aria-checked={isSelected}
-                      aria-label={`Select department ${dept.name}`}
-                      onClick={() => {
+                      selected={isSelected}
+                      label={`Select department ${dept.name}`}
+                      onSelect={() => {
                         setUserDeptId(dept.id);
                         persistSelection({ departmentId: dept.id, department: null });
                       }}
-                      className={cn(
-                        "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-[15px] font-medium transition-all active:scale-[0.97]",
-                        isSelected
-                          ? "bg-accent font-semibold text-white shadow-sm"
-                          : "border border-separator bg-canvas/70 text-label-2 hover:bg-canvas hover:text-label"
-                      )}
                     >
                       {dept.name}
-                    </button>
+                    </Chip>
                   );
                 })}
               </div>
@@ -511,36 +506,24 @@ export function AppointmentBookForm() {
           <Card>
             <CardHeader title="3. Appointment Date & Token Availability" />
 
-            <div className="mb-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setAppointmentDate(dateDefaults.today)}
-                aria-pressed={appointmentDate === dateDefaults.today}
-                aria-label={`Select today, ${dateDefaults.today}`}
-                className={cn(
-                  "inline-flex min-h-[44px] flex-1 items-center justify-center rounded-row border px-4 text-[15px] transition-colors active:scale-[0.98]",
-                  appointmentDate === dateDefaults.today
-                    ? "border-accent bg-accent text-white font-semibold"
-                    : "border-separator bg-fill text-label-2 hover:bg-fill-strong"
-                )}
+            <ChipGroup label="Appointment day" className="mb-3">
+              <Chip
+                selected={appointmentDate === dateDefaults.today}
+                label={`Select today, ${dateDefaults.today}`}
+                onSelect={() => setAppointmentDate(dateDefaults.today)}
+                className="flex-1"
               >
                 Today ({dateDefaults.today})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAppointmentDate(dateDefaults.tomorrow)}
-                aria-pressed={appointmentDate === dateDefaults.tomorrow}
-                aria-label={`Select tomorrow, ${dateDefaults.tomorrow}`}
-                className={cn(
-                  "inline-flex min-h-[44px] flex-1 items-center justify-center rounded-row border px-4 text-[15px] transition-colors active:scale-[0.98]",
-                  appointmentDate === dateDefaults.tomorrow
-                    ? "border-accent bg-accent text-white font-semibold"
-                    : "border-separator bg-fill text-label-2 hover:bg-fill-strong"
-                )}
+              </Chip>
+              <Chip
+                selected={appointmentDate === dateDefaults.tomorrow}
+                label={`Select tomorrow, ${dateDefaults.tomorrow}`}
+                onSelect={() => setAppointmentDate(dateDefaults.tomorrow)}
+                className="flex-1"
               >
                 Tomorrow ({dateDefaults.tomorrow})
-              </button>
-            </div>
+              </Chip>
+            </ChipGroup>
 
             <Field
               id="appointment-date-input"

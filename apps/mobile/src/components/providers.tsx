@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppProviders, type Database } from '@vyana/shared';
 import { supabase } from '@/lib/supabase';
+import { T, useThemeColors } from '@/constants/theme';
 
 export interface MobileToast {
   id: string;
@@ -40,6 +41,7 @@ export function MobileAppProviders({
     { name: string; strength?: string; quantity: number }[]
   >([]);
   const [toasts, setToasts] = useState<MobileToast[]>([]);
+  const colors = useThemeColors();
 
   const showToast = useCallback(
     (message: string, tone: MobileToast['tone'] = 'info') => {
@@ -84,16 +86,20 @@ export function MobileAppProviders({
                 key={t.id}
                 style={[
                   styles.toastCard,
-                  t.tone === 'success'
-                    ? styles.toastSuccess
-                    : t.tone === 'error'
-                      ? styles.toastError
-                      : t.tone === 'warning'
-                        ? styles.toastWarning
-                        : styles.toastInfo,
+                  {
+                    backgroundColor: colors.surface,
+                    borderLeftColor:
+                      t.tone === 'success'
+                        ? colors.ok
+                        : t.tone === 'error'
+                          ? colors.danger
+                          : t.tone === 'warning'
+                            ? colors.warn
+                            : colors.accent,
+                  },
                 ]}
               >
-                <Text style={styles.toastText}>{t.message}</Text>
+                <Text style={[styles.toastText, { color: colors.label }]}>{t.message}</Text>
               </View>
             ))}
           </View>
@@ -126,25 +132,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  toastSuccess: {
-    backgroundColor: '#115E59',
-  },
-  toastError: {
-    backgroundColor: '#991B1B',
-  },
-  toastWarning: {
-    backgroundColor: '#92400E',
-  },
-  toastInfo: {
-    backgroundColor: '#0F172A',
+    borderLeftWidth: 4,
+    ...T.shadow.float,
   },
   toastText: {
-    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
