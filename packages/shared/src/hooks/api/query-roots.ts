@@ -15,4 +15,5 @@ export const QUERY_ROOTS = {
   shareLinks: "share-links",
   sharedRecord: "shared-record",
   agentProposals: "agent-suggestions",
+  devices: "devices",
 } as const;

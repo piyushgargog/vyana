@@ -10,7 +10,7 @@ import { Button, Card, CardHeader, SkeletonLine } from "@/components/ui";
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 
 const MAX_COLLAPSED = 3;
-const DISCLAIMER = "Vyana suggested this from your own records. It is not medical advice.";
+const DISCLAIMER = "Vyana suggested this from your own records.";
 
 function suggestedOn(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {

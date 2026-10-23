@@ -34,6 +34,7 @@ import { QUERY_ROOTS } from "./query-roots";
 
 export { QUERY_ROOTS } from "./query-roots";
 export { useMyAgentProposals, useDecideAgentProposal } from "./agent-proposals";
+export * from "./devices";
 
 export function useSearchBlood() {
   const api = useApi();

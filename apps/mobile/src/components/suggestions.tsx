@@ -10,7 +10,7 @@ import { T } from '@/constants/theme';
 // top of Today. Mock-first against the provisional contract in @vyana/shared; the wording comes
 // from the proposal itself (rules wrote it), never from this component.
 const MAX_COLLAPSED = 3;
-const DISCLAIMER = 'Vyana suggested this from your own records. It is not medical advice.';
+const DISCLAIMER = 'Vyana suggested this from your own records.';
 
 function suggestedOn(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', {

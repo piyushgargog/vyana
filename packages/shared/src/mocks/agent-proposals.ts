@@ -20,11 +20,11 @@ function fixtures(): AgentProposal[] {
     {
       id: "proposal-refill-metformin",
       kind: "refill_due",
-      title: "Your metformin pack: 30 tablets, started 26 days ago",
-      reason: "Your dose log and the pack size on your prescription say the current pack is nearly finished.",
+      title: "Your metformin pack: 30 tablets",
+      reason: "Your prescription lists metformin in packs of 30 tablets.",
       evidence: [
         { label: "Last 7 dose logs", detail: "6 taken, 1 missed" },
-        { label: "Pack size from your prescription", detail: "30 tablets, started 26 days ago" },
+        { label: "Pack size from your prescription", detail: "30 tablets" },
       ],
       created_at: iso(-2 * 60 * 60 * 1000),
       expires_at: iso(3 * DAY),
