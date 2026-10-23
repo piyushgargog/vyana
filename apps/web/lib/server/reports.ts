@@ -53,7 +53,7 @@ export function flagFor(value: number | null, low: number | null, high: number |
 /** A number counts only if it is written inside its row's evidence ("7.4" in "HbA1c 7.4 % 4.0 - 5.6"). */
 function numberIn(evidence: string, n: number | null): number | null {
   if (n === null) return null;
-  return hasNumber(evidence, n) ? n : null;
+  return hasNumber(evidence, n, { skipGlued: true }) ? n : null;
 }
 
 export function verifyReport(out: ReportLlm, text: string, map: Record<string, string>) {

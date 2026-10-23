@@ -68,16 +68,17 @@ export function verifyEvidence<F extends Record<string, unknown>>(
 
 /**
  * Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap.
- * Digits glued to a letter ("HbA1c", "T3", "B12") are part of a name, not a written number: a model must not
- * pass the evidence check by quoting the test name for a hallucinated value of 1, 3 or 12.
+ * Strict by default: every digit run counts, so "2x500" yields 2 and 500. With `skipGlued` digits glued to a letter
+ * ("HbA1c", "T3", "B12") are treated as part of a name, not a written number (lab-report evidence only; never use it
+ * for doses, where "Paracetamol500mg" must still yield 500).
  */
-export function numbersIn(s: string): number[] {
+export function numbersIn(s: string, opts: { skipGlued?: boolean } = {}): number[] {
   const out: number[] = [];
   let current = "";
   let glued = false; // the number started right after a letter
   const flush = () => {
     const cleaned = current.replace(/,/g, "").replace(/\.$/, "");
-    if (/\d/.test(cleaned) && !glued) out.push(Number(cleaned));
+    if (/\d/.test(cleaned) && !(opts.skipGlued && glued)) out.push(Number(cleaned));
     current = "";
     glued = false;
   };
@@ -94,6 +95,6 @@ export function numbersIn(s: string): number[] {
 }
 
 /** True when `n` is one of the numbers written in `s` (compared as numbers, so 3 doesn't match "30"). */
-export function hasNumber(s: string | null | undefined, n: number): boolean {
-  return !!s && numbersIn(s).some((x) => Math.abs(x - n) < 1e-9);
+export function hasNumber(s: string | null | undefined, n: number, opts: { skipGlued?: boolean } = {}): boolean {
+  return !!s && numbersIn(s, opts).some((x) => Math.abs(x - n) < 1e-9);
 }
