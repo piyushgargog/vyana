@@ -8,6 +8,7 @@ import {
   formatLocalDate,
   getRefillStatus,
   MAX_DOSE_REMINDERS,
+  monthsAgo,
   nextOccurrenceOfHour,
   parseDoseUnits,
   parseLocalDate,
@@ -30,6 +31,15 @@ describe("dates", () => {
     expect(daysBetween("2026-10-15", "2026-10-12")).toBe(-3);
     expect(formatLocalDate(parseLocalDate("2026-01-05"))).toBe("2026-01-05");
     expect(atLocalTime("2026-10-12", "21:30").getHours()).toBe(21);
+  });
+
+  it("clamps monthsAgo to the shorter month instead of rolling into the next one", () => {
+    expect(monthsAgo("2026-03-31", 1)).toBe("2026-02-28");
+    expect(monthsAgo("2024-03-31", 1)).toBe("2024-02-29"); // leap year
+    expect(monthsAgo("2026-05-31", 3)).toBe("2026-02-28");
+    expect(monthsAgo("2026-01-31", 1)).toBe("2025-12-31");
+    expect(monthsAgo("2026-10-23", 24)).toBe("2024-10-23");
+    expect(monthsAgo("2026-10-23", 0)).toBe("2026-10-23");
   });
 });
 

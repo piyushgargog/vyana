@@ -19,10 +19,13 @@ export function addDays(date: string, days: number): string {
   return formatLocalDate(d);
 }
 
-/** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
+/** The calendar day (`YYYY-MM-DD`) `months` months before `date`, clamped to the shorter month. */
 export function monthsAgo(date: string, months: number): string {
   const d = parseLocalDate(date);
+  const day = d.getDate();
+  d.setDate(1); // stepping back from the 1st never rolls into the next month
   d.setMonth(d.getMonth() - months);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
   return formatLocalDate(d);
 }
 
