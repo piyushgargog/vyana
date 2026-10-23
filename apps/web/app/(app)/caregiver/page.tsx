@@ -283,7 +283,7 @@ export default function CaregiverPage() {
                       your medicine schedule.
                     </p>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => scrollTo(inviteRef)}>
+                  <Button variant="secondary" onClick={() => scrollTo(inviteRef)}>
                     Invite
                   </Button>
                 </div>
@@ -317,20 +317,18 @@ export default function CaregiverPage() {
                               <span className="flex items-center gap-1">
                                 <Button
                                   variant="destructive"
-                                  size="sm"
                                   disabled={revokeMutation.isPending}
                                   onClick={() => void handleRevokeCaregiver(c)}
                                 >
                                   Remove access
                                 </Button>
-                                <Button variant="plain" size="sm" onClick={() => setConfirmRevokeId(null)}>
+                                <Button variant="plain" onClick={() => setConfirmRevokeId(null)}>
                                   Cancel
                                 </Button>
                               </span>
                             ) : (
                               <Button
                                 variant="destructive"
-                                size="sm"
                                 aria-label={`Revoke access for ${c.full_name || "caregiver"}`}
                                 onClick={() => setConfirmRevokeId(c.link_id)}
                               >
@@ -369,12 +367,11 @@ export default function CaregiverPage() {
                 {inviteCode}
               </p>
               <div className="flex justify-center gap-2">
-                <Button variant="secondary" size="sm" onClick={handleCopyCode}>
+                <Button variant="secondary" onClick={handleCopyCode}>
                   Copy code
                 </Button>
                 <Button
                   variant="plain"
-                  size="sm"
                   disabled={inviteMutation.isPending}
                   onClick={handleGenerateCode}
                 >
