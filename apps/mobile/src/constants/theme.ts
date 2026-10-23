@@ -77,6 +77,13 @@ export const Spacing = {
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 
+/** Frame sizes for the v2 screen frame (#487): the slim top bar every screen draws (`ScreenTopBar`). */
+export const TopBarHeight = 44;
+/** Height of the native tab bar's content (icon and label), before the bottom safe-area inset is added. */
+export const TabBarHeight = Platform.select({ ios: 49, android: 80 }) ?? 49;
+/** Height of the floating Scan action on Today: the medium button plus the glass padding around it. */
+export const ScanActionHeight = 54;
+
 /**
  * Vyana design tokens, Liquid Glass (DESIGN §15, ADR-066). Screens use these and the components in
  * `src/components/ui`; never raw hex. `T` is the light appearance; `darkColors` below is its dark
@@ -124,6 +131,7 @@ export const T = {
     subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400', letterSpacing: -0.24 },
     footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: -0.08 },
     caption: { fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0 },
+    caption2: { fontSize: 11, lineHeight: 13, fontWeight: '400', letterSpacing: 0.06 },
     sectionHeader: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
   },
   shadow: {
