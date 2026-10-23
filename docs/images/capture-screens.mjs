@@ -7,8 +7,11 @@
 //   VYANA_DEMO_EMAIL   the demo patient login    (e.g. patient@vyana.test)
 //   VYANA_DEMO_PASSWORD  its password            (from the team's seed secrets)
 //
-// Without a demo login only the public home page is captured; the app screens
+// Without a demo login only the public pages are captured; the app screens
 // need the demo patient (fictional seed data — never a real person's account).
+// The share shot uses a demo token: with NEXT_PUBLIC_USE_MOCKS=true it renders
+// the fictional patient from the shared mocks; against a live deployment, set
+// VYANA_SHARE_TOKEN to a real demo-patient share token instead.
 // With a login the script signs in once and captures every screen below at
 // phone (390 px) and desktop (1366 px) widths, into this folder.
 // Check every image before committing: no real names, numbers or emails, no
@@ -30,7 +33,10 @@ const SIZES = [
 ];
 
 // Public: captured with no login. App screens: path after signing in as the demo patient.
-const PUBLIC_SHOTS = [{ slug: "home", path: "/" }];
+const PUBLIC_SHOTS = [
+  { slug: "home", path: "/" },
+  { slug: "share", path: `/share/${process.env.VYANA_SHARE_TOKEN || "demo"}` },
+];
 const APP_SHOTS = [
   { slug: "today", path: "/dashboard" },
   { slug: "ask", path: "/assistant" },

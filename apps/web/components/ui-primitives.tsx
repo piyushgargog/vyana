@@ -266,7 +266,7 @@ export function TrendChartSvg({
                 x={cx}
                 y={cy - 10}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fontWeight="600"
                 fill={isAbnormal ? "var(--color-danger-text)" : isUnknown ? "var(--color-label-2)" : "var(--color-accent-strong)"}
               >
@@ -277,7 +277,7 @@ export function TrendChartSvg({
                 x={cx}
                 y={padTop + plotH + 18}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fill="var(--color-label-2)"
               >
                 {pt.date}
