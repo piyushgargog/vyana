@@ -117,13 +117,13 @@ function AppShellContent({
             { href: "/consent", label: "Privacy", icon: ShieldCheck },
           ]
         : [
-            // The first five are also the phone's tab bar: keep the most used ones there. Privacy is on the dashboard and in the footer.
+            // The first five are also the phone's tab bar: keep the most used ones there. Lab reports is one of the five — a patient on a phone must be able to reach their reports from the shell (issue #451); medicine prices stay one tap away on the dashboard and in the desktop nav. Privacy is on the dashboard and in the footer.
             { href: "/dashboard", label: "Dashboard", icon: House },
             { href: "/assistant", label: "Ask Vyana", icon: MessageCircleQuestion },
             { href: "/prescriptions/scan", label: "Prescriptions", icon: Pill },
-            { href: "/basket", label: "Medicine prices", icon: ShoppingBasket },
-            { href: "/appointments", label: "Appointments", icon: CalendarDays },
             { href: "/reports/upload", label: "Lab reports", icon: FlaskConical },
+            { href: "/appointments", label: "Appointments", icon: CalendarDays },
+            { href: "/basket", label: "Medicine prices", icon: ShoppingBasket },
             { href: "/onboarding", label: "Health profile", icon: UserRound },
           ];
 
