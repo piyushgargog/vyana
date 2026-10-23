@@ -98,7 +98,7 @@ export default function LandingPage() {
 
           {/* 4. The App Displayed Inside a Phone Frame */}
           <div className="mt-14 sm:mt-18 flex justify-center">
-            <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
+            <div aria-hidden="true" className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
               {/* Phone Dynamic Island */}
               <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
 
