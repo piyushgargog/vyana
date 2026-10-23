@@ -2,18 +2,29 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
 
-/** The page's large title (iOS style), with an optional line above and actions on the right. */
+/**
+ * The page's large title (iOS style), with an optional line above and actions on the right.
+ * It collapses as the page scrolls (issue #492): past a small scroll the eyebrow and
+ * subtitle go and the title steps down to Title 2, so the chrome takes less of the screen.
+ */
 export function LargeTitle({ eyebrow, title, subtitle, actions, className }: { eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; className?: string }) {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 32);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   return (
-    <header className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
+    <header data-compact={compact || undefined} className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
       <div className="min-w-0">
-        {eyebrow ? <div className="text-[15px] text-label-3">{eyebrow}</div> : null}
-        <h1 className="mt-1 text-[32px] font-bold leading-tight tracking-[-0.03em] text-label sm:text-[40px]">{title}</h1>
-        {subtitle ? <p className="mt-2 max-w-2xl text-[17px] leading-relaxed text-label-2">{subtitle}</p> : null}
+        {eyebrow && !compact ? <div className="text-subheadline text-label-3">{eyebrow}</div> : null}
+        <h1 className={cn("mt-1 text-label transition-all duration-200", compact ? "text-title-2" : "text-large-title")}>{title}</h1>
+        {subtitle && !compact ? <p className="mt-2 max-w-2xl text-body leading-relaxed text-label-2">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </header>
@@ -96,7 +107,13 @@ export function Reveal({ children, delay = 0, className }: { children: ReactNode
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
   return (
-    <motion.div className={className} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 30, delay }}>
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ type: "spring", stiffness: 260, damping: 30, delay }}
+    >
       {children}
     </motion.div>
   );
