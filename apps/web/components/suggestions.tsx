@@ -71,10 +71,10 @@ function ProposalCard({
           size="md"
           className="min-h-[44px]"
           disabled={busy}
-          aria-label={`Do it: ${proposal.title}`}
+          aria-label={`Got it: ${proposal.title}`}
           onClick={() => onDecide(proposal, "approve")}
         >
-          Do it
+          Got it
         </Button>
         <Button
           variant="secondary"
