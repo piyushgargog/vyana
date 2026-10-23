@@ -1,7 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
-import { istDate } from "../dates";
+import { MISSED_DOSE_GRACE_MINUTES, istDayOf } from "@vyana/shared";
 import type { PushMessage, PushResult } from "../push";
 
 /**
@@ -67,7 +66,7 @@ export function istTime(d: Date): string {
 export function listOverdueDoses(items: CareItem[], now: Date): DueDose[] {
   const newest = now.getTime() - GRACE_MINUTES * MINUTE;
   const oldest = newest - CATCH_UP_MINUTES * MINUTE;
-  const days = [istDate(new Date(oldest)), istDate(new Date(newest))];
+  const days = [istDayOf(new Date(oldest).toISOString()), istDayOf(new Date(newest).toISOString())];
   const out: DueDose[] = [];
   for (const date of [...new Set(days)]) {
     for (const item of items) {

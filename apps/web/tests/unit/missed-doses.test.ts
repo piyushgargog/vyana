@@ -11,7 +11,7 @@ import {
   runMissedDoseCheck,
   type CareItem,
 } from "@/lib/server/data/missed-doses";
-import { istDate } from "@/lib/server/dates";
+import { istDayOf } from "@vyana/shared";
 import type { PushMessage, PushResult } from "@/lib/server/push";
 
 const iso = (s: string) => new Date(s);
@@ -32,8 +32,8 @@ describe("India time", () => {
     expect(istInstant("2026-10-12", "09:00").toISOString()).toBe("2026-10-12T03:30:00.000Z");
     expect(istInstant("2026-10-12", "00:15").toISOString()).toBe("2026-10-11T18:45:00.000Z");
     expect(istTime(iso("2026-10-12T03:30:00Z"))).toBe("09:00");
-    expect(istDate(iso("2026-10-12T20:00:00Z"))).toBe("2026-10-13"); // 01:30 the next morning in India
-    expect(istDate(iso("2026-10-12T18:29:00Z"))).toBe("2026-10-12");
+    expect(istDayOf(iso("2026-10-12T20:00:00Z").toISOString())).toBe("2026-10-13"); // 01:30 the next morning in India
+    expect(istDayOf(iso("2026-10-12T18:29:00Z").toISOString())).toBe("2026-10-12");
   });
 });
 
