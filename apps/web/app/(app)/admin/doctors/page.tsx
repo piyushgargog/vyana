@@ -127,7 +127,7 @@ export default function AdminDoctorsPage() {
           className={cn(
             "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "doctors"
-              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              ? "bg-surface text-label ring-1 ring-separator"
               : "text-label-2 hover:text-label"
           )}
         >
@@ -139,7 +139,7 @@ export default function AdminDoctorsPage() {
           className={cn(
             "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "hospitals"
-              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              ? "bg-surface text-label ring-1 ring-separator"
               : "text-label-2 hover:text-label"
           )}
         >
@@ -161,7 +161,7 @@ export default function AdminDoctorsPage() {
                   className={cn(
                     "rounded-full px-3.5 py-1 text-[13px] font-semibold capitalize transition-colors",
                     statusFilter === st
-                      ? "bg-surface text-label shadow-[0_1px_3px_rgb(0_0_0/0.08)]"
+                      ? "bg-surface text-label ring-1 ring-separator"
                       : "text-label-2 hover:text-label"
                   )}
                 >
