@@ -11,3 +11,13 @@ export { carePlanMock } from "./care-plan";
 export { interactionsMock } from "./interactions";
 export { triageMock, triageEmergencyMock, TRIAGE_DISCLAIMER } from "./triage";
 export { shareMock, shareMemoryMock } from "./share";
+export {
+  connectDeviceMock,
+  disconnectDeviceMock,
+  deviceConnectionsMock,
+  pauseDeviceMock,
+  resetDevicesMock,
+  resumeDeviceMock,
+  setDeviceConsentMock,
+  syncDeviceMock,
+} from "./devices";

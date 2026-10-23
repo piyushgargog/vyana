@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
 
         <div className="flex flex-col lg:flex-row gap-10 items-start">
           {/* Main Long-Form Content Column (Max Width 68ch) */}
-          <article className="w-full max-w-[68ch] flex-1 space-y-8">
+          <article className="w-full max-w-[68ch] flex-1 space-y-8 [overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
             <Card className="p-6 sm:p-10 space-y-8 text-[15px] sm:text-[16px] leading-relaxed text-label-2">
               {/* 1. Data Vyana stores */}
               <section id="data-stored" className="scroll-mt-24 space-y-3">

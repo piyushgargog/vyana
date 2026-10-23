@@ -59,10 +59,45 @@
 /* Browsers without backdrop-filter get a solid, readable surface instead. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass {
-    background: rgb(255 255 255 / 0.96);
+    background: var(--color-surface);
   }
   .glass-bar {
-    background: rgb(242 242 247 / 0.97);
+    background: var(--color-canvas);
+  }
+}
+
+/*
+ * Reduced transparency (issue #288): when the person asks the system for it, glass turns solid.
+ * There is nothing behind the surface to read any more, so the blur and the translucency both go.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-bar {
+    background: var(--color-canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Increased contrast (issue #288): the same surfaces with a border that still
+   reads as an edge, and the secondary text tokens at near-full strength —
+   the request is for stronger borders AND text. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-label-2: rgb(28 28 30 / 0.95);
+    --color-label-3: rgb(28 28 30 / 0.82);
+  }
+  .glass {
+    background: rgb(255 255 255 / 0.92);
+    border-color: rgb(60 60 67 / 0.55);
+  }
+  .glass-bar {
+    background: rgb(242 242 247 / 0.94);
+    border-bottom: 1px solid rgb(60 60 67 / 0.55);
   }
 }
 
