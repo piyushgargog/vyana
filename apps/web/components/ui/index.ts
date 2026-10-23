@@ -2,7 +2,7 @@
 export { BRAND_MARK_PATH, BrandMark } from "./brand-mark";
 export { cn } from "./cn";
 export { Button, ButtonLink, IconButton, type IconButtonProps } from "./button";
-export { Card, CardHeader, GlassCard } from "./card";
+export { Card, CardHeader } from "./card";
 export { Field, SelectField, TextAreaField } from "./field";
 export { IconTile, ListGroup, ListRow, type TileColor } from "./list";
 export { EmptyState, ErrorState, LargeTitle, Reveal, SegmentedNav, SkeletonLine } from "./layout";
