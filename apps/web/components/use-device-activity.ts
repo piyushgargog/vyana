@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import {
   buildActivityCard,
   buildTrendCharts,
+  istDayOf,
   mocks,
   type ActivityCardModel,
   type DailyActivityRow,
@@ -24,18 +25,13 @@ export interface DeviceActivity {
   readings: DeviceSpotReading[];
 }
 
-/** The calendar day in India (`YYYY-MM-DD`) — the day device rows are stored by. */
-function indiaToday(): string {
-  return new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
-}
-
 export function useDeviceActivity(): DeviceActivity {
   const { useMocks } = useVyanaWeb();
   return useMemo(
     () =>
       useMocks
         ? { today: mocks.activityMockToday, days: mocks.activityMockDays, readings: mocks.activityMockReadings }
-        : { today: indiaToday(), days: [], readings: [] },
+        : { today: istDayOf(new Date().toISOString()), days: [], readings: [] },
     [useMocks],
   );
 }
