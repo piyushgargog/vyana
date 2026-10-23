@@ -75,8 +75,8 @@ function ProposalCard({
 
       <View style={styles.actions}>
         <Button
-          title="Do it"
-          label={`Do it: ${proposal.title}`}
+          title="Got it"
+          label={`Got it: ${proposal.title}`}
           disabled={busy}
           onPress={() => onDecide(proposal, 'approve')}
           style={styles.actionBtn}
