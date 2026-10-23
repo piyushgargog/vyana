@@ -24,8 +24,13 @@ test.describe("patient flow", () => {
     await expect(page).toHaveURL(/\/prescriptions\/scan/);
     await expectNoHorizontalScroll(page);
 
-    // Reports.
-    await page.getByRole("link", { name: /lab reports/i }).first().click();
+    // Reports: the phone tab bar keeps the five most used sections, so no "Lab reports"
+    // link exists in the phone shell (issue #451). Phone users reach reports from Today:
+    // go back to the dashboard and use its "Upload a lab report" quick action. The same
+    // steps work on desktop, so one flow covers both projects.
+    await page.getByRole("link", { name: /dashboard/i }).first().click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await page.getByRole("link", { name: /upload a lab report/i }).first().click();
     await expect(page).toHaveURL(/\/reports\/upload/);
     await expectNoHorizontalScroll(page);
 

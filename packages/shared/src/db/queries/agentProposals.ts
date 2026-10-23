@@ -2,6 +2,7 @@
 // The care agent's proposals (issue #302): the server writes them, the patient decides.
 // Owner: Vaibhav Parmar
 
+import type { AgentProposal } from "../../contracts";
 import type { DbAgentProposal } from "../types";
 import { unwrap, type Sb } from "./helpers";
 
@@ -23,4 +24,42 @@ export async function listMyProposals(sb: Sb, status?: string): Promise<DbAgentP
  */
 export async function decideProposal(sb: Sb, proposalId: string, approve: boolean): Promise<DbAgentProposal> {
   return unwrap(await sb.rpc("decide_proposal", { p_proposal_id: proposalId, p_approve: approve })) as unknown as DbAgentProposal;
+}
+
+/** The table behind a proposal's evidence row, said in the patient's words (never a table name on a screen). */
+const EVIDENCE_SOURCE: Record<string, string> = {
+  prescription_items: "Your prescription",
+  prescriptions: "Your prescription",
+  dose_logs: "Your dose log",
+  reports: "Your lab report",
+  lab_values: "Your lab report",
+  care_plans: "Your care plan",
+};
+
+/**
+ * A stored proposal as the cards show it. The rules write the title, the reason and the evidence labels; this only
+ * renames the evidence source and drops anything that is not a labelled object, so a row can never break a card.
+ */
+export function toAgentProposal(row: DbAgentProposal): AgentProposal {
+  const raw = Array.isArray(row.evidence) ? row.evidence : [];
+  const evidence = raw.flatMap((e) => {
+    if (!e || typeof e !== "object") return [];
+    const item = e as { label?: unknown; detail?: unknown; table?: unknown };
+    if (typeof item.label !== "string" || !item.label.trim()) return [];
+    const detail =
+      typeof item.detail === "string" && item.detail.trim()
+        ? item.detail
+        : EVIDENCE_SOURCE[typeof item.table === "string" ? item.table : ""] ?? "Your records";
+    return [{ label: item.label, detail }];
+  });
+  return {
+    id: row.id,
+    kind: row.kind as AgentProposal["kind"],
+    title: row.title,
+    reason: row.reason,
+    evidence,
+    created_at: row.created_at,
+    expires_at: row.expires_at,
+    status: row.status as AgentProposal["status"],
+  };
 }
