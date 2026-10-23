@@ -19,6 +19,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - When a plan's daily AI limit is used up, AI features answer with the usual 'try again later' message until midnight (India time).
 
 ### Changed
+- The 14 API routes that answered JSON now build the response through one `jsonRes` helper in `apps/web/lib/server/errors.ts`, which keeps the dev-only contract check in one place instead of repeating it in every route (issue #425).
 - Web: appointment booking and the admin hospitals tab no longer look up OPD timings with an agent; they show an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
 - Phone: PM-JAY hospitals (schemes screen and SOS) and OPD timings in appointment booking no longer use an agent. PM-JAY shows a link to the official portal with a plain line that eligibility and the hospital list are checked there; booking shows an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
 - Trend chart, QR code and phone screens now read the shared design tokens (issue #365): the trend chart's second series changes colour, and the phone screens change look slightly, to match the web theme.
