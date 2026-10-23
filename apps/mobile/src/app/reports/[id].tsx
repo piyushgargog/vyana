@@ -1,18 +1,13 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { T } from '@/constants/theme';
-import { Screen } from '@/components/ui';
+import { Button, EmptyState, Screen } from '@/components/ui';
 import { useLabReport } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
 } from '@/components/ui-primitives';
 
 export default function LabReportDetailScreen() {
@@ -23,25 +18,25 @@ export default function LabReportDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={T.color.accent} />
-        <Text style={styles.loadingText}>Loading lab report…</Text>
-      </View>
+      <Screen title="Lab Report">
+        <MobileSkeletonCard lines={4} />
+      </Screen>
     );
   }
 
   if (!report) {
     return (
-      <View style={styles.notFoundContainer}>
-        <Text style={styles.notFoundTitle}>Lab Report Not Found</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back to Reports</Text>
-        </Pressable>
-      </View>
+      <Screen title="Lab Report">
+        <EmptyState
+          ios="doc.text.fill"
+          android="description"
+          title="Lab Report Not Found"
+          body="The report may have been removed, or the link that brought you here is wrong."
+          action={
+            <Button title="Back to Reports" onPress={() => router.back()} />
+          }
+        />
+      </Screen>
     );
   }
 
@@ -138,30 +133,7 @@ export default function LabReportDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 8,
-  },
-  loadingText: { fontSize: 13, color: T.color.label2 },
-  notFoundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
   headerSub: { fontSize: 12, color: T.color.label2 },
-  backBtn: {
-    backgroundColor: T.color.accentStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  backBtnText: { color: T.color.white, fontWeight: '700', fontSize: 12 },
   summaryCard: {
     backgroundColor: T.color.surface,
     borderRadius: 16,
