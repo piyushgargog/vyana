@@ -1,6 +1,6 @@
 import '@/global.css';
 
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 export const Colors = {
   light: {
@@ -79,15 +79,16 @@ export const MaxContentWidth = 800;
 
 /**
  * Vyana design tokens, Liquid Glass (DESIGN §15, ADR-066). Screens use these and the components in
- * `src/components/ui`; never raw hex. Light mode only for v1.
+ * `src/components/ui`; never raw hex. `T` is the light appearance; `darkColors` below is its dark
+ * half (issue #287), with the same keys, reached through `useThemeColors()`.
  */
 export const T = {
   color: {
     canvas: '#F2F2F7',
     surface: '#FFFFFF',
     label: '#1C1C1E',
-    // Aligned with the web tokens (U1): at 0.72/0.60 these measured 4.50:1 and 3.31:1 on the
-    // canvas — under the 4.5:1 small text needs. 0.78/0.74 measure 5.29:1 and 4.75:1.
+    // Aligned with the web tokens (U1): at 0.72/0.60 these measured 4.47:1 and 3.29:1 on the
+    // canvas — under the 4.5:1 small text needs. 0.78/0.74 measure 5.26:1 and 4.74:1.
     label2: 'rgba(60,60,67,0.78)',
     label3: 'rgba(60,60,67,0.74)',
     separator: 'rgba(60,60,67,0.12)',
@@ -99,7 +100,7 @@ export const T = {
     danger: '#FF3B30',
     dangerText: '#D70015',
     dangerSoft: 'rgba(255,59,48,0.1)',
-    ok: '#248A3D',
+    ok: '#1B7330',
     okSoft: 'rgba(52,199,89,0.12)',
     warn: '#C93400',
     warnSoft: 'rgba(255,149,0,0.14)',
@@ -130,3 +131,49 @@ export const T = {
     accent: { shadowColor: '#0D9488', shadowOpacity: 0.28, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   },
 } as const;
+
+/** The same colour tokens as plain strings, so a second palette can stand in for `T.color`. */
+export type ThemeColors = {
+  [K in keyof typeof T.color]: K extends 'tile' ? Record<keyof typeof T.color.tile, string> : string;
+};
+
+/**
+ * The dark half of the tokens (issue #287): the same keys as `T.color`, values taken from the
+ * iOS dark system colours and brightened where a text token needs 4.5:1 on the dark surface —
+ * `label3` sits at 0.55 rather than iOS's 0.30 for that reason, and the light `label3` and `ok`
+ * were raised to the web values in the same pass (0.6 measured 3.3:1, #248A3D measured 3.9:1).
+ */
+export const darkColors: ThemeColors = {
+  canvas: '#000000',
+  surface: '#1C1C1E',
+  label: '#FFFFFF',
+  label2: 'rgba(235,235,245,0.68)',
+  label3: 'rgba(235,235,245,0.55)',
+  separator: 'rgba(84,84,88,0.65)',
+  fill: 'rgba(120,120,128,0.24)',
+  fillStrong: 'rgba(120,120,128,0.36)',
+  accent: '#2DD4BF',
+  accentStrong: '#3EC6B8',
+  accentSoft: 'rgba(45,212,191,0.18)',
+  danger: '#FF453A',
+  dangerText: '#FF6961',
+  dangerSoft: 'rgba(255,69,58,0.16)',
+  ok: '#30D158',
+  okSoft: 'rgba(48,209,88,0.16)',
+  warn: '#FF9F0A',
+  warnSoft: 'rgba(255,159,10,0.18)',
+  white: '#FFFFFF',
+  tile: { accent: '#2DD4BF', blue: '#0A84FF', green: '#30D158', orange: '#FF9F0A', red: '#FF453A', gray: '#98989F', indigo: '#5E5CE6' },
+  glassFallback: 'rgba(28,28,30,0.78)',
+  glassBorder: 'rgba(255,255,255,0.18)',
+};
+
+/**
+ * The palette for the system appearance right now. Screens still read `T` directly (the app
+ * ships light-only until they migrate), but new and shared surfaces — the glass chrome first —
+ * take their colours from here, so the flip to `userInterfaceStyle: "automatic"` becomes a
+ * per-screen migration rather than a rewrite.
+ */
+export function useThemeColors(): ThemeColors {
+  return useColorScheme() === 'dark' ? darkColors : T.color;
+}
