@@ -1,7 +1,7 @@
 import { ReportAnalyzeReq, ReportAnalyzeRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
 import { enforceDailyAiLimit } from "@/lib/server/entitlements";
-import { parseBody, withRoute } from "@/lib/server/errors";
+import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { analyzeReport } from "@/lib/server/reports";
 
 // A transcription, an extraction and a summary call on a photo.
@@ -14,5 +14,5 @@ export const POST = withRoute("reports/analyze", async (req, ctx) => {
   await enforceDailyAiLimit(authed);
   const body = await parseBody(req, ReportAnalyzeReq);
   const res = await analyzeReport(authed, body.file_path, body.report_date);
-  return Response.json(process.env.NODE_ENV === "production" ? res : ReportAnalyzeRes.parse(res));
+  return jsonRes(ReportAnalyzeRes, res);
 }, { rateLimit: rateLimitOf("ai_document") });
