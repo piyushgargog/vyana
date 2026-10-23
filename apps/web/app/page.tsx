@@ -367,7 +367,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 7. Dark "For Doctors" Section */}
+        {/* 7. Dark “For Doctors” Section */}
         <section id="doctors" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="rounded-feature bg-label text-white p-8 sm:p-12 lg:p-14 shadow-float">
             <div className="max-w-2xl mb-10">
