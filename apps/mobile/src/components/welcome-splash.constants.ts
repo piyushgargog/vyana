@@ -5,8 +5,11 @@
  * across node/vitest environments without native mocks or polyfills.
  */
 
-/** How long the welcome splash stays visible before automatic transition (3 seconds). */
-export const SHOW_MS = 3000;
+/** How long the welcome splash stays visible before automatic transition (2.5 seconds at the latest, #488). */
+export const SHOW_MS = 2500;
+
+/** Duration of the entrance fade (and scale, unless Reduce Motion is on) in milliseconds (#488). */
+export const ENTER_MS = 600;
 
 /** Duration of the exit fade animation in milliseconds. */
 export const FADE_MS = 350;
@@ -37,6 +40,35 @@ export const WELCOME_STRINGS = {
   accessibilityLabel:
     'Vyana. Your health, in one calm place. Made with love in India. Tap anywhere to skip.',
 } as const;
+
+/**
+ * The bands of the welcome hero gradient, top to bottom, as `#RRGGBB` colours between
+ * `from` and `to`. The app ships no gradient library (the flag and the rings are drawn
+ * with views too), so the splash stacks these bands; at 32 the step between neighbours
+ * is too small to see. The interpolation deepens quickly (a square-root curve), so the
+ * name and tagline in the middle of the screen already sit on the deep end, where white
+ * words keep their contrast. Only `#RRGGBB` inputs are supported — that is all the
+ * theme's accent tokens use.
+ */
+export function gradientBands(from: string, to: string, count = 32): string[] {
+  const parse = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const a = parse(from);
+  const b = parse(to);
+  const channel = (v: number) =>
+    Math.round(v)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase();
+  return Array.from({ length: count }, (_, i) => {
+    const t = count <= 1 ? 1 : Math.sqrt(i / (count - 1));
+    const rgb = a.map((v, c) => v + (b[c] - v) * t);
+    return `#${rgb.map(channel).join('')}`;
+  });
+}
 
 /**
  * Calculate dimensions and 24-spoke wheel geometry for the India flag.
