@@ -7,8 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import {
@@ -28,8 +31,11 @@ import {
   CardHeader,
   EmptyState,
   ErrorState,
+  HEADER_COLLAPSE_OFFSET,
   Pill,
   Screen,
+  ScreenHeader,
+  ScreenTopBar,
   Symbol,
   Text,
 } from '@/components/ui';
@@ -121,6 +127,7 @@ const TimelineItem = memo(function TimelineItem({
 
 export default function TimelineScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { baseUrl, showToast } = useVyanaMobile();
 
   const { data: timeline = [], isLoading, isError: timelineError, refetch: refetchTimeline } = useTimeline();
@@ -138,6 +145,13 @@ export default function TimelineScreen() {
     scopes: ShareScope[];
   } | null>(null);
   const { data: shareLinks = [] } = useShareLinks();
+  // The frame's collapsing title (#487): the large title lives in the list header and the slim
+  // bar above the list takes the small title once it has scrolled past.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const handleListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const next = event.nativeEvent.contentOffset.y > HEADER_COLLAPSE_OFFSET;
+    setHeaderCollapsed((previous) => (previous === next ? previous : next));
+  }, []);
   // A link turned off (or expired) in Profile must not keep showing here as active.
   const shareUrl = created && !isShareUrlDead(shareLinks, created.url) ? created.url : null;
 
@@ -215,18 +229,28 @@ export default function TimelineScreen() {
   );
 
   return (
-    <Screen title="Timeline" eyebrow="Health" scroll={false}>
+    <Screen scroll={false}>
+      <ScreenTopBar title="Timeline" collapsed={headerCollapsed} />
       <FlatList
         data={filteredEntries}
         keyExtractor={(item) => `${item.kind}:${item.id}`}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
+        style={styles.list}
+        contentContainerStyle={[
+          styles.listContent,
+          // The list owns its bottom room here: the last rows clear the gesture area (#487).
+          { paddingBottom: insets.bottom + T.space.xl },
+        ]}
         removeClippedSubviews
         maxToRenderPerBatch={10}
         windowSize={11}
         initialNumToRender={10}
         ListHeaderComponent={
-          <View style={styles.headerStack}>
+          <>
+            <ScreenHeader eyebrow="Health" title="Timeline" />
+            <View style={styles.headerStack}>
             {/* Share with doctor */}
             <Card>
               <CardHeader title="Share with doctor" />
@@ -366,7 +390,8 @@ export default function TimelineScreen() {
                 );
               })}
             </ScrollView>
-          </View>
+            </View>
+          </>
         }
         ListEmptyComponent={
           isLoading ? (
@@ -394,7 +419,8 @@ export default function TimelineScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { gap: T.space.lg, paddingBottom: T.space.xl },
+  list: { flex: 1 },
+  listContent: { gap: T.space.lg, paddingHorizontal: T.space.lg, paddingBottom: T.space.xl },
   headerStack: { gap: T.space.lg },
   cardHeader: {
     flexDirection: 'row',
