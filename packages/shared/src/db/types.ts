@@ -19,6 +19,7 @@ export type DbLabValue = Tables<"lab_values">;
 export type DbVital = Tables<"vitals">;
 export type DbDailyActivity = Tables<"daily_activity">;
 export type DbDeviceConnection = Tables<"device_connections">;
+export type DbWeeklySummary = Tables<"weekly_summaries">;
 export type DbMealLog = Tables<"meal_logs">;
 export type DbCarePlan = Tables<"care_plans">;
 export type DbCareInvite = Tables<"care_invites">;

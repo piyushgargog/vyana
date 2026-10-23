@@ -127,6 +127,16 @@ select public.unschedule_care_agent();
 
 Check it ran: `select * from cron.job_run_details order by start_time desc limit 5;`
 
+## Switching the weekly summaries on
+
+Migration 0026 prepares the nightly job but does not start it. When a screen reads weekly summaries (the family card, the results page), run in the SQL editor:
+
+```sql
+select public.schedule_weekly_summaries();
+```
+
+That creates the job `weekly-summaries-nightly` (20:30 UTC, 02:00 IST), which recomputes the current and previous weeks in `weekly_summaries`. To stop it: `select public.unschedule_weekly_summaries();`
+
 ## What is still missing
 
 - **Uploaded files.** The images in Supabase Storage are not part of this backup. For the demo that is acceptable (the demo data is synthetic and can be re-uploaded); before real use, copy the two buckets too.
