@@ -19,6 +19,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - When a plan's daily AI limit is used up, AI features answer with the usual 'try again later' message until midnight (India time).
 
 ### Changed
+- Shared health helpers: `monthsAgo` moved from `memory.ts` into the `dates.ts` helper module (behaviour unchanged).
 - The 14 API routes that answered JSON now build the response through one `jsonRes` helper in `apps/web/lib/server/errors.ts`, which keeps the dev-only contract check in one place instead of repeating it in every route (issue #425).
 - Web: appointment booking and the admin hospitals tab no longer look up OPD timings with an agent; they show an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
 - Phone: PM-JAY hospitals (schemes screen and SOS) and OPD timings in appointment booking no longer use an agent. PM-JAY shows a link to the official portal with a plain line that eligibility and the hospital list are checked there; booking shows an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
@@ -26,6 +27,8 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - Phone navigation pass (U2): sheets now show a grabber and the Android sheet closes by tapping the dimmed area behind it, not only the close button. Haptics land on the moments that confirm something — a success tap when a dose is marked taken and when a share link is copied, and the warning tap when an SOS starts — never on ordinary taps. The hospital picker in appointment booking gets a real search field (search keyboard, clear button, results under it, a "no match" line).
 ### Fixed
 - A doctor's own registration number is capped at 40 characters on submit, like the admin manual-check schema for the same column (unbounded values were storable before).
+- Lab report reading: a reference range the model wrote backwards (the low bound above the high bound, for example "100 - 70" where the report prints "70 - 100") no longer computes a wrong flag — the value is left unflagged and marked for review instead.
+- The number check on lab-report values no longer counts digits glued to a letter ("HbA1c", "T3") as written numbers (the care plan and prescription checks stay strict), so a value can only be verified by a number that is actually written in its evidence.
 - One shared text cleaner (`cleanInlineText` in `@vyana/shared`): the medical ID, blood request message and search-link builders no longer re-type the same collapse-whitespace/trim/cap logic.
 - Next.js bumped 16.4.0 → 16.4.1 for three disclosed vulnerabilities (GHSA-2464-fhr4-w9xw and GHSA-673q-mjm6-r5xr, unauthenticated remote code execution; CVE-2026-94482, App Router denial of service).
 - The shared package builds again: two pull requests each exported a hook named `useDeviceConnections`; the provisional one of the devices screen is now `useMockDeviceConnections`.
