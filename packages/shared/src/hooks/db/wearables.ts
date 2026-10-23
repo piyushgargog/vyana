@@ -21,7 +21,7 @@ export function useDailyActivity(days: number) {
 }
 
 /** The patient's device connections, one per provider. */
-export function useDeviceConnections() {
+export function useStoredDeviceConnections() {
   const { sb, ready } = useDb();
   return useQuery<DbDeviceConnection[], DbError>({
     queryKey: [DB_KEYS.deviceConnections],

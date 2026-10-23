@@ -1,7 +1,7 @@
 import type { ShareMemory } from "@vyana/shared";
 import { Card, CardHeader } from "@/components/ui";
 import { TrendChartSvg, type TrendPoint } from "@/components/ui-primitives";
-import { formatChartDateTime, vitalTitle } from "./share-utils";
+import { formatChartDateTime, latestVitalLine, vitalTitle } from "./share-utils";
 
 /**
  * Vitals of the Memory Graph (issue #238): one line per vital type over the last
@@ -28,16 +28,21 @@ export function ShareVitals({ vitals }: { vitals: NonNullable<ShareMemory["vital
             p.value2 != null ? { date: formatChartDateTime(p.at), value: p.value2 } : null,
           );
           const hasSecond = points2.some((p) => p !== null);
+          // Device readings are marked as such in the line under the chart (issue
+          // #328); manual readings carry no mark and read exactly as before.
+          const latestLine = latestVitalLine(sorted, vital.unit);
           return (
-            <TrendChartSvg
-              key={vital.type}
-              title={vitalTitle(vital.type)}
-              unit={vital.unit ?? ""}
-              points={points}
-              points2={hasSecond ? points2 : undefined}
-              seriesLabel={isBp ? "Systolic" : "First reading"}
-              series2Label={isBp ? "Diastolic" : "Second reading"}
-            />
+            <div key={vital.type} className="space-y-2">
+              <TrendChartSvg
+                title={vitalTitle(vital.type)}
+                unit={vital.unit ?? ""}
+                points={points}
+                points2={hasSecond ? points2 : undefined}
+                seriesLabel={isBp ? "Systolic" : "First reading"}
+                series2Label={isBp ? "Diastolic" : "Second reading"}
+              />
+              {latestLine ? <p className="px-4 text-[13px] text-label-2">{latestLine}</p> : null}
+            </div>
           );
         })}
       </Card>

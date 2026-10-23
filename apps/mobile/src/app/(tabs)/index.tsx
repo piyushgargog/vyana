@@ -5,9 +5,11 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import {
   DEFAULT_TIMES,
+  QUERY_ROOTS,
   parseCarePlanJson,
   useActiveItems,
   useAdherence,
@@ -20,6 +22,7 @@ import {
   type FrequencyType,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { SuggestionsForYou } from '@/components/suggestions';
 import {
   Button,
   Card,
@@ -36,6 +39,7 @@ import {
   Text,
 } from '@/components/ui';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
+import { ActivityCard } from '@/components/activity-card';
 import { T } from '@/constants/theme';
 
 export default function PatientHomeScreen() {
@@ -71,10 +75,14 @@ export default function PatientHomeScreen() {
   const { data: appointments = [], refetch: refetchAppts } = useMyAppointments();
   const logDoseMutation = useLogDose();
 
+  const queryClient = useQueryClient();
+
   const onRefresh = () => {
     refetchItems();
     refetchLogs();
     refetchAppts();
+    // The suggestions list has its own query; a pull-to-refresh refreshes it too.
+    void queryClient.invalidateQueries({ queryKey: [QUERY_ROOTS.agentProposals] });
   };
 
   const scheduledSlots = activeItems.flatMap((item) => {
@@ -196,6 +204,9 @@ export default function PatientHomeScreen() {
         onRefresh={onRefresh}
         trailing={<SosPill />}
       >
+        {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
+        <SuggestionsForYou />
+
         {/* Doses Card with Progress */}
         <Card>
           <CardHeader
@@ -312,6 +323,9 @@ export default function PatientHomeScreen() {
             </View>
           )}
         </Card>
+
+        {/* Activity Card (device readings, #328) */}
+        <ActivityCard />
 
         {/* Refill Due Card */}
         {refillDueItems.length > 0 && (

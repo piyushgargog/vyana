@@ -19,6 +19,13 @@ export function addDays(date: string, days: number): string {
   return formatLocalDate(d);
 }
 
+/** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
+export function monthsAgo(date: string, months: number): string {
+  const d = parseLocalDate(date);
+  d.setMonth(d.getMonth() - months);
+  return formatLocalDate(d);
+}
+
 /** Whole calendar days from `from` to `to` (`to` later gives a positive number). */
 export function daysBetween(from: string, to: string): number {
   const a = parseLocalDate(from);

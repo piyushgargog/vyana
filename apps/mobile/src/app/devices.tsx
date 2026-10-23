@@ -6,7 +6,7 @@ import {
   relativeTime,
   useConnectDevice,
   useDisconnectDevice,
-  useDeviceConnections,
+  useMockDeviceConnections,
   usePauseDevice,
   useResumeDevice,
   useSyncHealth,
@@ -41,7 +41,7 @@ export default function ConnectedDevicesScreen() {
   const platform: DevicePlatform | null =
     Platform.OS === 'android' ? 'health_connect' : Platform.OS === 'ios' ? 'apple_health' : null;
 
-  const { data, isLoading, isError, refetch } = useDeviceConnections();
+  const { data, isLoading, isError, refetch } = useMockDeviceConnections();
   const connectMutation = useConnectDevice();
   const pauseMutation = usePauseDevice();
   const resumeMutation = useResumeDevice();

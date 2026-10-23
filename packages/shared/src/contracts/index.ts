@@ -118,10 +118,18 @@ export const EmergencySosRes = z.object({
   sms_body: z.string(),                  // includes https://maps.google.com/?q=<lat>,<lng>
 });
 
+// A registration year runs from 1950 to the current calendar year in India. The year is read when the request is
+// validated (not when this module loads), in Asia/Kolkata so the limit does not flip at 05:30 IST on 1 January.
+export const currentRegistrationYear = (): number =>
+  Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric" }).format(new Date()));
+const registrationYear = z.number().int().min(1950).refine((y) => y <= currentRegistrationYear(), {
+  message: "Year of registration cannot be in the future",
+});
+
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
-  reg_no: z.string().min(1), state_council: z.string().min(2),
-  year_of_registration: z.number().int().optional(),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2),
+  year_of_registration: registrationYear.optional(),
 });
 export const DoctorVerifyRes = z.object({
   status: z.enum(["verified","failed","pending"]),
@@ -135,7 +143,66 @@ export const DoctorVerifyRes = z.object({
 export const AdminDoctorCheckReq = z.object({
   doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
   reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
-  year: z.number().int().min(1950).max(2100).nullable(), note: z.string().max(300),
+  year: registrationYear.nullable(), note: z.string().max(300),
+});
+
+// ---------- Plans, waitlist and AI usage (v1.3, #305) ----------
+// PROVISIONAL, mock-first: the plans table (plans.features) and the M1/M2 hooks land with
+// Vaibhav's work; these schemas carry the same shape so the screens do not change. The page
+// reads its numbers from the plan's features — never from text typed into a page — and no plan
+// carries a price or a date anywhere.
+export const Plan = z.object({
+  slug: z.enum(["free", "family"]),
+  name: z.string().min(1),
+  features: z.array(z.string().min(1)),
+  ai_uses_per_day: z.number().int().min(0),
+});
+export const PlansRes = z.object({
+  plans: z.array(Plan),
+  current_slug: z.enum(["free", "family"]),
+});
+export const JoinWaitlistReq = z.object({
+  email: z.string().email(),
+  note: z.string().max(200).optional(),
+});
+export const JoinWaitlistRes = z.object({
+  status: z.enum(["joined", "already_on_list"]),
+});
+export const AiUsageTodayRes = z.object({
+  used: z.number().int().min(0),
+  limit: z.number().int().min(0),
+  /** ISO instant when today's count resets (midnight in India). */
+  resets_at: z.string(),
+});
+
+// ---------- Care agent proposals (v1.3, #304) ----------
+// Mock-first; kinds and statuses are the ones the agent_proposals table allows (migration 0017): the final contract lands with the care-agent server PR and Vaibhav's
+// M3 hooks; these schemas exist so the patient screens can be built and reviewed against the
+// shape the issue describes. A proposal is proposed by rules from the patient's own records;
+// the patient confirms ("approve") or dismisses ("reject") it, and a rejected one can be
+// restored while the server allows undo. Wording never carries a dose or a diagnosis.
+export const AgentProposalKind = z.enum(["refill_due", "lab_recheck", "missed_dose_pattern", "visit_summary", "care_plan_draft", "follow_up_message"]);
+export const AgentProposal = z.object({
+  id: z.string().min(1),
+  kind: AgentProposalKind,
+  title: z.string().min(1),
+  reason: z.string().min(1),
+  evidence: z.array(z.object({ label: z.string().min(1), detail: z.string().min(1) })),
+  created_at: z.string(),
+  expires_at: z.string().nullable(),
+  status: z.enum(["pending", "approved", "rejected", "expired", "done", "failed"]),
+});
+export const AgentProposalsRes = z.object({ proposals: z.array(AgentProposal) });
+export const AgentDecideReq = z.object({
+  id: z.string().min(1),
+  decision: z.enum(["approve", "reject", "restore"]),
+});
+export const AgentDecideRes = z.object({
+  status: z.enum(["approved", "rejected", "pending"]),
+  /** What happened, in words for the confirmation toast; null when there is nothing to say. */
+  result_text: z.string().nullable(),
+  /** Seconds during which a rejection can be undone; 0 when the server does not allow undo. */
+  undo_seconds: z.number().int().min(0),
 });
 
 // ---------- POST /api/prescriptions/extract ----------
@@ -265,7 +332,7 @@ export const ShareMemory = z.object({
   })).optional(),
   vitals: z.array(z.object({                          // last 12 months; value2 = the second number (diastolic)
     type: z.string(), unit: z.string().nullable(),
-    points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable() })),
+    points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable(), from_device: z.boolean().optional() })),
   })).optional(),
   medicines: z.array(z.object({
     name: z.string(), strength: z.string().nullable(), dose: z.string().nullable(), frequency: z.string(),
@@ -362,6 +429,16 @@ export type EmergencySosReq = z.infer<typeof EmergencySosReq>;
 export type EmergencySosRes = z.infer<typeof EmergencySosRes>;
 export type DoctorVerifyReq = z.infer<typeof DoctorVerifyReq>;
 export type DoctorVerifyRes = z.infer<typeof DoctorVerifyRes>;
+export type AgentProposalKind = z.infer<typeof AgentProposalKind>;
+export type AgentProposal = z.infer<typeof AgentProposal>;
+export type AgentProposalsRes = z.infer<typeof AgentProposalsRes>;
+export type AgentDecideReq = z.infer<typeof AgentDecideReq>;
+export type AgentDecideRes = z.infer<typeof AgentDecideRes>;
+export type Plan = z.infer<typeof Plan>;
+export type PlansRes = z.infer<typeof PlansRes>;
+export type JoinWaitlistReq = z.infer<typeof JoinWaitlistReq>;
+export type JoinWaitlistRes = z.infer<typeof JoinWaitlistRes>;
+export type AiUsageTodayRes = z.infer<typeof AiUsageTodayRes>;
 export type AdminDoctorCheckReq = z.infer<typeof AdminDoctorCheckReq>;
 export type PrescriptionExtractReq = z.infer<typeof PrescriptionExtractReq>;
 export type PrescriptionExtractRes = z.infer<typeof PrescriptionExtractRes>;

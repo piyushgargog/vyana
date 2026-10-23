@@ -32,6 +32,8 @@ import {
   type FrequencyType,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
+import { SuggestionsForYou } from "@/components/suggestions";
+import { ActivityCard } from "@/components/activity-card";
 import { AiSafetyBanner, TrendChartSvg } from "@/components/ui-primitives";
 import {
   Button,
@@ -339,6 +341,11 @@ export default function PatientDashboardPage() {
         />
       </Reveal>
 
+      {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
+      <Reveal>
+        <SuggestionsForYou />
+      </Reveal>
+
       {/* Main Grid: Doses & Visit Token */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 2. Doses List Card */}
@@ -575,7 +582,10 @@ export default function PatientDashboardPage() {
           </div>
         </Card>
 
-        {/* 5. Quick actions */}
+        {/* 5. Activity Card (device readings, #328) */}
+        <ActivityCard />
+
+        {/* 6. Quick actions */}
         <Card className="flex flex-col justify-between">
           <div>
             <CardHeader title="Do more with Vyana" />
