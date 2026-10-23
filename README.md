@@ -41,6 +41,10 @@ It reads public health sources directly (the e-RaktKosh blood stock, OpenStreetM
 |---|---|
 | [![Vyana home page, desktop](docs/images/home-desktop.png)](docs/images/home-desktop.png) | [![Vyana home page, phone](docs/images/home-phone.png)](docs/images/home-phone.png) |
 
+| Shared record — what a doctor sees (desktop) | Shared record — what a doctor sees (phone) |
+|---|---|
+| [![Vyana shared record page, desktop](docs/images/share-desktop.png)](docs/images/share-desktop.png) | [![Vyana shared record page, phone](docs/images/share-phone.png)](docs/images/share-phone.png) |
+
 More screens (Today, Ask Vyana, a care plan, blood search, SOS and the rest) are captured with [`docs/images/capture-screens.mjs`](docs/images/capture-screens.mjs) against the demo patient — see [`docs/images/README.md`](docs/images/README.md).
 
 ## Where the live web comes in
