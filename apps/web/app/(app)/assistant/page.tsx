@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { track, useApi, useChatMessages, useChatSessions, usePlanAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
+import { track, useApi, useChatMessages, useChatSessions, useCurrentPlan, useMyAiUsageToday, useRefreshAiUsage, useRefreshChatHistory } from "@vyana/shared";
 import {
   Button,
   Card,
@@ -23,6 +23,15 @@ import {
 import { Loader2, MessageCircleQuestion } from "lucide-react";
 import { ChatBubble } from "./chat-bubble";
 import type { AssistantMessage } from "./chat-helpers";
+
+/** The next midnight in India (Asia/Kolkata) — when today's AI count resets, because
+ *  `my_ai_usage_today` counts the day in Asia/Kolkata (migration 0015). */
+function nextIstMidnight(from: Date = new Date()): Date {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(from.getTime() + IST_OFFSET_MS);
+  const next = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1, 0, 0, 0);
+  return new Date(next - IST_OFFSET_MS);
+}
 
 export default function AssistantPage() {
   const api = useApi();
@@ -99,8 +108,16 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const isStreaming = status === "submitted" || status === "streaming";
 
-  // "AI uses left today" (#305): the count comes from usePlanAiUsageToday and the plan limit.
-  const { data: aiUsage } = usePlanAiUsageToday();
+  // "AI uses left today" (#418): the limit comes from the real plan through
+  // useCurrentPlan and the count from useMyAiUsageToday — the same my_ai_usage_today
+  // count the server enforces. When either cannot be read, or the plan sets no limit,
+  // no number is shown at all (never a guessed plan or limit).
+  const { data: plan } = useCurrentPlan();
+  const { data: usageToday } = useMyAiUsageToday();
+  const aiUsage =
+    plan && typeof plan.daily_ai_calls === "number" && usageToday
+      ? { used: usageToday.calls, limit: plan.daily_ai_calls }
+      : undefined;
   const limitReached = aiUsage !== undefined && aiUsage.used >= aiUsage.limit;
   const limitTrackedRef = useRef(false);
   useEffect(() => {
@@ -110,7 +127,7 @@ export default function AssistantPage() {
     }
   }, [limitReached]);
   const resetText = aiUsage
-    ? new Date(aiUsage.resets_at).toLocaleString("en-IN", {
+    ? nextIstMidnight().toLocaleString("en-IN", {
         day: "numeric",
         month: "short",
         hour: "numeric",
