@@ -90,12 +90,22 @@ export function MobileTrendChart({
   points,
   refLow,
   refHigh,
+  label,
+  flags = true,
 }: {
   title: string;
   unit: string;
   points: MobileTrendPoint[];
   refLow?: number | null;
   refHigh?: number | null;
+  /** Screen-reader label for the whole chart; defaults to the readings count. */
+  label?: string;
+  /**
+   * Print the flag word under each value and colour the bars by it (lab reports).
+   * Device readings pass false (issue #328): a device value is never labelled
+   * high/low/normal here, and every bar keeps the neutral accent.
+   */
+  flags?: boolean;
 }) {
   if (points.length === 0) {
     return (
@@ -116,12 +126,12 @@ export function MobileTrendChart({
   return (
     <View
       accessibilityRole="summary"
-      accessibilityLabel={`${title} trend chart across ${points.length} readings`}
+      accessibilityLabel={label ?? `${title} trend chart across ${points.length} readings`}
       style={styles.chartCard}
     >
       <View style={styles.chartHeader}>
         <Text variant="headline">
-          {title} Trend ({unit})
+          {unit ? `${title} Trend (${unit})` : `${title} Trend`}
         </Text>
         {typeof refLow === 'number' && typeof refHigh === 'number' && (
           <Text variant="footnote" tone="tertiary">
@@ -138,9 +148,11 @@ export function MobileTrendChart({
             pt.flag === 'high' ? 'High' : pt.flag === 'low' ? 'Low' : 'Normal';
           // The bar takes the colour of the flag the report itself gave (#332):
           // a calm warning tone for "above range", the strong red only for "low",
-          // never one alarm colour for everything.
-          const barColor =
-            pt.flag === 'high'
+          // never one alarm colour for everything. With flags off (device data)
+          // every bar is the neutral accent and no flag word is printed.
+          const barColor = !flags
+            ? T.color.accent
+            : pt.flag === 'high'
               ? T.color.warn
               : pt.flag === 'low'
                 ? T.color.danger
@@ -157,7 +169,7 @@ export function MobileTrendChart({
                 variant="caption"
                 style={[styles.barValText, { color: barColor }, !showLabel && styles.hiddenLabel]}
               >
-                {pt.value} ({flagText})
+                {flags ? `${pt.value} (${flagText})` : pt.value}
               </Text>
               <View
                 style={[

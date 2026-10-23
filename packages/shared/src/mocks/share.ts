@@ -45,7 +45,7 @@ export const shareMemoryMock: ShareRes = {
         type: "blood_pressure", unit: "mmHg",
         points: [
           { at: "2026-10-01T08:00:00.000Z", value: 142, value2: 90 },
-          { at: "2026-10-08T08:00:00.000Z", value: 138, value2: 88 },
+          { at: "2026-10-08T08:00:00.000Z", value: 138, value2: 88, from_device: true },
         ],
       },
     ],

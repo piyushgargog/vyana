@@ -91,6 +91,25 @@ describe("buildMemory", () => {
     ]);
   });
 
+  it("marks a reading the sync engine stored as from a device, and leaves manual ones unmarked", () => {
+    const memory = buildMemory(
+      src({
+        vitals: [
+          { type: "bp", value: 120, value2: 80, unit: "mmHg", measured_at: "2026-10-01T00:00:00Z", source: "manual" },
+          { type: "bp", value: 118, value2: 78, unit: "mmHg", measured_at: "2026-10-02T00:00:00Z", source: "health_connect" },
+          { type: "bp", value: 121, value2: 81, unit: "mmHg", measured_at: "2026-10-03T00:00:00Z" },
+        ],
+      }),
+      ["vitals"],
+      TODAY,
+    );
+    expect(memory.vitals?.[0].points).toEqual([
+      { at: "2026-10-01T00:00:00Z", value: 120, value2: 80 },
+      { at: "2026-10-02T00:00:00Z", value: 118, value2: 78, from_device: true },
+      { at: "2026-10-03T00:00:00Z", value: 121, value2: 81 },
+    ]);
+  });
+
   it("starts a medicine on the day it was started, not the day it was typed in", () => {
     const memory = buildMemory(
       src({

@@ -120,7 +120,7 @@ export const EmergencySosRes = z.object({
 
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
-  reg_no: z.string().min(1), state_council: z.string().min(2),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2),
   year_of_registration: z.number().int().optional(),
 });
 export const DoctorVerifyRes = z.object({
@@ -294,7 +294,7 @@ export const ShareMemory = z.object({
   })).optional(),
   vitals: z.array(z.object({                          // last 12 months; value2 = the second number (diastolic)
     type: z.string(), unit: z.string().nullable(),
-    points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable() })),
+    points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable(), from_device: z.boolean().optional() })),
   })).optional(),
   medicines: z.array(z.object({
     name: z.string(), strength: z.string().nullable(), dose: z.string().nullable(), frequency: z.string(),
