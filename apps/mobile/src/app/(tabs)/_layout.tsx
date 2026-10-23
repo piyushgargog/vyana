@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
-import { T } from '@/constants/theme';
+import { scrollScreenToTop } from '@/components/ui/screen-scroll';
+import { T, useThemeColors } from '@/constants/theme';
+import { useReduceTransparency } from '@/hooks/use-accessibility-setting';
 import {
   CONSENT_VERSION,
   useConsent,
@@ -14,6 +16,9 @@ import {
 
 export default function MobileTabsLayout() {
   const router = useRouter();
+  const pathname = usePathname();
+  const reduceTransparency = useReduceTransparency();
+  const themeColors = useThemeColors();
   const { user, loading: sessionLoading } = useSession();
   const { data: consentRecord, isLoading: consentLoading } =
     useConsent(CONSENT_VERSION);
@@ -62,35 +67,57 @@ export default function MobileTabsLayout() {
     );
   }
 
-  // Native glass tab bar (Liquid Glass on iOS, native bottom bar on Android).
+  // Native glass tab bar (Liquid Glass on iOS, native bottom bar on Android). The glass lives
+  // only here, on the bar (#487): on iOS the system material itself turns solid when the person
+  // asks for reduced transparency, and on Android the bar gets the solid surface colour instead.
   // Every tab screen draws its own large title with SOS in the trailing slot (#130, #132).
+  //
+  // A re-tap of the tab you are already on scrolls its root to the top: the trigger hears the
+  // press, and the screen registered its scroll view under its pathname (`Screen`).
+  const retap = (path: string) => () => {
+    if (pathname === path) {
+      scrollScreenToTop(path);
+    }
+  };
+
   return (
     <NativeTabs
+      labelVisibilityMode="labeled"
+      backgroundColor={reduceTransparency ? themeColors.surface : undefined}
       iconColor={{ default: T.color.label3, selected: T.color.accent }}
       labelStyle={{
-        default: { fontSize: 11, fontWeight: '600', color: T.color.label3 },
-        selected: { fontSize: 11, fontWeight: '600', color: T.color.accent },
+        default: { fontSize: T.text.caption2.fontSize, fontWeight: '600', color: T.color.label3 },
+        selected: { fontSize: T.text.caption2.fontSize, fontWeight: '600', color: T.color.accent },
       }}
     >
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="index" listeners={{ tabPress: retap('/') }}>
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="meds">
+      <NativeTabs.Trigger name="meds" listeners={{ tabPress: retap('/meds') }}>
         <NativeTabs.Trigger.Label>Medicines</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="pills.fill" md="medication" />
+        <NativeTabs.Trigger.Icon sf={{ default: 'pills', selected: 'pills.fill' }} md="medication" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="reports">
+      <NativeTabs.Trigger name="reports" listeners={{ tabPress: retap('/reports') }}>
         <NativeTabs.Trigger.Label>Reports</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="doc.text.fill" md="lab_profile" />
+        <NativeTabs.Trigger.Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} md="lab_profile" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="assistant">
+      <NativeTabs.Trigger name="assistant" listeners={{ tabPress: retap('/assistant') }}>
         <NativeTabs.Trigger.Label>Ask</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bubble.left.and.text.bubble.right.fill" md="forum" />
+        <NativeTabs.Trigger.Icon
+          sf={{
+            default: 'bubble.left.and.text.bubble.right',
+            selected: 'bubble.left.and.text.bubble.right.fill',
+          }}
+          md="forum"
+        />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
+      <NativeTabs.Trigger name="profile" listeners={{ tabPress: retap('/profile') }}>
         <NativeTabs.Trigger.Label>Me</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="account_circle" />
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
+          md="account_circle"
+        />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

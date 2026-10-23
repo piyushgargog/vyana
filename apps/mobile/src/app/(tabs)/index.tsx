@@ -203,6 +203,7 @@ export default function PatientHomeScreen() {
         title={greeting}
         onRefresh={onRefresh}
         trailing={<SosPill />}
+        floatingAction
       >
         {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
         <SuggestionsForYou />
