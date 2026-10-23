@@ -19,10 +19,13 @@ export function addDays(date: string, days: number): string {
   return formatLocalDate(d);
 }
 
-/** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
+/** The calendar day (`YYYY-MM-DD`) `months` months before `date`, clamped to the shorter month. */
 export function monthsAgo(date: string, months: number): string {
   const d = parseLocalDate(date);
+  const day = d.getDate();
+  d.setDate(1); // stepping back from the 1st never rolls into the next month
   d.setMonth(d.getMonth() - months);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
   return formatLocalDate(d);
 }
 
@@ -38,4 +41,9 @@ export function atLocalTime(date: string, time: string): Date {
   const d = parseLocalDate(date);
   d.setHours(Number(time.slice(0, 2)), Number(time.slice(3, 5)), 0, 0);
   return d;
+}
+
+/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. India is UTC+5:30 all year (no daylight saving). */
+export function istDayOf(timestamp: string): string {
+  return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
 }

@@ -9,7 +9,7 @@
 // A device reading is never a diagnosis: nothing here flags a reading as high, low, good or
 // bad, and the only sentences are the fixed ones of `describeTrend` (trends.ts).
 
-import { addDays } from "./dates";
+import { addDays, istDayOf } from "./dates";
 import { computeTrend, describeTrend, type DayValue } from "./trends";
 
 /** The fixed line under the SpO2, blood pressure and glucose charts (ADR-073). */
@@ -190,11 +190,6 @@ export interface TrendChartModel {
   latest: { text: string; day: string; at: string | null; from: string } | null;
   /** The screen-reader label of the chart, e.g. "Steps, last 7 days, average 7000 steps". */
   label: string;
-}
-
-/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. India is UTC+5:30 all year. */
-function istDayOf(timestamp: string): string {
-  return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
 }
 
 const average = (values: number[]): number | null =>

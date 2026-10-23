@@ -73,6 +73,8 @@ export type ApiClientOptions = {
 };
 
 export type ApiClient = {
+  /** True when this client answers from the fixtures (no network, no database): hooks that can read the real data check it. */
+  useMocks: boolean;
   /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
   agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
   /** RapidBlood: `search` starts a blood bank search job; poll `job(job_id)` until `status === "done"`. */
@@ -278,6 +280,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       exportData: () => request({ method: "GET", path: "/api/me/export", resSchema: MeExportRes, mock: { profiles: [] } }),
       deleteAccount: () => request({ method: "DELETE", path: "/api/me", resSchema: OkRes, mock: { ok: true as const } }),
     },
+    useMocks: Boolean(opts.useMocks),
     chatUrl: `${baseUrl}/api/assistant/chat`,
     authHeaders,
   };

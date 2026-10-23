@@ -34,6 +34,7 @@ import {
   listMyAppointments,
   listMyProposals,
   listPlans,
+  toAgentProposal,
   listPrescriptions,
   listVerifiedDoctors,
   liveChannelName,
@@ -747,5 +748,27 @@ describe("plans and the waitlist", () => {
   it("reads an address that is already waiting as false, never as the stored row", async () => {
     const f = fakeSupabase({ responses: { "rpc:join_waitlist": [ok(false)] } });
     await expect(joinWaitlist(f.sb, "person@example.com", "family", "their private note")).resolves.toBe(false);
+  });
+});
+
+describe("toAgentProposal", () => {
+  const row = {
+    id: "p-1", patient_id: "u-1", kind: "refill_due", title: "Metformin may need a refill", reason: "About 3 days of this medicine are left.",
+    payload: {}, status: "pending", rule_id: "refill-v1", dedupe_key: "k", created_at: "2026-10-23T00:00:00Z", expires_at: "2026-10-30T00:00:00Z", decided_at: null,
+  };
+
+  it("says the evidence source in the patient's words and keeps the rule's own text", () => {
+    const out = toAgentProposal({ ...row, evidence: [{ table: "prescription_items", id: "i-1", label: "Pack size and dose from your prescription" }] } as never);
+    expect(out).toMatchObject({ id: "p-1", kind: "refill_due", title: row.title, reason: row.reason, status: "pending", expires_at: row.expires_at });
+    expect(out.evidence).toEqual([{ label: "Pack size and dose from your prescription", detail: "Your prescription" }]);
+  });
+
+  it("uses a detail that is already there, falls back to 'Your records', and drops what is not a labelled object", () => {
+    const out = toAgentProposal({ ...row, evidence: [{ label: "A", detail: "Own detail" }, { table: "something_new", label: "B" }, { table: "reports" }, "x", null, { label: "  " }] } as never);
+    expect(out.evidence).toEqual([{ label: "A", detail: "Own detail" }, { label: "B", detail: "Your records" }]);
+  });
+
+  it("survives evidence that is not a list", () => {
+    expect(toAgentProposal({ ...row, evidence: {} } as never).evidence).toEqual([]);
   });
 });

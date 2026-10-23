@@ -7,7 +7,7 @@
 // Owner: Vaibhav Parmar
 
 import type { ShareMemory, ShareScope } from "../contracts";
-import { addDays, monthsAgo } from "./dates";
+import { addDays, istDayOf, monthsAgo } from "./dates";
 
 /** The parts of a record a share link can carry (the words of migration 0014 and the contracts). */
 export const SHARE_SCOPES = ["labs", "vitals", "medicines", "adherence"] as const;
@@ -78,11 +78,6 @@ type VitalSeries = NonNullable<ShareMemory["vitals"]>[number];
 type Medicine = NonNullable<ShareMemory["medicines"]>[number];
 type Adherence = NonNullable<ShareMemory["adherence"]>;
 
-/** The day in India that a timestamp falls on. India is UTC+5:30 all year (no daylight saving). */
-function istDateOf(timestamp: string): string {
-  return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
-}
-
 /** A flag from the database as the contract holds it (the column's check already holds it to these four). */
 function labFlag(flag: string): MemoryLabFlag {
   return flag === "low" || flag === "normal" || flag === "high" ? flag : "unknown";
@@ -122,7 +117,7 @@ function buildVitals(vitals: MemoryVital[], today: string): VitalSeries[] {
   const cutoff = monthsAgo(today, MEMORY_VITAL_MONTHS);
   const byType = new Map<string, MemoryVital[]>();
   for (const v of vitals) {
-    if (v.value === null || istDateOf(v.measured_at) < cutoff) continue;
+    if (v.value === null || istDayOf(v.measured_at) < cutoff) continue;
     const list = byType.get(v.type) ?? [];
     list.push(v);
     byType.set(v.type, list);
@@ -160,7 +155,7 @@ function buildMedicines(items: MemoryMedicineItem[], today: string): Medicine[] 
       frequency: i.frequency,
       // The day the medicine started is what the prescription says (start_date); the day the
       // row was typed in is only the fallback, or a medicine taken for years would look new.
-      start: i.start_date ?? istDateOf(i.created_at),
+      start: i.start_date ?? istDayOf(i.created_at),
       end: i.end_date,
     }))
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.name < b.name ? -1 : 1));
@@ -177,7 +172,7 @@ function buildAdherence(logs: MemoryDoseLog[], today: string): Adherence {
   let taken = 0;
   let logged = 0;
   for (const log of logs) {
-    const day = byDate.get(istDateOf(log.scheduled_for));
+    const day = byDate.get(istDayOf(log.scheduled_for));
     if (!day) continue;
     if (log.status === "taken" || log.status === "missed" || log.status === "skipped") {
       day[log.status]++;
