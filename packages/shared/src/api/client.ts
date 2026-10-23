@@ -73,12 +73,12 @@ export type ApiClientOptions = {
 };
 
 export type ApiClient = {
+  /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
+  agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
   /** RapidBlood: `search` starts a blood bank search job; poll `job(job_id)` until `status === "done"`. */
   blood: { search(body: BloodSearchReq): Promise<BloodSearchRes>; job(jobId: string): Promise<BloodSearchRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
-  /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
-  agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
   /** Plans, the Family waitlist and today's AI usage (#305, provisional contract). */
   plans: { current(): Promise<PlansRes> };
   waitlist: { join(body: JoinWaitlistReq): Promise<JoinWaitlistRes> };
@@ -143,7 +143,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
 
     if (opts.useMocks) {
       await sleep(minDelay + Math.random() * (maxDelay - minDelay));
-      const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
       // Copy so a screen that mutates the result never changes the shared fixture.
       const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
       return resSchema.parse(JSON.parse(JSON.stringify(mockValue)));
@@ -205,18 +204,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
 
   return {
-    blood: {
-      search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
-      job: (jobId) => {
-        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
-        return request({ method: "GET", path: `/api/blood/search/${encodeURIComponent(jobId)}`, resSchema: BloodSearchRes, mock: mocks.bloodSearchMock });
-      },
-    },
-    emergency: {
-      nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
-      sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
-    },
-    doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     agentProposals: {
       // Mock mode uses the stateful in-memory store (not the copied static fixture), so an approve
       // or reject actually settles the card for the rest of the session (#304, mock-first).
@@ -229,6 +216,28 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       },
       decide: async (body) => {
         const req = AgentDecideReq.safeParse(body);
+        if (!req.success) {
+          throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
+        }
+        if (opts.useMocks) {
+          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
+          return AgentDecideRes.parse(mocks.agentDecideMock(req.data));
+        }
+        return post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, req.data, () => mocks.agentDecideMock(req.data));
+      },
+    },
+    blood: {
+      search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
+      job: (jobId) => {
+        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
+        return request({ method: "GET", path: `/api/blood/search/${encodeURIComponent(jobId)}`, resSchema: BloodSearchRes, mock: mocks.bloodSearchMock });
+      },
+    },
+    emergency: {
+      nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
+      sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
+    },
+    doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     plans: {
       current: () =>
         request({ method: "GET", path: "/api/plans/me", resSchema: PlansRes, mock: mocks.plansMock }),
@@ -242,11 +251,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         }
         if (opts.useMocks) {
           await sleep(minDelay + Math.random() * (maxDelay - minDelay));
-          return AgentDecideRes.parse(mocks.agentDecideMock(req.data));
-        }
-        return post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, req.data, () => mocks.agentDecideMock(req.data));
-      },
-    },
           return JoinWaitlistRes.parse(mocks.joinWaitlistMock(req.data));
         }
         return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, () => mocks.joinWaitlistMock(req.data));
