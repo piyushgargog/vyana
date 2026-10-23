@@ -10,7 +10,7 @@ import {
   CONSENT_VERSION,
   useAcceptConsent,
   useConsent,
-  useDeviceConnections,
+  useMockDeviceConnections,
   useMyProfile,
   useSession,
   useSetDeviceConsent,
@@ -62,7 +62,7 @@ export default function MobileConsentScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // Device health data is a separate consent (#327): off by default, never part of
   // the DPDP accept above, and a phone cannot connect a device without it.
-  const { data: deviceData } = useDeviceConnections();
+  const { data: deviceData } = useMockDeviceConnections();
   const deviceConsentMutation = useSetDeviceConsent();
   const deviceConsent = deviceData?.consent_granted ?? false;
   const [explainerShown, setExplainerShown] = useState(false);
