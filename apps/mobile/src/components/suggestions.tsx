@@ -1,14 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useDecideAgentProposal, useMyAgentProposals, type AgentProposal } from '@vyana/shared';
+import {
+  useDecideAgentProposal,
+  useDecideProposal,
+  useMyAgentProposals,
+  useMyProposals,
+} from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
 import { Button, Card, CardHeader, Symbol, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
+import {
+  EMPTY_SUGGESTIONS_TEXT,
+  decideArgs,
+  toSuggestionView,
+  visibleSuggestions,
+  type SuggestionView,
+} from './suggestions-data';
 
-// "Suggestions for you" (#304): care-agent proposals the patient confirms or dismisses, at the
-// top of Today. Mock-first against the provisional contract in @vyana/shared; the wording comes
-// from the proposal itself (rules wrote it), never from this component.
+// "Suggestions for you" (#304, #417): care-agent proposals the patient confirms or dismisses,
+// at the top of Today. The cards read the real proposals through the db hooks (useMyProposals /
+// useDecideProposal); the mock store still serves tests and EXPO_PUBLIC_USE_MOCKS mode. The
+// wording comes from the proposal itself (rules wrote it), never from this component. The
+// deciding function has no undo, so a dismissal is final — there is no Undo button.
 const MAX_COLLAPSED = 3;
 const DISCLAIMER = 'Vyana suggested this from your own records.';
 
@@ -26,9 +40,9 @@ function ProposalCard({
   busy,
   onDecide,
 }: {
-  proposal: AgentProposal;
+  proposal: SuggestionView;
   busy: boolean;
-  onDecide: (p: AgentProposal, decision: 'approve' | 'reject') => void;
+  onDecide: (p: SuggestionView, decision: 'approve' | 'reject') => void;
 }) {
   const [whyOpen, setWhyOpen] = useState(false);
   return (
@@ -97,67 +111,33 @@ function ProposalCard({
   );
 }
 
-export function SuggestionsForYou() {
-  const { showToast } = useVyanaMobile();
-  const { data, isLoading, isError, refetch } = useMyAgentProposals();
-  const decide = useDecideAgentProposal();
+function SuggestionsView({
+  proposals,
+  isLoading,
+  isError,
+  refetch,
+  busyId,
+  onDecide,
+}: {
+  proposals: SuggestionView[];
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+  busyId: string | null;
+  onDecide: (p: SuggestionView, decision: 'approve' | 'reject') => void;
+}) {
   const [showAll, setShowAll] = useState(false);
-  // Every dismissal keeps its own undo slot and timer, so dismissing a second card
-  // never makes the first one permanent early.
-  const [undos, setUndos] = useState<{ id: string; title: string }[]>([]);
-  const undoTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   // A ticking clock, so a card whose expiry passes while the tab sits open leaves the
   // list without waiting for a refetch.
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const timers = undoTimers.current;
     const tick = setInterval(() => setNow(Date.now()), 30_000);
-    return () => {
-      clearInterval(tick);
-      timers.forEach((t) => clearTimeout(t));
-    };
+    return () => clearInterval(tick);
   }, []);
 
-  const proposals = (data?.proposals ?? []).filter(
-    (p) => p.expires_at === null || new Date(p.expires_at).getTime() > now
-  );
-  const visible = showAll ? proposals : proposals.slice(0, MAX_COLLAPSED);
-
-  const dropUndo = (id: string) => {
-    const timer = undoTimers.current.get(id);
-    if (timer) clearTimeout(timer);
-    undoTimers.current.delete(id);
-    setUndos((prev) => prev.filter((u) => u.id !== id));
-  };
-
-  const handleDecide = (p: AgentProposal, decision: 'approve' | 'reject') => {
-    decide.mutate(
-      { id: p.id, decision },
-      {
-        onSuccess: (res) => {
-          if (decision === 'approve') {
-            showToast(res.result_text ?? 'Done', 'success');
-          } else if (res.undo_seconds > 0) {
-            setUndos((prev) => [...prev.filter((u) => u.id !== p.id), { id: p.id, title: p.title }]);
-            undoTimers.current.set(
-              p.id,
-              setTimeout(() => dropUndo(p.id), res.undo_seconds * 1000)
-            );
-          }
-        },
-        onError: (err) => showToast(err.message, 'error'),
-      }
-    );
-  };
-
-  const handleUndo = (id: string) => {
-    dropUndo(id);
-    decide.mutate(
-      { id, decision: 'restore' },
-      { onError: (err) => showToast(err.message, 'error') }
-    );
-  };
+  const visible = visibleSuggestions(proposals, now);
+  const shown = showAll ? visible : visible.slice(0, MAX_COLLAPSED);
 
   return (
     <View style={styles.section}>
@@ -170,42 +150,98 @@ export function SuggestionsForYou() {
           <Text variant="subhead">Suggestions could not be loaded.</Text>
           <Button title="Try again" variant="secondary" label="Try loading suggestions again" onPress={() => refetch()} />
         </Card>
-      ) : proposals.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Card>
           <Text variant="subhead" tone="secondary">
-            Nothing to suggest right now.
+            {EMPTY_SUGGESTIONS_TEXT}
           </Text>
         </Card>
       ) : (
         <>
-          {visible.map((p) => (
+          {shown.map((p) => (
             <ProposalCard
               key={p.id}
               proposal={p}
-              busy={decide.isPending && decide.variables?.id === p.id}
-              onDecide={handleDecide}
+              busy={busyId === p.id}
+              onDecide={onDecide}
             />
           ))}
-          {!showAll && proposals.length > MAX_COLLAPSED && (
+          {!showAll && visible.length > MAX_COLLAPSED && (
             <Button
-              title={`See all ${proposals.length} suggestions`}
+              title={`See all ${visible.length} suggestions`}
               variant="secondary"
               label="See all suggestions"
               onPress={() => setShowAll(true)}
             />
           )}
-          {undos.map((u) => (
-            <View key={u.id} style={styles.undoBar}>
-              <Text variant="footnote" tone="secondary" style={styles.undoText}>
-                Dismissed: {u.title}
-              </Text>
-              <Button title="Undo" variant="secondary" size="md" label="Undo the dismissal" onPress={() => handleUndo(u.id)} />
-            </View>
-          ))}
         </>
       )}
     </View>
   );
+}
+
+/** Real proposals from the database (#417): pending only, decided through the database function. */
+function RealSuggestions() {
+  const { showToast } = useVyanaMobile();
+  const { data, isLoading, isError, refetch } = useMyProposals('pending');
+  const decide = useDecideProposal();
+
+  const handleDecide = (p: SuggestionView, decision: 'approve' | 'reject') => {
+    decide.mutate(decideArgs(p.id, decision), {
+      onSuccess: () => {
+        if (decision === 'approve') showToast('Done', 'success');
+      },
+      onError: (err) => showToast(err.message, 'error'),
+    });
+  };
+
+  return (
+    <SuggestionsView
+      proposals={(data ?? []).map(toSuggestionView)}
+      isLoading={isLoading}
+      isError={isError}
+      refetch={() => void refetch()}
+      busyId={decide.isPending ? (decide.variables?.id ?? null) : null}
+      onDecide={handleDecide}
+    />
+  );
+}
+
+/** The mock store's proposals, kept for tests and EXPO_PUBLIC_USE_MOCKS mode. */
+function MockSuggestions() {
+  const { showToast } = useVyanaMobile();
+  const { data, isLoading, isError, refetch } = useMyAgentProposals();
+  const decide = useDecideAgentProposal();
+
+  const handleDecide = (p: SuggestionView, decision: 'approve' | 'reject') => {
+    decide.mutate(
+      { id: p.id, decision },
+      {
+        onSuccess: (res) => {
+          if (decision === 'approve') {
+            showToast(res.result_text ?? 'Done', 'success');
+          }
+        },
+        onError: (err) => showToast(err.message, 'error'),
+      }
+    );
+  };
+
+  return (
+    <SuggestionsView
+      proposals={data?.proposals ?? []}
+      isLoading={isLoading}
+      isError={isError}
+      refetch={() => void refetch()}
+      busyId={decide.isPending ? (decide.variables?.id ?? null) : null}
+      onDecide={handleDecide}
+    />
+  );
+}
+
+export function SuggestionsForYou() {
+  const { useMocks } = useVyanaMobile();
+  return useMocks ? <MockSuggestions /> : <RealSuggestions />;
 }
 
 const styles = StyleSheet.create({
@@ -232,16 +268,4 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: T.space.sm },
   actionBtn: { flex: 1, minHeight: 44 },
-  undoBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: T.space.sm,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.sm,
-  },
-  undoText: { flex: 1 },
 });
