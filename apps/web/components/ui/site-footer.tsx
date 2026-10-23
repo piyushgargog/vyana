@@ -11,6 +11,7 @@ const COLUMNS: {
     links: [
       { label: "Features", href: "/#features" },
       { label: "For doctors", href: "/#doctors" },
+      { label: "Plans", href: "/plans" },
       { label: "Sign in", href: "/login" },
     ],
   },

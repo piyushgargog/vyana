@@ -947,12 +947,13 @@ components:
         reg_no:
           type: string
           minLength: 1
+          maxLength: 40
         state_council:
           type: string
           minLength: 2
         year_of_registration:
           type: integer
-          minimum: -9007199254740991
+          minimum: 1950
           maximum: 9007199254740991
       required:
         - reg_no
@@ -1990,6 +1991,8 @@ components:
                               type:
                                 - number
                                 - "null"
+                            from_device:
+                              type: boolean
                           required:
                             - at
                             - value

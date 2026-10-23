@@ -39,6 +39,7 @@ import {
   Text,
 } from '@/components/ui';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
+import { ActivityCard } from '@/components/activity-card';
 import { T } from '@/constants/theme';
 
 export default function PatientHomeScreen() {
@@ -322,6 +323,9 @@ export default function PatientHomeScreen() {
             </View>
           )}
         </Card>
+
+        {/* Activity Card (device readings, #328) */}
+        <ActivityCard />
 
         {/* Refill Due Card */}
         {refillDueItems.length > 0 && (

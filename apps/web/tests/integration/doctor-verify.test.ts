@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DoctorVerifyRes } from "@vyana/shared";
+import { DoctorVerifyRes, currentRegistrationYear } from "@vyana/shared";
 import { OTHER_USER_ID, USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
@@ -242,6 +242,22 @@ describe("POST /api/doctors/verify", () => {
     expect((await post(send, "")).status).toBe(401);
     asDoctor();
     expect((await post({ reg_no: "", state_council: "x" })).status).toBe(400);
+    // The registration number is capped at 40 chars, like the admin check schema for the same column.
+    expect((await post({ ...send, reg_no: "1".repeat(40) })).status).toBe(200);
+    expect((await post({ ...send, reg_no: "1".repeat(41) })).status).toBe(400);
+  });
+
+  it("rejects a registration year outside 1950 to the current year with 400 and saves nothing", async () => {
+    const currentYear = currentRegistrationYear();
+    // Same range as the admin's check (AdminDoctorCheckReq.year); junk years must not reach the database.
+    for (const year of [0, 1890, 1949, currentYear + 1, 999999]) {
+      const res = await post({ ...send, year_of_registration: year });
+      expect(res.status).toBe(400);
+    }
+    expect(row(USER_ID).year_of_registration).toBeUndefined();
+    // Boundary years are accepted like the admin path accepts them.
+    expect((await post({ ...send, year_of_registration: 1950 })).status).toBe(200);
+    expect((await post({ ...send, year_of_registration: currentYear })).status).toBe(200);
   });
 
   it("settles the role before reading the body: a patient gets 403 even with a body that is not JSON", async () => {

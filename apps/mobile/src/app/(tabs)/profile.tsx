@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
   useAddContact,
+  useCurrentPlanPage,
   useConsent,
   useDeleteAccount,
   useDeleteContact,
@@ -38,6 +39,8 @@ export default function MobileProfileTab() {
   const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
+  const { data: plansData, isLoading: plansLoading } = useCurrentPlanPage();
+  const currentPlan = plansData?.plans.find((p) => p.slug === plansData.current_slug);
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
   const updateProfileMutation = useUpdateProfile();
   const { data: contacts = [] } = useEmergencyContacts();
@@ -223,6 +226,20 @@ export default function MobileProfileTab() {
           title="Connected devices"
           subtitle="Health Connect or Apple Health"
           onPress={() => router.push('/devices')}
+        />
+      </ListGroup>
+
+      {/* Your plan (#305): the plan card opens the web page; no payments in the app. */}
+      <ListGroup header="Your plan">
+        <ListRow
+          icon={<IconTile ios="creditcard.fill" android="payment" color="indigo" />}
+          title={!plansLoading && currentPlan?.name ? `Your plan: ${currentPlan.name}` : 'Your plan'}
+          subtitle="See the Family plan"
+          onPress={() =>
+            Linking.openURL('https://vyanahealth.app/plans').catch(() =>
+              showToast('Could not open the plans page', 'error')
+            )
+          }
         />
       </ListGroup>
 

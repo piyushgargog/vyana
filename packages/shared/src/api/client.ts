@@ -6,6 +6,7 @@ import {
   AgentDecideReq,
   AgentDecideRes,
   AgentProposalsRes,
+  AiUsageTodayRes,
   ApiErrorBody,
   BloodSearchReq,
   BloodSearchRes,
@@ -19,8 +20,11 @@ import {
   GenerateCarePlanRes,
   InteractionsReq,
   InteractionsRes,
+  JoinWaitlistReq,
+  JoinWaitlistRes,
   MeExportRes,
   OkRes,
+  PlansRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
@@ -75,6 +79,10 @@ export type ApiClient = {
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
   /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
   agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
+  /** Plans, the Family waitlist and today's AI usage (#305, provisional contract). */
+  plans: { current(): Promise<PlansRes> };
+  waitlist: { join(body: JoinWaitlistReq): Promise<JoinWaitlistRes> };
+  aiUsage: { today(): Promise<AiUsageTodayRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
   reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes>; correctValue(body: LabValueCorrectReq): Promise<LabValueCorrectRes> };
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
@@ -137,6 +145,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       await sleep(minDelay + Math.random() * (maxDelay - minDelay));
       const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
       // Copy so a screen that mutates the result never changes the shared fixture.
+      const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
       return resSchema.parse(JSON.parse(JSON.stringify(mockValue)));
     }
 
@@ -220,6 +229,14 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       },
       decide: async (body) => {
         const req = AgentDecideReq.safeParse(body);
+    plans: {
+      current: () =>
+        request({ method: "GET", path: "/api/plans/me", resSchema: PlansRes, mock: mocks.plansMock }),
+    },
+    waitlist: {
+      // Mock mode uses the store so "already on the list" works within the session.
+      join: async (body) => {
+        const req = JoinWaitlistReq.safeParse(body);
         if (!req.success) {
           throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
         }
@@ -229,6 +246,15 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         }
         return post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, req.data, () => mocks.agentDecideMock(req.data));
       },
+    },
+          return JoinWaitlistRes.parse(mocks.joinWaitlistMock(req.data));
+        }
+        return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, () => mocks.joinWaitlistMock(req.data));
+      },
+    },
+    aiUsage: {
+      today: () =>
+        request({ method: "GET", path: "/api/ai/usage-today", resSchema: AiUsageTodayRes, mock: mocks.aiUsageTodayMock }),
     },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
     reports: {
