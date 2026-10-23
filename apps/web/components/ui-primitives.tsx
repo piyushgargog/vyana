@@ -6,13 +6,12 @@ import { SiteFooter } from "./ui/site-footer";
 import {
   buildQrMatrix,
   computeItemRefill,
-  generateQrMatrix,
   parseCarePlanJson,
   useReportAiMistake,
 } from "@vyana/shared";
 import { useVyanaWeb } from "./providers";
 
-export { buildQrMatrix, computeItemRefill, generateQrMatrix, parseCarePlanJson };
+export { buildQrMatrix, computeItemRefill, parseCarePlanJson };
 
 export function QrCodeSvg({
   data,
