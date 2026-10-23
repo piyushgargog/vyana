@@ -12,6 +12,10 @@ person's data.
 | `home-phone.png` | The public home page at 390 px | `capture-screens.mjs`, no login |
 | `share-desktop.png` | The public share page (a patient's timeline link, fictional demo patient) at 1366 px | `capture-screens.mjs`, no login, app running with `NEXT_PUBLIC_USE_MOCKS=true` |
 | `share-phone.png` | The same share page at 390 px | `capture-screens.mjs`, no login, mock mode as above |
+| `u1-home-phone-zoom200.png` | U1 largest-text pass (#285): home at 200% zoom, phone width — header actions wrap under the brand, nothing off-screen | Mock-env build, Playwright Chromium, 195 CSS px layout at scale factor 2 |
+| `u1-home-desktop-zoom200.png` | U1: home at 200% zoom, desktop width (683 CSS px layout) | Same |
+| `u1-login-phone-zoom200.png` | U1: sign-in at 200% zoom, phone width | Same |
+| `u1-terms-phone-zoom200.png` | U1: terms at 200% zoom, phone width — long words break inside the article | Same |
 
 ## Capturing the rest
 

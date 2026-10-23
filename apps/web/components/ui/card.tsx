@@ -1,14 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 
-/** A white content card on the grey page. */
+/** A white content card on the grey page. Content is always solid (issue #288): glass is for chrome only. */
 export function Card({ className, padded = true, ...rest }: ComponentProps<"section"> & { padded?: boolean }) {
   return <section className={cn("rounded-card bg-surface", padded && "p-5 sm:p-6", className)} {...rest} />;
-}
-
-/** A Liquid Glass card: only for things that float over content (a hero card, a summary over a chart). */
-export function GlassCard({ className, ...rest }: ComponentProps<"section">) {
-  return <section className={cn("glass rounded-card p-5 sm:p-6", className)} {...rest} />;
 }
 
 /** A card's title row: title on the left, an optional value or action on the right. */

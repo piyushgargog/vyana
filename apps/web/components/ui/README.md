@@ -32,7 +32,7 @@ Type: the system font (SF on Apple devices). Large page title `text-[32px] sm:te
 | Component | Use |
 |---|---|
 | `Button`, `ButtonLink`, `IconButton` | Pill buttons. `variant`: `primary` (one per screen), `secondary`, `plain`, `destructive`, `glass`; `size`: `sm`/`md`/`lg`. `IconButton` needs `label`. |
-| `Card`, `GlassCard`, `CardHeader` | White card; glass card only for a floating highlight; title row with a trailing value. |
+| `Card`, `CardHeader` | White card; title row with a trailing value. |
 | `ListGroup`, `ListRow`, `IconTile` | Settings-style grouped list. A row with `href`/`onClick` gets a chevron. `icon` + `iconColor` (`accent`, `blue`, `green`, `orange`, `red`, `gray`, `indigo`). |
 | `Field`, `SelectField`, `TextAreaField` | Labelled inputs with `hint` and `error`. |
 | `Pill` | Status: `tone` `neutral`/`accent`/`ok`/`warn`/`danger`. The text carries the meaning, not the colour. |
