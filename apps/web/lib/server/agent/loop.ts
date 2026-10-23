@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CarePlan, findLastDone } from "@vyana/shared";
-import { istDate } from "../data/missed-doses";
+import { istDate } from "../dates";
 import {
   labRecheckRule,
   missedDosePatternRule,

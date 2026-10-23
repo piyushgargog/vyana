@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
+import { istDate } from "../dates";
 import type { PushMessage, PushResult } from "../push";
 
 /**
@@ -46,11 +47,6 @@ export interface DueDose {
   item_id: string;
   patient_id: string;
   due: Date;
-}
-
-/** `YYYY-MM-DD` of a moment in India. */
-export function istDate(d: Date): string {
-  return new Date(d.getTime() + IST_OFFSET_MINUTES * MINUTE).toISOString().slice(0, 10);
 }
 
 /** The moment `HH:MM` on `date` (`YYYY-MM-DD`) in India. */

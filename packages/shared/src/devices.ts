@@ -36,6 +36,3 @@ export const DEVICE_METRIC_EXPLAINER: Record<DeviceMetric, string> = {
   blood_glucose: "Single readings from your device, shown with their time.",
   weight: "Your weight readings, for trends.",
 };
-
-/** The fixed line carried by device readings that are not lab results (ADR-073). */
-export const DEVICE_READING_NOTE = "A device reading is not a medical test";

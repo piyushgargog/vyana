@@ -14,7 +14,7 @@ import {
   type TimelineSources,
 } from "@vyana/shared";
 import { notFound } from "../errors";
-import { istDate } from "./missed-doses";
+import { istDate } from "../dates";
 
 /** `share_links.token` is 24 random bytes as hex. Anything else cannot be a token, so it never reaches the database. */
 export const SHARE_TOKEN_FORMAT = /^[0-9a-f]{48}$/;

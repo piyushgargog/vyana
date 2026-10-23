@@ -4,6 +4,9 @@ import type { ApiErrorBody, ErrorCode } from "@vyana/shared";
 import { log, newRequestId } from "./log";
 import type { RateLimit } from "./rate-limit";
 
+/** Health-data answers are never stored by a cache. */
+export const NO_STORE = "no-store";
+
 /** An error whose code, status and message are safe to send to the client. */
 export class AppError extends Error {
   constructor(

@@ -10,7 +10,7 @@
 // bad, and the only sentences are the fixed ones of `describeTrend` (trends.ts).
 
 import { addDays, istDayOf } from "./dates";
-import { computeTrend, describeTrend, type DayValue } from "./trends";
+import { computeTrend, describeTrend, formatSleep, type DayValue } from "./trends";
 
 /** The fixed line under the SpO2, blood pressure and glucose charts (ADR-073). */
 export const TREND_DEVICE_NOTE = "A device reading is not a medical test.";
@@ -83,14 +83,6 @@ export function mergeActivityDays(rows: DailyActivityRow[], today: string): Merg
     byDay.set(row.day, day);
   }
   return [...byDay.values()].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
-}
-
-/** `452` minutes as "7 h 32 min" (the same shape as the trend sentences). */
-export function formatSleep(minutes: number): string {
-  const total = Math.round(minutes);
-  const hours = Math.floor(total / 60);
-  const mins = total % 60;
-  return [hours > 0 ? `${hours} h` : "", mins > 0 || hours === 0 ? `${mins} min` : ""].filter(Boolean).join(" ");
 }
 
 export interface ActivityCardModel {

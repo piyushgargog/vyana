@@ -63,13 +63,18 @@ export function computeTrend(values: DayValue[], today: string, metric: TrendMet
   };
 }
 
+/** `452` minutes as "7 h 32 min" (the same shape as the trend sentences). */
+export function formatSleep(minutes: number): string {
+  const total = Math.round(minutes);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  return [hours > 0 ? `${hours} h` : "", mins > 0 || hours === 0 ? `${mins} min` : ""].filter(Boolean).join(" ");
+}
+
 function fmt(value: number, metric: TrendMetric): string {
   if (metric === "steps") return `${Math.round(value)} steps a day`;
   if (metric === "resting_hr") return `${Math.round(value)} beats a minute`;
-  const total = Math.round(value);
-  const hours = Math.floor(total / 60);
-  const minutes = total % 60;
-  return [hours > 0 ? `${hours} h` : "", minutes > 0 || hours === 0 ? `${minutes} min` : ""].filter(Boolean).join(" ");
+  return formatSleep(value);
 }
 
 /** One of five fixed sentences. Neutral numbers only, no advice. */

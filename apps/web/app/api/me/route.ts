@@ -1,7 +1,7 @@
 import { OkRes } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { deleteMyAccount, requireRecentLogin } from "@/lib/server/data/account";
-import { jsonRes, withRoute } from "@/lib/server/errors";
+import { jsonRes, NO_STORE, withRoute } from "@/lib/server/errors";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 
 export const maxDuration = 60;
@@ -17,5 +17,5 @@ export const DELETE = withRoute("me", async (req, ctx) => {
   requireRecentLogin(req);
   await deleteMyAccount(supabaseAdmin(), user.id);
   const res: OkRes = { ok: true };
-  return jsonRes(OkRes, res, { headers: { "cache-control": "no-store" } });
+  return jsonRes(OkRes, res, { headers: { "cache-control": NO_STORE } });
 });

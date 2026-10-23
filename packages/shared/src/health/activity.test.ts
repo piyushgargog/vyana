@@ -4,13 +4,13 @@ import {
   buildActivityCard,
   buildTrendCharts,
   TREND_DEVICE_NOTE,
-  formatSleep,
   mergeActivityDays,
   sourceLabel,
   type DailyActivityRow,
   type DeviceSpotReading,
 } from "./activity";
 import { addDays } from "./dates";
+import { formatSleep } from "./trends";
 
 const TODAY = "2026-10-22";
 

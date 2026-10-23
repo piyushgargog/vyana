@@ -5,13 +5,13 @@ import {
   findMissedDoses,
   firstName,
   GRACE_MINUTES,
-  istDate,
   istInstant,
   istTime,
   listOverdueDoses,
   runMissedDoseCheck,
   type CareItem,
 } from "@/lib/server/data/missed-doses";
+import { istDate } from "@/lib/server/dates";
 import type { PushMessage, PushResult } from "@/lib/server/push";
 
 const iso = (s: string) => new Date(s);
