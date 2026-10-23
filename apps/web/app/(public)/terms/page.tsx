@@ -79,7 +79,7 @@ export default function TermsOfServicePage() {
                   <li>Personal medication schedule tracking and refill reminder alerts.</li>
                   <li>Prescription and laboratory report scanning and digitized summarization.</li>
                   <li>Emergency medical summary profile and offline-scannable QR code generation.</li>
-                  <li>Transparent price comparison across Indian online pharmacies.</li>
+                  <li>Links to Indian online pharmacies and labs, where you can look up prices yourself.</li>
                   <li>Hospital OPD discovery and token booking assistance.</li>
                 </ul>
                 <p className="text-[13px] text-label-3 pt-1">
