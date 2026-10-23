@@ -1,7 +1,7 @@
 import { TriageReq, TriageRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { enforceDailyAiLimit } from "@/lib/server/entitlements";
-import { parseBody, withRoute } from "@/lib/server/errors";
+import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { triage } from "@/lib/server/triage";
 
 // One model call at most (SPEC §15). No role gate on purpose: any signed-in user may check symptoms —
@@ -14,5 +14,5 @@ export const POST = withRoute("triage", async (req, ctx) => {
   await enforceDailyAiLimit(authed);
   const body = await parseBody(req, TriageReq);
   const res = await triage(authed, body);
-  return Response.json(process.env.NODE_ENV === "production" ? res : TriageRes.parse(res));
+  return jsonRes(TriageRes, res);
 }, { rateLimit: rateLimitOf("ai_other") });
