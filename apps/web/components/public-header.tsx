@@ -64,7 +64,7 @@ export function PublicHeader({ navLinks }: PublicHeaderProps) {
           </nav>
         )}
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-2.5">
           <AuthActions />
           <IconButton
             href="https://github.com/piyushgargog/vyana"
