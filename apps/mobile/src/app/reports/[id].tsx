@@ -2,13 +2,13 @@ import React from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { T } from '@/constants/theme';
+import { Screen } from '@/components/ui';
 import { useLabReport } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
@@ -48,18 +48,10 @@ export default function LabReportDetailScreen() {
   const values = report.lab_values ?? [];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
-            {report.lab_name || 'Lab Report'}
-          </Text>
-          <Text style={styles.headerSub}>
-            Tested on {report.report_date || '—'}
-          </Text>
-        </View>
-      </View>
+    <Screen title={report.lab_name || 'Lab Report'}>
+      <Text style={styles.headerSub}>
+        Tested on {report.report_date || '—'}
+      </Text>
 
       {/* AI Plain-Language Summary */}
       {report.summary && (
@@ -141,13 +133,11 @@ export default function LabReportDetailScreen() {
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: T.color.canvas },
-  content: { padding: 16, gap: 14 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -164,13 +154,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: T.color.label },
   headerSub: { fontSize: 12, color: T.color.label2 },
   backBtn: {
     backgroundColor: T.color.accentStrong,
