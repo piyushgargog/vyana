@@ -84,7 +84,6 @@ export function ActivityCard() {
           <Button
             title="Connected devices"
             variant="secondary"
-            size="sm"
             onPress={() => router.push("/devices")}
           />
         </View>
@@ -151,7 +150,6 @@ export function ActivityCard() {
             <Button
               title="Health trends"
               variant="secondary"
-              size="sm"
               onPress={() => router.push("/health-trends")}
             />
           </View>

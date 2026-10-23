@@ -13,7 +13,7 @@ import { addDays } from "./dates";
 import { computeTrend, describeTrend, type DayValue } from "./trends";
 
 /** The fixed line under the SpO2, blood pressure and glucose charts (ADR-073). */
-export const DEVICE_READING_NOTE = "A device reading is not a medical test.";
+export const TREND_DEVICE_NOTE = "A device reading is not a medical test.";
 
 /** One row of `daily_activity` as the data layer returns it (issue #325). */
 export interface DailyActivityRow {
@@ -306,7 +306,7 @@ function spotChart(
     points,
     points2,
     sentence: null,
-    note: metric === "spo2" || metric === "bp" || metric === "glucose" ? DEVICE_READING_NOTE : null,
+    note: metric === "spo2" || metric === "bp" || metric === "glucose" ? TREND_DEVICE_NOTE : null,
     latest: {
       text: latestText,
       day: last.day,

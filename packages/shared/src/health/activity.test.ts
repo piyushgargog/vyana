@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildActivityCard,
   buildTrendCharts,
-  DEVICE_READING_NOTE,
+  TREND_DEVICE_NOTE,
   formatSleep,
   mergeActivityDays,
   sourceLabel,
@@ -158,9 +158,9 @@ describe("buildTrendCharts", () => {
       TODAY,
     );
     const byMetric = new Map(charts.map((c) => [c.metric, c]));
-    expect(byMetric.get("spo2")?.note).toBe(DEVICE_READING_NOTE);
-    expect(byMetric.get("bp")?.note).toBe(DEVICE_READING_NOTE);
-    expect(byMetric.get("glucose")?.note).toBe(DEVICE_READING_NOTE);
+    expect(byMetric.get("spo2")?.note).toBe(TREND_DEVICE_NOTE);
+    expect(byMetric.get("bp")?.note).toBe(TREND_DEVICE_NOTE);
+    expect(byMetric.get("glucose")?.note).toBe(TREND_DEVICE_NOTE);
     expect(byMetric.get("weight")?.note).toBeNull();
     for (const chart of charts) expect(chart.sentence).toBeNull();
   });

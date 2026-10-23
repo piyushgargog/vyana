@@ -116,7 +116,7 @@ export function ActivityCard() {
           ) : null}
 
           <div>
-            <ButtonLink href="/health/trends" variant="secondary" size="sm">
+            <ButtonLink href="/health/trends" variant="secondary">
               Health trends
             </ButtonLink>
           </div>

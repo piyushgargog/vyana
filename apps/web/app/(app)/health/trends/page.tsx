@@ -86,7 +86,7 @@ export default function HealthTrendsPage() {
               className={cn(
                 "inline-flex min-h-[44px] items-center rounded-full px-4 text-[14px] transition-colors",
                 selected
-                  ? "bg-surface font-semibold text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+                  ? "bg-surface font-semibold text-label shadow-float"
                   : "text-label-2 hover:text-label",
               )}
             >
