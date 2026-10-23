@@ -34,7 +34,7 @@ export function WaitlistForm() {
         <div>
           <p className="text-[15px] font-semibold text-label">You are on the list.</p>
           <p className="text-[15px] text-label-2">
-            Family is being considered. We will tell {email.trim()} if it opens.
+            {email.trim()} is on the Family list.
           </p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export function WaitlistForm() {
           That email is already on the list.
         </p>
         <p className="text-[15px] text-label-2">
-          One entry is enough — we will tell you if Family opens.
+          One entry is enough — we keep it for this list.
         </p>
       </div>
     );
@@ -89,7 +89,7 @@ export function WaitlistForm() {
         Tell me when Family opens
       </Button>
       <p className="text-[13px] text-label-3">
-        Your email is used only to tell you when Family opens. It is not shared
+        Leave your email to join the Family list. We use it only for this list. It is not shared
         and not used for anything else. The note is read only to understand what
         families want from the plan — please do not put health details in it.
       </p>

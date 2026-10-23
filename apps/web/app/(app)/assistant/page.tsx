@@ -164,7 +164,7 @@ export default function AssistantPage() {
                 {aiUsage.limit}
               </Pill>
             )}
-            <Button variant="secondary" size="sm" onClick={newChat}>
+            <Button variant="secondary" onClick={newChat}>
               New chat
             </Button>
           </div>
