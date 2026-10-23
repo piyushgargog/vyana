@@ -12,9 +12,6 @@ export * from "./db/types";
 export * from "./providers/AppProviders";
 export * from "./db/queries";
 export * from "./hooks/db";
-// Both hooks/api (#337, mock store) and hooks/db (#349) export this name; the phone's
-// connected-devices screens use the first until W2 replaces the mock store.
-export { useDeviceConnections } from "./hooks/api";
 export * from "./ui-helpers";
 export * from "./health";
 export * from "./devices";
