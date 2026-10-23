@@ -134,3 +134,12 @@ export async function parseBody<T>(req: Request, schema: { parse(data: unknown):
   }
   return schema.parse(data);
 }
+
+/**
+ * Builds the JSON success response for a route. Outside production the payload is validated against its contract
+ * before it leaves the server, so a drift between code and contract fails loudly in dev and CI instead of in
+ * front of a patient; production skips the extra parse (the contract already held where it was tested).
+ */
+export function jsonRes<T>(contract: { parse(data: unknown): T }, res: unknown, init?: ResponseInit): Response {
+  return Response.json(process.env.NODE_ENV === "production" ? res : contract.parse(res), init);
+}
