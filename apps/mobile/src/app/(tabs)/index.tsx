@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -22,7 +22,8 @@ import {
   type FrequencyType,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
-import { SuggestionsForYou } from '@/components/suggestions';
+import { BriefCard } from '@/components/brief-card';
+import { Rings } from '@/components/rings';
 import {
   Button,
   Card,
@@ -40,7 +41,12 @@ import {
 } from '@/components/ui';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
 import { ActivityCard } from '@/components/activity-card';
+import { useActivityCard } from '@/hooks/use-device-activity';
+import { useDeleteDoseLog } from '@/hooks/use-delete-dose-log';
 import { T } from '@/constants/theme';
+
+/** The status of one scheduled dose slot, as the row shows it. */
+type SlotStatus = 'taken' | 'skipped' | 'missed' | 'pending';
 
 export default function PatientHomeScreen() {
   const router = useRouter();
@@ -74,6 +80,38 @@ export default function PatientHomeScreen() {
   const { data: adherence } = useAdherence(30);
   const { data: appointments = [], refetch: refetchAppts } = useMyAppointments();
   const logDoseMutation = useLogDose();
+  const deleteDoseLogMutation = useDeleteDoseLog();
+  const activityModel = useActivityCard(null);
+
+  // Dose Undo (#488): after a Take or Skip, the status from before the action is
+  // kept for 10 seconds so the action can be taken back; afterwards a quiet
+  // "Change" is the way back. One slot per dose, so doses never undo each other.
+  const [undoSlots, setUndoSlots] = useState<Record<string, { prevStatus: SlotStatus }>>({});
+  const undoTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const [changing, setChanging] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const timers = undoTimers.current;
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, []);
+
+  const dropUndo = (key: string) => {
+    const timer = undoTimers.current.get(key);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.delete(key);
+    setUndoSlots((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const offerUndo = (key: string, prevStatus: SlotStatus) => {
+    setUndoSlots((prev) => ({ ...prev, [key]: { prevStatus } }));
+    const timer = undoTimers.current.get(key);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.set(key, setTimeout(() => dropUndo(key), 10_000));
+  };
 
   const queryClient = useQueryClient();
 
@@ -126,6 +164,23 @@ export default function PatientHomeScreen() {
 
   const takenCount = scheduledSlots.filter((s) => s.status === 'taken').length;
 
+  // The brief card (#488): the next dose still open today, earliest first.
+  const nextPendingSlot = scheduledSlots
+    .filter((s) => s.status === 'pending')
+    .sort((a, b) => a.scheduledIso.localeCompare(b.scheduledIso))[0];
+  const nextDose = nextPendingSlot
+    ? { medicineName: nextPendingSlot.medicineName, time: nextPendingSlot.timeStr }
+    : null;
+
+  // The care rings (#488): steps only with data and a goal, sleep only with data.
+  const stepsRing =
+    activityModel.steps && activityModel.steps.goal
+      ? { value: activityModel.steps.value, goal: activityModel.steps.goal }
+      : null;
+  const sleepRing = activityModel.sleep
+    ? { minutes: activityModel.sleep.minutes, text: activityModel.sleep.text }
+    : null;
+
   const refillDueItems = activeItems
     .map((item) => ({
       item,
@@ -139,28 +194,55 @@ export default function PatientHomeScreen() {
   const nextAppt = upcomingAppointments[0];
 
   const handleDoseAction = async (
-    itemId: string,
-    scheduledIso: string,
-    status: 'taken' | 'skipped',
-    medicineLabel: string
+    slot: { key: string; itemId: string; scheduledIso: string; status: string },
+    status: 'taken' | 'skipped'
   ) => {
     try {
       await logDoseMutation.mutateAsync({
-        item_id: itemId,
-        scheduled_for: scheduledIso,
+        item_id: slot.itemId,
+        scheduled_for: slot.scheduledIso,
         status,
       });
       // A confirmation tap for a logged dose (U2): success for taken, nothing for skipped.
       if (status === 'taken') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
-      showToast(
-        `${medicineLabel} marked as ${status.toUpperCase()}`,
-        status === 'taken' ? 'success' : 'warning'
-      );
+      // No toast any more: the row itself says Taken or Skipped, with Undo beside it.
+      setChanging((prev) => ({ ...prev, [slot.key]: false }));
+      offerUndo(slot.key, slot.status as SlotStatus);
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : 'Could not log dose',
+        'error'
+      );
+    }
+  };
+
+  const handleUndoDose = async (slot: {
+    key: string;
+    itemId: string;
+    scheduledIso: string;
+  }) => {
+    const prevStatus = undoSlots[slot.key]?.prevStatus;
+    dropUndo(slot.key);
+    if (!prevStatus) return;
+    try {
+      if (prevStatus === 'pending') {
+        // Before the action there was no log at all: undoing removes the row.
+        await deleteDoseLogMutation.mutateAsync({
+          item_id: slot.itemId,
+          scheduled_for: slot.scheduledIso,
+        });
+      } else {
+        await logDoseMutation.mutateAsync({
+          item_id: slot.itemId,
+          scheduled_for: slot.scheduledIso,
+          status: prevStatus,
+        });
+      }
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Could not undo',
         'error'
       );
     }
@@ -205,8 +287,23 @@ export default function PatientHomeScreen() {
         trailing={<SosPill />}
         floatingAction
       >
-        {/* Care suggestions (#304): pending proposals the patient confirms or dismisses. */}
-        <SuggestionsForYou />
+        {/* The brief and the care rings (#488) replace "Suggestions for you":
+            computed from the day's own data, never written by a model. */}
+        <BriefCard nextDose={nextDose} dosesScheduled={scheduledSlots.length} />
+        <Rings
+          doses={
+            scheduledSlots.length > 0
+              ? { taken: takenCount, due: scheduledSlots.length }
+              : null
+          }
+          steps={stepsRing}
+          sleep={sleepRing}
+          showConnectLine={!activityModel.steps && !activityModel.sleep}
+          onDosesPress={() => router.push('/(tabs)/meds')}
+          onStepsPress={() => router.push('/health-trends')}
+          onSleepPress={() => router.push('/health-trends')}
+          onConnectPress={() => router.push('/devices')}
+        />
 
         {/* Doses Card with Progress */}
         <Card>
@@ -236,6 +333,8 @@ export default function PatientHomeScreen() {
               {scheduledSlots.map((slot) => {
                 const isTaken = slot.status === 'taken';
                 const isSkipped = slot.status === 'skipped';
+                const undo = undoSlots[slot.key];
+                const showButtons = (!isTaken && !isSkipped) || (changing[slot.key] ?? false);
                 return (
                   <View key={slot.key} style={styles.doseRow}>
                     <View style={styles.doseInfo}>
@@ -253,63 +352,68 @@ export default function PatientHomeScreen() {
                       </Text>
                     </View>
 
-                    <View style={styles.doseActions}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Mark ${slot.medicineName} as taken`}
-                        disabled={logDoseMutation.isPending}
-                        onPress={() =>
-                          handleDoseAction(
-                            slot.itemId,
-                            slot.scheduledIso,
-                            'taken',
-                            `${slot.medicineName} ${slot.strength ?? ''}`
-                          )
-                        }
-                        style={[
-                          styles.doseBtn,
-                          isTaken ? styles.doseBtnTaken : styles.doseBtnDefault,
-                        ]}
-                      >
-                        <Text
-                          variant="footnote"
-                          tone={isTaken ? 'white' : 'accent'}
-                          style={styles.doseBtnText}
+                    {showButtons ? (
+                      <View style={styles.doseActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Mark ${slot.medicineName} as taken`}
+                          disabled={logDoseMutation.isPending}
+                          onPress={() => handleDoseAction(slot, 'taken')}
+                          style={[styles.doseBtn, styles.doseBtnDefault]}
                         >
-                          {isTaken ? '✓ Taken' : 'Take'}
-                        </Text>
-                      </Pressable>
+                          <Text variant="footnote" tone="accent" style={styles.doseBtnText}>
+                            Take
+                          </Text>
+                        </Pressable>
 
-                      {!isTaken && (
                         <Pressable
                           accessibilityRole="button"
                           accessibilityLabel={`Mark ${slot.medicineName} as skipped`}
                           disabled={logDoseMutation.isPending}
-                          onPress={() =>
-                            handleDoseAction(
-                              slot.itemId,
-                              slot.scheduledIso,
-                              'skipped',
-                              `${slot.medicineName} ${slot.strength ?? ''}`
-                            )
-                          }
-                          style={[
-                            styles.doseBtn,
-                            isSkipped
-                              ? styles.doseBtnSkipped
-                              : styles.doseBtnSecondary,
-                          ]}
+                          onPress={() => handleDoseAction(slot, 'skipped')}
+                          style={[styles.doseBtn, styles.doseBtnSecondary]}
                         >
-                          <Text
-                            variant="footnote"
-                            tone={isSkipped ? 'white' : 'tertiary'}
-                            style={styles.doseBtnText}
-                          >
-                            {isSkipped ? 'Skipped' : 'Skip'}
+                          <Text variant="footnote" tone="tertiary" style={styles.doseBtnText}>
+                            Skip
                           </Text>
                         </Pressable>
-                      )}
-                    </View>
+                      </View>
+                    ) : (
+                      <View style={styles.doseActions}>
+                        {/* Plain words, not a pill (#488): the dose is logged, and
+                            for 10 seconds Undo sits beside the word; after that a
+                            quiet Change is the way back. */}
+                        <Text variant="subhead" style={styles.doseStatusText}>
+                          {isTaken ? 'Taken' : 'Skipped'}
+                        </Text>
+                        {undo ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Undo marking ${slot.medicineName} as ${isTaken ? 'taken' : 'skipped'}`}
+                            disabled={logDoseMutation.isPending || deleteDoseLogMutation.isPending}
+                            onPress={() => handleUndoDose(slot)}
+                            style={styles.quietAction}
+                          >
+                            <Text variant="subhead" tone="accent" style={styles.doseBtnText}>
+                              Undo
+                            </Text>
+                          </Pressable>
+                        ) : (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Change the ${isTaken ? 'taken' : 'skipped'} mark for ${slot.medicineName}`}
+                            onPress={() =>
+                              setChanging((prev) => ({ ...prev, [slot.key]: true }))
+                            }
+                            style={styles.quietAction}
+                          >
+                            <Text variant="subhead" tone="tertiary">
+                              Change
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
                   </View>
                 );
               })}
@@ -542,17 +646,21 @@ const styles = StyleSheet.create({
   doseBtnDefault: {
     backgroundColor: T.color.accentSoft,
   },
-  doseBtnTaken: {
-    backgroundColor: T.color.ok,
-  },
   doseBtnSecondary: {
     backgroundColor: T.color.fill,
   },
-  doseBtnSkipped: {
-    backgroundColor: T.color.label3,
-  },
   doseBtnText: {
     fontWeight: '600',
+  },
+  doseStatusText: {
+    fontWeight: '600',
+  },
+  quietAction: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: T.space.xs,
   },
   adherenceFooter: {
     borderTopWidth: StyleSheet.hairlineWidth,
