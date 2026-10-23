@@ -24,7 +24,6 @@ export interface BloodRequestMessageInput {
   contact_phone: string;
 }
 
-
 /**
  * Builds the request message from what the patient typed. It says only what the request itself
  * holds: no claim about stock, matching or timing, because the app does not know any of that —

@@ -31,7 +31,6 @@ export interface MedicalIdContact {
 
 const NOT_RECORDED = "not recorded";
 
-
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 
 /** Drops the last character — a whole code point, so a multi-byte character is never split in half. */

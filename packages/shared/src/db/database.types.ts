@@ -648,6 +648,57 @@ export type Database = {
           },
         ]
       }
+      daily_activity: {
+        Row: {
+          active_minutes: number | null
+          day: string
+          device_name: string | null
+          distance_m: number | null
+          id: string
+          patient_id: string
+          resting_hr: number | null
+          sleep_minutes: number | null
+          source: string
+          steps: number | null
+          updated_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          active_minutes?: number | null
+          day: string
+          device_name?: string | null
+          distance_m?: number | null
+          id?: string
+          patient_id: string
+          resting_hr?: number | null
+          sleep_minutes?: number | null
+          source: string
+          steps?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active_minutes?: number | null
+          day?: string
+          device_name?: string | null
+          distance_m?: number | null
+          id?: string
+          patient_id?: string
+          resting_hr?: number | null
+          sleep_minutes?: number | null
+          source?: string
+          steps?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_activity_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string
@@ -686,6 +737,48 @@ export type Database = {
             columns: ["hospital_id"]
             isOneToOne: false
             referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_connections: {
+        Row: {
+          created_at: string
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          patient_id: string
+          permissions: string[]
+          provider: string
+          status: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          patient_id: string
+          permissions?: string[]
+          provider: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          patient_id?: string
+          permissions?: string[]
+          provider?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_connections_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1618,9 +1711,12 @@ export type Database = {
       vitals: {
         Row: {
           created_at: string
+          device_name: string | null
+          external_id: string | null
           id: string
           measured_at: string
           patient_id: string
+          source: string
           type: string
           unit: string
           value: number
@@ -1629,9 +1725,12 @@ export type Database = {
         ComputedFields: never
         Insert: {
           created_at?: string
+          device_name?: string | null
+          external_id?: string | null
           id?: string
           measured_at?: string
           patient_id: string
+          source?: string
           type: string
           unit: string
           value: number
@@ -1639,9 +1738,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          device_name?: string | null
+          external_id?: string | null
           id?: string
           measured_at?: string
           patient_id?: string
+          source?: string
           type?: string
           unit?: string
           value?: number
@@ -1813,6 +1915,7 @@ export type Database = {
         }
         Returns: string
       }
+      delete_my_device_data: { Args: Record<PropertyKey, never>; Returns: undefined }
       current_plan: {
         Args: Record<PropertyKey, never>
         Returns: {
