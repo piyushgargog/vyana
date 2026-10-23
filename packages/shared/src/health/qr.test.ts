@@ -1,7 +1,6 @@
 import jsQR from "jsqr";
 import { describe, expect, it } from "vitest";
 
-import { generateQrMatrix } from "../ui-helpers";
 import { buildMedicalIdQr, MEDICAL_ID_MAX_LENGTH } from "./index";
 import { buildQrMatrix } from "./qr";
 
@@ -84,8 +83,11 @@ describe("buildQrMatrix", () => {
   });
 });
 
-describe("the old generateQrMatrix", () => {
-  it("is only a picture: a decoder cannot read it (use buildQrMatrix)", () => {
-    expect(decode(generateQrMatrix("vyana://caregiver/join?code=123456", 25))).toBeNull();
+describe("a QR-looking picture that is not a QR code", () => {
+  it("is not readable: a decoder returns null (only buildQrMatrix makes a scannable code)", () => {
+    // Finder squares in three corners and a hash-like pattern in between, the way a fake would draw it.
+    const size = 25;
+    const matrix = Array.from({ length: size }, (_, r) => Array.from({ length: size }, (_, c) => (r * 31 + c * 17 + r * c) % 3 === 0));
+    expect(decode(matrix)).toBeNull();
   });
 });

@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://vyanahealth.app"),
   title: "Vyana: your health, in one calm place",
   description:
-    "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
+    "Prescriptions and reminders, lab reports in plain words, pharmacy links for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
   openGraph: {
     title: "Vyana: your health, in one calm place",
     description:
-      "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
+      "Prescriptions and reminders, lab reports in plain words, pharmacy links for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
     url: "https://vyanahealth.app",
     siteName: "Vyana",
     locale: "en_IN",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Vyana: your health, in one calm place",
     description:
-      "Prescriptions and reminders, lab reports in plain words, the best price for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
+      "Prescriptions and reminders, lab reports in plain words, pharmacy links for your medicines, hospital tokens and help in an emergency. With an assistant that shows the source of every answer.",
   },
 };
 

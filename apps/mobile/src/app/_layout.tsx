@@ -6,10 +6,14 @@ import { KeyboardAvoidingView, KeyboardProvider } from 'react-native-keyboard-co
 import { MobileAppProviders } from '@/components/providers';
 import { T } from '@/constants/theme';
 import { WelcomeSplash } from '@/components/welcome-splash';
+import { startHealthBackgroundSync } from '@/lib/health-background';
 import { onNotificationTap } from '@/lib/notifications';
 import { useReminderSync } from '@/lib/useReminderSync';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// The background health sync's task must be defined in a file loaded at start (#448)
+startHealthBackgroundSync();
 
 function RootNavigator() {
   const colorScheme = useColorScheme();

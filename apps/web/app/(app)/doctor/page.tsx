@@ -16,6 +16,7 @@ import {
   ButtonLink,
   Card,
   EmptyState,
+  ErrorState,
   Pill,
   Sheet,
   TextAreaField,
@@ -123,9 +124,11 @@ export default function DoctorQueuePage() {
               ) : (
                 <Link
                   href="/doctor/verify"
-                  className="inline-flex items-center gap-1 rounded-full bg-warn-soft px-2.5 py-0.5 text-xs font-semibold text-warn border border-warn/30 hover:bg-warn/15"
+                  className="inline-flex min-h-11 items-center rounded-full px-1 py-1"
                 >
-                  <span className="h-2 w-2 rounded-full bg-warn" /> NMC Verify Pending
+                  <Pill tone="warn" icon={<span className="h-2 w-2 rounded-full bg-warn" />}>
+                    NMC Verify Pending
+                  </Pill>
                 </Link>
               )}
             </div>
@@ -171,9 +174,7 @@ export default function DoctorQueuePage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-surface px-2 py-0.5 font-semibold text-accent-strong border border-accent/30">
-                {tokensInfo.tokens_left} tokens remaining
-              </span>
+              <Pill tone="accent">{tokensInfo.tokens_left} tokens remaining</Pill>
               <span className="text-label-2">
                 (Limit: {tokensInfo.daily_token_limit} / day)
               </span>
@@ -279,18 +280,11 @@ export default function DoctorQueuePage() {
           <SkeletonCard lines={2} />
         </div>
       ) : queueError ? (
-        <div className="rounded-card border border-danger/30 bg-danger-soft p-5 text-sm text-danger-text">
-          <p className="font-bold">Failed to load OPD queue</p>
-          <p className="mt-1 text-xs">{queueError.message}</p>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="mt-3"
-            onClick={() => refetch()}
-          >
-            Retry Loading Queue
-          </Button>
-        </div>
+        <ErrorState
+          title="We could not load the OPD queue"
+          body={queueError.message}
+          onRetry={() => refetch()}
+        />
       ) : filteredQueue.length === 0 ? (
         <Card padded={false}>
           <EmptyState

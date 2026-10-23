@@ -4,7 +4,7 @@
 
 > *Your health, in one calm place.*
 
-**Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, get your medicines delivered at the best price straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
+**Vyana is your online one-stop solution for complete healthcare**, with a personal AI assistant inside. Book hospital appointments with a token (like the government ORS portal), keep prescriptions and reports in one timeline, find your medicines at pharmacies straight from your prescription, never miss a dose or a refill, follow a care plan after a diagnosis, and get help fast in an emergency. All on web and mobile.
 
 It reads public health sources directly (the e-RaktKosh blood stock, OpenStreetMap hospitals, MedlinePlus and other trusted health sites) and points you to pharmacies, labs and official portals with plain links.
 
@@ -21,16 +21,16 @@ It reads public health sources directly (the e-RaktKosh blood stock, OpenStreetM
 | | Feature | What it does |
 |---|---|---|
 | 💊 | **Prescriptions, reminders and refills** | Scan a prescription or receive one from your doctor, review it, and get dose reminders with adherence tracking. Vyana warns you before a medicine runs out |
-| 🛒 | **Medicines delivered from your prescription** | Prices your **whole prescription** live on 1mg, PharmEasy, Netmeds and Apollo, plus a Jan Aushadhi generic basket, then redirects you to the cheapest pharmacy to place your order |
-| 🏥 | **Hospital appointments with a token** | Pick a hospital, department and date and get a token number, like the government ORS portal; see OPD timings fetched from the web |
-| 🩺 | **Verified doctors and e-prescriptions** | Doctors are checked against the NMC Indian Medical Register and write e-prescriptions with a diagnosis |
+| 🛒 | **Medicines from your prescription** | Opens each medicine of your prescription on 1mg, PharmEasy, Netmeds and Apollo (plain links: Vyana shows no price, the pharmacy's own page does) |
+| 🏥 | **Hospital appointments with a token** | Pick a hospital, department and date and get a token number, like the government ORS portal; open the hospital's own website for its timings |
+| 🩺 | **Verified doctors and e-prescriptions** | A Vyana admin checks each doctor's registration against the public register by hand; verified doctors write e-prescriptions with a diagnosis |
 | 📋 | **Care plan after a diagnosis** | What to do, what to avoid, what to eat, warning signs and follow-up tests, from trusted health sources and **approved by your doctor** |
 | 🧪 | **Reports and health timeline** | Upload a lab report and get flagged values and a plain-language summary; every prescription, report and visit in one timeline you can share with a doctor |
 | 🤖 | **AI health assistant** | Chat in English, Hindi or Hinglish; it knows your medicines and reports and cites trusted sources |
 | 🚑 | **Emergency** | One tap calls 108, shares your live location, opens Blinkit Ambulance where available, lists nearby emergency hospitals, and shows your medical ID QR |
 | 👨‍👩‍👧 | **Caregiver mode** | Family members can follow a patient's medicines and get an alert when a dose is missed |
 | ⚠️ | **Safety checks** | Drug interaction warnings across prescriptions, a symptom check that points you to the right department or to 108 |
-| 🔎 | **More from the live web** | Lab test price comparison and Ayushman Bharat (PM-JAY) hospitals near you |
+| 🔎 | **More from the live web** | Links to labs for test prices and to the official Ayushman Bharat (PM-JAY) hospital finder |
 | 🩸 | **RapidBlood** | Look up blood stock by blood group and component in your city and nearby cities, from the public e-RaktKosh stock page. Vyana lists the blood banks it finds and tracks your blood requests; you call the bank to confirm |
 | 🧠 | **Health Memory Graph** | Share a timeline link for 24 hours, 7 days or 30 days with only the parts you pick: labs, vitals, medicines or adherence. The doctor sees lab trends, vitals, medicines over time and a 30 day adherence strip, all drawn from your stored records, with no AI-written text; you see how many times the link was opened |
 | 🔒 | **Your data, your control** | Consent at sign-up, download all your data, delete your account any time |

@@ -111,6 +111,22 @@ Two routes exist only for schedulers; both refuse any call without the `x-cron-s
 - `POST /api/cron/missed-doses` — every 15 minutes, called by pg_cron from the database (migration 0008).
 - `POST /api/cron/care-agent` — runs the care agent rules and writes their proposals (issue #415). It is scheduled by Piyush on the server, not by any pull request: until he adds it, the route simply never runs.
 
+## Switching the care agent on
+
+Migration 0024 prepares the daily job but does not start it. When the suggestion cards use real proposals, run in the SQL editor:
+
+```sql
+select public.schedule_care_agent();
+```
+
+That creates the job `care-agent-daily` (00:30 UTC, 06:00 IST), which posts to the route with the Vault's `app_url` and `cron_secret`, like the missed-dose job. To stop it:
+
+```sql
+select public.unschedule_care_agent();
+```
+
+Check it ran: `select * from cron.job_run_details order by start_time desc limit 5;`
+
 ## What is still missing
 
 - **Uploaded files.** The images in Supabase Storage are not part of this backup. For the demo that is acceptable (the demo data is synthetic and can be re-uploaded); before real use, copy the two buckets too.
