@@ -130,16 +130,27 @@ async function draftsForPatient(
   if (itemError) throw itemError;
   const items = (itemData ?? []) as ItemRow[];
 
-  // Only the last 14 days of the dose log are read: the missed-dose rule looks at 7 days, so 14
-  // covers its window with a margin, and no run reads a patient's whole history.
+  // Two reads of the dose log, because the rules ask different questions:
+  // - missed doses: only the last 14 days (the rule looks at 7; 14 leaves room for the timezone edge and a late run);
+  // - refill: every dose TAKEN from the active pack, because the rule subtracts them from the pack size. A 14 day
+  //   window would count too few, show more days left than there are, and the refill alert would come late. The
+  //   read is bounded by the pack (about one row per dose of an active item), not by the patient's history.
+  const itemIds = items.map((i) => i.id);
   const since = new Date(now.getTime() - LOG_WINDOW_DAYS * DAY_MS).toISOString();
   const logs =
     items.length === 0
       ? []
-      : await readChunked<LogRow>(items.map((i) => i.id), (part) =>
+      : await readChunked<LogRow>(itemIds, (part) =>
           sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
         );
+  const takenLogs =
+    items.length === 0
+      ? []
+      : await readChunked<LogRow>(itemIds, (part) =>
+          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).eq("status", "taken"),
+        );
   const logsOf = (itemId: string) => logs.filter((l) => l.item_id === itemId);
+  const takenOf = (itemId: string) => takenLogs.filter((l) => l.item_id === itemId);
 
   const { data: linkData, error: linkError } = await sb
     .from("care_links")
@@ -152,7 +163,7 @@ async function draftsForPatient(
 
   const drafts: ProposalDraft[] = [];
   for (const item of items) {
-    const refill = refillDueRule({ today, item, doseLogs: logsOf(item.id) });
+    const refill = refillDueRule({ today, item, doseLogs: takenOf(item.id) });
     if (refill) drafts.push(refill);
     const missed = missedDosePatternRule({
       today,

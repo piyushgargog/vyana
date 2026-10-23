@@ -227,9 +227,24 @@ describe("runCareAgentLoop", () => {
     expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 450, created: 0, expired: 0, capped: false });
   });
 
-  it("ignores dose logs older than 14 days", async () => {
+  it("counts old TAKEN doses for the refill (the pack is subtracted from all of them), so the alert is not late", async () => {
     const old = takenLogs("i-1", 8).map((l) => ({ ...l, scheduled_for: String(l.scheduled_for).replace("2026-10", "2026-09") }));
     const db = world({ dose_logs: old });
+    expect((await runCareAgentLoop(db.sb, now)).created).toBe(1);
+    expect(db.table("agent_proposals")[0]).toMatchObject({ kind: "refill_due" });
+  });
+
+  it("ignores missed doses older than 14 days for the missed-dose pattern", async () => {
+    const missed = ["2026-09-01", "2026-09-02", "2026-09-03"].map((d) => ({
+      item_id: "i-2",
+      scheduled_for: `${d}T02:30:00.000Z`,
+      status: "missed",
+    }));
+    const db = world({
+      prescription_items: [refillItem({ id: "i-2", quantity_total: null })],
+      dose_logs: missed,
+      care_links: [{ patient_id: "p-1", caregiver_id: "c-1", status: "active" }],
+    });
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(0);
   });
 });
