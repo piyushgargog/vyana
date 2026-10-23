@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ApiErrorBody } from "@vyana/shared";
 import { AppError, jsonRes, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
@@ -98,6 +98,10 @@ describe("parseBody", () => {
 describe("jsonRes", () => {
   const contract = z.object({ ok: z.boolean() });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("returns the contract-parsed payload outside production", async () => {
     const res = jsonRes(contract, { ok: true });
     expect(res.status).toBe(200);
@@ -109,15 +113,10 @@ describe("jsonRes", () => {
   });
 
   it("skips validation and keeps the init in production", async () => {
-    const prev = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    try {
-      const res = jsonRes(contract, { ok: "yes" }, { headers: { "cache-control": "no-store" } });
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: "yes" });
-      expect(res.headers.get("cache-control")).toBe("no-store");
-    } finally {
-      process.env.NODE_ENV = prev;
-    }
+    vi.stubEnv("NODE_ENV", "production");
+    const res = jsonRes(contract, { ok: "yes" }, { headers: { "cache-control": "no-store" } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: "yes" });
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
