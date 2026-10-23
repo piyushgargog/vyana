@@ -22,33 +22,45 @@ export type DailyActivityInput = {
   device_name?: string | null;
 };
 
+type DailyActivityRow = {
+  patient_id: string;
+  day: string;
+  source: DeviceSource;
+  steps?: number;
+  active_minutes?: number;
+  distance_m?: number;
+  sleep_minutes?: number;
+  resting_hr?: number;
+  device_name?: string;
+};
+
 /**
- * Stores one row per (day, source), replacing the values when the day is synced again — a
- * health store's totals for a day grow as the day goes on, so the newest read wins.
+ * Stores one row per (day, source) — a health store's totals for a day grow as the day
+ * goes on, so the newest read wins for the fields it returns. A field the read did not
+ * return (null) is left out of the write entirely: a re-read that could not produce a
+ * value must never clear the one already stored. Rows are grouped by the fields they
+ * carry, because one upsert call needs one shape.
  */
 export async function upsertDailyActivity(sb: Sb, rows: DailyActivityInput[]): Promise<DbDailyActivity[]> {
   if (rows.length === 0) return [];
   const patientId = await requireUserId(sb);
-  return unwrap(
-    await sb
-      .from("daily_activity")
-      .upsert(
-        rows.map((r) => ({
-          patient_id: patientId,
-          day: r.day,
-          steps: r.steps ?? null,
-          active_minutes: r.active_minutes ?? null,
-          distance_m: r.distance_m ?? null,
-          sleep_minutes: r.sleep_minutes ?? null,
-          resting_hr: r.resting_hr ?? null,
-          source: r.source,
-          device_name: r.device_name ?? null,
-        })),
-        { onConflict: "patient_id,day,source" }
-      )
-      .select()
-      .order("day")
-  );
+  const groups = new Map<string, DailyActivityRow[]>();
+  for (const r of rows) {
+    const row: DailyActivityRow = { patient_id: patientId, day: r.day, source: r.source };
+    if (r.steps != null) row.steps = r.steps;
+    if (r.active_minutes != null) row.active_minutes = r.active_minutes;
+    if (r.distance_m != null) row.distance_m = r.distance_m;
+    if (r.sleep_minutes != null) row.sleep_minutes = r.sleep_minutes;
+    if (r.resting_hr != null) row.resting_hr = r.resting_hr;
+    if (r.device_name != null) row.device_name = r.device_name;
+    const shape = Object.keys(row).sort().join(",");
+    groups.set(shape, [...(groups.get(shape) ?? []), row]);
+  }
+  const out: DbDailyActivity[] = [];
+  for (const group of groups.values()) {
+    out.push(...unwrap(await sb.from("daily_activity").upsert(group, { onConflict: "patient_id,day,source" }).select().order("day")));
+  }
+  return out.sort((a, b) => a.day.localeCompare(b.day));
 }
 
 /** The last `days` days of activity, oldest first, every source the patient has. */

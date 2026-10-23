@@ -1,7 +1,7 @@
 "use client";
 
 // Connected-devices hooks (#327, ADR-073). The names Vaibhav's W2 lands —
-// useDeviceConnections, useDisconnectDevice, syncHealth — are provisional here:
+// useMockDeviceConnections, useDisconnectDevice, syncHealth — are provisional here:
 // they run against the in-memory mock store in mocks/devices until his sync engine
 // (one HealthSource over Health Connect / HealthKit) replaces the store. Device data
 // never crosses the REST API, so these hooks do not go through useApi().
@@ -22,7 +22,7 @@ import { QUERY_ROOTS } from "./query-roots";
 
 const devicesKey = [QUERY_ROOTS.devices, "connections"] as const;
 
-export function useDeviceConnections() {
+export function useMockDeviceConnections() {
   return useQuery<DeviceConnectionsRes>({
     queryKey: devicesKey,
     queryFn: async () => deviceConnectionsMock(),
