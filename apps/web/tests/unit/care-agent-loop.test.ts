@@ -28,6 +28,8 @@ function memoryDb(seed: Record<string, Row[]>) {
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), chain),
         in: (c: string, list: unknown[]) => (filters.push((r) => list.includes(r[c])), chain),
         not: (c: string, _op: string, v: unknown) => (filters.push((r) => r[c] !== v && r[c] !== undefined), chain),
+        gt: (c: string, v: unknown) => (filters.push((r) => String(r[c]) > String(v)), chain),
+        gte: (c: string, v: unknown) => (filters.push((r) => time(r[c]) >= time(v)), chain),
         order: (c: string) => ((orderCol = c), chain),
         range: (from: number, to: number) => ((slice = [from, to]), chain),
         limit: (n: number) => ((limitN = n), chain),
@@ -112,7 +114,7 @@ describe("runCareAgentLoop", () => {
   it("writes one proposal for a refill that is due, and none for a patient with nothing due", async () => {
     const db = world();
     const result = await runCareAgentLoop(db.sb, now);
-    expect(result).toEqual({ patients: 2, created: 1, expired: 0 });
+    expect(result).toEqual({ patients: 2, created: 1, expired: 0, capped: false });
 
     const rows = db.table("agent_proposals");
     expect(rows).toHaveLength(1);
@@ -130,7 +132,7 @@ describe("runCareAgentLoop", () => {
   it("a second run writes nothing again (the open proposal is seen)", async () => {
     const db = world();
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(1);
-    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 2, created: 0, expired: 0 });
+    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 2, created: 0, expired: 0, capped: false });
     expect(db.table("agent_proposals")).toHaveLength(1);
   });
 
@@ -152,7 +154,7 @@ describe("runCareAgentLoop", () => {
       ],
     });
     // The stale row is still pending while the rules run, so it blocks this run's insert...
-    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 2, created: 0, expired: 1 });
+    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 2, created: 0, expired: 1, capped: false });
     expect(db.table("agent_proposals")[0].status).toBe("expired");
     // ...and the run after that proposes it fresh.
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(1);
@@ -207,14 +209,27 @@ describe("runCareAgentLoop", () => {
     });
   });
 
-  it("looks at no more than 200 patients in one run", async () => {
-    const profiles = Array.from({ length: 205 }, (_, i) => ({
+  it("pages through every patient: 450 patients, three due refills, one proposal each, none on a second run", async () => {
+    const profiles = Array.from({ length: 450 }, (_, i) => ({
       id: `p-${String(i).padStart(3, "0")}`,
       role: "patient",
     }));
-    const db = world({ profiles, prescription_items: [], dose_logs: [] });
-    const result = await runCareAgentLoop(db.sb, now);
-    expect(result.patients).toBe(200);
-    expect(result.created).toBe(0);
+    const due = [10, 250, 440];
+    const db = world({
+      profiles,
+      prescription_items: due.map((n) =>
+        refillItem({ id: `i-${n}`, patient_id: `p-${String(n).padStart(3, "0")}` }),
+      ),
+      dose_logs: due.flatMap((n) => takenLogs(`i-${n}`, 8)),
+    });
+    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 450, created: 3, expired: 0, capped: false });
+    expect(db.table("agent_proposals").map((r) => r.patient_id).sort()).toEqual(["p-010", "p-250", "p-440"]);
+    expect(await runCareAgentLoop(db.sb, now)).toEqual({ patients: 450, created: 0, expired: 0, capped: false });
+  });
+
+  it("ignores dose logs older than 14 days", async () => {
+    const old = takenLogs("i-1", 8).map((l) => ({ ...l, scheduled_for: String(l.scheduled_for).replace("2026-10", "2026-09") }));
+    const db = world({ dose_logs: old });
+    expect((await runCareAgentLoop(db.sb, now)).created).toBe(0);
   });
 });

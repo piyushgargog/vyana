@@ -22,7 +22,18 @@ const item = (over: Partial<RxLlm["items"][number]>): RxLlm["items"][number] => 
 
 describe("numbersIn / hasNumber", () => {
   it("reads whole numbers, decimals and Indian grouping", () => {
-    expect(numbersIn("HbA1c 7.4 % 4.0 - 5.6, platelets 1,50,000 /cumm, x 30 days.")).toEqual([1, 7.4, 4, 5.6, 150000, 30]);
+    expect(numbersIn("HbA1c 7.4 % 4.0 - 5.6, platelets 1,50,000 /cumm, x 30 days.", { skipGlued: true })).toEqual([7.4, 4, 5.6, 150000, 30]);
+  });
+  it("does not count digits glued to a letter as written numbers", () => {
+    expect(numbersIn("HbA1c 7.4 %", { skipGlued: true })).toEqual([7.4]);
+    expect(numbersIn("T3, T4 and TSH", { skipGlued: true })).toEqual([]);
+    expect(numbersIn("Vitamin B12 250 pg/mL", { skipGlued: true })).toEqual([250]);
+    expect(numbersIn("BP 120/80 mmHg", { skipGlued: true })).toEqual([120, 80]);
+    expect(hasNumber("HbA1c 7.4 %", 1, { skipGlued: true })).toBe(false);
+    // strict by default: glued digits still count (doses, care plans)
+    expect(numbersIn("Take 2x500")).toEqual([2, 500]);
+    expect(numbersIn("Paracetamol500mg")).toEqual([500]);
+    expect(hasNumber("HbA1c 7.4 %", 1)).toBe(true);
   });
   it("compares as numbers, so 3 isn't found in 30 and 4 isn't found in 7.4", () => {
     expect(hasNumber("x 30 days", 30)).toBe(true);
@@ -186,6 +197,21 @@ describe("verifyReport", () => {
     );
     expect(out.values).toHaveLength(1);
     expect(out.values[0]).toMatchObject({ value: null, flag: "unknown", needs_review: true });
+    expect(out.anyReview).toBe(true);
+  });
+
+  it("flags a swapped reference range for review instead of computing a wrong flag", () => {
+    // Both bounds are printed in the row, so both pass the evidence check; the swap itself must be caught.
+    const out = verifyReport(
+      {
+        ...base,
+        values: [row({ test_name: "Fasting Blood Sugar", value: 115, unit: "mg/dL", ref_low: 100, ref_high: 70, evidence: "Fasting Blood Sugar 115 mg/dL 70 - 100" })],
+      },
+      text,
+      {},
+    );
+    expect(out.values).toHaveLength(1);
+    expect(out.values[0]).toMatchObject({ value: 115, ref_low: 100, ref_high: 70, flag: "unknown", needs_review: true });
     expect(out.anyReview).toBe(true);
   });
 

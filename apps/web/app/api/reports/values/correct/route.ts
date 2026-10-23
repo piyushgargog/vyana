@@ -1,6 +1,6 @@
 import { LabValueCorrectReq, LabValueCorrectRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
-import { parseBody, withRoute } from "@/lib/server/errors";
+import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { correctLabValue } from "@/lib/server/reports";
 
 // A few database reads and writes; no model call (the summary is rebuilt in code).
@@ -13,5 +13,5 @@ export const POST = withRoute("reports/values/correct", async (req, ctx) => {
   requireRole(authed.profile, "patient");
   const body = await parseBody(req, LabValueCorrectReq);
   const res = await correctLabValue(authed, body);
-  return Response.json(process.env.NODE_ENV === "production" ? res : LabValueCorrectRes.parse(res));
+  return jsonRes(LabValueCorrectRes, res);
 }, { rateLimit: rateLimitOf("ai_document") });

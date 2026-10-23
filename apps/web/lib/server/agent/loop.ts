@@ -15,13 +15,16 @@ import {
  * proposals they return. Rules decide; this loop only reads what they need, writes what they
  * answered, and closes what has expired. A model is never involved.
  *
- * One run looks at at most MAX_PATIENTS patients (the first ones by id, so a run is bounded and
- * the next run starts from the same place). Counts only leave this module: no medicine name and
+ * One run pages through all patients by id, at most MAX_PAGES pages (a bounded run; `capped` says
+ * when that stopped it). Counts only leave this module: no medicine name and
  * no health value is ever logged or returned.
  */
 
-export const MAX_PATIENTS = 200;
-const PAGE = 100;
+const PAGE = 200;
+/** 50 pages of 200 = 10,000 patients a run. */
+export const MAX_PAGES = 50;
+/** The missed-dose rule looks at the last 7 days; 14 leaves room for the timezone edge and a late run. */
+const LOG_WINDOW_DAYS = 14;
 const CHUNK = 100;
 const DAY_MS = 86_400_000;
 
@@ -73,21 +76,25 @@ async function readChunked<T>(
   return out;
 }
 
-/** The patients of one run: the first MAX_PATIENTS by id, paged so no single read is unbounded. */
-async function listPatients(sb: SupabaseClient): Promise<string[]> {
+/**
+ * The patients of one run: every patient, paged by a cursor on the last id seen (`id > lastId`,
+ * ordered by id, so no page is skipped or repeated). A hard cap of MAX_PAGES pages keeps one run
+ * from running forever; `capped` says the cap stopped it with patients still unread.
+ */
+async function listPatients(sb: SupabaseClient): Promise<{ ids: string[]; capped: boolean }> {
   const ids: string[] = [];
-  for (let from = 0; ids.length < MAX_PATIENTS; from += PAGE) {
-    const { data, error } = await sb
-      .from("profiles")
-      .select("id")
-      .eq("role", "patient")
-      .order("id")
-      .range(from, from + PAGE - 1);
+  let lastId: string | null = null;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    let query = sb.from("profiles").select("id").eq("role", "patient");
+    if (lastId !== null) query = query.gt("id", lastId);
+    const { data, error } = await query.order("id").limit(PAGE);
     if (error) throw error;
-    ids.push(...(data ?? []).map((r) => r.id as string));
-    if (!data || data.length < PAGE) break;
+    const rows = data ?? [];
+    ids.push(...rows.map((r) => r.id as string));
+    if (rows.length < PAGE) return { ids, capped: false };
+    lastId = rows[rows.length - 1].id as string;
   }
-  return ids.slice(0, MAX_PATIENTS);
+  return { ids, capped: true };
 }
 
 /**
@@ -113,6 +120,7 @@ async function draftsForPatient(
   sb: SupabaseClient,
   patientId: string,
   today: string,
+  now: Date,
 ): Promise<ProposalDraft[]> {
   const { data: itemData, error: itemError } = await sb
     .from("prescription_items")
@@ -122,14 +130,14 @@ async function draftsForPatient(
   if (itemError) throw itemError;
   const items = (itemData ?? []) as ItemRow[];
 
-  // The refill rule counts every dose ever logged as taken against the pack (the same rows the
-  // refill alerts read), so the loop reads an item's whole log, not a window; the missed-dose
-  // rule picks its own last seven days out of the same rows.
+  // Only the last 14 days of the dose log are read: the missed-dose rule looks at 7 days, so 14
+  // covers its window with a margin, and no run reads a patient's whole history.
+  const since = new Date(now.getTime() - LOG_WINDOW_DAYS * DAY_MS).toISOString();
   const logs =
     items.length === 0
       ? []
       : await readChunked<LogRow>(items.map((i) => i.id), (part) =>
-          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part),
+          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
         );
   const logsOf = (itemId: string) => logs.filter((l) => l.item_id === itemId);
 
@@ -195,6 +203,8 @@ export interface CareAgentLoopResult {
   created: number;
   /** Open proposals the database closed as expired at the end of the run. */
   expired: number;
+  /** True when the page cap stopped the run before every patient was read. */
+  capped: boolean;
 }
 
 /**
@@ -204,11 +214,11 @@ export interface CareAgentLoopResult {
  */
 export async function runCareAgentLoop(sb: SupabaseClient, now: Date = new Date()): Promise<CareAgentLoopResult> {
   const today = istDate(now);
-  const patientIds = await listPatients(sb);
+  const { ids: patientIds, capped } = await listPatients(sb);
   let created = 0;
 
   for (const patientId of patientIds) {
-    const drafts = await draftsForPatient(sb, patientId, today);
+    const drafts = await draftsForPatient(sb, patientId, today, now);
     if (drafts.length === 0) continue;
 
     const { data: openData, error: openError } = await sb
@@ -247,5 +257,5 @@ export async function runCareAgentLoop(sb: SupabaseClient, now: Date = new Date(
   const { data: expiredCount, error: expireError } = await sb.rpc("expire_proposals");
   if (expireError) throw expireError;
 
-  return { patients: patientIds.length, created, expired: typeof expiredCount === "number" ? expiredCount : 0 };
+  return { patients: patientIds.length, created, expired: typeof expiredCount === "number" ? expiredCount : 0, capped };
 }

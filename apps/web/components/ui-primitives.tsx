@@ -70,6 +70,7 @@ export function TrendChartSvg({
   points2,
   seriesLabel,
   series2Label,
+  label,
 }: {
   title: string;
   unit: string;
@@ -80,6 +81,8 @@ export function TrendChartSvg({
   points2?: (TrendPoint | null)[];
   seriesLabel?: string;
   series2Label?: string;
+  /** Screen-reader label for the chart; defaults to the measurement count. */
+  label?: string;
 }) {
   if (points.length === 0) {
     return (
@@ -171,7 +174,7 @@ export function TrendChartSvg({
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`${title} trend chart over ${points.length} measurements`}
+        aria-label={label ?? `${title} trend chart over ${points.length} measurements`}
         className="h-44 w-full min-w-[520px] overflow-visible"
       >
         {bandTop !== null && bandBottom !== null && bandBottom >= bandTop && (
@@ -266,7 +269,7 @@ export function TrendChartSvg({
                 x={cx}
                 y={cy - 10}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fontWeight="600"
                 fill={isAbnormal ? "var(--color-danger-text)" : isUnknown ? "var(--color-label-2)" : "var(--color-accent-strong)"}
               >
@@ -277,7 +280,7 @@ export function TrendChartSvg({
                 x={cx}
                 y={padTop + plotH + 18}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fill="var(--color-label-2)"
               >
                 {pt.date}
