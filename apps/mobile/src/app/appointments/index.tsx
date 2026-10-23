@@ -9,6 +9,7 @@ import {
   type MyAppointment,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { opdInstruction } from '@/components/opd-instruction';
 import {
   Button,
   Card,
@@ -50,6 +51,10 @@ export default function AppointmentsIndexScreen() {
 
   const { data: myAppointments = [], isLoading: apptsLoading } =
     useMyAppointments();
+
+  // Today as the stored date's own format, so the two compare directly.
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const { data: hospitals = [], isLoading: hospitalsLoading } = useHospitals(
     kindFilter === 'all' ? {} : { kind: kindFilter }
   );
@@ -80,16 +85,15 @@ export default function AppointmentsIndexScreen() {
     <Screen
       eyebrow="Hospital visits"
       title="OPD Appointments"
-      trailing={
-        <Button
-          title="Book Token"
-          size="sm"
-          style={styles.bookTokenBtn}
-          label="Book new OPD appointment token"
-          onPress={() => router.push('/appointments/book')}
-        />
-      }
     >
+      {/* The booking action lives in the content now (issue #489): in the header it
+          shared one row with the centred title and squeezed it off its line. */}
+      <Button
+        title="Book Token"
+        label="Book new OPD appointment token"
+        onPress={() => router.push('/appointments/book')}
+      />
+
       {/* Tabs Switcher */}
       <View style={styles.segment} accessibilityRole="tablist">
         {(
@@ -183,8 +187,7 @@ export default function AppointmentsIndexScreen() {
                 </View>
                 <View style={styles.instructionsBox}>
                   <Text variant="footnote" tone="accent" style={styles.instructionsText}>
-                    Report to the OPD registration desk by 8:30 AM with Token #
-                    {appt.token_no}.
+                    {opdInstruction(appt, today)}
                   </Text>
                 </View>
               </Card>
@@ -316,7 +319,6 @@ export default function AppointmentsIndexScreen() {
 }
 
 const styles = StyleSheet.create({
-  bookTokenBtn: { minHeight: 44 },
   segment: {
     flexDirection: 'row',
     backgroundColor: T.color.fill,
