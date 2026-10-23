@@ -128,7 +128,7 @@ const registrationYear = z.number().int().min(1950).refine((y) => y <= currentRe
 
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
-  reg_no: z.string().min(1).max(40), state_council: z.string().min(2),
+  reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
   year_of_registration: registrationYear.optional(),
 });
 export const DoctorVerifyRes = z.object({
@@ -367,7 +367,7 @@ export const ChatBody = z.object({
       z
         .object({
           role: z.enum(["system", "user", "assistant"]),
-          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()),
+          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()).max(20),
         })
         .loose(),
     )
