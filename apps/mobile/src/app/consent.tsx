@@ -10,9 +10,12 @@ import {
   CONSENT_VERSION,
   useAcceptConsent,
   useConsent,
+  useMockDeviceConnections,
   useMyProfile,
   useSession,
+  useSetDeviceConsent,
 } from '@vyana/shared';
+import { DeviceExplainer } from '@/components/device-explainer';
 import { useVyanaMobile } from '@/components/providers';
 import {
   Button,
@@ -57,6 +60,12 @@ export default function MobileConsentScreen() {
   const [agreedData, setAgreedData] = useState(true);
   const [agreedDisclaimer, setAgreedDisclaimer] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Device health data is a separate consent (#327): off by default, never part of
+  // the DPDP accept above, and a phone cannot connect a device without it.
+  const { data: deviceData } = useMockDeviceConnections();
+  const deviceConsentMutation = useSetDeviceConsent();
+  const deviceConsent = deviceData?.consent_granted ?? false;
+  const [explainerShown, setExplainerShown] = useState(false);
 
   useEffect(() => {
     if (!sessionLoading && !user) {
@@ -212,6 +221,44 @@ export default function MobileConsentScreen() {
           onPress={handleAccept}
         />
       </Card>
+
+      {/* Device health data (#327): its own consent item, off by default. */}
+      <Card>
+        <View style={styles.pointTitle}>
+          <IconTile ios="applewatch" android="watch" color="gray" />
+          <Text variant="headline" accessibilityRole="header" style={styles.pointTitleText}>
+            Device health data
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: deviceConsent }}
+          accessibilityLabel="Consent to reading device health data from Health Connect or Apple Health"
+          onPress={() => deviceConsentMutation.mutate(!deviceConsent)}
+          style={styles.checkRow}
+        >
+          <View style={[styles.checkbox, deviceConsent && styles.checkboxChecked]}>
+            {deviceConsent && (
+              <Symbol ios="checkmark" android="check" size={14} color={T.color.white} />
+            )}
+          </View>
+          <Text variant="subhead" style={styles.checkText}>
+            I consent to Vyana reading my device health data — daily totals and single
+            readings from my phone&apos;s health store.
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See what device health data covers"
+          onPress={() => setExplainerShown((v) => !v)}
+          style={styles.explainerToggle}
+        >
+          <Text variant="footnote" tone="accent" style={styles.legalLink}>
+            {explainerShown ? 'Hide what this covers' : 'What this covers'}
+          </Text>
+        </Pressable>
+        {explainerShown && <DeviceExplainer />}
+      </Card>
     </Screen>
   );
 }
@@ -267,5 +314,9 @@ const styles = StyleSheet.create({
   legalLink: {
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  explainerToggle: {
+    minHeight: 44,
+    justifyContent: 'center',
   },
 });

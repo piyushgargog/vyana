@@ -50,6 +50,8 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "lab_reports", owner: ["patient_id"], order: "id" },
   { table: "lab_values", owner: ["patient_id"], order: "id" },
   { table: "vitals", owner: ["patient_id"], order: "id" },
+  { table: "daily_activity", owner: ["patient_id"], order: "id" },
+  { table: "device_connections", owner: ["patient_id"], order: "id" },
   { table: "meal_logs", owner: ["patient_id"], order: "id" },
   { table: "care_plans", owner: ["patient_id"], order: "id" },
   { table: "care_links", owner: ["patient_id", "caregiver_id"], order: "id" },

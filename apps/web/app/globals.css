@@ -24,6 +24,14 @@
   --color-ok-soft: rgb(52 199 89 / 0.12);
   --color-warn: #b52f00;
   --color-warn-soft: rgb(255 149 0 / 0.14);
+
+  /* Icon tile colours (iOS system colours, issue #287): every one of these has a dark
+     value in the appearance block below, so no component carries a hex of its own. */
+  --color-tile-blue: #007aff;
+  --color-tile-green: #34c759;
+  --color-tile-orange: #ff9500;
+  --color-tile-gray: #8e8e93;
+  --color-tile-indigo: #5856d6;
   --color-ink: #1c1c1e;
 
   --radius-row: 12px;
@@ -38,6 +46,60 @@
   --shadow-glass: 0 8px 32px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.9);
   --shadow-float: 0 10px 30px rgb(0 0 0 / 0.12);
   --shadow-accent: 0 8px 24px rgb(13 148 136 / 0.28);
+}
+
+:root {
+  color-scheme: light;
+}
+
+/*
+ * Dark appearance (issue #287): the app follows the system, with no switch of its own
+ * (dark-mode.md). Only the token values change — every component already paints from
+ * tokens, so overriding them here flips the whole app. Text tokens are chosen for
+ * 4.5:1 or better on both dark backgrounds (checked with values, see the PR):
+ * label-2 and label-3 sit above iOS's own alphas for that reason.
+ * This block comes before the accessibility blocks below so that reduced-transparency
+ * and increased-contrast can restate their dark surfaces after it.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-canvas: #000000;
+    --color-surface: #1c1c1e;
+    --color-ink: #f2f2f7;
+    --color-label: #ffffff;
+    --color-label-2: rgb(235 235 245 / 0.68);
+    --color-label-3: rgb(235 235 245 / 0.55);
+    --color-separator: rgb(84 84 88 / 0.65);
+    --color-fill: rgb(120 120 128 / 0.24);
+    --color-fill-strong: rgb(120 120 128 / 0.36);
+    --color-accent: #2dd4bf;
+    --color-accent-strong: #3ec6b8;
+    --color-accent-soft: rgb(45 212 191 / 0.18);
+    --color-danger: #ff453a;
+    --color-danger-text: #ff6961;
+    --color-danger-soft: rgb(255 69 58 / 0.16);
+    --color-ok: #30d158;
+    --color-ok-soft: rgb(48 209 88 / 0.16);
+    --color-warn: #ff9f0a;
+    --color-warn-soft: rgb(255 159 10 / 0.18);
+    --color-tile-blue: #0a84ff;
+    --color-tile-green: #30d158;
+    --color-tile-orange: #ff9f0a;
+    --color-tile-gray: #98989f;
+    --color-tile-indigo: #5e5ce6;
+    --shadow-glass:
+      0 8px 32px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
+      inset 0 1px 0 rgb(255 255 255 / 0.12);
+    --shadow-float: 0 10px 30px rgb(0 0 0 / 0.5);
+  }
+  .glass {
+    background: rgb(28 28 30 / 0.62);
+    border-color: rgb(255 255 255 / 0.16);
+  }
+  .glass-bar {
+    background: rgb(22 22 24 / 0.72);
+  }
 }
 
 /* Liquid Glass: only for chrome (nav, tab bar, floating buttons, sheets). Content sits on solid surfaces. */
@@ -59,10 +121,75 @@
 /* Browsers without backdrop-filter get a solid, readable surface instead. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass {
-    background: rgb(255 255 255 / 0.96);
+    background: var(--color-surface);
   }
   .glass-bar {
-    background: rgb(242 242 247 / 0.97);
+    background: var(--color-canvas);
+  }
+}
+
+/*
+ * Reduced transparency (issue #288): when the person asks the system for it, glass turns solid.
+ * There is nothing behind the surface to read any more, so the blur and the translucency both go.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-bar {
+    background: var(--color-canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Increased contrast (issue #288): the same surfaces with a border that still
+   reads as an edge, and the secondary text tokens at near-full strength —
+   the request is for stronger borders AND text. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-label-2: rgb(28 28 30 / 0.95);
+    --color-label-3: rgb(28 28 30 / 0.82);
+  }
+  .glass {
+    background: rgb(255 255 255 / 0.92);
+    border-color: rgb(60 60 67 / 0.55);
+  }
+  .glass-bar {
+    background: rgb(242 242 247 / 0.94);
+    border-bottom: 1px solid rgb(60 60 67 / 0.55);
+  }
+}
+
+/* The same two states in the dark appearance (issue #287): solid dark surfaces, light edges. */
+@media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-bar {
+    background: var(--color-canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root {
+    /* More contrast strengthens the text tokens too, not only the surfaces. */
+    --color-label-2: rgb(255 255 255 / 0.95);
+    --color-label-3: rgb(235 235 245 / 0.85);
+  }
+  .glass {
+    background: rgb(28 28 30 / 0.94);
+    border-color: rgb(255 255 255 / 0.55);
+  }
+  .glass-bar {
+    background: rgb(0 0 0 / 0.96);
+    border-bottom: 1px solid rgb(255 255 255 / 0.55);
   }
 }
 
