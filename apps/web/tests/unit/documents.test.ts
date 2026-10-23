@@ -22,7 +22,14 @@ const item = (over: Partial<RxLlm["items"][number]>): RxLlm["items"][number] => 
 
 describe("numbersIn / hasNumber", () => {
   it("reads whole numbers, decimals and Indian grouping", () => {
-    expect(numbersIn("HbA1c 7.4 % 4.0 - 5.6, platelets 1,50,000 /cumm, x 30 days.")).toEqual([1, 7.4, 4, 5.6, 150000, 30]);
+    expect(numbersIn("HbA1c 7.4 % 4.0 - 5.6, platelets 1,50,000 /cumm, x 30 days.")).toEqual([7.4, 4, 5.6, 150000, 30]);
+  });
+  it("does not count digits glued to a letter as written numbers", () => {
+    expect(numbersIn("HbA1c 7.4 %")).toEqual([7.4]);
+    expect(numbersIn("T3, T4 and TSH")).toEqual([]);
+    expect(numbersIn("Vitamin B12 250 pg/mL")).toEqual([250]);
+    expect(numbersIn("BP 120/80 mmHg")).toEqual([120, 80]);
+    expect(hasNumber("HbA1c 7.4 %", 1)).toBe(false);
   });
   it("compares as numbers, so 3 isn't found in 30 and 4 isn't found in 7.4", () => {
     expect(hasNumber("x 30 days", 30)).toBe(true);

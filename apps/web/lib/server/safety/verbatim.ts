@@ -66,18 +66,28 @@ export function verifyEvidence<F extends Record<string, unknown>>(
   return { values, failed, needs_review: failed.length > 0 };
 }
 
-/** Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap. */
+/**
+ * Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap.
+ * Digits glued to a letter ("HbA1c", "T3", "B12") are part of a name, not a written number: a model must not
+ * pass the evidence check by quoting the test name for a hallucinated value of 1, 3 or 12.
+ */
 export function numbersIn(s: string): number[] {
   const out: number[] = [];
   let current = "";
+  let glued = false; // the number started right after a letter
   const flush = () => {
     const cleaned = current.replace(/,/g, "").replace(/\.$/, "");
-    if (/\d/.test(cleaned)) out.push(Number(cleaned));
+    if (/\d/.test(cleaned) && !glued) out.push(Number(cleaned));
     current = "";
+    glued = false;
   };
+  let prev = "";
   for (const ch of s) {
-    if ((ch >= "0" && ch <= "9") || ((ch === "." || ch === ",") && current.length > 0)) current += ch;
-    else flush();
+    if ((ch >= "0" && ch <= "9") || ((ch === "." || ch === ",") && current.length > 0)) {
+      if (current.length === 0) glued = /\p{L}/u.test(prev);
+      current += ch;
+    } else flush();
+    prev = ch;
   }
   flush();
   return out.filter((n) => Number.isFinite(n));
