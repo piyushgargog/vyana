@@ -1,8 +1,8 @@
 // packages/shared/src/health/qr.ts
 // A real, scannable QR code for the Medical ID and for invite links. Owner: Vaibhav Parmar
 //
-// `generateQrMatrix` in ui-helpers.ts only draws a pattern that looks like a QR code (finder squares and a pattern
-// made from a hash of the text): no phone can read it. This builds the real thing (Reed-Solomon error correction,
+// A pattern that only looks like a QR code (finder squares and a pattern made from a hash of the text) cannot be
+// read by any phone. This builds the real thing (Reed-Solomon error correction,
 // masking), and the tests decode it again with an independent decoder.
 
 import qrcode from "qrcode-generator";
