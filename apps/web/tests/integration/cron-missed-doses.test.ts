@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requireEnv } from "@/lib/server/supabase-admin";
 
 const run = vi.fn(async () => ({ checked: 3, alerts_sent: 2 }));
+const runLate = vi.fn(async () => ({ checked: 5, patient_sent: 1, caregiver_sent: 1 }));
 vi.mock("@/lib/server/supabase-admin", () => ({
   supabaseAdmin: () => ({ marker: "admin" }),
   requireEnv: (name: string) => {
@@ -11,6 +12,7 @@ vi.mock("@/lib/server/supabase-admin", () => ({
   },
 }));
 vi.mock("@/lib/server/data/missed-doses", () => ({ runMissedDoseCheck: (...args: unknown[]) => run(...(args as [])) }));
+vi.mock("@/lib/server/data/late-doses", () => ({ runLateDoseCheck: (...args: unknown[]) => runLate(...(args as [])) }));
 
 const { POST } = await import("@/app/api/cron/missed-doses/route");
 
@@ -20,6 +22,7 @@ const call = (headers: Record<string, string> = {}) =>
 beforeEach(() => {
   vi.stubEnv("CRON_SECRET", "s3cret-value-for-tests");
   run.mockClear();
+  runLate.mockClear();
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -29,8 +32,9 @@ describe("POST /api/cron/missed-doses", () => {
   it("runs the check for the scheduler and returns its counts", async () => {
     const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ checked: 3, alerts_sent: 2 });
+    expect(await res.json()).toEqual({ checked: 3, alerts_sent: 2, late_checked: 5, late_patient_sent: 1, late_caregiver_sent: 1 });
     expect(run).toHaveBeenCalledTimes(1);
+    expect(runLate).toHaveBeenCalledTimes(1);
     const [client, send] = run.mock.calls[0] as unknown as [{ marker: string }, unknown];
     expect(client.marker).toBe("admin"); // the service-role client
     expect(typeof send).toBe("function"); // sendPush

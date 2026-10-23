@@ -74,6 +74,7 @@ export const NOT_EXPORTED: Record<string, string> = {
   care_invite_attempts: "rate-limit bookkeeping for joining with a code, no health or personal content",
   rate_limits: "counters of the per-user API limits (migration 0012), no health or personal content",
   missed_dose_alerts: "delivery bookkeeping of the alert push; the doses themselves are in dose_logs",
+  late_dose_pushes: "delivery bookkeeping of the late-dose nudge; the doses themselves are in dose_logs",
   hospitals: "public information",
   departments: "public information",
   price_quotes: "public prices, not tied to a user",

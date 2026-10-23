@@ -1114,6 +1114,49 @@ export type Database = {
           },
         ]
       }
+      late_dose_pushes: {
+        Row: {
+          caregiver_sent_at: string | null
+          id: string
+          item_id: string
+          patient_id: string
+          scheduled_for: string
+          sent_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          caregiver_sent_at?: string | null
+          id?: string
+          item_id: string
+          patient_id: string
+          scheduled_for: string
+          sent_at?: string
+        }
+        Update: {
+          caregiver_sent_at?: string | null
+          id?: string
+          item_id?: string
+          patient_id?: string
+          scheduled_for?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "late_dose_pushes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "prescription_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "late_dose_pushes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_reports: {
         Row: {
           created_at: string
@@ -1508,6 +1551,7 @@ export type Database = {
           full_name: string | null
           gender: string | null
           id: string
+          late_dose_nudge: boolean
           onboarded: boolean
           phone: string | null
           preferred_language: string
@@ -1523,6 +1567,7 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id: string
+          late_dose_nudge?: boolean
           onboarded?: boolean
           phone?: string | null
           preferred_language?: string
@@ -1537,6 +1582,7 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          late_dose_nudge?: boolean
           onboarded?: boolean
           phone?: string | null
           preferred_language?: string
