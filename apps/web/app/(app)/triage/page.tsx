@@ -178,10 +178,15 @@ export default function TriagePage() {
                 {triageResult.advice}
               </p>
               <div className="mt-4">
-                <ButtonLink href="/sos" variant="destructive">
-                  <TriangleAlert aria-hidden="true" className="h-[18px] w-[18px]" />
-                  Open Emergency SOS / Call 108 now
-                </ButtonLink>
+                <div className="flex flex-wrap gap-2">
+                  <ButtonLink href="tel:108" variant="destructive">
+                    <TriangleAlert aria-hidden="true" className="h-[18px] w-[18px]" />
+                    Call 108 now
+                  </ButtonLink>
+                  <ButtonLink href="/sos" variant="secondary">
+                    Open Emergency SOS
+                  </ButtonLink>
+                </div>
               </div>
             </Card>
           ) : (
@@ -191,7 +196,7 @@ export default function TriagePage() {
               </Pill>
               <h2 className="mt-3 text-[20px] font-semibold text-label">
                 {triageResult.urgency === "soon"
-                  ? "Seek clinical consultation in 24–48 hours"
+                  ? "See a doctor soon"
                   : "Schedule a regular hospital OPD visit"}
               </h2>
               <p className="mt-1 text-[15px] leading-relaxed text-label-2">
