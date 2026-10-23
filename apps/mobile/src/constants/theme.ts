@@ -86,8 +86,8 @@ export const T = {
     canvas: '#F2F2F7',
     surface: '#FFFFFF',
     label: '#1C1C1E',
-    // Aligned with the web tokens (U1): at 0.72/0.60 these measured 4.47:1 and 3.29:1 on the
-    // canvas — under the 4.5:1 small text needs. 0.78/0.74 measure 5.26:1 and 4.74:1.
+    // Aligned with the web tokens (U1): at 0.72/0.60 these measured 4.50:1 and 3.31:1 on the
+    // canvas — under the 4.5:1 small text needs. 0.78/0.74 measure 5.29:1 and 4.75:1.
     label2: 'rgba(60,60,67,0.78)',
     label3: 'rgba(60,60,67,0.74)',
     separator: 'rgba(60,60,67,0.12)',

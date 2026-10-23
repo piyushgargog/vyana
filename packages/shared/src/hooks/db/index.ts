@@ -26,5 +26,6 @@ export * from "./reports";
 export * from "./shareLinks";
 export * from "./timeline";
 export * from "./vitals";
+export * from "./wearables";
 export * from "./waitlist";
 export { DB_KEYS } from "./shared";
