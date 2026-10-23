@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { getAdherence, listDoseLogs, logDose, type Adherence, type LogDoseInput } from "../../db/queries/doses";
+import { getAdherence, listDoseLogs, logDose, undoDose, type Adherence, type LogDoseInput } from "../../db/queries/doses";
 import type { DbError } from "../../db/queries/helpers";
 import type { DbDoseLog } from "../../db/types";
 import { DB_KEYS, useDb, useInvalidate } from "./shared";
@@ -15,6 +15,16 @@ export function useLogDose() {
   const invalidate = useInvalidate();
   return useMutation<DbDoseLog, DbError, LogDoseInput>({
     mutationFn: (input) => logDose(sb, input),
+    onSuccess: () => invalidate(DB_KEYS.doseLogs, DB_KEYS.adherence),
+  });
+}
+
+/** Undoes a dose the patient logged (taken or skipped); a missed row is never removed. */
+export function useUndoDose() {
+  const { sb } = useDb();
+  const invalidate = useInvalidate();
+  return useMutation<void, DbError, { item_id: string; scheduled_for: string }>({
+    mutationFn: (input) => undoDose(sb, input),
     onSuccess: () => invalidate(DB_KEYS.doseLogs, DB_KEYS.adherence),
   });
 }
