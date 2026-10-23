@@ -14,4 +14,5 @@ export const QUERY_ROOTS = {
   careLinks: "care-links",
   shareLinks: "share-links",
   sharedRecord: "shared-record",
+  devices: "devices",
 } as const;

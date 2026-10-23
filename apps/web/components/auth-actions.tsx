@@ -40,7 +40,7 @@ export function AuthActions({ plainSignIn = false }: { plainSignIn?: boolean }) 
     );
   }
   return (
-    <span className={status === "loading" ? "invisible flex items-center gap-2 sm:gap-3" : "flex items-center gap-2 sm:gap-3"} aria-hidden={status === "loading"}>
+    <span className={status === "loading" ? "invisible flex flex-wrap items-center gap-2 sm:gap-3" : "flex flex-wrap items-center gap-2 sm:gap-3"} aria-hidden={status === "loading"}>
       <ButtonLink href="/login" variant={plainSignIn ? "plain" : "secondary"} size="sm" tabIndex={status === "loading" ? -1 : undefined}>
         Sign in
       </ButtonLink>
