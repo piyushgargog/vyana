@@ -104,6 +104,13 @@ The AI routes count each signed-in user's calls (table `rate_limits`, function `
 
 To let an account run without limits (the safety eval, the prewarm, recording the demo), put its user id in `RATE_LIMIT_EXEMPT_USER_IDS` in `apps/web/.env.production` (comma separated), then run the deploy command. Each exempt call logs `rate_limit_exempt` without the id. Remove the id afterwards.
 
+## Scheduled routes
+
+Two routes exist only for schedulers; both refuse any call without the `x-cron-secret` header.
+
+- `POST /api/cron/missed-doses` — every 15 minutes, called by pg_cron from the database (migration 0008).
+- `POST /api/cron/care-agent` — runs the care agent rules and writes their proposals (issue #415). It is scheduled by Piyush on the server, not by any pull request: until he adds it, the route simply never runs.
+
 ## What is still missing
 
 - **Uploaded files.** The images in Supabase Storage are not part of this backup. For the demo that is acceptable (the demo data is synthetic and can be re-uploaded); before real use, copy the two buckets too.

@@ -40,7 +40,7 @@ export type VitalType = keyof typeof VITAL_UNITS;
 export const EMERGENCY_NUMBER = "108";
 
 // Scope v2 additions (plan 7.5)
-export const CONSENT_VERSION = "2026-10-11";
+export const CONSENT_VERSION = "2026-10-23";
 export const EMERGENCY = { ambulance: "108", all: "112" } as const; // EMERGENCY_NUMBER stays for compatibility
 export const BLINKIT = {
   url: "https://blinkit.com",
