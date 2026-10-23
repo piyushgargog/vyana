@@ -66,24 +66,35 @@ export function verifyEvidence<F extends Record<string, unknown>>(
   return { values, failed, needs_review: failed.length > 0 };
 }
 
-/** Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap. */
-export function numbersIn(s: string): number[] {
+/**
+ * Every number written in `s` ("1,50,000" → 150000, "4.0" → 4). A plain scan, so long text stays cheap.
+ * Strict by default: every digit run counts, so "2x500" yields 2 and 500. With `skipGlued` digits glued to a letter
+ * ("HbA1c", "T3", "B12") are treated as part of a name, not a written number (lab-report evidence only; never use it
+ * for doses, where "Paracetamol500mg" must still yield 500).
+ */
+export function numbersIn(s: string, opts: { skipGlued?: boolean } = {}): number[] {
   const out: number[] = [];
   let current = "";
+  let glued = false; // the number started right after a letter
   const flush = () => {
     const cleaned = current.replace(/,/g, "").replace(/\.$/, "");
-    if (/\d/.test(cleaned)) out.push(Number(cleaned));
+    if (/\d/.test(cleaned) && !(opts.skipGlued && glued)) out.push(Number(cleaned));
     current = "";
+    glued = false;
   };
+  let prev = "";
   for (const ch of s) {
-    if ((ch >= "0" && ch <= "9") || ((ch === "." || ch === ",") && current.length > 0)) current += ch;
-    else flush();
+    if ((ch >= "0" && ch <= "9") || ((ch === "." || ch === ",") && current.length > 0)) {
+      if (current.length === 0) glued = /\p{L}/u.test(prev);
+      current += ch;
+    } else flush();
+    prev = ch;
   }
   flush();
   return out.filter((n) => Number.isFinite(n));
 }
 
 /** True when `n` is one of the numbers written in `s` (compared as numbers, so 3 doesn't match "30"). */
-export function hasNumber(s: string | null | undefined, n: number): boolean {
-  return !!s && numbersIn(s).some((x) => Math.abs(x - n) < 1e-9);
+export function hasNumber(s: string | null | undefined, n: number, opts: { skipGlued?: boolean } = {}): boolean {
+  return !!s && numbersIn(s, opts).some((x) => Math.abs(x - n) < 1e-9);
 }
