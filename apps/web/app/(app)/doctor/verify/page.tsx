@@ -102,10 +102,10 @@ export default function DoctorVerifyPage() {
       setVerifyResult(res);
 
       if (res.status === "verified") {
-        showToast("NMC Verification Successful! Doctor credentials confirmed.", "success");
+        showToast("Your registration is verified.", "success");
       } else {
         showToast(
-          `Verification status: ${res.status}. See details below.`,
+          "Sent for the admin check. Your status is shown below.",
           "warning"
         );
       }

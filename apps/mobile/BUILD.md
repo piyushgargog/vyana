@@ -105,3 +105,11 @@ EXPO_PUBLIC_SUPABASE_URL=https://example.supabase.co EXPO_PUBLIC_SUPABASE_ANON_K
 ```
 
 If this fails, the cloud build will fail too.
+
+## Health stores
+
+Reading Health Connect (Android) and HealthKit (iOS) needs a real build: use an EAS build (or a development build), never Expo Go — the health libraries are native modules Expo Go does not carry. The configuration lives in `app.json`: the `react-native-health-connect` and `@kingstinct/react-native-healthkit` config plugins, the nine `android.permission.health.READ_*` permissions for the record types the sync engine reads, and the `expo-background-task` / `expo-task-manager` plugins for the background sync.
+
+- Android: Health Connect is built into Android 14 and later. On older Android the phone needs the Health Connect app from the Play Store; without it the devices screen says the store is not installed.
+- iOS: the HealthKit entitlement is added by the library's plugin. Building for a real iPhone needs a paid Apple developer account (the free personal team cannot hold the HealthKit entitlement for a device build).
+- A Play Store release will additionally need Google's Health Connect data-use declaration (the health permissions policy form in Play Console) before the build can be published.

@@ -14,6 +14,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorState,
   Field,
   LargeTitle,
   Pill,
@@ -47,6 +48,7 @@ export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = useState<DoctorWithRelations[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [doctorsError, setDoctorsError] = useState<string | null>(null);
+  const [doctorsAttempt, setDoctorsAttempt] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -64,7 +66,7 @@ export default function AdminDoctorsPage() {
       } catch (err) {
         if (!ignore) {
           setDoctorsError(
-            err instanceof Error ? err.message : "Failed to load doctors"
+            err instanceof Error ? err.message : "Please try again in a moment."
           );
         }
       } finally {
@@ -77,13 +79,14 @@ export default function AdminDoctorsPage() {
     return () => {
       ignore = true;
     };
-  }, [supabase]);
+  }, [supabase, doctorsAttempt]);
 
   // Fetch all hospitals
   const {
     data: hospitals,
     isLoading: hospitalsLoading,
     error: hospitalsError,
+    refetch: refetchHospitals,
   } = useHospitals();
 
   const filteredDoctors = doctors.filter((doc: DoctorWithRelations) => {
@@ -124,7 +127,7 @@ export default function AdminDoctorsPage() {
           className={cn(
             "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "doctors"
-              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              ? "bg-surface text-label ring-1 ring-separator"
               : "text-label-2 hover:text-label"
           )}
         >
@@ -136,7 +139,7 @@ export default function AdminDoctorsPage() {
           className={cn(
             "rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors",
             activeTab === "hospitals"
-              ? "bg-surface text-label shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+              ? "bg-surface text-label ring-1 ring-separator"
               : "text-label-2 hover:text-label"
           )}
         >
@@ -158,7 +161,7 @@ export default function AdminDoctorsPage() {
                   className={cn(
                     "rounded-full px-3.5 py-1 text-[13px] font-semibold capitalize transition-colors",
                     statusFilter === st
-                      ? "bg-surface text-label shadow-[0_1px_3px_rgb(0_0_0/0.08)]"
+                      ? "bg-surface text-label ring-1 ring-separator"
                       : "text-label-2 hover:text-label"
                   )}
                 >
@@ -189,9 +192,16 @@ export default function AdminDoctorsPage() {
               <SkeletonLine className="h-10 w-full" />
             </Card>
           ) : doctorsError ? (
-            <Card className="border border-danger/30 bg-danger-soft/20 text-danger-text">
-              <p className="font-semibold text-[17px]">Failed to load doctors registry</p>
-              <p className="mt-1 text-[13px] text-label-2">{doctorsError}</p>
+            <Card>
+              <ErrorState
+                title="We could not load the doctors list"
+                body={doctorsError}
+                onRetry={() => {
+                  setDoctorsError(null);
+                  setDoctorsLoading(true);
+                  setDoctorsAttempt((n) => n + 1);
+                }}
+              />
             </Card>
           ) : filteredDoctors.length === 0 ? (
             <Card>
@@ -288,9 +298,12 @@ export default function AdminDoctorsPage() {
               <SkeletonLine className="h-10 w-full" />
             </Card>
           ) : hospitalsError ? (
-            <Card className="border border-danger/30 bg-danger-soft/20 text-danger-text">
-              <p className="font-semibold text-[17px]">Failed to load hospitals</p>
-              <p className="mt-1 text-[13px] text-label-2">{hospitalsError.message}</p>
+            <Card>
+              <ErrorState
+                title="We could not load the hospitals list"
+                body={hospitalsError.message}
+                onRetry={() => refetchHospitals()}
+              />
             </Card>
           ) : !hospitals || hospitals.length === 0 ? (
             <Card>

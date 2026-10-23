@@ -69,7 +69,7 @@ function DoctorPrescribeContent({
         setAppointment(data as AppointmentDetails | null);
       } catch (err) {
         if (!ignore) {
-          setApptError(err instanceof Error ? err.message : "Failed to load appointment");
+          setApptError(err instanceof Error ? err.message : "Please try again in a moment.");
         }
       } finally {
         if (!ignore) {
