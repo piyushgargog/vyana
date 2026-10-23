@@ -165,7 +165,7 @@ The first release: the web app at https://vyanahealth.app and the Android app (p
 ### Changed
 - The home page and the sign-in pages show **"Open Vyana"** when you are already signed in (the session cookie was never lost; the pages just did not say so), and `/login` and `/sign-up` send a signed-in person into the app. The proxy refreshes the session only on full page loads.
 - The seeded demo accounts use **one password per role**; the seed refuses to touch a live database unless asked to.
-- The Android build no longer uses React Compiler: it wrote `Symbol.for(...)` into every component, and our icon component named `Symbol` hid the-builtin, which closed the app at launch.
+- The Android build no longer uses React Compiler: it wrote `Symbol.for(...)` into every component, and our icon component named `Symbol` hid the built-in, which closed the app at launch.
 - Demo hospital pins (GTB, Max Patparganj) match OpenStreetMap.
 
 ### Fixed
