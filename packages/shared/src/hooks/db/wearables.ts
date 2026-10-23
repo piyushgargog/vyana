@@ -20,8 +20,12 @@ export function useDailyActivity(days: number) {
   });
 }
 
-/** The patient's device connections, one per provider. */
-export function useDeviceConnections() {
+/**
+ * The patient's device connections as stored, one row per provider. Named for the rows:
+ * the screens use the API layer's `useDeviceConnections` (hooks/api/devices), and the two
+ * cannot share a name in the package barrel.
+ */
+export function useDeviceConnectionRows() {
   const { sb, ready } = useDb();
   return useQuery<DbDeviceConnection[], DbError>({
     queryKey: [DB_KEYS.deviceConnections],
