@@ -1,13 +1,15 @@
 -- supabase/tests/database/wearables.test.sql
 -- Device data (issue #325, ADR-073): who may read and write daily activity, device
 -- connections and device-sourced vitals, the dedupe keys, and delete_my_device_data.
+-- The policy coverage (every table against patient, other patient, doctor, unrelated
+-- doctor and anon, and the delete leaving other patients' rows alone) is issue #416.
 -- Run with: supabase test db
 -- Owner: Vaibhav Parmar
 
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(35);
 
 -- 1 patient A · 2 patient B · 3 doctor D (Medicine, has an appointment with A) · 4 doctor E (Skin, no patient)
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -69,9 +71,18 @@ select public.tap_login('10000000-0000-0000-0000-000000000002'); set local role 
 select is(
   (select count(*)::int from public.daily_activity),
   0, 'another patient reads no activity rows');
+select is(
+  (select count(*)::int from public.vitals),
+  0, 'another patient reads no vitals');
+select is(
+  (select count(*)::int from public.device_connections),
+  0, 'another patient reads no connections');
 select throws_ok(
   $$ insert into public.vitals (patient_id, type, value, unit, source, external_id) values ('10000000-0000-0000-0000-000000000001', 'spo2', 97, '%', 'health_connect', 'ext-2') $$,
   '42501', null, 'a patient cannot add a vital for somebody else');
+select throws_ok(
+  $$ insert into public.device_connections (patient_id, provider, status, permissions) values ('10000000-0000-0000-0000-000000000001', 'health_connect', 'connected', '{steps}') $$,
+  '42501', null, 'a patient cannot add a connection for somebody else');
 
 -- ----------------------------------------------------------------------------
 -- Doctors: A's doctor reads, an unrelated doctor does not, neither writes
@@ -81,6 +92,12 @@ select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role 
 select is(
   (select count(*)::int from public.daily_activity),
   2, 'a doctor of the patient reads their activity');
+select is(
+  (select count(*)::int from public.vitals),
+  2, 'a doctor of the patient reads their vitals');
+select is(
+  (select count(*)::int from public.device_connections),
+  1, 'a doctor of the patient reads their connection');
 select throws_ok(
   $$ insert into public.daily_activity (patient_id, day, steps, source) values ('10000000-0000-0000-0000-000000000001', current_date - 3, 100, 'health_connect') $$,
   '42501', null, 'a doctor cannot write activity for a patient');
@@ -90,6 +107,12 @@ select public.tap_login('10000000-0000-0000-0000-000000000004'); set local role 
 select is(
   (select count(*)::int from public.daily_activity),
   0, 'a doctor who does not treat the patient reads nothing');
+select is(
+  (select count(*)::int from public.vitals),
+  0, 'a doctor who does not treat the patient reads no vitals');
+select is(
+  (select count(*)::int from public.device_connections),
+  0, 'a doctor who does not treat the patient reads no connections');
 
 -- ----------------------------------------------------------------------------
 -- The vitals dedupe: a device reading is stored once, a manual one always
@@ -131,6 +154,16 @@ select is(
 -- ----------------------------------------------------------------------------
 -- delete_my_device_data: device rows go, manual rows stay, connections revoke
 -- ----------------------------------------------------------------------------
+-- Patient B has device data of their own by now (written as the owner): the
+-- delete is the caller's only, so B's rows must survive it.
+reset role;
+insert into public.vitals (patient_id, type, value, unit, source, device_name, external_id) values
+  ('10000000-0000-0000-0000-000000000002', 'spo2', 97, '%', 'health_connect', 'Watch', 'ext-b1');
+insert into public.daily_activity (patient_id, day, steps, source, device_name) values
+  ('10000000-0000-0000-0000-000000000002', current_date - 1, 3000, 'health_connect', 'Watch');
+
+select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
+
 select lives_ok(
   $$ select public.delete_my_device_data() $$,
   'the patient can delete their device data');
@@ -147,6 +180,15 @@ select is(
   (select status from public.device_connections where patient_id = '10000000-0000-0000-0000-000000000001'),
   'revoked', 'the connection is left revoked, not deleted');
 
+select public.tap_login('10000000-0000-0000-0000-000000000002'); set local role authenticated;
+
+select is(
+  (select count(*)::int from public.vitals where source <> 'manual'),
+  1, 'the delete leaves another patient''s device vitals alone');
+select is(
+  (select count(*)::int from public.daily_activity),
+  1, 'the delete leaves another patient''s activity alone');
+
 -- ----------------------------------------------------------------------------
 -- Signed out: nothing at all
 -- ----------------------------------------------------------------------------
@@ -158,6 +200,9 @@ select throws_ok(
 select throws_ok(
   $$ select * from public.device_connections $$,
   '42501', null, 'anon reads no connections');
+select throws_ok(
+  $$ select * from public.vitals $$,
+  '42501', null, 'anon reads no vitals');
 
 set local role authenticated;
 
