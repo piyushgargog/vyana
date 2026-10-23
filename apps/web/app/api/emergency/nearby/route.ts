@@ -1,6 +1,6 @@
 import { EmergencyNearbyReq, EmergencyNearbyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
-import { parseBody, withRoute } from "@/lib/server/errors";
+import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { log } from "@/lib/server/log";
 import { findNearbyHospitals } from "@/lib/server/web/overpass";
 
@@ -20,5 +20,5 @@ export const POST = withRoute("emergency/nearby", async (req, ctx) => {
     res = { area: null, hospitals: [], cached: false };
   }
   ctx.cache = res.cached ? "hit" : "miss";
-  return Response.json(process.env.NODE_ENV === "production" ? res : EmergencyNearbyRes.parse(res));
+  return jsonRes(EmergencyNearbyRes, res);
 }, { rateLimit: rateLimitOf("public") });

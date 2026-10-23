@@ -10,6 +10,8 @@ person's data.
 |---|---|---|
 | `home-desktop.png` | The public home page at 1366 px | `capture-screens.mjs`, no login |
 | `home-phone.png` | The public home page at 390 px | `capture-screens.mjs`, no login |
+| `share-desktop.png` | The public share page (a patient's timeline link, fictional demo patient) at 1366 px | `capture-screens.mjs`, no login, app running with `NEXT_PUBLIC_USE_MOCKS=true` |
+| `share-phone.png` | The same share page at 390 px | `capture-screens.mjs`, no login, mock mode as above |
 | `u1-home-phone-zoom200.png` | U1 largest-text pass (#285): home at 200% zoom, phone width — header actions wrap under the brand, nothing off-screen | Mock-env build, Playwright Chromium, 195 CSS px layout at scale factor 2 |
 | `u1-home-desktop-zoom200.png` | U1: home at 200% zoom, desktop width (683 CSS px layout) | Same |
 | `u1-login-phone-zoom200.png` | U1: sign-in at 200% zoom, phone width | Same |
@@ -19,8 +21,11 @@ person's data.
 
 The app screens (Today, Ask Vyana with a cited answer, prescription scan
 result, a care plan with sources, medicine interactions, blood search
-results, the SOS / emergency card, the Health Memory Graph share page, and —
-once C1 is merged — care suggestions) need a signed-in demo session:
+results, the SOS / emergency card, and — once C1 is merged — care
+suggestions) need a signed-in demo session. Mock mode alone is not enough:
+with no Supabase session the app shell sends every signed-in route to
+/login, so those screens can only be captured against a real (seeded)
+backend, like this:
 
 ```sh
 # 1. Run the web app (mock env is enough for the public shell; the demo data

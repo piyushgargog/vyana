@@ -1,6 +1,6 @@
 import { BloodSearchReq, BloodSearchRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
-import { parseBody, withRoute } from "@/lib/server/errors";
+import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { startBloodJob } from "@/lib/server/blood";
 
 // Reads the public stock service now (about a second); GET /{job_id} repeats the search from the cache (RapidBlood, ADR-072).
@@ -12,5 +12,5 @@ export const POST = withRoute("blood/search", async (req, ctx) => {
   const body = await parseBody(req, BloodSearchReq);
   const res = await startBloodJob(user.id, body);
   ctx.cache = res.cached ? "hit" : "miss";
-  return Response.json(process.env.NODE_ENV === "production" ? res : BloodSearchRes.parse(res));
+  return jsonRes(BloodSearchRes, res);
 }, { rateLimit: rateLimitOf("lookup") });
