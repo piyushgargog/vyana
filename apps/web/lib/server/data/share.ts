@@ -4,6 +4,7 @@ import {
   buildMemory,
   buildTimeline,
   isShareScope,
+  istDayOf,
   MEMORY_LAB_POINTS,
   MEMORY_LAB_TESTS,
   type MemoryDoseLog,
@@ -14,7 +15,6 @@ import {
   type TimelineSources,
 } from "@vyana/shared";
 import { notFound } from "../errors";
-import { istDate } from "../dates";
 
 /** `share_links.token` is 24 random bytes as hex. Anything else cannot be a token, so it never reaches the database. */
 export const SHARE_TOKEN_FORMAT = /^[0-9a-f]{48}$/;
@@ -38,7 +38,7 @@ export function ageFromDob(dob: string | null, now: Date): number | null {
   if (!dob) return null;
   const [y, m, d] = dob.split("-").map(Number);
   if (!y || !m || !d) return null;
-  const [ty, tm, td] = istDate(now).split("-").map(Number);
+  const [ty, tm, td] = istDayOf(now.toISOString()).split("-").map(Number);
   let age = ty - y;
   if (tm < m || (tm === m && td < d)) age--;
   return age >= 0 ? age : null;
@@ -89,7 +89,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   if (!row || row.revoked || new Date(row.expires_at).getTime() <= now.getTime()) throw notFound(GONE);
 
   const patient = row.patient_id;
-  const today = istDate(now);
+  const today = istDayOf(now.toISOString());
   const scopes: ShareScope[] = (row.scopes ?? []).filter(isShareScope);
 
   const [profile, conditions, items, contacts] = await Promise.all([

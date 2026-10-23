@@ -1,8 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CarePlan, findLastDone } from "@vyana/shared";
-import { istDate } from "../dates";
+import { CarePlan, findLastDone, istDayOf } from "@vyana/shared";
 import {
   labRecheckRule,
   missedDosePatternRule,
@@ -224,7 +223,7 @@ export interface CareAgentLoopResult {
  * then let `expire_proposals()` close what has run out.
  */
 export async function runCareAgentLoop(sb: SupabaseClient, now: Date = new Date()): Promise<CareAgentLoopResult> {
-  const today = istDate(now);
+  const today = istDayOf(now.toISOString());
   const { ids: patientIds, capped } = await listPatients(sb);
   let created = 0;
 
