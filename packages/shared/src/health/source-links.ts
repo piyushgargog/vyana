@@ -3,6 +3,8 @@
 // pharmacies, labs and e-RaktKosh, with the name already typed in. The app reads no price and no stock from them; it never
 // shows a number it did not get from the patient.
 
+import { cleanInlineText } from "../text/clean";
+
 export type PharmacyId = "1mg" | "pharmeasy" | "netmeds" | "apollo";
 export type LabId = "healthians" | "redcliffe" | "thyrocare" | "1mg_labs";
 
@@ -18,7 +20,7 @@ export interface LabLookupLink extends LookupLink {
 }
 
 /** The text a link carries: one line, trimmed, no longer than a medicine or test name can be. */
-export const cleanSearchText = (text: string): string => text.replace(/\s+/g, " ").trim().slice(0, 80);
+export const cleanSearchText = (text: string): string => cleanInlineText(text, 80);
 
 const PHARMACIES: { id: PharmacyId; name: string; url: (q: string) => string }[] = [
   { id: "1mg", name: "Tata 1mg", url: (q) => `https://www.1mg.com/search/all?name=${q}` },

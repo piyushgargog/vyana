@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(18);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'a@vyana.test', '{"full_name":"Patient A"}'),
@@ -106,6 +106,25 @@ select is(
   (select calls::int from public.ai_usage_daily
     where user_id is null and day = (now() at time zone 'Asia/Kolkata')::date),
   1, 'a run with no user rolls up under a null user');
+
+reset role;
+
+-- An audit row is not a model call (issue #424): the lab-value correction writes
+-- one with model null. It is stored like any other row, but it must not count
+-- towards the patient's totals — that number is what the daily limit reads.
+-- (Added last: the daily view above still rolls every row up, audit included.)
+insert into public.ai_runs (user_id, feature, provider, model, input_tokens, output_tokens, latency_ms, created_at) values
+  ('10000000-0000-0000-0000-000000000001', 'lab_value_correction', null, null, null, null, null, now());
+
+select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
+
+select is(
+  (select count(*)::int from public.ai_runs where feature = 'lab_value_correction'),
+  1, 'the audit row is stored and readable');
+select results_eq(
+  $$ select calls::int, input_tokens::int, output_tokens::int from public.my_ai_usage_today() $$,
+  $$ values (2, 300, 130) $$,
+  'an audit row with no model does not count towards the totals');
 
 reset role;
 

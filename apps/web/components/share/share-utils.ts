@@ -112,3 +112,18 @@ export function flagText(flag: "low" | "normal" | "high" | "unknown"): string {
   if (flag === "normal") return "Normal";
   return "";
 }
+
+type VitalPoint = { at: string; value: number; value2: number | null; from_device?: boolean };
+
+/**
+ * The "Latest: ..." line under a vital chart (issue #328). It exists only to mark
+ * device readings, so a chart made of manual readings alone gets no line (null).
+ * `sorted` is oldest first.
+ */
+export function latestVitalLine(sorted: VitalPoint[], unit: string | null | undefined): string | null {
+  if (!sorted.some((p) => p.from_device)) return null;
+  const latest = sorted[sorted.length - 1];
+  const value = latest.value2 != null ? `${latest.value}/${latest.value2}` : `${latest.value}`;
+  const note = latest.from_device ? "from device" : "some readings from device";
+  return `Latest: ${value}${unit ? ` ${unit}` : ""} · ${formatChartDateTime(latest.at)} · ${note}`;
+}

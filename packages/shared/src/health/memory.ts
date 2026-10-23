@@ -7,7 +7,7 @@
 // Owner: Vaibhav Parmar
 
 import type { ShareMemory, ShareScope } from "../contracts";
-import { addDays, formatLocalDate, parseLocalDate } from "./dates";
+import { addDays, monthsAgo } from "./dates";
 
 /** The parts of a record a share link can carry (the words of migration 0014 and the contracts). */
 export const SHARE_SCOPES = ["labs", "vitals", "medicines", "adherence"] as const;
@@ -41,6 +41,8 @@ export interface MemoryVital {
   value2: number | null;
   unit: string | null;
   measured_at: string;
+  /** Where the reading came from (`manual`, `health_connect`, `healthkit`, `ble`); rows read before the column existed carry none and read as manual. */
+  source?: string | null;
 }
 
 /** One medicine as the server read it (a row of `prescription_items`). */
@@ -75,13 +77,6 @@ type LabTest = NonNullable<ShareMemory["labs"]>[number];
 type VitalSeries = NonNullable<ShareMemory["vitals"]>[number];
 type Medicine = NonNullable<ShareMemory["medicines"]>[number];
 type Adherence = NonNullable<ShareMemory["adherence"]>;
-
-/** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
-function monthsAgo(date: string, months: number): string {
-  const d = parseLocalDate(date);
-  d.setMonth(d.getMonth() - months);
-  return formatLocalDate(d);
-}
 
 /** The day in India that a timestamp falls on. India is UTC+5:30 all year (no daylight saving). */
 function istDateOf(timestamp: string): string {
@@ -138,7 +133,14 @@ function buildVitals(vitals: MemoryVital[], today: string): VitalSeries[] {
     series.push({
       type,
       unit: [...sorted].reverse().find((r) => r.unit)?.unit ?? null,
-      points: sorted.map((r) => ({ at: r.measured_at, value: r.value!, value2: r.value2 })),
+      // A reading the sync engine stored is marked as from a device (issue #328); a manual
+      // reading carries no mark, so old payloads stay exactly as they were.
+      points: sorted.map((r) => ({
+        at: r.measured_at,
+        value: r.value!,
+        value2: r.value2,
+        ...(r.source && r.source !== "manual" ? { from_device: true } : {}),
+      })),
     });
   }
   series.sort((a, b) => (a.points[a.points.length - 1].at < b.points[b.points.length - 1].at ? 1 : -1));
