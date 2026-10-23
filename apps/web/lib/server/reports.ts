@@ -70,7 +70,12 @@ export function verifyReport(out: ReportLlm, text: string, map: Record<string, s
     const high = numberIn(row.evidence, row.ref_high);
     const valueText = row.value_text && evidenceFound(row.evidence, row.value_text) ? row.value_text.trim() : null;
     const unit = row.unit && evidenceFound(row.evidence, row.unit) ? row.unit.trim() : null;
-    const needsReview = value !== row.value || low !== row.ref_low || high !== row.ref_high || (row.value_text !== null && valueText === null);
+    // A reference range is low-then-high: when the model swapped the two bounds, both numbers still pass the
+    // evidence check (both are printed in the row), so the swap is caught here. A flag from an inverted range
+    // would be wrong, so the row is never flagged and goes to review instead.
+    const rangeInverted = low !== null && high !== null && low > high;
+    const needsReview =
+      value !== row.value || low !== row.ref_low || high !== row.ref_high || (row.value_text !== null && valueText === null) || rangeInverted;
     anyReview ||= needsReview;
     values.push({
       test_name: restore(name, map),
@@ -79,7 +84,7 @@ export function verifyReport(out: ReportLlm, text: string, map: Record<string, s
       unit,
       ref_low: low,
       ref_high: high,
-      flag: flagFor(value, low, high),
+      flag: rangeInverted ? "unknown" : flagFor(value, low, high),
       needs_review: needsReview,
       evidence: restore(row.evidence.trim(), map),
     });

@@ -189,6 +189,21 @@ describe("verifyReport", () => {
     expect(out.anyReview).toBe(true);
   });
 
+  it("flags a swapped reference range for review instead of computing a wrong flag", () => {
+    // Both bounds are printed in the row, so both pass the evidence check; the swap itself must be caught.
+    const out = verifyReport(
+      {
+        ...base,
+        values: [row({ test_name: "Fasting Blood Sugar", value: 115, unit: "mg/dL", ref_low: 100, ref_high: 70, evidence: "Fasting Blood Sugar 115 mg/dL 70 - 100" })],
+      },
+      text,
+      {},
+    );
+    expect(out.values).toHaveLength(1);
+    expect(out.values[0]).toMatchObject({ value: 115, ref_low: 100, ref_high: 70, flag: "unknown", needs_review: true });
+    expect(out.anyReview).toBe(true);
+  });
+
   it("flagFor handles one-sided ranges and missing values", () => {
     expect(flagFor(3, 4, null)).toBe("low");
     expect(flagFor(200, null, 199)).toBe("high");
