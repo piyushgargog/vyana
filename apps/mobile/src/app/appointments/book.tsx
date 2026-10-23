@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     ...T.shadow.accent,
   },
   successPill: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: T.color.onColorFill,
     borderRadius: T.radius.pill,
     borderCurve: 'continuous',
     paddingHorizontal: T.space.md,
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   },
   tokenNumber: { fontSize: 44, lineHeight: 52, textAlign: 'center' },
   metaBox: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: T.color.onColorFillSoft,
     borderRadius: T.radius.row,
     borderCurve: 'continuous',
     padding: T.space.md,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
   arrivalBox: {
-    backgroundColor: 'rgba(0,0,0,0.16)',
+    backgroundColor: T.color.onColorShadeSoft,
     borderRadius: T.radius.row,
     borderCurve: 'continuous',
     padding: T.space.md,
