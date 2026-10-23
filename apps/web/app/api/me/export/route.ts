@@ -1,7 +1,7 @@
 import { MeExportRes } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { exportMyData } from "@/lib/server/data/account";
-import { withRoute } from "@/lib/server/errors";
+import { jsonRes, withRoute } from "@/lib/server/errors";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 
 export const maxDuration = 60;
@@ -12,7 +12,7 @@ export const GET = withRoute("me/export", async (req, ctx) => {
   ctx.userId = user.id;
   const res = await exportMyData(supabaseAdmin(), user);
   const today = new Date().toISOString().slice(0, 10);
-  return Response.json(process.env.NODE_ENV === "production" ? res : MeExportRes.parse(res), {
+  return jsonRes(MeExportRes, res, {
     headers: {
       // The file holds health data and links to files: never stored by a cache.
       "cache-control": "no-store",
