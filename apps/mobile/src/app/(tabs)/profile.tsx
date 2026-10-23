@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
   useAddContact,
-  useCurrentPlanPage,
+  useCurrentPlan,
   useConsent,
   useDeleteAccount,
   useDeleteContact,
@@ -39,8 +39,9 @@ export default function MobileProfileTab() {
   const { supabase, showToast } = useVyanaMobile();
 
   const { data: profile } = useMyProfile();
-  const { data: plansData, isLoading: plansLoading } = useCurrentPlanPage();
-  const currentPlan = plansData?.plans.find((p) => p.slug === plansData.current_slug);
+  // Your plan (#418): read the real plan through useCurrentPlan; while it loads or when
+  // it cannot be read, the row says "Your plan" with no name (never a guessed plan).
+  const { data: currentPlan, isLoading: planLoading } = useCurrentPlan();
   const { data: consentRecord } = useConsent(CONSENT_VERSION);
   const updateProfileMutation = useUpdateProfile();
   const { data: contacts = [] } = useEmergencyContacts();
@@ -229,11 +230,11 @@ export default function MobileProfileTab() {
         />
       </ListGroup>
 
-      {/* Your plan (#305): the plan card opens the web page; no payments in the app. */}
+      {/* Your plan (#305, #418): the plan row reads the real plan; it opens the web page; no payments in the app. */}
       <ListGroup header="Your plan">
         <ListRow
           icon={<IconTile ios="creditcard.fill" android="payment" color="indigo" />}
-          title={!plansLoading && currentPlan?.name ? `Your plan: ${currentPlan.name}` : 'Your plan'}
+          title={!planLoading && currentPlan?.name ? `Your plan: ${currentPlan.name}` : 'Your plan'}
           subtitle="See the Family plan"
           onPress={() =>
             Linking.openURL('https://vyanahealth.app/plans').catch(() =>
