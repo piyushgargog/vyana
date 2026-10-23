@@ -72,55 +72,6 @@ export function computeItemRefill(
   };
 }
 
-export function generateQrMatrix(text: string, size: number = 25): boolean[][] {
-  const matrix: boolean[][] = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => false)
-  );
-
-  const drawFinder = (r0: number, c0: number) => {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        const isBorder = r === 0 || r === 6 || c === 0 || c === 6;
-        const isInner = r >= 2 && r <= 4 && c >= 2 && c <= 4;
-        if (r0 + r < size && c0 + c < size) {
-          matrix[r0 + r][c0 + c] = isBorder || isInner;
-        }
-      }
-    }
-  };
-
-  drawFinder(0, 0);
-  drawFinder(0, size - 7);
-  drawFinder(size - 7, 0);
-
-  let hash = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const inTopLeft = r < 8 && c < 8;
-      const inTopRight = r < 8 && c >= size - 8;
-      const inBottomLeft = r >= size - 8 && c < 8;
-      if (inTopLeft || inTopRight || inBottomLeft) continue;
-      if (r === 6 || c === 6) {
-        matrix[r][c] = (r + c) % 2 === 0;
-        continue;
-      }
-      const charCode = text.charCodeAt(
-        (r * size + c) % Math.max(1, text.length)
-      );
-      const mix =
-        ((hash >>> ((r + c) % 16)) ^ (charCode * (r + 3) * (c + 7))) & 3;
-      matrix[r][c] = mix === 0 || mix === 2;
-    }
-  }
-
-  return matrix;
-}
-
 // ---------------------------------------------------------------- share links
 
 const SHARE_SCOPE_LABELS: Record<string, string> = {
