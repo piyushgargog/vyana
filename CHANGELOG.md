@@ -25,6 +25,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 
 ### Changed
 - The consent text has a new version (`2026-10-23`): since #334 it says that a photo is first read by a vision model that sees the whole image, which the old text did not. Everyone who accepted the old text sees the consent screen once more. Server routes do not check the version, only the app gate does.
+- The plans page, the assistant's “AI uses left today” chip and the phone Profile plan row now read the signed-in user's real plan and today's real AI usage (issue #418): the plan name and daily limit come from the `plans` table through `useCurrentPlan`, and the count is the same `my_ai_usage_today` count the server enforces, through `useMyAiUsageToday`. When the plan or the count cannot be read, they show “Your plan” with no name and no number — never a plan name by default.
 - Shared health helpers: `monthsAgo` moved from `memory.ts` into the `dates.ts` helper module (behaviour unchanged).
 - The 14 API routes that answered JSON now build the response through one `jsonRes` helper in `apps/web/lib/server/errors.ts`, which keeps the dev-only contract check in one place instead of repeating it in every route (issue #425).
 - Web: appointment booking and the admin hospitals tab no longer look up OPD timings with an agent; they show an "Open the hospital's own website" link when the hospital has a saved https address (issue #339).
