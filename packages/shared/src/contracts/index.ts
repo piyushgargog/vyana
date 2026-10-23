@@ -118,10 +118,18 @@ export const EmergencySosRes = z.object({
   sms_body: z.string(),                  // includes https://maps.google.com/?q=<lat>,<lng>
 });
 
+// A registration year runs from 1950 to the current calendar year in India. The year is read when the request is
+// validated (not when this module loads), in Asia/Kolkata so the limit does not flip at 05:30 IST on 1 January.
+export const currentRegistrationYear = (): number =>
+  Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric" }).format(new Date()));
+const registrationYear = z.number().int().min(1950).refine((y) => y <= currentRegistrationYear(), {
+  message: "Year of registration cannot be in the future",
+});
+
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
   reg_no: z.string().min(1), state_council: z.string().min(2),
-  year_of_registration: z.number().int().min(1950).max(2100).optional(),
+  year_of_registration: registrationYear.optional(),
 });
 export const DoctorVerifyRes = z.object({
   status: z.enum(["verified","failed","pending"]),
@@ -135,7 +143,7 @@ export const DoctorVerifyRes = z.object({
 export const AdminDoctorCheckReq = z.object({
   doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
   reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
-  year: z.number().int().min(1950).max(2100).nullable(), note: z.string().max(300),
+  year: registrationYear.nullable(), note: z.string().max(300),
 });
 
 // ---------- POST /api/prescriptions/extract ----------

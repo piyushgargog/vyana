@@ -952,7 +952,7 @@ components:
           minLength: 2
         year_of_registration:
           type: integer
-          minimum: -9007199254740991
+          minimum: 1950
           maximum: 9007199254740991
       required:
         - reg_no
