@@ -77,6 +77,20 @@ describe("verifyCarePlan", () => {
     expect(v.dropped).toBe(3);
   });
 
+  it("stays strict on digits glued to letters: '2x500' with a quote lacking 500 is dropped", () => {
+    const v = verifyCarePlan(
+      {
+        ...empty,
+        do: [b("Take 2x500 and stop smoking", "Stop smoking"), b("Paracetamol500mg daily", "Stop smoking"), b("Stop smoking", "Stop smoking")],
+      },
+      pages,
+      "Type 2 diabetes",
+      "en",
+    );
+    expect(v.plan.do).toEqual(["Stop smoking"]);
+    expect(v.dropped).toBe(2);
+  });
+
   it("builds the sample day from cited foods only", () => {
     const v = verifyCarePlan(
       {

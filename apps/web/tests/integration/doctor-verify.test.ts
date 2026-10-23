@@ -242,6 +242,9 @@ describe("POST /api/doctors/verify", () => {
     expect((await post(send, "")).status).toBe(401);
     asDoctor();
     expect((await post({ reg_no: "", state_council: "x" })).status).toBe(400);
+    // The registration number is capped at 40 chars, like the admin check schema for the same column.
+    expect((await post({ ...send, reg_no: "1".repeat(40) })).status).toBe(200);
+    expect((await post({ ...send, reg_no: "1".repeat(41) })).status).toBe(400);
   });
 
   it("rejects a registration year outside 1950 to the current year with 400 and saves nothing", async () => {

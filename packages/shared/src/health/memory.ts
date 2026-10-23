@@ -7,7 +7,7 @@
 // Owner: Vaibhav Parmar
 
 import type { ShareMemory, ShareScope } from "../contracts";
-import { addDays, formatLocalDate, parseLocalDate } from "./dates";
+import { addDays, monthsAgo } from "./dates";
 
 /** The parts of a record a share link can carry (the words of migration 0014 and the contracts). */
 export const SHARE_SCOPES = ["labs", "vitals", "medicines", "adherence"] as const;
@@ -75,13 +75,6 @@ type LabTest = NonNullable<ShareMemory["labs"]>[number];
 type VitalSeries = NonNullable<ShareMemory["vitals"]>[number];
 type Medicine = NonNullable<ShareMemory["medicines"]>[number];
 type Adherence = NonNullable<ShareMemory["adherence"]>;
-
-/** The calendar day (`YYYY-MM-DD`) `months` months before `date`. */
-function monthsAgo(date: string, months: number): string {
-  const d = parseLocalDate(date);
-  d.setMonth(d.getMonth() - months);
-  return formatLocalDate(d);
-}
 
 /** The day in India that a timestamp falls on. India is UTC+5:30 all year (no daylight saving). */
 function istDateOf(timestamp: string): string {
