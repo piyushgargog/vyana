@@ -10,7 +10,6 @@ import * as Haptics from 'expo-haptics';
 import {
   DEFAULT_TIMES,
   QUERY_ROOTS,
-  parseCarePlanJson,
   useActiveItems,
   useAdherence,
   useCarePlans,
@@ -39,6 +38,7 @@ import {
   Text,
 } from '@/components/ui';
 import { MobileSkeletonCard } from '@/components/ui-primitives';
+import { buildCarePlanRows } from '@/components/care-plan-rows';
 import { ActivityCard } from '@/components/activity-card';
 import { T } from '@/constants/theme';
 
@@ -50,7 +50,8 @@ export default function PatientHomeScreen() {
   const { data: activeItems = [], isLoading: itemsLoading, isError: itemsError, refetch: refetchItems } = useActiveItems();
   const { data: conditions = [] } = useConditions();
   const { data: carePlans = [] } = useCarePlans();
-  const activeCarePlan = parseCarePlanJson(carePlans[0]?.plan_json);
+  // Each row names one stored plan and opens that same plan (issue #489).
+  const carePlanRows = buildCarePlanRows(carePlans);
 
   const now = new Date();
   const startOfDay = new Date(
@@ -181,7 +182,9 @@ export default function PatientHomeScreen() {
     router.push('/basket');
   };
 
-  const carePlanHref = conditions[0]
+  // With no stored plan yet, the one row keeps its old destination: the first
+  // condition's care screen, or onboarding when there is no condition either.
+  const carePlanFallbackHref = conditions[0]
     ? `/care/${conditions[0].id}`
     : '/onboarding';
 
@@ -400,22 +403,36 @@ export default function PatientHomeScreen() {
               router.push(nextAppt ? '/appointments' : '/appointments/book')
             }
           />
-          <ListRow
-            icon={
-              <IconTile
-                ios="heart.text.square.fill"
-                android="clinical_notes"
-                color="green"
+          {carePlanRows.length > 0 ? (
+            carePlanRows.map((row) => (
+              <ListRow
+                key={row.conditionId}
+                icon={
+                  <IconTile
+                    ios="heart.text.square.fill"
+                    android="clinical_notes"
+                    color="green"
+                  />
+                }
+                title="Chronic Care Plan"
+                subtitle={row.condition}
+                onPress={() => router.push(row.href as never)}
               />
-            }
-            title="Chronic Care Plan"
-            subtitle={
-              activeCarePlan
-                ? activeCarePlan.condition
-                : 'Physician care instructions'
-            }
-            onPress={() => router.push(carePlanHref as never)}
-          />
+            ))
+          ) : (
+            <ListRow
+              icon={
+                <IconTile
+                  ios="heart.text.square.fill"
+                  android="clinical_notes"
+                  color="green"
+                />
+              }
+              title="Chronic Care Plan"
+              subtitle="Physician care instructions"
+              onPress={() => router.push(carePlanFallbackHref as never)}
+            />
+          )}
           <ListRow
             icon={
               <IconTile
