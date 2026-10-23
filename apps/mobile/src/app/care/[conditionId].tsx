@@ -27,6 +27,7 @@ import {
   type VitalType,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { planMealLabel, planStrings } from '@/components/plan-strings';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
@@ -56,25 +57,6 @@ const VITAL_TYPES = [
   'weight',
   'spo2',
 ] as const;
-
-function vitalLabel(vt: VitalType): string {
-  switch (vt) {
-    case 'sugar_fasting':
-      return 'Fasting Sugar';
-    case 'sugar_random':
-      return 'Random Sugar';
-    case 'bp':
-      return 'Blood Pressure';
-    case 'heart_rate':
-      return 'Heart Rate';
-    case 'weight':
-      return 'Weight';
-    case 'spo2':
-      return 'SpO2';
-    default:
-      return vt;
-  }
-}
 
 function vitalIcon(vt: VitalType): { ios: 'drop.fill' | 'heart.fill' | 'waveform.path.ecg' | 'scalemass.fill' | 'lungs.fill'; android: string } {
   switch (vt) {
@@ -127,14 +109,19 @@ export default function ConditionCarePlanScreen() {
     parseCarePlanJson(dbPlan?.plan_json) ??
     (generateMutation.data ? generateMutation.data.plan : null);
 
+  // The screen's headings and chrome follow the plan's own language (issue #489);
+  // the plan's content text is the server's and is rendered exactly as it arrives.
+  const S = planStrings(activePlan?.language);
+  const vitalLabel = (vt: VitalType): string => S.vitalTypes[vt] ?? vt;
+
   const handleGeneratePlan = async () => {
     if (!conditionId) return;
     try {
       await generateMutation.mutateAsync({ condition_id: conditionId });
-      showToast('Generated evidence-based care plan', 'success');
+      showToast(S.generatedToast, 'success');
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : 'Could not generate care plan',
+        err instanceof Error ? err.message : S.generateFailed,
         'error'
       );
     }
@@ -143,7 +130,7 @@ export default function ConditionCarePlanScreen() {
   const handleLogVital = async () => {
     const parsed = parseFloat(vitalVal);
     if (isNaN(parsed) || parsed <= 0) {
-      showToast('Please enter a valid vital reading', 'warning');
+      showToast(S.vitalInvalid, 'warning');
       return;
     }
     try {
@@ -153,13 +140,10 @@ export default function ConditionCarePlanScreen() {
         unit: VITAL_UNITS[selectedVital],
       });
       setVitalVal('');
-      showToast(
-        `Logged ${selectedVital.replace('_', ' ')} reading`,
-        'success'
-      );
+      showToast(S.vitalLogged(vitalLabel(selectedVital)), 'success');
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : 'Could not log vital',
+        err instanceof Error ? err.message : S.vitalLogFailed,
         'error'
       );
     }
@@ -169,13 +153,13 @@ export default function ConditionCarePlanScreen() {
     setMealError(null);
     const desc = mealDesc.trim();
     if (!desc) {
-      setMealError('Say what you ate');
-      showToast('Say what you ate', 'warning');
+      setMealError(S.mealEmptyError);
+      showToast(S.mealEmptyError, 'warning');
       return;
     }
     if (desc.length > MEAL_DESCRIPTION_MAX) {
-      setMealError(`Keep it under ${MEAL_DESCRIPTION_MAX} characters`);
-      showToast(`Keep it under ${MEAL_DESCRIPTION_MAX} characters`, 'warning');
+      setMealError(S.mealTooLong(MEAL_DESCRIPTION_MAX));
+      showToast(S.mealTooLong(MEAL_DESCRIPTION_MAX), 'warning');
       return;
     }
 
@@ -183,8 +167,8 @@ export default function ConditionCarePlanScreen() {
     if (mealCalories.trim()) {
       const parsed = Number(mealCalories.trim());
       if (!Number.isInteger(parsed) || parsed < 0 || parsed > MEAL_CALORIES_MAX) {
-        setMealError(`Calories must be a whole number from 0 to ${MEAL_CALORIES_MAX}`);
-        showToast(`Calories must be a whole number from 0 to ${MEAL_CALORIES_MAX}`, 'warning');
+        setMealError(S.caloriesRange(MEAL_CALORIES_MAX));
+        showToast(S.caloriesRange(MEAL_CALORIES_MAX), 'warning');
         return;
       }
       cals = parsed;
@@ -199,12 +183,12 @@ export default function ConditionCarePlanScreen() {
       setMealDesc('');
       setMealCalories('');
       setMealError(null);
-      showToast('Meal logged in care plan', 'success');
+      showToast(S.mealLogged, 'success');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
           ? (err as { message: string }).message
-          : 'Could not log meal';
+          : S.mealLogFailed;
       setMealError(msg);
       showToast(msg, 'error');
     }
@@ -213,12 +197,12 @@ export default function ConditionCarePlanScreen() {
   const handleDeleteMeal = async (id: string) => {
     try {
       await deleteMealMutation.mutateAsync(id);
-      showToast('Meal entry removed', 'info');
+      showToast(S.mealRemoved, 'info');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
           ? (err as { message: string }).message
-          : 'Could not remove meal';
+          : S.mealRemoveFailed;
       showToast(msg, 'error');
     }
   };
@@ -234,23 +218,22 @@ export default function ConditionCarePlanScreen() {
 
   return (
     <Screen
-      eyebrow="Care plan"
-      title={activePlan?.condition || 'Chronic Care Plan'}
+      eyebrow={S.eyebrow}
+      title={activePlan?.condition || S.noPlanTitle}
     >
       {/* Plan Status Badges */}
       {isDoctorApproved ? (
         <Card>
-          <Pill text="Doctor reviewed and approved" tone="ok" />
+          <Pill text={S.approvedBadge} tone="ok" />
           <Text variant="footnote" tone="secondary">
-            Approved by your doctor. Follow this plan as advised.
+            {S.approvedNote}
           </Text>
         </Card>
       ) : isPatientGenerated ? (
         <Card>
-          <Pill text="Patient generated — not reviewed by a doctor" tone="warn" />
+          <Pill text={S.generatedBadge} tone="warn" />
           <Text variant="footnote" tone="secondary">
-            Created from verified health guidelines. Please discuss these
-            guidelines with your doctor.
+            {S.generatedNote}
           </Text>
         </Card>
       ) : null}
@@ -263,11 +246,11 @@ export default function ConditionCarePlanScreen() {
         <EmptyState
           ios="heart.text.square.fill"
           android="clinical_notes"
-          title="No care plan active yet"
-          body="Generate an evidence-based daily plan with diet, exercise, red flags, and follow-up test reminders from WHO and ICMR guidelines."
+          title={S.emptyTitle}
+          body={S.emptyBody}
           action={
             <Button
-              title="Generate care plan"
+              title={S.generate}
               icon={
                 <Symbol
                   ios="sparkles"
@@ -277,7 +260,7 @@ export default function ConditionCarePlanScreen() {
                 />
               }
               loading={generateMutation.isPending}
-              label="Generate personalized care plan"
+              label={S.generateLabel}
               onPress={handleGeneratePlan}
             />
           }
@@ -289,7 +272,7 @@ export default function ConditionCarePlanScreen() {
         <>
           {/* Summary */}
           <Card>
-            <CardHeader title="Summary" />
+            <CardHeader title={S.summary} />
             <Text variant="body" tone="secondary">
               {activePlan.summary}
             </Text>
@@ -297,7 +280,7 @@ export default function ConditionCarePlanScreen() {
 
           {/* Do & Don't Guidance */}
           <Card>
-            <CardHeader title="What to do" />
+            <CardHeader title={S.whatToDo} />
             {activePlan.do.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Symbol
@@ -314,7 +297,7 @@ export default function ConditionCarePlanScreen() {
           </Card>
 
           <Card>
-            <CardHeader title="What to avoid" />
+            <CardHeader title={S.whatToAvoid} />
             {activePlan.dont.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Symbol
@@ -333,15 +316,15 @@ export default function ConditionCarePlanScreen() {
           {/* Diet Plan */}
           {activePlan.diet && (
             <Card>
-              <CardHeader title="Diet and nutrition" />
+              <CardHeader title={S.diet} />
               <View style={styles.dietBlock}>
-                <Text variant="headline">Eat more</Text>
+                <Text variant="headline">{S.eatMore}</Text>
                 <Text variant="body" tone="secondary">
                   {activePlan.diet.eat_more.join(' · ')}
                 </Text>
               </View>
               <View style={styles.dietBlock}>
-                <Text variant="headline">Limit or avoid</Text>
+                <Text variant="headline">{S.limit}</Text>
                 <Text variant="body" tone="secondary">
                   {activePlan.diet.limit.join(' · ')}
                 </Text>
@@ -349,12 +332,12 @@ export default function ConditionCarePlanScreen() {
               {activePlan.diet.sample_day && (
                 <View style={styles.sampleDayBox}>
                   <Text variant="footnote" tone="tertiary">
-                    Sample day
+                    {S.sampleDay}
                   </Text>
                   {activePlan.diet.sample_day.map((meal, idx) => (
                     <Text key={idx} variant="footnote" tone="secondary">
                       <Text variant="footnote" style={styles.strong}>
-                        {meal.meal.toUpperCase()}:{' '}
+                        {S.mealTypes[meal.meal]}:{' '}
                       </Text>
                       {meal.items.join(', ')}
                     </Text>
@@ -367,14 +350,14 @@ export default function ConditionCarePlanScreen() {
           {/* Patient Daily Meal Log & Calorie Tracker */}
           <Card>
             <CardHeader
-              title="Daily meal log"
+              title={S.mealLog}
               trailing={`${mealSummary.total} kcal`}
             />
             <Text variant="footnote" tone="tertiary">
-              Today’s diet tracking ({mealDate})
+              {S.todayTracking(mealDate)}
             </Text>
             <Button
-              title="Open full meal log"
+              title={S.openMealLog}
               variant="secondary"
               size="sm"
               onPress={() => router.push('/care/meals')}
@@ -390,9 +373,7 @@ export default function ConditionCarePlanScreen() {
                   color={T.color.warn}
                 />
                 <Text variant="footnote" tone="warn">
-                  {mealSummary.unknown}{' '}
-                  {mealSummary.unknown === 1 ? 'meal' : 'meals'} without
-                  calories
+                  {S.mealsWithoutCalories(mealSummary.unknown)}
                 </Text>
               </View>
             )}
@@ -410,16 +391,16 @@ export default function ConditionCarePlanScreen() {
                       />
                     }
                     title={m.description}
-                    subtitle={m.meal.toUpperCase()}
+                    subtitle={planMealLabel(S, m.meal)}
                     value={
                       typeof m.calories === 'number'
                         ? `${m.calories} kcal`
-                        : 'No calories'
+                        : S.noCalories
                     }
                     trailing={
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`Delete ${m.meal} entry`}
+                        accessibilityLabel={S.deleteMeal(planMealLabel(S, m.meal))}
                         disabled={deleteMealMutation.isPending}
                         onPress={() => handleDeleteMeal(m.id)}
                         style={styles.iconBtn}
@@ -429,7 +410,7 @@ export default function ConditionCarePlanScreen() {
                           android="delete"
                           size={18}
                           color={T.color.danger}
-                          label={`Delete ${m.meal} entry`}
+                          label={S.deleteMeal(planMealLabel(S, m.meal))}
                         />
                       </Pressable>
                     }
@@ -440,7 +421,7 @@ export default function ConditionCarePlanScreen() {
 
             {/* Add Meal Form */}
             <View style={styles.formBlock}>
-              <Text variant="headline">Log today’s meal</Text>
+              <Text variant="headline">{S.logMealTitle}</Text>
               <View style={styles.chipRow}>
                 {MEAL_TYPES.map((t) => {
                   const isSel = mealType === t;
@@ -448,7 +429,7 @@ export default function ConditionCarePlanScreen() {
                     <Pressable
                       key={t}
                       accessibilityRole="button"
-                      accessibilityLabel={`Pick meal ${t}`}
+                      accessibilityLabel={S.pickMeal(S.mealTypes[t])}
                       onPress={() => setMealType(t)}
                       style={[
                         styles.chip,
@@ -460,7 +441,7 @@ export default function ConditionCarePlanScreen() {
                         tone={isSel ? 'white' : 'secondary'}
                         style={isSel && styles.chipTextActive}
                       >
-                        {t}
+                        {S.mealTypes[t]}
                       </Text>
                     </Pressable>
                   );
@@ -468,8 +449,8 @@ export default function ConditionCarePlanScreen() {
               </View>
 
               <TextInput
-                accessibilityLabel="Meal description"
-                placeholder="What did you eat? (e.g. 2 Roti, Sabzi)"
+                accessibilityLabel={S.mealDescriptionLabel}
+                placeholder={S.mealPlaceholder}
                 placeholderTextColor={T.color.label3}
                 value={mealDesc}
                 onChangeText={(t) => {
@@ -481,8 +462,8 @@ export default function ConditionCarePlanScreen() {
               />
 
               <TextInput
-                accessibilityLabel="Calories"
-                placeholder="Calories in kcal (optional, 0–5000)"
+                accessibilityLabel={S.caloriesLabel}
+                placeholder={S.caloriesPlaceholder}
                 placeholderTextColor={T.color.label3}
                 keyboardType="number-pad"
                 value={mealCalories}
@@ -508,10 +489,10 @@ export default function ConditionCarePlanScreen() {
               )}
 
               <Button
-                title="Log meal"
+                title={S.logMeal}
                 variant="secondary"
                 loading={addMealMutation.isPending}
-                label="Log meal entry"
+                label={S.logMealLabel}
                 onPress={handleAddMeal}
               />
             </View>
@@ -528,11 +509,11 @@ export default function ConditionCarePlanScreen() {
                   color={T.color.danger}
                 />
                 <Text variant="headline" tone="danger">
-                  Critical red flags
+                  {S.redFlags}
                 </Text>
               </View>
               <Text variant="footnote" tone="secondary">
-                Seek immediate help or call 108
+                {S.redFlagsNote}
               </Text>
               {activePlan.red_flags.map((flag, idx) => (
                 <View key={idx} style={styles.bulletRow}>
@@ -553,7 +534,7 @@ export default function ConditionCarePlanScreen() {
           {/* Follow-Up Tests */}
           {activePlan.follow_up_tests &&
             activePlan.follow_up_tests.length > 0 && (
-              <ListGroup header="Follow-up tests">
+              <ListGroup header={S.followUpTests}>
                 {activePlan.follow_up_tests.map((test, idx) => (
                   <ListRow
                     key={idx}
@@ -565,7 +546,7 @@ export default function ConditionCarePlanScreen() {
                       />
                     }
                     title={test.test}
-                    value={`Every ${test.every_days} days`}
+                    value={S.everyDays(test.every_days)}
                   />
                 ))}
               </ListGroup>
@@ -573,7 +554,7 @@ export default function ConditionCarePlanScreen() {
 
           {/* Citations & Sources */}
           {activePlan.sources && activePlan.sources.length > 0 && (
-            <ListGroup header="Verified medical sources">
+            <ListGroup header={S.sources}>
               {activePlan.sources.map((src, idx) => (
                 <ListRow
                   key={idx}
@@ -581,7 +562,7 @@ export default function ConditionCarePlanScreen() {
                     <IconTile ios="link" android="link" color="gray" />
                   }
                   title={src.title}
-                  label={`Open source ${src.title}`}
+                  label={S.openSource(src.title)}
                   onPress={() => Linking.openURL(src.url)}
                 />
               ))}
@@ -595,7 +576,7 @@ export default function ConditionCarePlanScreen() {
 
       {/* Vitals Logging & History Chart */}
       <Card>
-        <CardHeader title="Track daily health vitals" />
+        <CardHeader title={S.vitalsTitle} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -608,7 +589,7 @@ export default function ConditionCarePlanScreen() {
               <Pressable
                 key={vt}
                 accessibilityRole="button"
-                accessibilityLabel={`Select vital ${vitalLabel(vt)}`}
+                accessibilityLabel={S.selectVital(vitalLabel(vt))}
                 onPress={() => setSelectedVital(vt)}
                 style={[
                   styles.vitalChip,
@@ -635,21 +616,21 @@ export default function ConditionCarePlanScreen() {
 
         <View style={styles.logRow}>
           <TextInput
-            accessibilityLabel={`Enter ${vitalLabel(selectedVital)} reading`}
+            accessibilityLabel={S.enterVital(vitalLabel(selectedVital))}
             value={vitalVal}
             onChangeText={setVitalVal}
-            placeholder={`Enter value (${VITAL_UNITS[selectedVital]})`}
+            placeholder={S.enterValue(VITAL_UNITS[selectedVital])}
             placeholderTextColor={T.color.label3}
             keyboardType="numeric"
             style={[styles.input, styles.logInput]}
           />
           <Button
-            title="Log vital"
+            title={S.logVital}
             variant="secondary"
             size="sm"
             disabled={addVitalMutation.isPending || !vitalVal.trim()}
             loading={addVitalMutation.isPending}
-            label="Log vital reading"
+            label={S.logVitalLabel}
             onPress={handleLogVital}
           />
         </View>
