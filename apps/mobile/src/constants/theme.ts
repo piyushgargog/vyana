@@ -12,6 +12,7 @@ export const Colors = {
     primary: '#0D9488',
     primaryDark: '#0F766E',
     primaryLight: '#F0FDFA',
+    link: '#3c87f7',
     emergency: '#DC2626',
     emergencyLight: '#FEF2F2',
     warning: '#D97706',
@@ -30,6 +31,9 @@ export const Colors = {
     primary: '#14B8A6',
     primaryDark: '#0D9488',
     primaryLight: '#134E4A',
+    // Same as light on purpose: the legacy ThemedText link rendered this blue in both
+    // appearances; the token now names it so the dark migration (#287) can revisit it.
+    link: '#3c87f7',
     emergency: '#EF4444',
     emergencyLight: '#450A0A',
     warning: '#F59E0B',
@@ -110,6 +114,15 @@ export const T = {
     /** Glass fallback where native Liquid Glass is not available (Android, older iOS). */
     glassFallback: 'rgba(255,255,255,0.86)',
     glassBorder: 'rgba(255,255,255,0.8)',
+    /** Tints laid over a saturated colour surface (the teal success card, the red SOS card). They
+        composite over the card colour itself, not the canvas, so they read the same in both
+        appearances and the dark half below carries the identical values. */
+    onColorFill: 'rgba(255,255,255,0.22)',
+    onColorFillSoft: 'rgba(255,255,255,0.16)',
+    onColorShade: 'rgba(0,0,0,0.22)',
+    onColorShadeSoft: 'rgba(0,0,0,0.16)',
+    /** The dim behind a sheet or modal. */
+    scrim: 'rgba(0,0,0,0.25)',
   },
   radius: { row: 12, tile: 16, card: 22, feature: 28, pill: 999 },
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
@@ -166,6 +179,11 @@ export const darkColors: ThemeColors = {
   tile: { accent: '#2DD4BF', blue: '#0A84FF', green: '#30D158', orange: '#FF9F0A', red: '#FF453A', gray: '#98989F', indigo: '#5E5CE6' },
   glassFallback: 'rgba(28,28,30,0.78)',
   glassBorder: 'rgba(255,255,255,0.18)',
+  onColorFill: 'rgba(255,255,255,0.22)',
+  onColorFillSoft: 'rgba(255,255,255,0.16)',
+  onColorShade: 'rgba(0,0,0,0.22)',
+  onColorShadeSoft: 'rgba(0,0,0,0.16)',
+  scrim: 'rgba(0,0,0,0.25)',
 };
 
 /**
