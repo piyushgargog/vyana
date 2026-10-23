@@ -98,7 +98,7 @@ export default function LandingPage() {
 
           {/* 4. The App Displayed Inside a Phone Frame */}
           <div className="mt-14 sm:mt-18 flex justify-center">
-            <div className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
+            <div aria-hidden="true" className="relative w-full max-w-[340px] rounded-[48px] border-[8px] border-label/90 bg-canvas p-4 shadow-float text-left select-none">
               {/* Phone Dynamic Island */}
               <div className="mx-auto mb-4 h-4 w-24 rounded-full bg-label/90" aria-hidden="true" />
 
@@ -367,7 +367,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 7. Dark “For Doctors” Section */}
+        {/* 7. Dark "For Doctors" Section */}
         <section id="doctors" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="rounded-feature bg-label text-white p-8 sm:p-12 lg:p-14 shadow-float">
             <div className="max-w-2xl mb-10">
