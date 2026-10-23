@@ -161,8 +161,8 @@ export default function MedicalIdPage() {
       <Card>
         <CardHeader title="Doctor share link" trailing="24h" />
         <p className="text-[14px] leading-relaxed text-label-3">
-          Generates a 24-hour expiring link to your full medical summary for doctors and
-          hospitals.
+          Generates a 24-hour expiring link to your Medical ID details (name, blood group,
+          allergies, medicines and one emergency contact) for doctors and hospitals.
         </p>
         {shareUrl ? (
           <div className="mt-3 space-y-3 rounded-2xl bg-accent-soft p-4">
@@ -171,12 +171,11 @@ export default function MedicalIdPage() {
             </p>
             <p className="break-all text-[14px] font-semibold text-accent-strong">{shareUrl}</p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={handleCopyLink}>
+              <Button variant="secondary" onClick={handleCopyLink}>
                 Copy link
               </Button>
               <Button
                 variant="plain"
-                size="sm"
                 onClick={() => window.open(shareUrl, "_blank", "noopener")}
               >
                 Preview page
