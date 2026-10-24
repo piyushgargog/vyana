@@ -21,7 +21,7 @@ import {
   TrendChartSvg,
   type TrendPoint,
 } from "@/components/ui-primitives";
-import { Button, ButtonLink, Card, Pill } from "@/components/ui";
+import { Button, ButtonLink, Card, EmptyState, Pill } from "@/components/ui";
 
 interface LabReportVal {
   test_name: string;
@@ -77,7 +77,7 @@ function DoctorPatientSummaryContent({
       } catch (err) {
         if (!ignore) {
           setProfileError(
-            err instanceof Error ? err.message : "Please try again in a moment."
+            err instanceof Error ? err.message : "Failed to load patient profile"
           );
         }
       } finally {
@@ -195,7 +195,9 @@ function DoctorPatientSummaryContent({
               <h1 className="text-xl sm:text-2xl font-bold text-label">
                 {patientProfile.full_name || "Patient Record"}
               </h1>
-              <Pill tone="neutral">Patient ID: {patientId.slice(0, 8)}…</Pill>
+              <span className="rounded-full bg-fill px-2.5 py-0.5 text-xs font-semibold text-label-2">
+                Patient ID: {patientId.slice(0, 8)}…
+              </span>
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-label-2">
@@ -442,8 +444,8 @@ function DoctorPatientSummaryContent({
           {carePlansLoading ? (
             <SkeletonCard lines={3} />
           ) : !carePlans || carePlans.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
-              No chronic care plans authored or linked for this patient yet.
+            <Card>
+              <EmptyState title="No chronic care plans authored or linked for this patient yet." />
             </Card>
           ) : (
             <div className="space-y-3">
@@ -557,7 +559,9 @@ function DoctorPatientSummaryContent({
                           Report Date: {report.report_date || report.created_at.slice(0, 10)}
                         </p>
                       </div>
-                      <Pill tone="neutral">{values.length} tests recorded</Pill>
+                      <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-semibold text-label-2">
+                        {values.length} tests recorded
+                      </span>
                     </div>
 
                     {report.summary && (
@@ -641,8 +645,8 @@ function DoctorPatientSummaryContent({
           {vitalsLoading ? (
             <SkeletonCard lines={3} />
           ) : vitals.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
-              No vitals logged for this patient yet.
+            <Card>
+              <EmptyState title="No vitals logged for this patient yet." />
             </Card>
           ) : (
             <div className="space-y-4">
