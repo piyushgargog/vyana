@@ -255,13 +255,14 @@ describe("buildLabChart", () => {
     ]);
   });
 
-  it("names an out-of-range value in words, from the stored flag", () => {
+  it("names an out-of-range value in words, from the stored flag when the row states no bounds", () => {
+    const noBounds = { ref_low: null, ref_high: null };
     const chart = buildLabChart(
       [
-        labRow({ measured_on: "2025-10-20", value: 7.2, flag: "high" }),
-        labRow({ measured_on: "2026-01-23", value: 3.8, flag: "low" }),
-        labRow({ measured_on: "2026-04-10", value: 5.1, flag: "normal" }),
-        labRow({ measured_on: "2026-07-01", value: 5.2, flag: "unknown" }),
+        labRow({ measured_on: "2025-10-20", value: 7.2, flag: "high", ...noBounds }),
+        labRow({ measured_on: "2026-01-23", value: 3.8, flag: "low", ...noBounds }),
+        labRow({ measured_on: "2026-04-10", value: 5.1, flag: "normal", ...noBounds }),
+        labRow({ measured_on: "2026-07-01", value: 5.2, flag: "unknown", ...noBounds }),
       ],
       { title: "HbA1c" },
     );
@@ -269,10 +270,56 @@ describe("buildLabChart", () => {
       ["above", "Above range"],
       ["below", "Below range"],
       ["in", null],
-      ["in", null],
+      ["unknown", null],
     ]);
     expect(chart?.points[0].a11yLabel).toBe("20 October 2025: 7.2 percent, above range");
     expect(chart?.points[2].a11yLabel).toBe("10 April 2026: 5.1 percent, in range");
+    // An unflagged row makes no claim: the screen reader hears the value only.
+    expect(chart?.points[3].a11yLabel).toBe("1 July 2026: 5.2 percent");
+  });
+
+  it("places a value against the bounds its own row states, whatever the flag says", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-10-20", value: 7.2, flag: "unknown" }),
+        labRow({ measured_on: "2026-01-23", value: 5.2, flag: "unknown" }),
+        labRow({ measured_on: "2026-04-10", value: 3.8, flag: null }),
+        labRow({ measured_on: "2026-07-01", value: 5.2, flag: "high" }),
+      ],
+      { title: "HbA1c" },
+    );
+    // The default row states bounds 4–5.6: an unknown flag no longer defaults to "in",
+    // and a stored flag that disagrees with the row's own bounds does not win.
+    expect(chart?.points.map((p) => p.status)).toEqual(["above", "in", "below", "in"]);
+    expect(chart?.points[0].a11yLabel).toBe("20 October 2025: 7.2 percent, above range");
+    expect(chart?.points[1].a11yLabel).toBe("23 January 2026: 5.2 percent, in range");
+  });
+
+  it("makes no in-range claim when a row states neither bounds nor a known flag", () => {
+    const noBounds = { ref_low: null, ref_high: null };
+    for (const flag of ["unknown", null, "critical"]) {
+      const chart = buildLabChart(
+        [labRow({ measured_on: "2025-10-20", value: 7.2, flag, ...noBounds })],
+        { title: "HbA1c" },
+      );
+      expect(chart?.points[0].status).toBe("unknown");
+      expect(chart?.points[0].statusText).toBeNull();
+      expect(chart?.points[0].a11yLabel).toBe("20 October 2025: 7.2 percent");
+      expect(chart?.headline).toBe("Latest: 7.2% on 20 October 2025.");
+    }
+  });
+
+  it("does not judge the latest value against a band drawn from another row", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-10-20", value: 5.4 }),
+        labRow({ measured_on: "2026-01-23", value: 7.2, flag: "high", ref_low: null, ref_high: null }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.refLow).toBe(4);
+    expect(chart?.refHigh).toBe(5.6);
+    expect(chart?.headline).toBe("Latest: 7.2% on 23 January 2026 — above the range on its report.");
   });
 
   it("draws the band from the newest row that states both bounds", () => {
