@@ -5,6 +5,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "../database.types";
+import { parseLocalDate } from "../../health/dates";
 
 /** Every query function takes the Supabase client as its first argument. */
 export type Sb = SupabaseClient<Database>;
@@ -52,23 +53,16 @@ export async function requireUserId(sb: Sb): Promise<string> {
   return id;
 }
 
-/** `YYYY-MM-DD` for a Date, in local time (the day a person sees on their phone). */
-export function toLocalDate(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
 /** Start of a local calendar day as an ISO timestamp. `date` is `YYYY-MM-DD`. */
 export function startOfLocalDay(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+  return parseLocalDate(date).toISOString();
 }
 
 /** Start of the next local calendar day as an ISO timestamp. */
 export function startOfNextLocalDay(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d + 1, 0, 0, 0, 0).toISOString();
+  const next = parseLocalDate(date);
+  next.setDate(next.getDate() + 1);
+  return next.toISOString();
 }
 
 /** ISO timestamp for `days` days before now. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { formatLocalDate } from "../../health/dates";
 import { fakeSupabase } from "./fakeSupabase";
 import {
   DbError,
@@ -53,7 +54,6 @@ import {
   shareUrl,
   startOfLocalDay,
   startOfNextLocalDay,
-  toLocalDate,
   trimTrailingSlashes,
   unwrap,
   unwrapOrNull,
@@ -91,7 +91,7 @@ describe("helpers", () => {
   });
 
   it("works with local calendar days", () => {
-    expect(toLocalDate(new Date(2026, 9, 5))).toBe("2026-10-05");
+    expect(formatLocalDate(new Date(2026, 9, 5))).toBe("2026-10-05");
     expect(new Date(startOfLocalDay("2026-10-05")).getDate()).toBe(5);
     expect(new Date(startOfNextLocalDay("2026-10-31")).getMonth()).toBe(10); // November
     expect(daysAgoIso(1, new Date("2026-10-12T00:00:00Z"))).toBe("2026-10-11T00:00:00.000Z");
