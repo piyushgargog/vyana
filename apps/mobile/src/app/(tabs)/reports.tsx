@@ -105,7 +105,9 @@ export default function MobileReportsTab() {
             date: p.day,
             value: p.value,
             dateLabel: p.dateLabel,
-            status: p.status === 'in' ? null : p.status,
+            // Only a placed value colours a bar: "in" and "unknown" (no range
+            // claim established) both render as a plain bar.
+            status: p.status === 'above' || p.status === 'below' ? p.status : null,
             a11yLabel: p.a11yLabel,
           }))}
           refLow={labChart.refLow}
