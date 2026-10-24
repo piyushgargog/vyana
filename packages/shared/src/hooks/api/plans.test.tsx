@@ -72,4 +72,22 @@ describe("useJoinWaitlistPage", () => {
 
     expect(res).toEqual({ status: "already_on_list" });
   });
+
+  it("rejects when the database function fails, instead of answering a status", async () => {
+    const fake = fakeSupabase({
+      userId: null,
+      responses: {
+        "rpc:join_waitlist": [{ data: null, error: { message: "boom", code: "XX000" } }],
+      },
+    });
+    const { wrapper } = setup(fake);
+    const { result } = renderHook(() => useJoinWaitlistPage(), { wrapper });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ email: "a@example.com" })
+      ).rejects.toThrow("boom");
+    });
+    expect(result.current.data).toBeUndefined();
+  });
 });
