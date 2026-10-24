@@ -1,6 +1,7 @@
 // packages/shared/src/mocks/agent-proposals.ts
-// Mock-first care-agent proposals (#304): fictional demo data and a small in-memory store, so the
-// patient screens can be built, approved and rejected before the real contract and routes land.
+// Care-agent proposals (#304) for mock mode: fictional demo data and a small in-memory store, so the
+// patient screens can be approved and rejected in mock mode. On the real app the hooks read the
+// patient's own agent_proposals rows through the database, and no /api/agent/proposals route exists.
 // The store lives for the session only; a reload brings the fixtures back. Dates are written
 // relative to "now" when the store is first read, so the demo never shows a stale or expired card
 // by accident — except the one fixture whose expiry is in the past on purpose (it must not show).
@@ -89,7 +90,7 @@ export function visibleProposals(now: Date = new Date()): AgentProposal[] {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
-/** The mock list response: visible proposals only, validated against the provisional contract. */
+/** The mock list response: visible proposals only, validated against the AgentProposalsRes contract. */
 export function agentProposalsMock(): AgentProposalsRes {
   return AgentProposalsRes.parse({ proposals: visibleProposals() });
 }

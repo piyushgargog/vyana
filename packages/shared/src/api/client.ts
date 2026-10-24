@@ -6,7 +6,6 @@ import {
   AgentDecideReq,
   AgentDecideRes,
   AgentProposalsRes,
-  AiUsageTodayRes,
   ApiErrorBody,
   BloodSearchReq,
   BloodSearchRes,
@@ -24,7 +23,6 @@ import {
   JoinWaitlistRes,
   MeExportRes,
   OkRes,
-  PlansRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
@@ -75,16 +73,19 @@ export type ApiClientOptions = {
 export type ApiClient = {
   /** True when this client answers from the fixtures (no network, no database): hooks that can read the real data check it. */
   useMocks: boolean;
-  /** Care agent proposals (#304, provisional contract): list what is pending; decide one. */
+  /** Care agent proposals (#304): list what is pending; decide one. Mock mode only — no
+   *  /api/agent/proposals route exists; on the real app the hooks read and decide the
+   *  patient's own rows in agent_proposals through the database. */
   agentProposals: { list(): Promise<AgentProposalsRes>; decide(body: AgentDecideReq): Promise<AgentDecideRes> };
   /** RapidBlood: `search` starts a blood bank search job; poll `job(job_id)` until `status === "done"`. */
   blood: { search(body: BloodSearchReq): Promise<BloodSearchRes>; job(jobId: string): Promise<BloodSearchRes> };
   emergency: { nearby(body: EmergencyNearbyReq): Promise<EmergencyNearbyRes>; sos(body: EmergencySosReq): Promise<EmergencySosRes> };
   doctors: { verify(body: DoctorVerifyReq): Promise<DoctorVerifyRes> };
-  /** Plans, the Family waitlist and today's AI usage (#305, provisional contract). */
-  plans: { current(): Promise<PlansRes> };
+  /** Family waitlist (#305): joins through the client until the form moves to the database
+   *  hook (open PR #529). The plan catalogue and today's AI usage are NOT here: the screens
+   *  read them from the database hooks (usePlans / useCurrentPlan, useMyAiUsageToday, #418),
+   *  and no /api/plans/me or /api/ai/usage-today route exists. */
   waitlist: { join(body: JoinWaitlistReq): Promise<JoinWaitlistRes> };
-  aiUsage: { today(): Promise<AiUsageTodayRes> };
   prescriptions: { extract(body: PrescriptionExtractReq): Promise<PrescriptionExtractRes> };
   reports: { analyze(body: ReportAnalyzeReq): Promise<ReportAnalyzeRes>; correctValue(body: LabValueCorrectReq): Promise<LabValueCorrectRes> };
   carePlans: { generate(body: GenerateCarePlanReq): Promise<GenerateCarePlanRes> };
@@ -240,10 +241,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
     },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
-    plans: {
-      current: () =>
-        request({ method: "GET", path: "/api/plans/me", resSchema: PlansRes, mock: mocks.plansMock }),
-    },
     waitlist: {
       // Mock mode uses the store so "already on the list" works within the session.
       join: async (body) => {
@@ -257,10 +254,6 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         }
         return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, () => mocks.joinWaitlistMock(req.data));
       },
-    },
-    aiUsage: {
-      today: () =>
-        request({ method: "GET", path: "/api/ai/usage-today", resSchema: AiUsageTodayRes, mock: mocks.aiUsageTodayMock }),
     },
     prescriptions: { extract: (body) => post("/api/prescriptions/extract", PrescriptionExtractReq, PrescriptionExtractRes, body, mocks.prescriptionsExtractMock) },
     reports: {
