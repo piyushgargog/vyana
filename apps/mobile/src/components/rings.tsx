@@ -14,15 +14,23 @@ import { T } from "@/constants/theme";
 const SIZE = 92;
 const STROKE = 9;
 
-/** One ring: a track circle and an accent arc swept clockwise from the top. */
-function RingArc({ fill, color }: { fill: number; color: string }) {
-  const clamped = Math.min(1, Math.max(0, fill));
+/** One ring: a track circle and an accent arc swept clockwise from the top.
+ *  A null fill draws the track with NO arc at all: the ring makes no fill claim. */
+function RingArc({ fill, color }: { fill: number | null; color: string }) {
   const circle = {
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
     borderWidth: STROKE,
   };
+  if (fill === null) {
+    return (
+      <View style={{ width: SIZE, height: SIZE }} pointerEvents="none">
+        <View style={[circle, styles.track]} />
+      </View>
+    );
+  }
+  const clamped = Math.min(1, Math.max(0, fill));
   const rightDeg = -180 + Math.min(clamped, 0.5) * 360;
   const leftDeg = 180 + Math.max(0, clamped - 0.5) * 360;
   return (
@@ -64,7 +72,8 @@ function Ring({
   label: string;
   center: React.ReactNode;
   caption: string;
-  fill: number;
+  /** Fraction of the ring filled, 0–1; null draws the track with no arc (no fill claim). */
+  fill: number | null;
   color: string;
   onPress: () => void;
 }) {
@@ -155,10 +164,12 @@ export function Rings({
         {sleep ? (
           <Ring
             label={`Sleep, ${sleep.text} last night`}
-            // No sleep goal exists in the data, so the ring makes no fill claim
-            // against one: a recorded night closes it, and the duration itself
-            // is the centre (the same caution as the steps ring without a goal).
-            fill={1}
+            // No sleep goal exists in the data, so any fill would invent a
+            // completion ("you slept 100%") that nothing measured. The ring
+            // draws its track with no arc at all; the duration in the centre
+            // is the whole claim, until a real sleep goal exists to fill
+            // against (#525 review).
+            fill={null}
             color={T.color.tile.indigo}
             caption="Sleep"
             onPress={onSleepPress}
