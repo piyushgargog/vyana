@@ -167,7 +167,7 @@ type LabValueRow = {
 
 /** The corrected value: the patient's reading, the stored range, and a flag computed in code (§2A rule 4). */
 export function applyCorrection(row: LabValueRow, body: LabValueCorrectReq): LabValue {
-  const value = body.value;
+  const value = body.value ?? null; // an omitted value is a text-only correction, not an undefined number
   return {
     id: row.id,
     test_name: row.test_name,
