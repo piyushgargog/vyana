@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { Language, type AiMeta, type TriageReq, type TriageRes } from "@vyana/shared";
+import { Language, normalizeNameCompact, type AiMeta, type TriageReq, type TriageRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
 import { log } from "./log";
@@ -52,14 +52,12 @@ export const DISCLAIMER: Record<Language, string> = {
   hinglish: "Yeh diagnosis nahi hai. Vyana sirf batata hai ki kahan dikhana hai; kya problem hai, yeh doctor decide karte hain.",
 };
 
-const squash = (s: string) => s.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
-
 /** Keeps names from the allowed list (ignoring case and spaces), in the model's order, at most 2. */
 export function matchDepartments(names: string[], allowed: string[]): string[] {
-  const byKey = new Map(allowed.map((a) => [squash(a), a]));
+  const byKey = new Map(allowed.map((a) => [normalizeNameCompact(a), a]));
   const out: string[] = [];
   for (const n of names) {
-    const hit = byKey.get(squash(n));
+    const hit = byKey.get(normalizeNameCompact(n));
     if (hit && !out.includes(hit)) out.push(hit);
   }
   return out.slice(0, MAX_DEPARTMENTS);

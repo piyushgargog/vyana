@@ -10,6 +10,7 @@
  * Changing the list needs a PROGRESS.md entry and a team review (EVALUATION §6 "Interactions table").
  */
 
+import { normalizeName } from "@vyana/shared";
 import { INTERACTION_TABLE, SALT_ALIASES, expandSalts, normalizeSalt } from "./interactions-table";
 
 export interface BrandSalts {
@@ -79,9 +80,11 @@ const FORM_WORDS = new Set(["tablet", "tablets", "tab", "tabs", "capsule", "caps
 const isStrength = (w: string) => /\d/.test(w) || /^(?:mg|mcg|g|ml|iu|%)$/.test(w);
 
 function words(s: string): string[] {
-  return s
-    .normalize("NFKC")
-    .toLowerCase()
+  // `normalizeName` only collapses whitespace and trims, both of which the
+  // split below would do anyway, so the word list is unchanged. This keeps
+  // its own punctuation rule: unlike the red-flags splitter, hyphens and
+  // similar characters stay inside a word here.
+  return normalizeName(s)
     .replace(/[()[\],+/]/g, " ")
     .split(/\s+/)
     .filter(Boolean);

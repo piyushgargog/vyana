@@ -1,6 +1,6 @@
 import "server-only";
 import type { StreamTextTransform, TextStreamPart, ToolSet } from "ai";
-import type { Language, SourceLink } from "@vyana/shared";
+import { normalizeNameCompact, type Language, type SourceLink } from "@vyana/shared";
 import { checkDiagnosisLanguage, findDosePatterns } from "../safety/blocklists";
 import { canonicalUrl, filterCitationsInText, findUrls } from "../safety/citations";
 import { restore } from "../safety/redact";
@@ -56,8 +56,6 @@ function sentencesLength(text: string): number {
   return end;
 }
 
-const squash = (s: string) => s.toLowerCase().replace(/\s+/g, "");
-
 export class ReplyGuard {
   private readonly allowed = new Set<string>();
   private readonly titles = new Map<string, string>();
@@ -81,13 +79,13 @@ export class ReplyGuard {
 
   /** Called by `get_my_medicines`: the patient's own strengths, doses and frequencies may be read back to them. */
   allowOwnDoses(values: (string | null | undefined)[]): void {
-    for (const v of values) if (v && v.trim()) this.ownDoses.push(squash(v));
+    for (const v of values) if (v && v.trim()) this.ownDoses.push(normalizeNameCompact(v));
   }
 
   /** A sentence gives a dose that is not the patient's own medicine. "Don't double the dose" only adds the note. */
   givesDose(sentence: string): boolean {
     const hits = findDosePatterns(sentence).filter((h) => h.rule !== "change the dose");
-    return hits.some((h) => !this.ownDoses.some((own) => own.includes(squash(h.text))));
+    return hits.some((h) => !this.ownDoses.some((own) => own.includes(normalizeNameCompact(h.text))));
   }
 
   /** The whole sentences of `text` (all of it when `flush`), without the ones that give a dose. */

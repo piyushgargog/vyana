@@ -10,6 +10,8 @@
  * Changing the list needs a PROGRESS.md entry and a team review (EVALUATION §6 "Care plan red flags").
  */
 
+import { normalizeName } from "@vyana/shared";
+
 export interface RedFlagSource {
   title: string;
   url: string;
@@ -177,9 +179,9 @@ export const CONDITION_RED_FLAGS: readonly ConditionRedFlags[] = [
 ];
 
 function words(s: string): string[] {
-  return s
-    .normalize("NFKC")
-    .toLowerCase()
+  // `normalizeName` only collapses whitespace and trims, both of which the
+  // split below would do anyway, so the word list is unchanged.
+  return normalizeName(s)
     .split(/[^\p{L}\p{M}\p{N}]+/u)
     .filter(Boolean);
 }

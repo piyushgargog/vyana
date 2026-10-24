@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { normalizeName } from "@vyana/shared";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
 
@@ -18,7 +19,7 @@ const inFlight = new Map<string, Promise<{ value: unknown; cached: boolean } | n
 
 /** Lowercase, trim and collapse spaces, so the same input typed differently lands on one key. */
 export function normalizeKeyPart(s: string): string {
-  return s.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+  return normalizeName(s);
 }
 
 export function sha1(s: string): string {
