@@ -69,10 +69,19 @@ describe("POST /api/cron/missed-doses", () => {
     expect(() => requireEnv("CRON_SECRET")).toThrow("Missing environment variable CRON_SECRET");
   });
 
-  it("turns a failure of the check into the standard error body", async () => {
+  it("isolates a failed check: the other still runs and reports its own counts", async () => {
     run.mockRejectedValueOnce(new Error("database down"));
     const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
-    expect(res.status).toBe(500);
-    expect((await res.json()).error.code).toBe("INTERNAL");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ checked: 0, alerts_sent: 0, late_checked: 5, late_patient_sent: 1, late_caregiver_sent: 1 });
+    expect(runLate).toHaveBeenCalledTimes(1);
+  });
+
+  it("isolates a failed late check the same way", async () => {
+    runLate.mockRejectedValueOnce(new Error("push service down"));
+    const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ checked: 3, alerts_sent: 2, late_checked: 0, late_patient_sent: 0, late_caregiver_sent: 0 });
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });

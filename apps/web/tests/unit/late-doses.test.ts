@@ -35,7 +35,7 @@ describe("findLateDoses", () => {
   });
 
   it("at 90 minutes a nudged slot becomes the caregivers', until it is stamped", () => {
-    const row = { item_id: "i-1", scheduled_for: due.toISOString(), caregiver_sent_at: null };
+    const row = { item_id: "i-1", scheduled_for: due.toISOString(), sent_at: ist("2026-10-12 09:31").toISOString(), caregiver_sent_at: null };
     const r = findLateDoses([item()], [], [row], ist("2026-10-12 10:30"));
     expect(r.patientDue).toHaveLength(0);
     expect(r.caregiverDue).toHaveLength(1);
@@ -71,6 +71,7 @@ function memoryDb(seed: Record<string, Row[]>) {
       const chain = {
         select: () => chain,
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), chain),
+        is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), chain),
         in: (c: string, list: unknown[]) => (filters.push((r) => list.includes(r[c])), chain),
         gte: (c: string, v: unknown) => (filters.push((r) => time(r[c]) >= time(v)), chain),
         gt: (c: string, v: unknown) => (filters.push((r) => String(r[c]) > String(v)), chain),
@@ -91,8 +92,9 @@ function memoryDb(seed: Record<string, Row[]>) {
             return resolve({ data: null, error: null });
           }
           if (op === "update") {
-            for (const r of table(name).filter((r) => filters.every((f) => f(r)))) Object.assign(r, patch);
-            return resolve({ data: null, error: null });
+            const updated = table(name).filter((r) => filters.every((f) => f(r)));
+            for (const r of updated) Object.assign(r, patch);
+            return resolve({ data: updated.map((r) => ({ ...r })), error: null });
           }
           if (op === "upsert") {
             const inserted: Row[] = [];
@@ -146,7 +148,7 @@ describe("runLateDoseCheck", () => {
       data: { type: "dose_late", itemId: "i-1", scheduledFor: due.toISOString() },
     });
     expect(db.table("late_dose_pushes")).toEqual([
-      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString() },
+      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), sent_at: ist("2026-10-12 09:45").toISOString() },
     ]);
 
     expect(await runLateDoseCheck(db.sb, send, ist("2026-10-12 10:00"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
@@ -184,5 +186,52 @@ describe("runLateDoseCheck", () => {
     const send = vi.fn(async () => ok(0));
     expect(await runLateDoseCheck(db.sb, send, ist("2026-10-12 09:45"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
     expect(db.table("late_dose_pushes")).toEqual([]);
+  });
+
+  it("escalates at 90 minutes even when the patient has no push token at all", async () => {
+    const db = world({ push_tokens: [{ user_id: "c-1", token: "ExponentPushToken[care1]" }] });
+    const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    const result = await runLateDoseCheck(db.sb, send, ist("2026-10-12 10:30"));
+    expect(result).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 1 });
+    expect(send.mock.calls[0][0][0]).toMatchObject({ to: "ExponentPushToken[care1]", channelId: "caregiver-alerts" });
+    // The row is the escalation's own claim: caregiver stamped, patient never told.
+    expect(db.table("late_dose_pushes")).toEqual([
+      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), caregiver_sent_at: ist("2026-10-12 10:30").toISOString() },
+    ]);
+  });
+
+  it("a partial failure keeps only the delivered dose's claim", async () => {
+    const db = world({
+      care_links: [
+        { patient_id: "p-1", caregiver_id: "c-1", status: "active" },
+        { patient_id: "p-2", caregiver_id: "c-1", status: "active" },
+      ],
+      prescription_items: [
+        { id: "i-1", patient_id: "p-1", times: ["09:00"], start_date: "2026-10-01", end_date: null, active: true },
+        { id: "i-2", patient_id: "p-2", times: ["09:00"], start_date: "2026-10-01", end_date: null, active: true },
+      ],
+      profiles: [
+        { id: "p-1", full_name: "Aryan Sharma", late_dose_nudge: true },
+        { id: "p-2", full_name: "Bina Rao", late_dose_nudge: true },
+      ],
+      push_tokens: [
+        { user_id: "p-1", token: "ExponentPushToken[patient1]" },
+        { user_id: "p-2", token: "ExponentPushToken[patient2]" },
+        { user_id: "c-1", token: "ExponentPushToken[care1]" },
+      ],
+    });
+    const send = vi.fn(async (messages: PushMessage[]) => (messages[0].to.includes("patient2") ? ok(0) : ok(messages.length)));
+    const result = await runLateDoseCheck(db.sb, send, ist("2026-10-12 09:45"));
+    expect(result).toEqual({ checked: 2, patient_sent: 1, caregiver_sent: 0 });
+    expect(db.table("late_dose_pushes").map((r) => r.item_id)).toEqual(["i-1"]);
+  });
+
+  it("releases the caregiver claim when the escalation delivers nothing", async () => {
+    const db = world({
+      late_dose_pushes: [{ patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), sent_at: ist("2026-10-12 09:31").toISOString(), caregiver_sent_at: null }],
+    });
+    const send = vi.fn(async () => ok(0));
+    expect(await runLateDoseCheck(db.sb, send, ist("2026-10-12 10:30"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
+    expect(db.table("late_dose_pushes")[0].caregiver_sent_at).toBeNull();
   });
 });
