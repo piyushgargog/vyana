@@ -35,4 +35,22 @@ describe("minimum text and targets (U1)", () => {
     const button = readFileSync(join(process.cwd(), "components", "ui", "button.tsx"), "utf8");
     expect(button).toContain('sm: "h-11 w-11 p-0"');
   });
+
+  it("the care-plan editor's remove buttons are labelled 44 px targets (#535)", () => {
+    const page = readFileSync(
+      join(process.cwd(), "app", "(app)", "doctor", "care-plans", "[id]", "page.tsx"),
+      "utf8",
+    );
+    const removeButtons = page
+      .split("<button")
+      .slice(1)
+      .map((chunk) => chunk.split("</button>")[0])
+      .filter((block) => block.includes("✕"));
+    expect(removeButtons).toHaveLength(6);
+    for (const block of removeButtons) {
+      expect(block).toContain("aria-label={`Remove ");
+      expect(block).toContain("min-h-11");
+      expect(block).toContain("min-w-11");
+    }
+  });
 });
