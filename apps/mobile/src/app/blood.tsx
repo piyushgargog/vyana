@@ -568,7 +568,9 @@ export default function BloodScreen() {
           <Card>
             <ErrorState
               title="Could not load your requests."
+              body="Check your connection and try again."
               retryLabel="Retry"
+              retryAccessibilityLabel="Retry loading your requests"
               onRetry={() => requests.refetch()}
             />
           </Card>
