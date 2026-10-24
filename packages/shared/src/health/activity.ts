@@ -333,8 +333,9 @@ export function buildTrendCharts(
 // here, next to the device chart models, so the screen only renders: points arrive in
 // chronological order with their axis labels, the reference range the band draws, the
 // headline sentence and the screen-reader texts. Every number and word comes from the
-// stored rows — the flag a report stored decides whether a value sits above or below its
-// range, and an out-of-range value is always named in words ("Above range"), never
+// stored rows — a value is placed against the bounds its own row states when it states
+// both, otherwise by the flag the report stored, and a row with neither makes no range
+// claim at all. An out-of-range value is always named in words ("Above range"), never
 // carried by colour alone (brief #486, rule 4).
 
 /** One stored lab value as the history query returns it (a row of `lab_values`). */
@@ -349,7 +350,8 @@ export interface LabValueRow {
   unit: string | null;
 }
 
-export type LabRangeStatus = "in" | "above" | "below";
+/** Where a value sits against a range; "unknown" makes no claim (see `labRangeStatus`). */
+export type LabRangeStatus = "in" | "above" | "below" | "unknown";
 
 export interface LabChartPoint {
   /** `YYYY-MM-DD` */
@@ -358,7 +360,7 @@ export interface LabChartPoint {
   dateLabel: string;
   value: number;
   status: LabRangeStatus;
-  /** "Above range" / "Below range"; null when the value sits in the range. */
+  /** "Above range" / "Below range"; null when the value sits in the range or no claim is made. */
   statusText: string | null;
   /** The screen-reader text of the point: the full date, the value and its range status. */
   a11yLabel: string;
@@ -407,6 +409,24 @@ function labA11yUnit(unit: string): string {
 }
 
 /**
+ * Where one value sits against a range, told truthfully. When the row states both of its
+ * own bounds, the value is measured against those bounds. Otherwise the flag the report
+ * stored decides. A row whose flag is missing or unrecognised and which states no bounds
+ * makes no claim at all ("unknown") — it is never read as "in range".
+ */
+function labRangeStatus(r: LabValueRow & { value: number }): LabRangeStatus {
+  if (r.ref_low !== null && r.ref_high !== null) {
+    if (r.value > r.ref_high) return "above";
+    if (r.value < r.ref_low) return "below";
+    return "in";
+  }
+  if (r.flag === "high") return "above";
+  if (r.flag === "low") return "below";
+  if (r.flag === "normal") return "in";
+  return "unknown";
+}
+
+/**
  * The chart model of one lab test's history, oldest first. Rows without a value or a date
  * cannot be placed on a time axis, so they stay out of the chart (they are still listed
  * with their report). Returns null when nothing can be charted — the screen's empty state.
@@ -439,7 +459,7 @@ export function buildLabChart(
   let previousYear: number | null = null;
   const points: LabChartPoint[] = usable.map((r) => {
     const parts = labDateParts(r.measured_on);
-    const status: LabRangeStatus = r.flag === "high" ? "above" : r.flag === "low" ? "below" : "in";
+    const status = labRangeStatus(r);
     const statusText = status === "above" ? "Above range" : status === "below" ? "Below range" : null;
     const year = parts ? parts.y : null;
     const showYear = year !== null && year !== previousYear;
@@ -454,19 +474,30 @@ export function buildLabChart(
       value: r.value,
       status,
       statusText,
-      a11yLabel: `${labFullDate(r.measured_on)}: ${valueText}${statusText ? `, ${statusText.toLowerCase()}` : ", in range"}`,
+      a11yLabel: `${labFullDate(r.measured_on)}: ${valueText}${
+        statusText ? `, ${statusText.toLowerCase()}` : status === "in" ? ", in range" : ""
+      }`,
     };
   });
 
   const latest = points[points.length - 1];
   const latestText = `${formatLabValue(latest.value)}${unit}`;
-  const headline = rangeText
-    ? `Latest: ${latestText} on ${labFullDate(latest.day)} — ${
-        latest.status === "in" ? "in" : latest.status
-      } the reference range (${rangeText}).`
-    : `Latest: ${latestText} on ${labFullDate(latest.day)}${
-        latest.statusText ? ` — ${latest.status} the range on its report` : ""
-      }.`;
+  // The band belongs to the latest row itself only when that row states both bounds (it
+  // is the newest row, so the backward search above stops at it). A status judged by an
+  // older row's band — or by a flag against a range the row never stated — is not claimed
+  // against the drawn band, and an "unknown" status makes no range claim at all.
+  const latestRow = usable[usable.length - 1];
+  const latestAgainstBand = latestRow.ref_low !== null && latestRow.ref_high !== null;
+  const headline =
+    latest.status === "unknown"
+      ? `Latest: ${latestText} on ${labFullDate(latest.day)}.`
+      : rangeText && latestAgainstBand
+        ? `Latest: ${latestText} on ${labFullDate(latest.day)} — ${
+            latest.status === "in" ? "in" : latest.status
+          } the reference range (${rangeText}).`
+        : `Latest: ${latestText} on ${labFullDate(latest.day)}${
+            latest.statusText ? ` — ${latest.status} the range on its report` : ""
+          }.`;
 
   const label =
     points.length === 1
