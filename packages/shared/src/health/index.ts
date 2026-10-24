@@ -13,3 +13,4 @@ export * from "./source-links";
 export * from "./qr";
 export * from "./trends";
 export * from "./activity";
+export * from "./adherence";

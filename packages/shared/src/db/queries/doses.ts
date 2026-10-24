@@ -3,7 +3,7 @@
 
 import { MISSED_DOSE_GRACE_MINUTES } from "../../constants";
 import type { DbDoseLog, DbPrescriptionItem } from "../types";
-import { daysAgoIso, requireUserId, toLocalDate, unwrap, type Sb } from "./helpers";
+import { check, daysAgoIso, requireUserId, toLocalDate, unwrap, type Sb } from "./helpers";
 
 export type DoseStatus = "taken" | "missed" | "skipped";
 
@@ -34,6 +34,24 @@ export async function logDose(sb: Sb, input: LogDoseInput): Promise<DbDoseLog> {
       )
       .select()
       .single()
+  );
+}
+
+/**
+ * Undoes a dose the patient logged themselves (issue #495): deletes the row for one medicine
+ * and due time, but only when its status is `taken` or `skipped`. A `missed` row is never
+ * removed — those are the record the missed-dose check wrote, not a tap the patient made.
+ */
+export async function undoDose(sb: Sb, input: { item_id: string; scheduled_for: string }): Promise<void> {
+  const patientId = await requireUserId(sb);
+  check(
+    await sb
+      .from("dose_logs")
+      .delete()
+      .eq("patient_id", patientId)
+      .eq("item_id", input.item_id)
+      .eq("scheduled_for", input.scheduled_for)
+      .in("status", ["taken", "skipped"])
   );
 }
 
