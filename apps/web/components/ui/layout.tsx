@@ -19,12 +19,27 @@ export function LargeTitle({ eyebrow, title, subtitle, actions, className }: { e
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  // The eyebrow and subtitle stay mounted and only cross-fade, and the title's box keeps
+  // the large-title height: the header's height never changes as it compacts, so the
+  // scroll position that triggers the change cannot be undone by the change itself
+  // (the unmount-and-shrink version oscillated on barely-tall pages). The title size
+  // swaps without a transition — animating font-size is layout work on every frame.
   return (
     <header data-compact={compact || undefined} className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
       <div className="min-w-0">
-        {eyebrow && !compact ? <div className="text-subheadline text-label-3">{eyebrow}</div> : null}
-        <h1 className={cn("mt-1 text-label transition-all duration-200", compact ? "text-title-2" : "text-large-title")}>{title}</h1>
-        {subtitle && !compact ? <p className="mt-2 max-w-2xl text-body leading-relaxed text-label-2">{subtitle}</p> : null}
+        {eyebrow ? (
+          <div aria-hidden={compact || undefined} className={cn("text-subheadline text-label-3 transition-opacity duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
+            {eyebrow}
+          </div>
+        ) : null}
+        <div className="mt-1 flex min-h-[2.5625rem] items-center">
+          <h1 className={cn("text-label", compact ? "text-title-2" : "text-large-title")}>{title}</h1>
+        </div>
+        {subtitle ? (
+          <p aria-hidden={compact || undefined} className={cn("mt-2 max-w-2xl text-body leading-relaxed text-label-2 transition-opacity duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
+            {subtitle}
+          </p>
+        ) : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </header>
@@ -104,6 +119,22 @@ export function ErrorState({
 
 /** Fades and lifts its children in once (lists, cards). Off when the user asks for reduced motion. */
 export function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <div className={className}>{children}</div>;
+  return (
+    <motion.div className={className} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 30, delay }}>
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * The scroll-triggered variant, for the public landing page only (issue #492). App
+ * screens use `Reveal`: content there can arrive after an async load, and a whileInView
+ * trigger could leave it invisible until it scrolls — the landing sections are static
+ * and below the fold by design, which is the one place scroll-reveal belongs.
+ */
+export function RevealOnScroll({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
   return (

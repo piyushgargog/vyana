@@ -7,7 +7,7 @@ import {
   ButtonLink,
   Card,
   Pill,
-  Reveal,
+  RevealOnScroll,
   SiteFooter,
 } from "@/components/ui";
 import {
@@ -188,7 +188,7 @@ export default function LandingPage() {
           </div>
 
           <div className="space-y-14">
-            <Reveal>
+            <RevealOnScroll>
               <div className="grid items-center gap-6 md:grid-cols-2">
                 <div>
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
@@ -204,24 +204,24 @@ export default function LandingPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between rounded-row bg-ok-soft/40 p-3 text-callout">
                       <div>
-                        <span className="font-semibold text-label block">Metformin 500mg</span>
-                        <span className="text-footnote text-label-3">8:00 AM · After breakfast</span>
+                        <span className="font-semibold text-label block">Morning dose</span>
+                        <span className="text-footnote text-label-3">Marked taken</span>
                       </div>
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">✓</span>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">✓</span>
                     </div>
                     <div className="flex items-center justify-between rounded-row bg-fill/60 p-3 text-callout">
                       <div>
-                        <span className="font-semibold text-label block">Telmisartan 40mg</span>
-                        <span className="text-footnote text-label-3">9:00 PM · At bedtime</span>
+                        <span className="font-semibold text-label block">Evening dose</span>
+                        <span className="text-footnote text-label-3">Not yet marked</span>
                       </div>
                       <span className="text-footnote font-semibold text-label-3">Due</span>
                     </div>
                   </div>
                 </Card>
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal>
+            <RevealOnScroll>
               <div className="grid items-center gap-6 md:grid-cols-2">
                 <div className="md:order-2">
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
@@ -235,8 +235,8 @@ export default function LandingPage() {
                 </div>
                 <Card className="md:order-1">
                   <div className="flex items-center justify-between text-callout font-semibold text-label mb-2">
-                    <span>HbA1c</span>
-                    <span className="text-ok font-medium">7.4 → 6.8</span>
+                    <span>Your reports, as trends</span>
+                    <span className="text-accent-strong font-medium">One chart</span>
                   </div>
                   <div className="space-y-1 text-footnote text-label-3">
                     <p>• Compared against the standard reference range</p>
@@ -244,9 +244,9 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal>
+            <RevealOnScroll>
               <div className="grid items-center gap-6 md:grid-cols-2">
                 <div>
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
@@ -270,9 +270,9 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal>
+            <RevealOnScroll>
               <div className="grid items-center gap-6 md:grid-cols-2">
                 <div className="md:order-2">
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger-text mb-5">
@@ -296,7 +296,7 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </div>
-            </Reveal>
+            </RevealOnScroll>
           </div>
         </section>
 

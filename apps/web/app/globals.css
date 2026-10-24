@@ -43,7 +43,7 @@
   /* The type scale as text styles (issue #492, brief #486): screens use these utilities
      (text-large-title, text-body, …), never raw sizes. Display is the marketing headline
      of the public pages only. */
-  --text-display: 3.5rem;
+  --text-display: 2.5rem;
   --text-display--line-height: 1.05;
   --text-display--font-weight: 700;
   --text-display--letter-spacing: -0.03em;
@@ -85,6 +85,19 @@
 
 :root {
   color-scheme: light;
+}
+
+/* Display steps up with the viewport (40px → 56px → 64px, the old hero's steps): one
+   flat size made the phone hero as large as the desktop one (issue #492 review). */
+@media (min-width: 768px) {
+  :root {
+    --text-display: 3.5rem;
+  }
+}
+@media (min-width: 1280px) {
+  :root {
+    --text-display: 4rem;
+  }
 }
 
 /*
