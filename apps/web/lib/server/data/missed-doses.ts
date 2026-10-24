@@ -114,10 +114,10 @@ export function firstName(fullName: string | null | undefined): string | null {
   return first ? first : null;
 }
 
-const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
+export const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
 
 /** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
-async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+export async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
   const out: T[] = [];
   for (const part of chunks(ids)) {
     const { data, error } = await query(part);
