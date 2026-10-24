@@ -13,7 +13,7 @@ import { Language, type ChatBody } from "@vyana/shared";
 import { finishAiRun, providerOf, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
-import { getModel, isLlmMock, modelName } from "../llm";
+import { getModel, isLlmMock, modelName, streamStepsOf } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
@@ -85,6 +85,27 @@ function chatModel(): LanguageModel {
   return isLlmMock() ? scriptedAssistantModel() : getModel("text");
 }
 
+/**
+ * What the `ai_runs` row of a streamed reply records (ADR-056), from the per-step attribution of `streamStepsOf`
+ * (null entry = the primary answered that step, else the fallback's label; the list itself is null for a model
+ * the pool does not track, e.g. the mock):
+ * - untracked: the configured model, as before the pool recorded anything;
+ * - no completed step (every candidate failed): no model and no provider — nothing answered the reply;
+ * - every step answered by the same model: that model (`fallback:<id>` for a fallback, like `runAi`);
+ * - steps answered by different models: each step's label in order, joined with "," — the row names every
+ *   model that produced part of the reply, and the provider stays empty unless all steps share one.
+ */
+export function streamAnswerOf(steps: (string | null)[] | null, primary: string): { model: string | null; provider: string | null } {
+  if (steps === null) return { model: primary, provider: providerOf(primary) };
+  if (steps.length === 0) return { model: null, provider: null };
+  const labels = steps.map((s) => (s === null ? primary : `fallback:${s}`));
+  const providers = [...new Set(labels.map((l) => providerOf(l)))];
+  return {
+    model: labels.length === 1 || labels.every((l) => l === labels[0]) ? labels[0] : labels.join(","),
+    provider: providers.length === 1 ? providers[0] : null,
+  };
+}
+
 async function openSession({ sb, user }: AuthedUser, sessionId: string | undefined, firstText: string): Promise<string> {
   if (sessionId) {
     const { data, error } = await sb.from("chat_sessions").select("id").eq("id", sessionId).maybeSingle();
@@ -137,13 +158,16 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
     writer.write({ type: "text-end", id });
   };
 
+  // Built once per request so onEnd can ask which model answered each step of the stream (ADR-056).
+  const model = chatModel();
+
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.write({ type: "start", messageMetadata: { ai_run_id: runId } });
       // Written by the server before the model runs, so it is always first (§2A rule 4).
       if (emergency) writeText(writer, "emergency-notice", EMERGENCY_NOTICE[language]);
       const result = streamText({
-        model: chatModel(),
+        model,
         instructions: assistantSystemPrompt(language, { emergency }),
         messages,
         tools: assistantTools({ userId: user.id, sb, guard }),
@@ -176,11 +200,16 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
     onError,
     onEnd: async ({ responseMessage, isAborted }) => {
       const status = failed || isAborted ? "rejected" : guard.needsReview ? "needs_review" : "ok";
+      // The models that actually answered (ADR-056), per step: a fallback step shows up as "fallback:<id>",
+      // like runAi does for generate calls, and a stream no candidate could answer records no model at all.
+      // Without this the row would credit the primary (or the last failed candidate) for another model's work.
+      const answered = streamAnswerOf(streamStepsOf(model), modelName("text"));
       await finishAiRun(runId, {
         output: { text: guard.text, notes: guard.notes, removed_urls: guard.removed, emergency_notice: emergency },
         sources: guard.sources,
         status,
-        usage: { provider: providerOf(modelName("text")), ...tokens, latency_ms: Date.now() - started },
+        model: answered.model,
+        usage: { provider: answered.provider, ...tokens, latency_ms: Date.now() - started },
       });
       log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved

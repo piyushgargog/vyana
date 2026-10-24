@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
-import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
+import { historyFrom, isDoseQuestion, streamAnswerOf } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
 import { isTrustedHealthUrl } from "@/lib/server/web/domains";
 
@@ -184,6 +184,24 @@ describe("assistant tools", () => {
     expect(out.results.every((r) => isTrustedHealthUrl(r.url))).toBe(true);
     guard.clean(`${out.results[0].url} `);
     expect(guard.removed).toEqual([]);
+  });
+});
+
+describe("streamAnswerOf (what the ai_runs row records for a streamed reply)", () => {
+  const primary = "groq:main-model";
+  it("keeps the configured model for a model the pool does not track (the mock)", () => {
+    expect(streamAnswerOf(null, primary)).toEqual({ model: primary, provider: "groq" });
+  });
+  it("records no model and no provider when no step of the stream succeeded", () => {
+    expect(streamAnswerOf([], primary)).toEqual({ model: null, provider: null });
+  });
+  it("records the one model that answered every step", () => {
+    expect(streamAnswerOf([null, null], primary)).toEqual({ model: primary, provider: "groq" });
+    expect(streamAnswerOf(["groq:small-model", "groq:small-model"], primary)).toEqual({ model: "fallback:groq:small-model", provider: "groq" });
+  });
+  it("names every step's model, in order, for a mixed reply", () => {
+    expect(streamAnswerOf(["groq:small-model", null], primary)).toEqual({ model: "fallback:groq:small-model,groq:main-model", provider: "groq" });
+    expect(streamAnswerOf([null, "nvidia:big-model"], primary)).toEqual({ model: "groq:main-model,fallback:nvidia:big-model", provider: null });
   });
 });
 
