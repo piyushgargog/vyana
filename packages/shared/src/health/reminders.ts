@@ -5,6 +5,7 @@
 import type { DbDoseLog, DbPrescriptionItem } from "../db/types";
 import { addDays, atLocalTime, formatLocalDate } from "./dates";
 import { getRefillStatus, type RefillItem } from "./refill";
+import { medicineLabel, normaliseTestName } from "../text/names";
 
 export type ReminderKind = "dose" | "refill" | "follow_up";
 
@@ -37,10 +38,6 @@ export const MAX_FOLLOW_UPS = 8;
 const LOGGED_WINDOW_MINUTES = 30;
 
 const FOOD: Record<DbPrescriptionItem["with_food"], string> = { before: "before food", after: "after food", any: "" };
-
-function medicineLabel(item: Pick<DbPrescriptionItem, "medicine_name" | "strength">): string {
-  return item.strength ? `${item.medicine_name} ${item.strength}` : item.medicine_name;
-}
 
 /**
  * The next dose reminders of the active medicines, nearest first. A dose that is already logged
@@ -132,11 +129,6 @@ export function planRefillAlerts(
 }
 
 export type FollowUpTest = { test: string; every_days: number };
-
-/** A test name reduced to lower-case letters and digits, so "HbA1c" and "Hb A1c" compare equal. */
-function normaliseTestName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
 
 /**
  * When a care plan test was last measured. `lastDone` is keyed by the lab's own test name, which rarely

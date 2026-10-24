@@ -1,15 +1,13 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
+import { istInstant, istTime, MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
 import { istDate } from "../dates";
 import type { PushMessage, PushResult } from "../push";
 
 /**
  * The medicine times in the database are wall-clock times in India (no daylight saving, UTC+5:30), and the
- * server runs in UTC, so a dose due at "09:00" is 03:30 UTC. The app is for India; this is the one place that knows.
+ * server runs in UTC, so a dose due at "09:00" is 03:30 UTC. The India-time conversions live in `@vyana/shared`.
  */
-export const IST_OFFSET_MINUTES = 330;
-
 /** The caregiver alert goes out this many minutes after a dose was due (plan F11). */
 export const GRACE_MINUTES = MISSED_DOSE_GRACE_MINUTES;
 
@@ -47,17 +45,6 @@ export interface DueDose {
   item_id: string;
   patient_id: string;
   due: Date;
-}
-
-/** The moment `HH:MM` on `date` (`YYYY-MM-DD`) in India. */
-export function istInstant(date: string, time: string): Date {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, Number(time.slice(0, 2)), Number(time.slice(3, 5))) - IST_OFFSET_MINUTES * MINUTE);
-}
-
-/** `HH:MM` in India for a moment. */
-export function istTime(d: Date): string {
-  return new Date(d.getTime() + IST_OFFSET_MINUTES * MINUTE).toISOString().slice(11, 16);
 }
 
 /**

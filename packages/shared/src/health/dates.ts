@@ -43,7 +43,21 @@ export function atLocalTime(date: string, time: string): Date {
   return d;
 }
 
-/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. India is UTC+5:30 all year (no daylight saving). */
+/** India is UTC+5:30 all year (no daylight saving), so every India-time helper below shares this one offset. */
+export const IST_OFFSET_MINUTES = 330;
+
+/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. */
 export function istDayOf(timestamp: string): string {
-  return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
+  return new Date(new Date(timestamp).getTime() + IST_OFFSET_MINUTES * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** The moment `HH:MM` on `date` (`YYYY-MM-DD`) in India. The reverse of `istTime`. */
+export function istInstant(date: string, time: string): Date {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, Number(time.slice(0, 2)), Number(time.slice(3, 5))) - IST_OFFSET_MINUTES * 60 * 1000);
+}
+
+/** `HH:MM` in India for a moment. The reverse of `istInstant`. */
+export function istTime(d: Date): string {
+  return new Date(d.getTime() + IST_OFFSET_MINUTES * 60 * 1000).toISOString().slice(11, 16);
 }
