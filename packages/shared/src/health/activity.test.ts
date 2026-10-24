@@ -165,6 +165,29 @@ describe("buildTrendCharts", () => {
     for (const chart of charts) expect(chart.sentence).toBeNull();
   });
 
+  it("charts a heart-rate spot reading on its own chart, apart from resting heart rate", () => {
+    const charts = buildTrendCharts(
+      [row(0, { resting_hr: 62 })],
+      [
+        reading({ type: "heart_rate", value: 78, unit: "bpm", measured_at: "2026-10-21T03:00:00.000Z" }),
+        reading({ type: "heart_rate", value: 82, unit: "bpm", measured_at: "2026-10-22T03:00:00.000Z" }),
+      ],
+      7,
+      TODAY,
+    );
+    const byMetric = new Map(charts.map((c) => [c.metric, c]));
+    const heartRate = byMetric.get("heart_rate");
+    expect(heartRate?.title).toBe("Heart rate");
+    expect(heartRate?.unit).toBe("bpm");
+    expect(heartRate?.points.map((p) => p.value)).toEqual([78, 82]);
+    expect(heartRate?.points2).toBeNull();
+    expect(heartRate?.sentence).toBeNull();
+    expect(heartRate?.latest).toMatchObject({ text: "82 bpm", day: TODAY, from: "Pixel Watch" });
+    expect(heartRate?.label).toBe("Heart rate, last 7 days, average 80 bpm");
+    // The spot readings stay out of the daily resting-heart-rate chart.
+    expect(byMetric.get("resting_hr")?.points.map((p) => p.value)).toEqual([62]);
+  });
+
   it("carries the diastolic as the second line of the blood pressure chart, with gaps", () => {
     const [bp] = buildTrendCharts(
       [],

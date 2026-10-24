@@ -155,7 +155,7 @@ export function buildActivityCard(rows: DailyActivityRow[], today: string, stepG
 
 export type TrendRangeDays = 7 | 30 | 90;
 
-export type TrendMetricKey = "steps" | "resting_hr" | "sleep" | "spo2" | "bp" | "glucose" | "weight";
+export type TrendMetricKey = "steps" | "resting_hr" | "sleep" | "spo2" | "bp" | "glucose" | "weight" | "heart_rate";
 
 export interface TrendChartPoint {
   /** `YYYY-MM-DD` (the day in India for a spot reading). */
@@ -247,6 +247,7 @@ const SPOT_TYPES: Record<string, TrendMetricKey> = {
   sugar_fasting: "glucose",
   sugar_random: "glucose",
   weight: "weight",
+  heart_rate: "heart_rate",
 };
 
 const SPOT_TITLES: Record<TrendMetricKey, string> = {
@@ -257,6 +258,7 @@ const SPOT_TITLES: Record<TrendMetricKey, string> = {
   bp: "Blood pressure",
   glucose: "Glucose",
   weight: "Weight",
+  heart_rate: "Heart rate",
 };
 
 function spotChart(
@@ -323,6 +325,7 @@ export function buildTrendCharts(
     spotChart("bp", readings, range, today),
     spotChart("glucose", readings, range, today),
     spotChart("weight", readings, range, today),
+    spotChart("heart_rate", readings, range, today),
   ];
   return charts.filter((c): c is TrendChartModel => c !== null);
 }

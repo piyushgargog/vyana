@@ -36,6 +36,8 @@ export const activityMockReadings: DeviceSpotReading[] = [
   { type: "sugar_fasting", value: 101, value2: null, unit: "mg/dL", measured_at: at(3, "01:05:00"), source: "health_connect", device_name: "Pixel Watch" },
   { type: "weight", value: 70.4, value2: null, unit: "kg", measured_at: at(1, "01:20:00"), source: "health_connect", device_name: "Pixel Watch" },
   { type: "weight", value: 70.9, value2: null, unit: "kg", measured_at: at(9, "01:25:00"), source: "health_connect", device_name: "Pixel Watch" },
+  { type: "heart_rate", value: 78, value2: null, unit: "bpm", measured_at: at(0, "10:00:00"), source: "health_connect", device_name: "Pixel Watch" },
+  { type: "heart_rate", value: 82, value2: null, unit: "bpm", measured_at: at(2, "10:05:00"), source: "health_connect", device_name: "Pixel Watch" },
 ];
 
 /** The same screens with nothing recorded: the empty state. */
