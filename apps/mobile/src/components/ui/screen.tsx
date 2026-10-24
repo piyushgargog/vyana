@@ -16,8 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScanActionHeight, T, TabBarHeight } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-accessibility-setting';
-import { HEADER_COLLAPSE_OFFSET, ScreenHeader, ScreenTopBar } from './screen-header';
-import { registerScreenScroll } from './screen-scroll';
+import { ScreenHeader, ScreenTopBar } from './screen-header';
+import { HEADER_COLLAPSE_OFFSET, isHeaderCollapsed, registerScreenScroll } from './screen-scroll';
 
 /**
  * The v2 frame for every screen (#487): a slim top bar (back chevron, the screen's one action,
@@ -69,7 +69,7 @@ export function Screen({
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const y = event.nativeEvent.contentOffset.y;
       scrollY.setValue(y);
-      const next = y > HEADER_COLLAPSE_OFFSET;
+      const next = isHeaderCollapsed(y);
       if (next !== collapsedRef.current) {
         collapsedRef.current = next;
         setCollapsed(next);
@@ -126,7 +126,10 @@ export function Screen({
       <View style={styles.screen}>
         {bar}
         {title ? (
-          <View style={[styles.content, { flex: 1, paddingBottom: bottomReserve }]}>{children}</View>
+          // Non-scrolling screens own their layout edge to edge (the old frame applied no
+          // reserve here): reserving the tab bar's height as padding would lift fixed
+          // content — the Ask composer's bar — off the bottom for no reason (#487 review).
+          <View style={[styles.content, { flex: 1 }]}>{children}</View>
         ) : (
           // No title: the screen composes its own header (Timeline puts `ScreenTopBar` over its
           // list), so the children own their padding and fill the shell directly.
