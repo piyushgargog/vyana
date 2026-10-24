@@ -54,13 +54,28 @@ type Frequency = PrescriptionItem["frequency"];
 
 /**
  * Words that state a schedule no contract frequency can express: a weekly or monthly cadence, an alternate-day
- * cadence, or a weekday-only cadence. A duration phrase ("BD for a week") is not one — it is stripped first, so
- * only the cadence itself is judged. Used by frequencyOf and verifyRx so both agree on what is unexpressible.
+ * cadence, or a weekday-only cadence. A duration phrase ("BD for a week") is not one: a cadence match that sits
+ * inside a "for … weeks/months/days" phrase does not count, so only the cadence itself is judged. Used by
+ * frequencyOf and verifyRx so both agree on what is unexpressible. Nothing here sanitizes input — the text is
+ * only read, never rewritten — so no replace-based stripping is involved.
  */
 export function hasUnexpressibleSchedule(evidence: string | null): boolean {
   if (!evidence) return false;
-  const withoutDuration = evidence.toLowerCase().replace(/\bfor\s+(?:a|one|two|\d+)\s+(?:weeks?|months?|days?)\b/g, "");
-  return /(?<![a-z])(?:weekly|fortnightly|monthly|a week|per week|every week|a month|per month|every month|alternate days?|every other day|every (?:\d+|one|two|three|four|five|six|seven) days?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?)(?![a-z])/.test(withoutDuration);
+  const e = evidence.toLowerCase();
+  const durations = [...e.matchAll(/\bfor\s+(?:a|one|two|\d+)\s+(?:weeks?|months?|days?)\b/g)];
+  const cadences = [
+    ...e.matchAll(
+      /(?<![a-z])(?:weekly|fortnightly|monthly|a week|per week|every week|a month|per month|every month|alternate days?|every other day|every (?:\d+|one|two|three|four|five|six|seven) days?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?)(?![a-z])/g,
+    ),
+  ];
+  return cadences.some((m) => {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    return !durations.some((d) => {
+      const ds = d.index ?? 0;
+      return start >= ds && end <= ds + d[0].length;
+    });
+  });
 }
 
 /**
