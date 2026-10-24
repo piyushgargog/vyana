@@ -4,7 +4,8 @@
 import { DEFAULT_TIMES, type FrequencyType } from "../../constants";
 import type { Json, TablesInsert } from "../database.types";
 import type { DbPrescription, DbPrescriptionItem } from "../types";
-import { DbError, requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
+import { formatLocalDate } from "../../health/dates";
+import { DbError, requireUserId, unwrap, unwrapOrNull, type Sb } from "./helpers";
 
 export type PrescriptionWithItems = DbPrescription & { prescription_items: DbPrescriptionItem[] };
 
@@ -97,7 +98,7 @@ export async function setItemActive(sb: Sb, id: string, active: boolean): Promis
 }
 
 /** The signed-in patient's medicines that are switched on and not past their end date (`today` is a local `YYYY-MM-DD`). */
-export async function listActiveItems(sb: Sb, today: string = toLocalDate(new Date())): Promise<DbPrescriptionItem[]> {
+export async function listActiveItems(sb: Sb, today: string = formatLocalDate(new Date())): Promise<DbPrescriptionItem[]> {
   const patientId = await requireUserId(sb);
   return unwrap(
     await sb

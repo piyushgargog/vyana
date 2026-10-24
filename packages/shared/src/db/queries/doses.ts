@@ -3,7 +3,8 @@
 
 import { MISSED_DOSE_GRACE_MINUTES } from "../../constants";
 import type { DbDoseLog, DbPrescriptionItem } from "../types";
-import { daysAgoIso, requireUserId, toLocalDate, unwrap, type Sb } from "./helpers";
+import { formatLocalDate } from "../../health/dates";
+import { daysAgoIso, requireUserId, unwrap, type Sb } from "./helpers";
 
 export type DoseStatus = "taken" | "missed" | "skipped";
 
@@ -93,7 +94,7 @@ export function listDueDoses(items: ScheduledItem[], from: Date, now: Date, grac
   const due: { item_id: string; due: Date }[] = [];
   const lastDue = now.getTime() - graceMinutes * 60 * 1000;
   for (let day = new Date(from.getFullYear(), from.getMonth(), from.getDate()); day.getTime() <= now.getTime(); day.setDate(day.getDate() + 1)) {
-    const date = toLocalDate(day);
+    const date = formatLocalDate(day);
     for (const item of items) {
       if (date < item.start_date || (item.end_date && date > item.end_date)) continue;
       for (const time of item.times) {
