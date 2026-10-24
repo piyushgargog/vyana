@@ -1456,7 +1456,6 @@ components:
             - type: "null"
       required:
         - value_id
-        - value
       additionalProperties: false
     LabValueCorrectRes:
       type: object

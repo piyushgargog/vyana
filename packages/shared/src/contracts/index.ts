@@ -235,11 +235,11 @@ export const ReportAnalyzeRes = z.object({
 export const LabValueCorrectReq = z
   .object({
     value_id: z.guid(),
-    value: z.number().finite().nullable(),
+    value: z.number().finite().nullable().optional(),                  // omitted = a text-only correction; the refine still requires a value or a value_text
     value_text: z.string().trim().min(1).max(60).nullable().optional(), // a written result, e.g. "Negative"
     unit: z.string().trim().min(1).max(20).nullable().optional(),       // omitted = keep the stored unit
   })
-  .refine((b) => b.value !== null || !!b.value_text, { message: "Send a value or a value_text", path: ["value"] });
+  .refine((b) => b.value != null || !!b.value_text, { message: "Send a value or a value_text", path: ["value"] });
 export const LabValueCorrectRes = z.object({
   report_id: z.guid(),
   value: LabValue,
