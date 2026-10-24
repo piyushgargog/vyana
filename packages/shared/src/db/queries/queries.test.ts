@@ -96,6 +96,15 @@ describe("helpers", () => {
     expect(new Date(startOfNextLocalDay("2026-10-31")).getMonth()).toBe(10); // November
     expect(daysAgoIso(1, new Date("2026-10-12T00:00:00Z"))).toBe("2026-10-11T00:00:00.000Z");
   });
+
+  it("startOfNextLocalDay crosses the year and February boundaries", () => {
+    const newYear = new Date(startOfNextLocalDay("2026-12-31"));
+    expect([newYear.getFullYear(), newYear.getMonth(), newYear.getDate()]).toEqual([2027, 0, 1]);
+    const nonLeap = new Date(startOfNextLocalDay("2026-02-28")); // 2026 is not a leap year
+    expect([nonLeap.getFullYear(), nonLeap.getMonth(), nonLeap.getDate()]).toEqual([2026, 2, 1]); // 1 March
+    const leap = new Date(startOfNextLocalDay("2028-02-28")); // 2028 is a leap year
+    expect([leap.getFullYear(), leap.getMonth(), leap.getDate()]).toEqual([2028, 1, 29]); // 29 February
+  });
 });
 
 describe("profile", () => {
