@@ -1,0 +1,18 @@
+{
+  "/": {
+    "violations": [],
+    "passes": 17
+  },
+  "/privacy": {
+    "violations": [],
+    "passes": 19
+  },
+  "/terms": {
+    "violations": [],
+    "passes": 20
+  },
+  "/login": {
+    "violations": [],
+    "passes": 22
+  }
+}

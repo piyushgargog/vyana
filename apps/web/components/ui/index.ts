@@ -6,7 +6,7 @@ export { Card, CardHeader } from "./card";
 export { Chip, ChipGroup } from "./chip";
 export { Field, SelectField, TextAreaField } from "./field";
 export { IconTile, ListGroup, ListRow, type TileColor } from "./list";
-export { EmptyState, ErrorState, LargeTitle, Reveal, SegmentedNav, SkeletonLine } from "./layout";
+export { EmptyState, ErrorState, LargeTitle, Reveal, RevealOnScroll, SegmentedNav, SkeletonLine } from "./layout";
 export { Pill } from "./pill";
 export { Sheet } from "./sheet";
 export { SiteFooter } from "./site-footer";
