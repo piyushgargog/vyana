@@ -24,6 +24,7 @@ import {
 import { useVyanaMobile } from '@/components/providers';
 import { BriefCard } from '@/components/brief-card';
 import { Rings } from '@/components/rings';
+import { SuggestionsForYou } from '@/components/suggestions';
 import {
   Button,
   Card,
@@ -43,10 +44,15 @@ import { MobileSkeletonCard } from '@/components/ui-primitives';
 import { ActivityCard } from '@/components/activity-card';
 import { useActivityCard } from '@/hooks/use-device-activity';
 import { useDeleteDoseLog } from '@/hooks/use-delete-dose-log';
+import {
+  closeDoseUndo,
+  doseUndoPlan,
+  offerDoseUndo,
+  DOSE_UNDO_WINDOW_MS,
+  type DoseSlotStatus,
+  type DoseUndoSlots,
+} from '@/lib/dose-undo';
 import { T } from '@/constants/theme';
-
-/** The status of one scheduled dose slot, as the row shows it. */
-type SlotStatus = 'taken' | 'skipped' | 'missed' | 'pending';
 
 export default function PatientHomeScreen() {
   const router = useRouter();
@@ -86,7 +92,9 @@ export default function PatientHomeScreen() {
   // Dose Undo (#488): after a Take or Skip, the status from before the action is
   // kept for 10 seconds so the action can be taken back; afterwards a quiet
   // "Change" is the way back. One slot per dose, so doses never undo each other.
-  const [undoSlots, setUndoSlots] = useState<Record<string, { prevStatus: SlotStatus }>>({});
+  // The bookkeeping itself is the pure module `@/lib/dose-undo`; this screen
+  // only owns the timers and the mutations.
+  const [undoSlots, setUndoSlots] = useState<DoseUndoSlots>({});
   const undoTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const [changing, setChanging] = useState<Record<string, boolean>>({});
 
@@ -99,18 +107,14 @@ export default function PatientHomeScreen() {
     const timer = undoTimers.current.get(key);
     if (timer) clearTimeout(timer);
     undoTimers.current.delete(key);
-    setUndoSlots((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    setUndoSlots((prev) => closeDoseUndo(prev, key));
   };
 
-  const offerUndo = (key: string, prevStatus: SlotStatus) => {
-    setUndoSlots((prev) => ({ ...prev, [key]: { prevStatus } }));
+  const offerUndo = (key: string, prevStatus: DoseSlotStatus) => {
+    setUndoSlots((prev) => offerDoseUndo(prev, key, prevStatus, Date.now()));
     const timer = undoTimers.current.get(key);
     if (timer) clearTimeout(timer);
-    undoTimers.current.set(key, setTimeout(() => dropUndo(key), 10_000));
+    undoTimers.current.set(key, setTimeout(() => dropUndo(key), DOSE_UNDO_WINDOW_MS));
   };
 
   const queryClient = useQueryClient();
@@ -209,7 +213,7 @@ export default function PatientHomeScreen() {
       }
       // No toast any more: the row itself says Taken or Skipped, with Undo beside it.
       setChanging((prev) => ({ ...prev, [slot.key]: false }));
-      offerUndo(slot.key, slot.status as SlotStatus);
+      offerUndo(slot.key, slot.status as DoseSlotStatus);
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : 'Could not log dose',
@@ -223,11 +227,18 @@ export default function PatientHomeScreen() {
     itemId: string;
     scheduledIso: string;
   }) => {
-    const prevStatus = undoSlots[slot.key]?.prevStatus;
-    dropUndo(slot.key);
-    if (!prevStatus) return;
+    const undo = undoSlots[slot.key];
+    if (!undo) return;
+    const plan = doseUndoPlan(undo.prevStatus);
+    // The slot stays until the undo settles (#525 review): dropping it first
+    // made a failed undo unrecoverable — the dose kept its new status with no
+    // way back. The expiry timer stops too, so the offer cannot vanish while
+    // the mutation is in flight.
+    const timer = undoTimers.current.get(slot.key);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.delete(slot.key);
     try {
-      if (prevStatus === 'pending') {
+      if (plan.kind === 'delete') {
         // Before the action there was no log at all: undoing removes the row.
         await deleteDoseLogMutation.mutateAsync({
           item_id: slot.itemId,
@@ -237,10 +248,13 @@ export default function PatientHomeScreen() {
         await logDoseMutation.mutateAsync({
           item_id: slot.itemId,
           scheduled_for: slot.scheduledIso,
-          status: prevStatus,
+          status: plan.status,
         });
       }
+      dropUndo(slot.key);
     } catch (err) {
+      // Failed: the offer goes back with a fresh window, so Undo can be retried.
+      offerUndo(slot.key, undo.prevStatus);
       showToast(
         err instanceof Error ? err.message : 'Could not undo',
         'error'
@@ -287,8 +301,10 @@ export default function PatientHomeScreen() {
         trailing={<SosPill />}
         floatingAction
       >
-        {/* The brief and the care rings (#488) replace "Suggestions for you":
-            computed from the day's own data, never written by a model. */}
+        {/* The brief and the care rings (#488): computed from the day's own
+            data, never written by a model. The care suggestions (#304) sit
+            below them and render nothing at all when there is nothing to
+            suggest — no empty section, no heading. */}
         <BriefCard nextDose={nextDose} dosesScheduled={scheduledSlots.length} />
         <Rings
           doses={
@@ -304,6 +320,7 @@ export default function PatientHomeScreen() {
           onSleepPress={() => router.push('/health-trends')}
           onConnectPress={() => router.push('/devices')}
         />
+        <SuggestionsForYou />
 
         {/* Doses Card with Progress */}
         <Card>
@@ -333,6 +350,9 @@ export default function PatientHomeScreen() {
               {scheduledSlots.map((slot) => {
                 const isTaken = slot.status === 'taken';
                 const isSkipped = slot.status === 'skipped';
+                // The record only ever holds live offers: the expiry timer
+                // closes each slot as its 10 s window ends (the window rule
+                // itself is `liveDoseUndo` in @/lib/dose-undo).
                 const undo = undoSlots[slot.key];
                 const showButtons = (!isTaken && !isSkipped) || (changing[slot.key] ?? false);
                 return (
