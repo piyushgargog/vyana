@@ -495,7 +495,7 @@ function DoctorCarePlanReviewContent({
                         diet: {
                           ...draftPlan.diet,
                           eat_more: draftPlan.diet.eat_more.filter((_, i) => i !== idx),
-                        \},
+                        \                        },
                       });
                     }}
                     aria-label={`Remove food to include: ${item}`} 
