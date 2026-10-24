@@ -21,6 +21,10 @@ describe("logDose (#495)", () => {
       scheduled_for: "2026-10-23T02:30:00.000Z",
       status: "taken",
     });
+    // logged_at is what makes the last write win (issue #495 step 1): it must be on the
+    // payload, an ISO instant at the moment of the tap.
+    expect(typeof rows.logged_at).toBe("string");
+    expect(Math.abs(Date.now() - new Date(rows.logged_at as string).getTime())).toBeLessThan(60_000);
     expect(opts).toEqual({ onConflict: "item_id,scheduled_for" });
   });
 });

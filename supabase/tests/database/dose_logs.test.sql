@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(9);
+select plan(10);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures (as the table owner): patients A and B, one medicine of A's
@@ -31,17 +31,17 @@ begin
 end;
 $$;
 
--- A logs a dose as taken (the write logDose makes)
+-- A logs a dose as taken (the write logDose makes, logged_at included)
 select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
 select is(
-  public.tap_affected($$ insert into public.dose_logs (patient_id, item_id, scheduled_for, status)
-    values ('10000000-0000-0000-0000-000000000001', '41000000-0000-0000-0000-000000000001', '2026-10-23T08:00:00+05:30', 'taken') $$),
+  public.tap_affected($$ insert into public.dose_logs (patient_id, item_id, scheduled_for, status, logged_at)
+    values ('10000000-0000-0000-0000-000000000001', '41000000-0000-0000-0000-000000000001', '2026-10-23T08:00:00+05:30', 'taken', '2026-10-23T08:05:00+05:30') $$),
   1, 'the patient logs a dose');
 -- Logging the same dose again updates the same row (the upsert logDose makes)
 select is(
-  public.tap_affected($$ insert into public.dose_logs (patient_id, item_id, scheduled_for, status)
-    values ('10000000-0000-0000-0000-000000000001', '41000000-0000-0000-0000-000000000001', '2026-10-23T08:00:00+05:30', 'skipped')
-    on conflict (item_id, scheduled_for) do update set status = excluded.status $$),
+  public.tap_affected($$ insert into public.dose_logs (patient_id, item_id, scheduled_for, status, logged_at)
+    values ('10000000-0000-0000-0000-000000000001', '41000000-0000-0000-0000-000000000001', '2026-10-23T08:00:00+05:30', 'skipped', '2026-10-23T08:20:00+05:30')
+    on conflict (item_id, scheduled_for) do update set status = excluded.status, logged_at = excluded.logged_at $$),
   1, 'logging the same dose again writes');
 select is(
   (select count(*)::int from public.dose_logs where item_id = '41000000-0000-0000-0000-000000000001'),
@@ -49,6 +49,9 @@ select is(
 select is(
   (select status from public.dose_logs where item_id = '41000000-0000-0000-0000-000000000001'),
   'skipped', 'the last write wins');
+select is(
+  (select logged_at from public.dose_logs where item_id = '41000000-0000-0000-0000-000000000001'),
+  '2026-10-23T08:20:00+05:30'::timestamptz, 'and logged_at advances with the re-log, which is what orders the writes');
 -- Undo (the delete undoDose makes) removes it
 select is(
   public.tap_affected($$ delete from public.dose_logs
