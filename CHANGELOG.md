@@ -264,7 +264,7 @@ The first release: the web app at https://vyanahealth.app and the Android app (p
 - CI on every pull request: lint, typecheck, tests, web build, expo-doctor, CodeQL, secret scanning, dependency review, PR title check and auto-labels.
 - Repository basics: README, MIT license, contributing guide, security policy, issue and PR templates, CODEOWNERS, Dependabot.
 - Code of Conduct (Contributor Covenant 2.1), accessibility statement (`.github/ACCESSIBILITY.md`) and an accessibility issue template.
-- Demo data v2: nine real Delhi hospitals (five government, four private) with 47 departments, two fictional verified doctors for each, a Metformin pack that is 2 days from a refill, an HbA1c trend over four reports, accepted consents, and dose logs in India time. Booking now shows real hospitals.
+- Demo data v2: nine real Delhi hospitals (five government, four private) with 47 departments, two fictional verified doctors for each, a Metformin pack that is 2 days from a refill, an approved Type 2 Diabetes care plan, an HbA1c trend over four reports, accepted consents, and dose logs in India time. Booking now shows real hospitals.
 
 - Missed-dose alerts for caregivers: every 15 minutes the database calls `POST /api/cron/missed-doses`; a dose that was due 60+ minutes ago and never logged sends one push to each caregiver phone (no medicine name on the lock screen). A push helper for Expo notifications (`lib/server/push.ts`) removes dead tokens.
 
