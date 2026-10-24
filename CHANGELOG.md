@@ -16,6 +16,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 ### Removed
 - Removed the medicine basket, lab price comparison, hospital OPD info and PM-JAY list endpoints, with their contracts, mocks, hooks and tests (the screens use plain links now).
 - Removed the web agent vendor integration completely: code, tests, scripts, environment variables and the privacy page entry.
+- Removed the unused job-cache helpers `cachedJobResult` and `cacheJobResult` from `apps/web/lib/server/jobs.ts`; nothing called them (the blood-job poll reads the cache directly).
 
 ### Added
 - Care suggestions (mock-first): "Suggestions for you" cards at the top of the phone's Today tab and the web dashboard. Each card is a proposal from the patient's own records — a plain title, a one-sentence reason, "Why you see this" with the evidence and the date — with "Do it" and "Not now" buttons; approving confirms with what actually happened, dismissing offers Undo for the seconds the answer allows. Built on a provisional `AgentProposal` contract and an in-memory mock store in `@vyana/shared` (`useMyAgentProposals` / `useDecideAgentProposal`), so the final contract and the M3 hooks can replace the plumbing without touching the screens.
