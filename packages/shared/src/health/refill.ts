@@ -116,10 +116,13 @@ export function getRefillStatus(item: RefillItem, doseLogs: Pick<DbDoseLog, "ite
   );
 }
 
-export type ScheduledRefillItem = Pick<
-  DbPrescriptionItem,
-  "dose" | "times" | "frequency" | "quantity_total" | "start_date" | "end_date" | "refill_alert_days" | "active"
->;
+export type ScheduledRefillItem = Omit<
+  Pick<DbPrescriptionItem, "dose" | "times" | "frequency" | "quantity_total" | "start_date" | "end_date" | "refill_alert_days" | "active">,
+  "refill_alert_days"
+> & {
+  /** Null when the item has no alert window saved; the scheduled path falls back to 5 days, as the screens always did. */
+  refill_alert_days: number | null;
+};
 
 export type ScheduledRefillStatus = RefillStatus & {
   /** The calendar day the pack runs out on the schedule, or null when it cannot be worked out. */
@@ -132,7 +135,8 @@ export type ScheduledRefillStatus = RefillStatus & {
  * dispensed minus the doses the schedule says should have been taken since `start_date`
  * (dose slots per day from `times`, falling back to the frequency default, times the units per
  * dose from `parseDoseUnits` — so "2 tablets" twice a day uses 4 units a day, while a strength
- * such as "500 mg" still uses 1). The days-left math itself is `deriveRefillStatus`, shared
+ * such as "500 mg" still uses 1). An item with no `refill_alert_days` saved falls back to a
+ * 5-day alert window, the default the screens used before the engines were unified. The days-left math itself is `deriveRefillStatus`, shared
  * with the logged answer, so the two can only differ by logged-vs-assumed consumption — never
  * by the arithmetic, the per-dose units, or the switched-off / course-ended rules.
  */
@@ -155,7 +159,7 @@ export function getScheduledRefillStatus(item: ScheduledRefillItem, now: Date = 
   const unitsLeft = Math.max(0, round2(item.quantity_total - elapsedDays * perDay));
   const totalDays = Math.floor(item.quantity_total / perDay);
   const status = deriveRefillStatus(
-    { units_left: unitsLeft, units_per_day: perDay, refill_alert_days: item.refill_alert_days, active: item.active, end_date: item.end_date },
+    { units_left: unitsLeft, units_per_day: perDay, refill_alert_days: item.refill_alert_days ?? 5, active: item.active, end_date: item.end_date },
     now
   );
   return { ...status, refill_date: addDays(item.start_date, totalDays) };

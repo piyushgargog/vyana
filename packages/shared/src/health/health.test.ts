@@ -220,6 +220,13 @@ describe("getScheduledRefillStatus", () => {
     expect(getScheduledRefillStatus({ ...due, end_date: "2026-11-30" }, today).refill_due).toBe(true);
   });
 
+  it("falls back to a 5-day alert window when refill_alert_days is null", () => {
+    // Base item has 4 days left: outside its saved 3-day window, inside the 5-day fallback.
+    // Without the fallback, null would compare as 0 and "refill soon" would never fire.
+    expect(getScheduledRefillStatus({ ...item, refill_alert_days: null }, today)).toMatchObject({ days_left: 4, refill_due: true });
+    expect(getScheduledRefillStatus({ ...item, refill_alert_days: 3 }, today).refill_due).toBe(false);
+  });
+
   it("knows nothing without a quantity or a start date, and has no days for as-needed medicines", () => {
     expect(getScheduledRefillStatus({ ...item, quantity_total: null }, today)).toEqual({
       units_left: null,
