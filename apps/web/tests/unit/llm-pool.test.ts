@@ -192,15 +192,64 @@ describe("failover (retryable failures only)", () => {
   it("names the fallback that answered a stream, so ai_runs records the model that really did (ADR-056)", async () => {
     vi.stubEnv("GROQ_API_KEYS", "k1,k2");
     vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
-    const { streamFallbackOf } = await import("@/lib/server/llm");
+    const { streamFallbackOf, streamStepsOf } = await import("@/lib/server/llm");
     const primary = getModel("text");
     expect(await streamText({ model: primary, prompt: "hi", maxRetries: 0 }).text).toBe("groq|k1|main-model");
     expect(streamFallbackOf(primary)).toBeNull(); // the primary answered
+    expect(streamStepsOf(primary)).toEqual([null]);
     script.set("groq|k1|main-model", 429);
     script.set("groq|k2|main-model", 429);
     const fallback = getModel("text");
     expect(await streamText({ model: fallback, prompt: "hi", maxRetries: 0 }).text).toBe("groq|k2|small-model"); // keys rotate: k2 answers
     expect(streamFallbackOf(fallback)).toBe("groq:small-model");
+    expect(streamStepsOf(fallback)).toEqual(["groq:small-model"]);
+  });
+
+  it("records no answering model for a stream when every candidate fails", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
+    const { streamFallbackOf, streamStepsOf } = await import("@/lib/server/llm");
+    script.set("groq|k1|main-model", 429);
+    script.set("groq|k2|main-model", 429);
+    script.set("groq|k1|small-model", 429);
+    script.set("groq|k2|small-model", 503);
+    const model = getModel("text");
+    await expect(streamText({ model, prompt: "hi", maxRetries: 0 }).text).rejects.toThrow("No output generated");
+    // The label is set on success, not on attempt: the last failed candidate answered nothing.
+    expect(streamStepsOf(model)).toEqual([]);
+    expect(streamFallbackOf(model)).toBeNull();
+  });
+
+  it("credits each step of a multi-step stream to the model that answered that step", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
+    const { streamFallbackOf, streamStepsOf } = await import("@/lib/server/llm");
+    const model = getModel("text");
+    // A tool loop's steps are separate doStream calls on the same wrapped model, each trying the primary first.
+    script.set("groq|k1|main-model", 429);
+    script.set("groq|k2|main-model", 429);
+    expect(await streamText({ model, prompt: "step 1", maxRetries: 0 }).text).toBe("groq|k1|small-model");
+    script.delete("groq|k1|main-model");
+    script.delete("groq|k2|main-model");
+    expect(await streamText({ model, prompt: "step 2", maxRetries: 0 }).text).toBe("groq|k1|main-model");
+    script.set("groq|k1|main-model", 429);
+    script.set("groq|k2|main-model", 429);
+    expect(await streamText({ model, prompt: "step 3", maxRetries: 0 }).text).toBe("groq|k1|small-model");
+    // Step 1's fallback must not stick to step 2, and step 3's fallback must not rewrite step 2's primary.
+    expect(streamStepsOf(model)).toEqual(["groq:small-model", null, "groq:small-model"]);
+    expect(streamFallbackOf(model)).toBe("groq:small-model"); // the last step's answerer
+  });
+
+  it("tracks steps for a stream with no fallbacks too, so its total failure still records no answerer", async () => {
+    vi.stubEnv("GROQ_API_KEY", "only");
+    const { streamStepsOf } = await import("@/lib/server/llm");
+    const ok = getModel("text");
+    expect(await streamText({ model: ok, prompt: "hi", maxRetries: 0 }).text).toBe("groq|only|main-model");
+    expect(streamStepsOf(ok)).toEqual([null]);
+    script.set("groq|only|main-model", 503);
+    const failed = getModel("text");
+    await expect(streamText({ model: failed, prompt: "hi", maxRetries: 0 }).text).rejects.toThrow("No output generated");
+    expect(streamStepsOf(failed)).toEqual([]);
   });
 
   it("classifies errors", () => {

@@ -162,18 +162,37 @@ export const POOL_KEY = "vyana_pool";
 
 /**
  * Streams (the assistant) cannot carry the fallback tag in provider metadata — the V4 stream result has no such
- * field — so the winning candidate's label is kept here instead. `getModel` builds a fresh wrapped model per call,
- * so the entry is per request; read it with `streamFallbackOf` after the stream ends. The generate path does the
- * same thing through `POOL_KEY`.
+ * field — so the answering candidate of every step is kept here instead. `getModel` builds a fresh wrapped model
+ * per call, so the entry is per request; read it with `streamStepsOf` / `streamFallbackOf` after the stream ends.
+ * The generate path does the same thing through `POOL_KEY`.
+ *
+ * A step is recorded only once its `doStream` has succeeded — never on attempt — so a stream in which every
+ * candidate fails records no step at all, and no model is credited with an answer it did not produce. One reply
+ * can run several steps (the assistant allows up to 5), each trying the primary first, so attribution is a list:
+ * one entry per completed step, in order — null when the primary answered that step, else the fallback's
+ * `provider:id` label.
  */
-const streamFallbacks = new WeakMap<object, { label: string | null }>();
+const streamFallbacks = new WeakMap<object, { steps: (string | null)[] }>();
 
 /**
- * The `provider:id` label of the fallback candidate that answered a stream through this model, or null when the
- * primary answered (or the model never streamed). Lets `ai_runs` record the model that really answered (ADR-056).
+ * The answering candidate of each completed step of a stream through this model, in order: null for a step the
+ * primary answered, else the fallback's `provider:id` label. Returns null when the model is not a pooled model
+ * (nothing is tracked for it), and an empty list when it is pooled but no step ever succeeded — every candidate
+ * failed, so no model answered. Lets `ai_runs` record the models that really answered (ADR-056).
+ */
+export function streamStepsOf(model: LanguageModel): (string | null)[] | null {
+  if (typeof model !== "object" || model === null) return null;
+  const entry = streamFallbacks.get(model);
+  return entry ? [...entry.steps] : null;
+}
+
+/**
+ * The `provider:id` label of the fallback candidate that answered the last completed step of a stream through
+ * this model, or null when the primary answered that step (or no step completed). For a whole multi-step reply
+ * use `streamStepsOf`: steps can be answered by different candidates.
  */
 export function streamFallbackOf(model: LanguageModel): string | null {
-  return typeof model === "object" && model !== null ? (streamFallbacks.get(model)?.label ?? null) : null;
+  return streamStepsOf(model)?.at(-1) ?? null;
 }
 
 export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): LanguageModel {
@@ -198,7 +217,24 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
   const [first, ...rest] = candidates;
   const primary = build(first);
   const dropReasoning: LanguageModelMiddleware = { transformParams: async ({ params }) => withoutReasoning(params) };
-  if (rest.length === 0) return wrapLanguageModel({ model: primary, middleware: dropReasoning });
+  // Per-step stream attribution for this request (see `streamStepsOf`): an entry is added only after a step's
+  // stream has actually started, so a failed attempt never credits a model with an answer it did not produce.
+  const attribution: { steps: (string | null)[] } = { steps: [] };
+  if (rest.length === 0) {
+    const single = wrapLanguageModel({
+      model: primary,
+      middleware: {
+        ...dropReasoning,
+        wrapStream: async ({ doStream }) => {
+          const result = await doStream();
+          attribution.steps.push(null); // the only candidate is the primary
+          return result;
+        },
+      },
+    });
+    streamFallbacks.set(single, attribution);
+    return single;
+  }
 
   const others = rest.map((c) => ({ c, model: build(c) }));
   // An error that stops the pool is logged with its status, so "AI_APICallError" in a route log is never the whole story.
@@ -233,7 +269,6 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
     throw failed(last);
   }
 
-  const fallback: { label: string | null } = { label: null };
   const wrapped = wrapLanguageModel({
     model: primary,
     middleware: {
@@ -247,17 +282,21 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
       },
       wrapStream: async ({ doStream, params }) => {
         try {
-          return await doStream();
+          const result = await doStream();
+          attribution.steps.push(null); // the primary answered this step
+          return result;
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => {
-            // The V4 stream result has no provider-metadata field, so the winning label is kept per model.
-            fallback.label = label(c);
-            return m.doStream(params);
+          return fallBack(err, params.abortSignal?.aborted === true, async (m, c) => {
+            // The V4 stream result has no provider-metadata field, so the answering label is kept per model —
+            // and only once this candidate's stream has actually started, never on a failed attempt.
+            const result = await m.doStream(params);
+            attribution.steps.push(label(c));
+            return result;
           });
         }
       },
     },
   });
-  streamFallbacks.set(wrapped, fallback);
+  streamFallbacks.set(wrapped, attribution);
   return wrapped;
 }
