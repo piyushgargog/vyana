@@ -77,7 +77,7 @@ function DoctorPatientSummaryContent({
       } catch (err) {
         if (!ignore) {
           setProfileError(
-            err instanceof Error ? err.message : "Failed to load patient profile"
+            err instanceof Error ? err.message : "Please try again in a moment."
           );
         }
       } finally {
@@ -195,9 +195,7 @@ function DoctorPatientSummaryContent({
               <h1 className="text-xl sm:text-2xl font-bold text-label">
                 {patientProfile.full_name || "Patient Record"}
               </h1>
-              <span className="rounded-full bg-fill px-2.5 py-0.5 text-xs font-semibold text-label-2">
-                Patient ID: {patientId.slice(0, 8)}…
-              </span>
+              <Pill tone="neutral">Patient ID: {patientId.slice(0, 8)}…</Pill>
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-label-2">
@@ -559,9 +557,7 @@ function DoctorPatientSummaryContent({
                           Report Date: {report.report_date || report.created_at.slice(0, 10)}
                         </p>
                       </div>
-                      <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-semibold text-label-2">
-                        {values.length} tests recorded
-                      </span>
+                      <Pill tone="neutral">{values.length} tests recorded</Pill>
                     </div>
 
                     {report.summary && (
