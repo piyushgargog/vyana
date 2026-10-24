@@ -102,6 +102,7 @@ describe("computeItemRefill", () => {
         {
           frequency: "BD",
           times: [],
+          dose: "1 tablet",
           quantity_total: 30,
           start_date: "2026-10-01",
           end_date: null,
@@ -115,5 +116,58 @@ describe("computeItemRefill", () => {
       if (prevTz === undefined) delete process.env.TZ;
       else process.env.TZ = prevTz;
     }
+  });
+
+  it("counts units per dose from the dose text, not one unit per dose", () => {
+    // "2 tablets" twice a day, 12 tablets from today -> the pack lasts 3 days, not 6.
+    const r = computeItemRefill(
+      {
+        frequency: "BD",
+        times: ["09:00", "21:00"],
+        dose: "2 tablets",
+        quantity_total: 12,
+        start_date: "2026-10-24",
+        end_date: null,
+        refill_alert_days: 5,
+      },
+      new Date("2026-10-24T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(3);
+    expect(r.refillDate).toBe("2026-10-27");
+  });
+
+  it("treats a strength dose like '500 mg' as one unit per dose", () => {
+    // Same shape as the tablet test: 30 units twice a day -> 15 days, as before.
+    const r = computeItemRefill(
+      {
+        frequency: "BD",
+        times: [],
+        dose: "500 mg",
+        quantity_total: 30,
+        start_date: "2026-10-01",
+        end_date: null,
+        refill_alert_days: 5,
+      },
+      new Date("2026-10-05T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(11);
+    expect(r.refillDate).toBe("2026-10-16");
+  });
+
+  it("handles fractional units per dose", () => {
+    // "1/2 tablet" once a day, 7 tablets -> 14 days.
+    const r = computeItemRefill(
+      {
+        frequency: "OD",
+        times: [],
+        dose: "1/2 tablet",
+        quantity_total: 7,
+        start_date: "2026-10-24",
+        end_date: null,
+        refill_alert_days: 5,
+      },
+      new Date("2026-10-24T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(14);
   });
 });

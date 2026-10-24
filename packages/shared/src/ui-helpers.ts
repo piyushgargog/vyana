@@ -2,6 +2,7 @@ import { DEFAULT_TIMES, type FrequencyType } from "./constants";
 import { CarePlan } from "./contracts";
 import type { DbPrescriptionItem, DbShareLink } from "./db/types";
 import { formatLocalDate } from "./health/dates";
+import { parseDoseUnits } from "./health/refill";
 import { carePlanMock } from "./mocks/care-plan";
 
 export function parseCarePlanJson(
@@ -23,6 +24,7 @@ export function computeItemRefill(
     DbPrescriptionItem,
     | "frequency"
     | "times"
+    | "dose"
     | "quantity_total"
     | "start_date"
     | "end_date"
@@ -53,7 +55,9 @@ export function computeItemRefill(
       needsRefillSoon: false,
     };
   }
-  const totalDays = Math.floor(item.quantity_total / dosesPerDay);
+  // A dose is not always one unit: "2 tablets" uses two of the pack per dose.
+  const unitsPerDay = dosesPerDay * parseDoseUnits(item.dose);
+  const totalDays = Math.floor(item.quantity_total / unitsPerDay);
   const start = new Date(`${item.start_date}T00:00:00`);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const elapsedDays = Math.max(
