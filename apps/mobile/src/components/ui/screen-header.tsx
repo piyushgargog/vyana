@@ -7,8 +7,9 @@ import { T, TopBarHeight } from '@/constants/theme';
 import { Symbol } from './symbol';
 import { Text } from './text';
 
-/** Scroll distance after which the large title has collapsed into the slim bar. */
-export const HEADER_COLLAPSE_OFFSET = 40;
+// The collapse threshold lives with the frame's other scroll rules in `screen-scroll` (pure
+// TypeScript, unit-tested); it is re-exported here so existing imports keep working.
+export { HEADER_COLLAPSE_OFFSET } from './screen-scroll';
 
 /**
  * The large title block at the top of a screen's scrolling content (Apple's large-title pattern,
