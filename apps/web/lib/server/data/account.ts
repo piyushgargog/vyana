@@ -27,6 +27,12 @@ export interface ExportTable {
   order: string;
   /** Columns left out because a copy of the file could open something (a link token, a pairing code, a device token). */
   omit?: string[];
+  /**
+   * For a table with no user column of its own: the rows are the user's when their `owner`
+   * column names a row of `table` whose `ownerColumn` is the user (review_events belong to
+   * the patient through their review_requests — the doctor's note lives only there).
+   */
+  through?: { table: string; key: string; ownerColumn: string };
 }
 
 /**
@@ -48,6 +54,7 @@ export const EXPORT_TABLES: ExportTable[] = [
   { table: "prescription_items", owner: ["patient_id"], order: "id" },
   { table: "dose_logs", owner: ["patient_id"], order: "id" },
   { table: "review_requests", owner: ["patient_id"], order: "id" },
+  { table: "review_events", owner: ["request_id"], order: "id", through: { table: "review_requests", key: "id", ownerColumn: "patient_id" } },
   { table: "lab_reports", owner: ["patient_id"], order: "id" },
   { table: "lab_values", owner: ["patient_id"], order: "id" },
   { table: "vitals", owner: ["patient_id"], order: "id" },
@@ -75,7 +82,6 @@ export const NOT_EXPORTED: Record<string, string> = {
   care_invite_attempts: "rate-limit bookkeeping for joining with a code, no health or personal content",
   rate_limits: "counters of the per-user API limits (migration 0012), no health or personal content",
   missed_dose_alerts: "delivery bookkeeping of the alert push; the doses themselves are in dose_logs",
-  review_events: "the audit trail of a review; the request and its outcome are in review_requests",
   hospitals: "public information",
   departments: "public information",
   price_quotes: "public prices, not tied to a user",
@@ -118,6 +124,14 @@ async function readAll(
 }
 
 async function readTable(sb: SupabaseClient, spec: ExportTable, userId: string): Promise<{ rows: Row[]; truncated: boolean }> {
+  if (spec.through) {
+    const t = spec.through;
+    const parents = await readAll((from, to) => sb.from(t.table).select(t.key).eq(t.ownerColumn, userId).order(t.key).range(from, to));
+    const ids = parents.rows.map((r) => String(r[t.key]));
+    if (ids.length === 0) return { rows: [], truncated: parents.truncated };
+    const res = await readAll((from, to) => sb.from(spec.table).select("*").in(spec.owner[0], ids).order(spec.order).range(from, to));
+    return { rows: res.rows, truncated: parents.truncated || res.truncated };
+  }
   const seen = new Set<string>();
   const out: Row[] = [];
   let truncated = false;

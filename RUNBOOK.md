@@ -127,6 +127,20 @@ select public.unschedule_care_agent();
 
 Check it ran: `select * from cron.job_run_details order by start_time desc limit 5;`
 
+## Switching review-request expiry on
+
+Migration 0028 prepares the nightly expiry of doctor review requests (issue #498) but does not start it. When the review flow goes live, run in the SQL editor:
+
+```sql
+select public.schedule_review_expiry();
+```
+
+That creates the job `review-requests-expiry` (21:00 UTC, 02:30 IST), which runs `expire_review_requests()` directly in the database — no route or secret is involved. To stop it:
+
+```sql
+select public.unschedule_review_expiry();
+```
+
 ## What is still missing
 
 - **Uploaded files.** The images in Supabase Storage are not part of this backup. For the demo that is acceptable (the demo data is synthetic and can be re-uploaded); before real use, copy the two buckets too.
