@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Animated,
   DimensionValue,
+  Pressable,
   StyleProp,
   StyleSheet,
   TextInput,
@@ -71,6 +72,12 @@ export interface MobileTrendPoint {
   date: string;
   value: number;
   flag?: 'low' | 'normal' | 'high' | null;
+  /** Axis label when the caller formats the date itself (the lab model adds the year when it changes). */
+  dateLabel?: string;
+  /** Range status from the caller's model; wins over `flag` when set. */
+  status?: 'above' | 'below' | null;
+  /** Screen-reader text for this one point (full date, value, range status). */
+  a11yLabel?: string;
 }
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -83,6 +90,13 @@ export function shortChartDate(date: string): string {
   return month ? `${Number(match[3])} ${month}` : date;
 }
 
+/** The fixed height of the bar area; the reference band and the bars share this one scale. */
+const PLOT_HEIGHT = 120;
+/** Room under the bars for the date labels (caption line height + the column gap); the band's baseline sits this far from the bottom. */
+const DATE_LABEL_SPACE = 20;
+/** Past this many points the value/date labels thin out; every point stays tappable instead. */
+const MAX_POINT_LABELS = 8;
+
 export function MobileTrendChart({
   title,
   unit,
@@ -90,6 +104,7 @@ export function MobileTrendChart({
   refLow,
   refHigh,
   label,
+  headline,
   flags = true,
 }: {
   title: string;
@@ -99,13 +114,18 @@ export function MobileTrendChart({
   refHigh?: number | null;
   /** Screen-reader label for the whole chart; defaults to the readings count. */
   label?: string;
+  /** The one-line takeaway over the chart, built by the caller's model (brief #486, rule 11). */
+  headline?: string | null;
   /**
-   * Print the flag word under each value and colour the bars by it (lab reports).
+   * Print the range status under each value and colour the bars by it (lab reports).
    * Device readings pass false (issue #328): a device value is never labelled
    * high/low/normal here, and every bar keeps the neutral accent.
    */
   flags?: boolean;
 }) {
+  // The selected point is the chart's tooltip: the latest by default, any bar on tap.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
   if (points.length === 0) {
     return (
       <View style={styles.chartCard}>
@@ -116,11 +136,45 @@ export function MobileTrendChart({
     );
   }
 
-  const maxVal = Math.max(
-    ...points.map((p) => p.value),
-    typeof refHigh === 'number' ? refHigh : 0,
-    1
-  );
+  // One scale for the bars and the band, with headroom over the tallest of them.
+  const scaleMax =
+    Math.max(
+      ...points.map((p) => p.value),
+      typeof refHigh === 'number' ? refHigh : 0,
+      typeof refLow === 'number' ? refLow : 0,
+      1,
+    ) * 1.15;
+  const barHeight = (value: number) =>
+    Math.max(3, Math.min(PLOT_HEIGHT, (value / scaleMax) * PLOT_HEIGHT));
+  const hasBand = typeof refLow === 'number' && typeof refHigh === 'number';
+  const bandBottom = hasBand ? (refLow / scaleMax) * PLOT_HEIGHT : 0;
+  const bandHeight = hasBand ? Math.max(3, ((refHigh - refLow) / scaleMax) * PLOT_HEIGHT) : 0;
+
+  const pointStatus = (pt: MobileTrendPoint): 'above' | 'below' | null => {
+    if (!flags) return null;
+    if (pt.status !== undefined) return pt.status;
+    return pt.flag === 'high' ? 'above' : pt.flag === 'low' ? 'below' : null;
+  };
+  const pointLabel = (pt: MobileTrendPoint) => pt.dateLabel ?? shortChartDate(pt.date);
+  const pointA11y = (pt: MobileTrendPoint): string => {
+    if (pt.a11yLabel) return pt.a11yLabel;
+    const status = pointStatus(pt);
+    const statusWord = status === 'above' ? ', above range' : status === 'below' ? ', below range' : '';
+    return `${pointLabel(pt)}: ${pt.value}${unit ? ` ${unit}` : ''}${statusWord}`;
+  };
+
+  const selectedIdx = (() => {
+    if (selectedKey === null) return points.length - 1;
+    const idx = points.findIndex((p) => `${p.date}|${p.value}` === selectedKey);
+    return idx >= 0 ? idx : points.length - 1;
+  })();
+  const selectedPoint = points[selectedIdx];
+
+  // With more points than fit, thin the printed labels; the tap readout and the
+  // screen-reader labels still carry every point (brief #486, rule 11).
+  const labelStep = Math.max(1, Math.ceil(points.length / MAX_POINT_LABELS));
+  const showLabel = (idx: number) =>
+    points.length <= MAX_POINT_LABELS || idx % labelStep === 0 || idx === points.length - 1 || idx === selectedIdx;
 
   return (
     <View
@@ -132,59 +186,113 @@ export function MobileTrendChart({
         <Text variant="headline">
           {unit ? `${title} Trend (${unit})` : `${title} Trend`}
         </Text>
-        {typeof refLow === 'number' && typeof refHigh === 'number' && (
+        {hasBand && (
           <Text variant="footnote" tone="tertiary">
-            Normal reference range: {refLow} – {refHigh} {unit}
+            Reference range: {refLow} – {refHigh} {unit} (shaded band)
           </Text>
         )}
+        {headline ? (
+          <Text variant="subhead" tone="secondary">
+            {headline}
+          </Text>
+        ) : null}
       </View>
 
-      <View style={styles.barsContainer}>
-        {points.map((pt, idx) => {
-          const ratio = Math.min(1, Math.max(0.18, pt.value / (maxVal * 1.15)));
-          const barHeight = Math.round(ratio * 110);
-          const flagText =
-            pt.flag === 'high' ? 'High' : pt.flag === 'low' ? 'Low' : 'Normal';
-          // The bar takes the colour of the flag the report itself gave (#332):
-          // a calm warning tone for "above range", the strong red only for "low",
-          // never one alarm colour for everything. With flags off (device data)
-          // every bar is the neutral accent and no flag word is printed.
-          const barColor = !flags
-            ? T.color.accent
-            : pt.flag === 'high'
-              ? T.color.warn
-              : pt.flag === 'low'
-                ? T.color.danger
-                : T.color.accent;
-          // With more than four bars the labels touch (#332): show every second
-          // one, plus always the latest. Hidden labels keep their space so the
-          // bars stay on one baseline.
-          const crowded = points.length > 4;
-          const showLabel = !crowded || idx % 2 === 0 || idx === points.length - 1;
+      {flags && selectedPoint ? (
+        <Text variant="footnote" tone="secondary" style={styles.chartReadout}>
+          {pointA11y(selectedPoint)}
+        </Text>
+      ) : null}
 
-          return (
-            <View key={`${pt.date}-${idx}`} style={styles.barColumn}>
-              <Text
-                variant="caption"
-                style={[styles.barValText, { color: barColor }, !showLabel && styles.hiddenLabel]}
+      <View style={styles.chartPlot}>
+        {hasBand && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.chartBand,
+              { bottom: DATE_LABEL_SPACE + bandBottom, height: bandHeight },
+            ]}
+          />
+        )}
+        <View
+          pointerEvents="none"
+          style={[styles.chartAxis, { bottom: DATE_LABEL_SPACE }]}
+        />
+        <View style={styles.barsRow}>
+          {points.map((pt, idx) => {
+            const status = pointStatus(pt);
+            // One calm tone for out of range in either direction, the neutral accent
+            // in range — never red or green, and never colour alone: an out-of-range
+            // point also carries an arrow icon and the words "Above/Below range".
+            const barColor = status ? T.color.warn : T.color.accent;
+            const labelled = showLabel(idx);
+            const column = (
+              <>
+                <View style={styles.barZone}>
+                  {status && labelled ? (
+                    <View style={styles.barStatus}>
+                      <Symbol
+                        ios={status === 'above' ? 'arrow.up.circle.fill' : 'arrow.down.circle.fill'}
+                        android={status === 'above' ? 'arrow_circle_up' : 'arrow_circle_down'}
+                        size={11}
+                        color={T.color.warn}
+                      />
+                      <Text variant="caption2" tone="warn" style={styles.barStatusText}>
+                        {status === 'above' ? 'Above range' : 'Below range'}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Text
+                    variant="caption"
+                    style={[
+                      styles.barValText,
+                      idx === selectedIdx && styles.barValSelected,
+                      !labelled && styles.hiddenLabel,
+                    ]}
+                  >
+                    {pt.value}
+                  </Text>
+                  <View
+                    style={[
+                      styles.barFill,
+                      { height: barHeight(pt.value), backgroundColor: barColor },
+                      idx === selectedIdx && styles.barFillSelected,
+                    ]}
+                  />
+                </View>
+                <Text
+                  variant="caption"
+                  tone="tertiary"
+                  style={[styles.barDateText, !labelled && styles.hiddenLabel]}
+                >
+                  {pointLabel(pt)}
+                </Text>
+              </>
+            );
+
+            return flags ? (
+              <Pressable
+                key={`${pt.date}-${idx}`}
+                accessibilityRole="button"
+                accessibilityLabel={pointA11y(pt)}
+                accessibilityState={{ selected: idx === selectedIdx }}
+                onPress={() => setSelectedKey(`${pt.date}|${pt.value}`)}
+                style={styles.barColumn}
               >
-                {flags ? `${pt.value} (${flagText})` : pt.value}
-              </Text>
+                {column}
+              </Pressable>
+            ) : (
               <View
-                style={[
-                  styles.barFill,
-                  {
-                    height: barHeight,
-                    backgroundColor: barColor,
-                  },
-                ]}
-              />
-              <Text variant="caption" tone="tertiary" style={!showLabel ? styles.hiddenLabel : undefined}>
-                {shortChartDate(pt.date)}
-              </Text>
-            </View>
-          );
-        })}
+                key={`${pt.date}-${idx}`}
+                accessible
+                accessibilityLabel={pointA11y(pt)}
+                style={styles.barColumn}
+              >
+                {column}
+              </View>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -403,24 +511,62 @@ const styles = StyleSheet.create({
   chartHeader: {
     gap: T.space.xs,
   },
-  barsContainer: {
+  chartReadout: {
+    fontWeight: '600',
+    backgroundColor: T.color.fill,
+    borderRadius: T.radius.row,
+    paddingHorizontal: T.space.md,
+    paddingVertical: T.space.sm,
+  },
+  chartPlot: {
+    position: 'relative',
+    paddingTop: T.space.sm,
+  },
+  chartBand: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: T.color.accentSoft,
+    borderRadius: 4,
+  },
+  chartAxis: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: T.color.separator,
+  },
+  barsRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-around',
-    paddingTop: T.space.md,
-    minHeight: 155,
-    borderBottomWidth: 1,
-    borderBottomColor: T.color.separator,
-    paddingBottom: T.space.sm,
   },
   barColumn: {
     alignItems: 'center',
     gap: T.space.xs,
     flex: 1,
   },
+  barZone: {
+    height: PLOT_HEIGHT,
+    alignSelf: 'stretch',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 2,
+  },
+  barStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  barStatusText: {
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   barValText: {
     fontWeight: '700',
     textAlign: 'center',
+  },
+  barValSelected: {
+    textDecorationLine: 'underline',
   },
   hiddenLabel: {
     opacity: 0,
@@ -428,6 +574,13 @@ const styles = StyleSheet.create({
   barFill: {
     width: 26,
     borderRadius: 6,
+  },
+  barFillSelected: {
+    borderWidth: 2,
+    borderColor: T.color.label,
+  },
+  barDateText: {
+    textAlign: 'center',
   },
   aiBanner: {
     backgroundColor: T.color.warnSoft,

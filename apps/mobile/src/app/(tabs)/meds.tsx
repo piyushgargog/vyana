@@ -14,6 +14,7 @@ import {
   useSetItemActive,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { InteractionCard } from '@/components/interaction-card';
 import {
   computeItemRefill,
   MobileAiSafetyBanner,
@@ -119,7 +120,7 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/prescriptions/scan')}
           style={styles.scanBtn}
         >
-          <Text variant="footnote" tone="white" style={styles.scanBtnText}>
+          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={11 / T.text.footnote.fontSize} style={styles.scanBtnText}>
             + Scan Prescription (OCR)
           </Text>
         </Pressable>
@@ -130,7 +131,7 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/basket')}
           style={styles.basketBtn}
         >
-          <Text variant="footnote" tone="white" style={styles.basketBtnText}>
+          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={11 / T.text.footnote.fontSize} style={styles.basketBtnText}>
             Compare Medicine Prices →
           </Text>
         </Pressable>
@@ -174,38 +175,7 @@ export default function MobileMedsTab() {
               </View>
             ) : (
               interactionsMutation.data.interactions.map((inter, idx) => (
-                <View key={idx} style={styles.interactionCard}>
-                  <View style={styles.headerRow}>
-                    <Text variant="subhead" style={styles.interactionPair}>
-                      {inter.medicine_a} + {inter.medicine_b}
-                    </Text>
-                    <Text variant="caption" tone="white" style={styles.severityBadge}>
-                      Severity: {inter.severity.toUpperCase()}
-                    </Text>
-                  </View>
-                  {inter.layer && (
-                    <Text variant="caption" style={styles.interactionSources}>
-                      {inter.layer === 'table'
-                        ? 'From the reviewed list'
-                        : 'From a trusted source'}
-                    </Text>
-                  )}
-                  <Text variant="caption" style={styles.interactionEffect}>
-                    {inter.effect}
-                  </Text>
-                  <Text variant="caption" style={styles.interactionAdvice}>
-                    Guidance: {inter.advice}
-                  </Text>
-                  <Text variant="caption" style={styles.interactionQuote}>
-                    Verbatim Evidence: “{inter.quote}”
-                  </Text>
-                  <Text variant="caption" style={styles.interactionSources}>
-                    Sources:{' '}
-                    {inter.sources
-                      .map((s) => `${s.title} (${s.url})`)
-                      .join(' · ')}
-                  </Text>
-                </View>
+                <InteractionCard key={idx} interaction={inter} />
               ))
             )}
             {interactionsMutation.data.not_checked &&
@@ -249,11 +219,9 @@ export default function MobileMedsTab() {
           <View key={rx.id} style={styles.card}>
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                {rx.notes && (
-                  <Text variant="caption" style={styles.rxHospital}>
-                    {rx.notes}
-                  </Text>
-                )}
+                {/* The title is the condition; the prescription's instruction reads
+                    as a normal sentence under it (issue #489) — it used to sit above
+                    the title as an uppercase eyebrow, a heading for nothing. */}
                 <Text variant="headline">
                   {rx.diagnosis || 'Prescription'}
                 </Text>
@@ -261,6 +229,11 @@ export default function MobileMedsTab() {
                   {rx.doctor_name ? `Prescribed by ${rx.doctor_name} · ` : ''}
                   {rx.issued_on ? `Issued ${rx.issued_on}` : ''}
                 </Text>
+                {rx.notes && (
+                  <Text variant="footnote" tone="secondary" style={styles.cardSub}>
+                    {rx.notes}
+                  </Text>
+                )}
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -326,9 +299,9 @@ export default function MobileMedsTab() {
                           item.quantity_total
                         )
                       }
-                      style={styles.reorderSmallBtn}
+                      style={styles.itemActionBtn}
                     >
-                      <Text variant="caption" tone="white" style={styles.reorderSmallText}>
+                      <Text variant="caption" style={styles.itemActionText}>
                         Look up
                       </Text>
                     </Pressable>
@@ -339,12 +312,15 @@ export default function MobileMedsTab() {
                       accessibilityLabel={`Toggle ${item.medicine_name} active status`}
                       disabled={toggleMutation.isPending}
                       onPress={() => handleToggleItem(item.id, !item.active)}
-                      style={[
-                        styles.toggleBtn,
-                        !item.active && styles.toggleBtnPaused,
-                      ]}
+                      style={styles.itemActionBtn}
                     >
-                      <Text variant="caption" style={styles.toggleBtnText}>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: item.active ? T.color.ok : T.color.label3 },
+                        ]}
+                      />
+                      <Text variant="caption" style={styles.itemActionText}>
                         {item.active ? 'Active' : 'Paused'}
                       </Text>
                     </Pressable>
@@ -455,11 +431,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: T.space.sm,
   },
-  rxHospital: {
-    fontWeight: '700',
-    color: T.color.accentStrong,
-    textTransform: 'uppercase',
-  },
   cardSub: { marginTop: T.space.xs / 2 },
   outlineBtn: {
     borderWidth: 1,
@@ -488,31 +459,6 @@ const styles = StyleSheet.create({
     borderColor: T.color.separator,
   },
   safeText: { color: T.color.ok, fontWeight: '600' },
-  interactionCard: {
-    backgroundColor: T.color.dangerSoft,
-    borderColor: T.color.separator,
-    borderWidth: 1,
-    borderRadius: T.radius.row,
-    padding: T.space.md,
-    gap: T.space.xs,
-  },
-  interactionPair: { fontWeight: '700', color: T.color.dangerText },
-  severityBadge: {
-    backgroundColor: T.color.danger,
-    paddingHorizontal: T.space.sm,
-    paddingVertical: T.space.xs / 2,
-    borderRadius: T.radius.pill,
-    overflow: 'hidden',
-    fontWeight: '800',
-  },
-  interactionEffect: { color: T.color.dangerText, fontWeight: '600' },
-  interactionAdvice: { color: T.color.dangerText },
-  interactionQuote: {
-    fontStyle: 'italic',
-    color: T.color.dangerText,
-    marginTop: T.space.xs / 2,
-  },
-  interactionSources: { color: T.color.dangerText, fontWeight: '600' },
   detailChip: {
     backgroundColor: T.color.fill,
     paddingHorizontal: T.space.sm,
@@ -559,25 +505,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   medItemActions: { gap: T.space.xs, alignItems: 'flex-end' },
-  reorderSmallBtn: {
-    backgroundColor: T.color.accent,
-    paddingHorizontal: T.space.sm,
-    borderRadius: T.radius.row,
-    minHeight: 44,
-    justifyContent: 'center',
+  // One action style for the whole list (issue #489): "Look up" used to be a solid
+  // blue button and "Active/Paused" a soft pill, though both act on the same item.
+  itemActionBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  reorderSmallText: { fontWeight: '700' },
-  toggleBtn: {
-    backgroundColor: T.color.okSoft,
-    paddingHorizontal: T.space.sm,
+    justifyContent: 'center',
+    gap: T.space.xs,
+    minWidth: 104,
+    minHeight: 44,
+    paddingHorizontal: T.space.md,
+    backgroundColor: T.color.fill,
+    borderWidth: 1,
+    borderColor: T.color.separator,
     borderRadius: T.radius.pill,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderCurve: 'continuous',
   },
-  toggleBtnPaused: { backgroundColor: T.color.fill },
-  toggleBtnText: { fontWeight: '700', color: T.color.accentStrong },
+  itemActionText: { fontWeight: '700', color: T.color.accentStrong },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
   searchRow: { flexDirection: 'row', gap: T.space.sm },
   inputLabel: {
     fontWeight: '700',

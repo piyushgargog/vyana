@@ -5,7 +5,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLabReports, useLabValueHistory } from '@vyana/shared';
+import { buildLabChart, useLabReports, useLabValueHistory } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
@@ -30,16 +30,10 @@ export default function MobileReportsTab() {
   const { data: reports = [], isLoading: reportsLoading, isError: reportsError, refetch: refetchReports } = useLabReports();
   const { data: hba1cHistory = [] } = useLabValueHistory('HbA1c');
 
-  const chartPoints = hba1cHistory
-    .filter((item) => item.value !== null)
-    .map((item) => ({
-      date: item.measured_on ?? 'Recent',
-      value: Number(item.value ?? 0),
-      flag: (item.flag as 'low' | 'normal' | 'high' | null) ?? 'normal',
-    }));
-
-  const refLow = hba1cHistory[0]?.ref_low ?? null;
-  const refHigh = hba1cHistory[0]?.ref_high ?? null;
+  // The shared model does the chart's thinking (issue #489): chronological points with
+  // year-aware labels, the reference band, the headline sentence and the screen-reader
+  // texts all come from the stored rows; this screen only renders them.
+  const labChart = buildLabChart(hba1cHistory, { title: 'HbA1c', unit: '%' });
 
   return (
     <Screen
@@ -103,13 +97,27 @@ export default function MobileReportsTab() {
       </Pressable>
 
       {/* Historical HbA1c Trend Chart */}
-      <MobileTrendChart
-        title="HbA1c Glycemic Control"
-        unit="%"
-        points={chartPoints}
-        refLow={refLow}
-        refHigh={refHigh}
-      />
+      {labChart ? (
+        <MobileTrendChart
+          title="HbA1c Glycemic Control"
+          unit={labChart.unit}
+          points={labChart.points.map((p) => ({
+            date: p.day,
+            value: p.value,
+            dateLabel: p.dateLabel,
+            // Only a placed value colours a bar: "in" and "unknown" (no range
+            // claim established) both render as a plain bar.
+            status: p.status === 'above' || p.status === 'below' ? p.status : null,
+            a11yLabel: p.a11yLabel,
+          }))}
+          refLow={labChart.refLow}
+          refHigh={labChart.refHigh}
+          headline={labChart.headline}
+          label={labChart.label}
+        />
+      ) : (
+        <MobileTrendChart title="HbA1c Glycemic Control" unit="%" points={[]} />
+      )}
 
       {/* Lab Reports List */}
       {reportsLoading ? (
@@ -187,8 +195,10 @@ export default function MobileReportsTab() {
 }
 
 const styles = StyleSheet.create({
-  actionRow: { flexDirection: 'row', gap: T.space.sm },
-  actionBtn: { flex: 1 },
+  // The two actions stack (issue #489): at phone widths their labels wrapped onto
+  // two lines side by side; as a vertical pair each keeps one line at full width.
+  actionRow: { flexDirection: 'column', gap: T.space.sm },
+  actionBtn: {},
   timelineBanner: {
     backgroundColor: T.color.accentSoft,
     borderColor: T.color.separator,
