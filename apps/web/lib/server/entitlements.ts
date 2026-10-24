@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AppError, rateLimited } from "./errors";
+import { firstRow } from "./first-row";
 import { log } from "./log";
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -12,11 +13,6 @@ export function secondsUntilIstMidnight(now: Date = new Date()): number {
   const msIntoDay = ((ist % DAY_MS) + DAY_MS) % DAY_MS;
   return Math.max(1, Math.ceil((DAY_MS - msIntoDay) / 1000));
 }
-
-const firstRow = (data: unknown): Record<string, unknown> | null => {
-  const row = Array.isArray(data) ? data[0] : data;
-  return row && typeof row === "object" ? (row as Record<string, unknown>) : null;
-};
 
 /** Answered when the plan or usage lookup fails: by decision the check fails closed (429), it never lets the call through. */
 const checkFailed = () =>
@@ -34,8 +30,8 @@ export async function checkDailyAiLimit(sb: SupabaseClient, now: Date = new Date
   try {
     const [plan, usage] = await Promise.all([sb.rpc("current_plan"), sb.rpc("my_ai_usage_today")]);
     if (plan.error || usage.error) throw new Error("plan lookup failed");
-    const p = firstRow(plan.data);
-    const u = firstRow(usage.data);
+    const p = firstRow<Record<string, unknown>>(plan.data);
+    const u = firstRow<Record<string, unknown>>(usage.data);
     if (!p || !("daily_ai_calls" in p) || (p.daily_ai_calls !== null && typeof p.daily_ai_calls !== "number")) throw new Error("no plan");
     if (!u || typeof u.calls !== "number") throw new Error("no usage");
     limit = p.daily_ai_calls as number | null;
