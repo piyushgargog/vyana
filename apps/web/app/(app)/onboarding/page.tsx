@@ -15,7 +15,7 @@ import {
   useUpsertDoctorProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, Card, Field, Pill, SelectField } from "@/components/ui";
+import { Button, Card, EmptyState, Field, Pill, SelectField } from "@/components/ui";
 import { SkeletonCard } from "@/components/ui-primitives";
 
 export default function OnboardingPage() {
@@ -402,9 +402,7 @@ export default function OnboardingPage() {
                   </button>
                 </span>
               ) : conditions.length === 0 ? (
-                <span className="text-xs text-label-3">
-                  No chronic conditions recorded yet.
-                </span>
+                <EmptyState className="w-full" title="No chronic conditions recorded yet." />
               ) : null}
             </div>
             <div className="flex gap-2">
