@@ -22,7 +22,7 @@ import {
   type DbBloodRequest,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, ButtonLink, Card, CardHeader, Chip, ChipGroup, EmptyState, ErrorState, Field, LargeTitle, ListGroup, Pill, SelectField, SkeletonLine } from "@/components/ui";
+import { Button, ButtonLink, Card, CardHeader, EmptyState, ErrorState, Field, LargeTitle, ListGroup, Pill, SelectField, SkeletonLine } from "@/components/ui";
 import { Check, Copy, Droplets, ExternalLink, Loader2, Phone, Send } from "lucide-react";
 
 /** Shown at all times (RapidBlood, ADR-071): what the list is, and who does the matching. */
@@ -129,19 +129,21 @@ function RequestCard({ request }: { request: DbBloodRequest }) {
       <p className="text-[15px] text-label-2">
         {request.hospital_name}, {request.city}
       </p>
-      <ChipGroup label="Where this request stands" className="mt-3">
+      <div role="group" aria-label="Where this request stands" className="mt-3 flex flex-wrap gap-2">
         {BLOOD_REQUEST_STATUSES.map((status) => (
-          <Chip
+          <button
             key={status}
-            selected={request.status === status}
+            type="button"
+            aria-pressed={request.status === status}
             disabled={update.isPending}
-            onSelect={() => request.status !== status && update.mutate({ id: request.id, patch: { status } })}
+            onClick={() => request.status !== status && update.mutate({ id: request.id, patch: { status } })}
+            className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold ${request.status === status ? "bg-accent text-white" : "bg-fill text-label-2"}`}
           >
             {request.status === status ? <Check aria-hidden="true" className="h-4 w-4" /> : null}
             {STATUS_LABEL[status]}
-          </Chip>
+          </button>
         ))}
-      </ChipGroup>
+      </div>
       {update.isError ? <p role="alert" className="mt-2 text-[14px] text-danger-text">Could not save that change. Try again.</p> : null}
       <p className="mt-3 text-[13px] text-label-3">You set every status yourself; nothing here changes by itself.</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -341,9 +343,17 @@ export default function BloodPage() {
           <ErrorState onRetry={() => requests.refetch()} />
         ) : requests.data && requests.data.length > 0 ? (
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
+        ) : requests.isPending ? (
+          <Card>
+            <div className="space-y-3" aria-label="Loading your requests">
+              <SkeletonLine className="w-2/3" />
+              <SkeletonLine />
+              <SkeletonLine className="w-1/2" />
+            </div>
+          </Card>
         ) : (
           <Card>
-            <p className="text-[15px] text-label-3">{requests.isPending ? "Loading your requests…" : "No requests yet."}</p>
+            <EmptyState title="No requests yet." />
           </Card>
         )}
       </section>
