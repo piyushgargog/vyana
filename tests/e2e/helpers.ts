@@ -18,10 +18,28 @@ export async function signIn(page: Page, email: string, password: string): Promi
   // The app redirects to /dashboard, /doctor or /onboarding after sign-in, or to /consent when the account has not
   // accepted the current consent version yet (the demo accounts after every version bump, issue #472).
   await page.waitForURL(/\/(dashboard|doctor|onboarding|consent)/, { timeout: 15000 });
-  if (/\/consent/.test(page.url())) {
-    for (const box of await page.getByRole("checkbox").all()) await box.check();
-    await page.getByRole("button", { name: /i consent/i }).click();
-    await page.waitForURL(/\/(dashboard|doctor|onboarding)/, { timeout: 15000 });
+  await acceptConsentIfRedirected(page);
+}
+
+/**
+ * The consent gate resolves asynchronously in the app shell: after the first
+ * post-login URL lands, the shell can still bounce the page to /consent (the
+ * scheduled E2E run of 2026-10-24 failed exactly this way — sign-in returned
+ * on /doctor/ while the shell was still fetching consent, then the page left
+ * for /consent and the doctor flow timed out waiting for /doctor/). Handling
+ * /consent only when it is the first landing is therefore racy. Give the shell
+ * a few seconds to perform that redirect and accept consent if it appears.
+ */
+async function acceptConsentIfRedirected(page: Page): Promise<void> {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (/\/consent/.test(page.url())) {
+      for (const box of await page.getByRole("checkbox").all()) await box.check();
+      await page.getByRole("button", { name: /i consent/i }).click();
+      await page.waitForURL(/\/(dashboard|doctor|onboarding)/, { timeout: 15000 });
+      return;
+    }
+    await page.waitForTimeout(250);
   }
 }
 
