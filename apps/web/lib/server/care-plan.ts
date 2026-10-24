@@ -1,9 +1,10 @@
 import "server-only";
 import { z } from "zod";
-import { Language, type CarePlan, type GenerateCarePlanReq, type GenerateCarePlanRes, type SourceLink } from "@vyana/shared";
+import type { CarePlan, GenerateCarePlanReq, GenerateCarePlanRes, Language, SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
 import { forbidden, notFound, upstream } from "./errors";
+import { resolveLanguage } from "./language";
 import { log } from "./log";
 import { CARE_PLAN_PROMPT_VERSION, CARE_PLAN_SYSTEM, carePlanPrompt } from "./prompts/care-plan";
 import { checkDiagnosisLanguage, findDosePatterns } from "./safety/blocklists";
@@ -198,7 +199,7 @@ export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePla
 
   const admin = supabaseAdmin();
   const { data: patient } = await admin.from("profiles").select("preferred_language").eq("id", condition.patient_id).maybeSingle();
-  const language = body.language ?? Language.catch("en").parse((patient as { preferred_language?: unknown } | null)?.preferred_language);
+  const language = resolveLanguage(body.language, (patient as { preferred_language?: unknown } | null)?.preferred_language);
 
   let pages: Page[];
   try {

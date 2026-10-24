@@ -9,10 +9,11 @@ import {
   type ModelMessage,
   type UIMessageChunk,
 } from "ai";
-import { Language, type ChatBody } from "@vyana/shared";
+import type { ChatBody } from "@vyana/shared";
 import { finishAiRun, providerOf, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
+import { resolveLanguage } from "../language";
 import { getModel, isLlmMock, modelName } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
@@ -101,7 +102,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   const { sb, user, profile } = authed;
   const turns = historyFrom(body.messages);
   const question = turns[turns.length - 1].text;
-  const language = Language.catch("en").parse(profile.preferred_language);
+  const language = resolveLanguage(undefined, profile.preferred_language);
 
   const sessionId = await openSession(authed, body.session_id, question);
   const { error: saveError } = await sb

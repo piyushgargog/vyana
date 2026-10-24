@@ -44,6 +44,12 @@ export interface RunAiResult<T> {
   runId: string | null;
 }
 
+/** The one `AiMeta` stamp (issue #543): the run id is included only when the caller passes it (a run row exists). */
+export function aiMeta(model: string, promptVersion: string, runId?: string | null): AiMeta {
+  const meta: AiMeta = { model, prompt_version: promptVersion, generated_at: new Date().toISOString() };
+  return runId === undefined ? meta : { ...meta, run_id: runId };
+}
+
 /** Sent to the user when the model's answer can't be used: never a half-guess (PLAN §2A rule 2). */
 export const UNREADABLE_MESSAGE = "Couldn't read this. Please enter it manually.";
 
@@ -148,5 +154,5 @@ export async function runAi<T>(input: RunAiInput<T>): Promise<RunAiResult<T>> {
   const latency = Date.now() - started;
   const runId = await recordRun(input, model, object, status, { provider: providerOf(model), ...out.tokens, latency_ms: latency });
   log({ event: "ai_run", feature: input.feature, model, status, duration_ms: latency });
-  return { object, ai: { model, prompt_version: input.promptVersion, generated_at: new Date().toISOString(), run_id: runId }, runId };
+  return { object, ai: aiMeta(model, input.promptVersion, runId), runId };
 }

@@ -1,8 +1,9 @@
 import "server-only";
 import { z } from "zod";
-import { Language, type AiMeta, type TriageReq, type TriageRes } from "@vyana/shared";
-import { runAi } from "./ai";
+import type { AiMeta, Language, TriageReq, TriageRes } from "@vyana/shared";
+import { aiMeta, runAi } from "./ai";
 import type { AuthedUser } from "./auth";
+import { resolveLanguage } from "./language";
 import { log } from "./log";
 import { TRIAGE_PROMPT_VERSION, TRIAGE_SYSTEM, triagePrompt } from "./prompts/triage";
 import { matchRedFlags, redFlagLabels } from "./safety/red-flags";
@@ -73,10 +74,8 @@ async function allowedDepartments(): Promise<string[]> {
   return names.includes(DEFAULT_DEPARTMENT) ? names : [...names, DEFAULT_DEPARTMENT];
 }
 
-const meta = (model: string, promptVersion: string): AiMeta => ({ model, prompt_version: promptVersion, generated_at: new Date().toISOString() });
-
 export async function triage({ user, profile }: AuthedUser, body: TriageReq): Promise<TriageRes> {
-  const language = body.language ?? Language.catch("en").parse(profile.preferred_language);
+  const language = resolveLanguage(body.language, profile.preferred_language);
 
   // 1. Fixed rules first: no model is involved in an emergency (§2A rule 4).
   const flags = matchRedFlags(`${body.symptoms} ${body.duration ?? ""}`);
@@ -87,7 +86,7 @@ export async function triage({ user, profile }: AuthedUser, body: TriageReq): Pr
       advice: ADVICE[language].emergency(""),
       red_flags: redFlagLabels(flags),
       disclaimer: DISCLAIMER[language],
-      ai: meta("rules", "red-flags"),
+      ai: aiMeta("rules", "red-flags"),
     };
   }
 
@@ -120,7 +119,7 @@ export async function triage({ user, profile }: AuthedUser, body: TriageReq): Pr
   } catch (err) {
     // Unsure → see a doctor soon (§2A rule 6).
     log({ event: "triage_fallback", error: err instanceof Error ? err.name : "Error" });
-    ai = meta("fallback", TRIAGE_PROMPT_VERSION);
+    ai = aiMeta("fallback", TRIAGE_PROMPT_VERSION);
   }
   if (!departments.length) departments = [DEFAULT_DEPARTMENT];
 
