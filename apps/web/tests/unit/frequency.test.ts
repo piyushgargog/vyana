@@ -48,6 +48,21 @@ describe("frequencyOf", () => {
     expect(frequencyOf("1-0-1-0-1")).not.toBe("TDS"); // not a morning-noon-night schedule
   });
 
+  it("does not read a weekly or alternate-day schedule as a daily one", () => {
+    expect(frequencyOf("twice a week")).toBeNull(); // was BD
+    expect(frequencyOf("once a week")).toBeNull(); // was OD
+    expect(frequencyOf("1-0-1 twice a week")).toBeNull();
+    expect(frequencyOf("twice monthly")).toBeNull();
+    expect(frequencyOf("every other day")).toBeNull();
+    expect(frequencyOf("alternate days")).toBeNull();
+    expect(frequencyOf("every Monday")).toBeNull();
+  });
+
+  it("a duration phrase is not a weekly schedule", () => {
+    expect(frequencyOf("BD for a week")).toBe("BD");
+    expect(frequencyOf("OD for a month")).toBe("OD");
+  });
+
   it("does not read a strength or a date as a schedule", () => {
     expect(frequencyOf("Dolo 650 mg 10/10/2026")).toBeNull();
     expect(frequencyOf("Telma 40")).toBeNull();
@@ -108,5 +123,21 @@ describe("verifyRx uses the code's reading of the schedule", () => {
     const res = rx(f("BD", "1-0-1"), "Tab Metformin 500 mg after food");
     expect(res.items[0].frequency).toBe("custom");
     expect(res.items[0].needs_review).toBe(true);
+  });
+
+  it("a weekly schedule the contract cannot express becomes custom and asks the patient to check", () => {
+    const res = rx(f("BD", "twice a week"), "Tab Metformin 500 mg twice a week after food 30 days");
+    expect(res.items[0].frequency).toBe("custom");
+    expect(res.items[0].times).toEqual([]); // no daily reminder times for a twice-weekly medicine
+    expect(res.items[0].needs_review).toBe(true);
+    expect(res.warnings.join(" ")).toContain("how often");
+  });
+
+  it("an alternate-day schedule the code cannot read becomes custom and asks the patient to check", () => {
+    const res = rx(f("OD", "every other day"), "Tab Metformin 500 mg every other day after food 30 days");
+    expect(res.items[0].frequency).toBe("custom");
+    expect(res.items[0].times).toEqual([]);
+    expect(res.items[0].needs_review).toBe(true);
+    expect(res.warnings.join(" ")).toContain("how often");
   });
 });

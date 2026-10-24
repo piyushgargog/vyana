@@ -53,11 +53,39 @@ function addDays(iso: string, days: number): string {
 type Frequency = PrescriptionItem["frequency"];
 
 /**
+ * Words that state a schedule no contract frequency can express: a weekly or monthly cadence, an alternate-day
+ * cadence, or a weekday-only cadence. A duration phrase ("BD for a week") is not one: a cadence match that sits
+ * inside a "for … weeks/months/days" phrase does not count, so only the cadence itself is judged. Used by
+ * frequencyOf and verifyRx so both agree on what is unexpressible. Nothing here sanitizes input — the text is
+ * only read, never rewritten — so no replace-based stripping is involved.
+ */
+export function hasUnexpressibleSchedule(evidence: string | null): boolean {
+  if (!evidence) return false;
+  const e = evidence.toLowerCase();
+  const durations = [...e.matchAll(/\bfor\s+(?:a|one|two|\d+)\s+(?:weeks?|months?|days?)\b/g)];
+  const cadences = [
+    ...e.matchAll(
+      /(?<![a-z])(?:weekly|fortnightly|monthly|a week|per week|every week|a month|per month|every month|alternate days?|every other day|every (?:\d+|one|two|three|four|five|six|seven) days?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?)(?![a-z])/g,
+    ),
+  ];
+  return cadences.some((m) => {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    return !durations.some((d) => {
+      const ds = d.index ?? 0;
+      return start >= ds && end <= ds + d[0].length;
+    });
+  });
+}
+
+/**
  * How often a medicine is taken, read from the words the prescription uses (ADR-058, PLAN §2A rule 4): the model only
- * quotes them, the code says what they mean. `1-0-1` is twice a day. Returns null when the words don't say.
+ * quotes them, the code says what they mean. `1-0-1` is twice a day. Returns null when the words don't say, and
+ * also when they say a schedule the contract cannot express ("twice a week" is not BD) — verifyRx then flags it.
  */
 export function frequencyOf(evidence: string | null): Frequency | null {
   if (!evidence) return null;
+  if (hasUnexpressibleSchedule(evidence)) return null;
   const e = evidence.toLowerCase();
   // Morning-noon-night style: three or four 0/1 doses, separated by - / x or spaces. Count the ones.
   const pattern = e.match(/(?<![\d.])([01])\s*[-–—/x×]\s*([01])\s*[-–—/x×]\s*([01])(?:\s*[-–—/x×]\s*([01]))?(?![\d.])/);
@@ -108,7 +136,12 @@ export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, 
     const modelFrequency = proven(text, it.frequency);
     // The code, not the model, says what the written schedule means (ADR-058): a disagreement is corrected and flagged.
     const written = modelFrequency ? frequencyOf(it.frequency.evidence) : null;
-    const frequency = written ?? modelFrequency;
+    // A schedule the words state but the contract cannot express ("twice a week", "every other day") must not
+    // silently keep the model's daily value: it becomes "custom" and is flagged below, so the patient reviews it
+    // before any reminder is set. Words that say nothing about a schedule ("after food") still keep the model.
+    const unexpressible =
+      modelFrequency !== null && written === null && hasUnexpressibleSchedule(it.frequency.evidence);
+    const frequency = unexpressible ? null : (written ?? modelFrequency);
     const form = proven(text, it.form);
     const withFood = proven(text, it.with_food);
     const duration = proven(text, it.duration_days);
