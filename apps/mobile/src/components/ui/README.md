@@ -23,7 +23,8 @@ The look: Apple iOS 26 Liquid Glass, light mode. Native glass (`expo-glass-effec
 
 | Component | Use |
 |---|---|
-| `Screen` | A screen with an iOS large title (`title`, `eyebrow`, `trailing`), scrolling content, pull to refresh (`onRefresh`), room for the tab bar. |
+| `Screen` | The v2 frame (#487): slim top bar + large title that collapses into it on scroll (`title`, `eyebrow`, `trailing`), scrolling content, pull to refresh (`onRefresh`), safe areas and room for the tab bar and the floating Scan action (`floatingAction`). Tab roots open at the top when re-tapped or returned to. |
+| `ScreenHeader`, `ScreenTopBar` | The frame's two header pieces, for screens that scroll with their own list (Timeline): the large title block goes in the list header, the slim bar above it, driven by the list's scroll (`collapsed` after `HEADER_COLLAPSE_OFFSET`). |
 | `Text` | `variant` (type scale) and `tone` (`label`, `secondary`, `tertiary`, `accent`, `danger`, `ok`, `warn`, `white`). |
 | `Button` | Pill with a spring press and a light haptic. `variant`: `primary`, `secondary`, `plain`, `destructive`; `size`, `icon`, `loading`. |
 | `Card`, `CardHeader` | White card and its title row. |

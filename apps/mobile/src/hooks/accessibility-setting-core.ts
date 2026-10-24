@@ -1,7 +1,7 @@
 /** The two things the hooks need from React Native's accessibility service, and nothing more. */
 export type AccessibilitySource = {
   addEventListener: (
-    event: 'reduceTransparencyChanged' | 'highTextContrastChanged',
+    event: 'reduceTransparencyChanged' | 'highTextContrastChanged' | 'reduceMotionChanged',
     listener: (enabled: boolean) => void,
   ) => { remove: () => void };
 };
@@ -10,7 +10,7 @@ export type AccessibilityQuery = {
   /** The initial read: isReduceTransparencyEnabled, isHighTextContrastEnabled, … */
   query: () => Promise<boolean>;
   /** The change event for the same setting. */
-  event: 'reduceTransparencyChanged' | 'highTextContrastChanged';
+  event: 'reduceTransparencyChanged' | 'highTextContrastChanged' | 'reduceMotionChanged';
 };
 
 /**

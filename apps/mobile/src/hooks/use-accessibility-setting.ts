@@ -29,3 +29,11 @@ export function useHighContrast(): boolean {
     event: 'highTextContrastChanged',
   });
 }
+
+/** Whether the person has asked the system for reduced motion; animations swap for cross-fades or plain swaps while it is on. */
+export function useReduceMotion(): boolean {
+  return useAccessibilitySetting({
+    query: () => AccessibilityInfo.isReduceMotionEnabled(),
+    event: 'reduceMotionChanged',
+  });
+}

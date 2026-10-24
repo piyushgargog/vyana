@@ -4,7 +4,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { KeyboardAvoidingView, KeyboardProvider } from 'react-native-keyboard-controller';
 import { MobileAppProviders } from '@/components/providers';
-import { T } from '@/constants/theme';
 import { WelcomeSplash } from '@/components/welcome-splash';
 import { startHealthBackgroundSync } from '@/lib/health-background';
 import { onNotificationTap } from '@/lib/notifications';
@@ -52,12 +51,10 @@ function RootNavigator() {
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          // One way back and one title (#332): the bar carries only the back arrow,
-          // on the canvas colour; every pushed screen shows its own large title.
-          headerTitle: '',
-          headerStyle: { backgroundColor: T.color.canvas },
-          headerTintColor: T.color.accentStrong,
-          headerShadowVisible: false,
+          // One way back and one title (#332, #487): the native header is off; every screen
+          // draws the v2 frame through `Screen` — a slim bar with the back chevron and the
+          // collapsing large title — so the top inset is owned in exactly one place.
+          headerShown: false,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

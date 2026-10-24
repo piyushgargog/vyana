@@ -74,8 +74,19 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/** Frame sizes for the v2 screen frame (#487): the slim top bar every screen draws (`ScreenTopBar`). */
+export const TopBarHeight = 44;
+/**
+ * Height of the native tab bar's content (icon and label), before the bottom safe-area inset
+ * is added. This is the one tab-bar height in the app: `Screen` reserves exactly this much for
+ * tab roots. (A legacy template constant disagreed with it by a point on iOS and was removed —
+ * nothing read it.)
+ */
+export const TabBarHeight = Platform.select({ ios: 49, android: 80 }) ?? 49;
+/** Height of the floating Scan action on Today: the medium button plus the glass padding around it. */
+export const ScanActionHeight = 54;
 
 /**
  * Vyana design tokens, Liquid Glass (DESIGN §15, ADR-066). Screens use these and the components in
@@ -111,7 +122,7 @@ export const T = {
     glassFallback: 'rgba(255,255,255,0.86)',
     glassBorder: 'rgba(255,255,255,0.8)',
   },
-  radius: { row: 12, tile: 16, card: 22, feature: 28, pill: 999 },
+  radius: { row: 12, tile: 16, card: 20, feature: 28, pill: 999 },
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
   text: {
     largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
@@ -124,6 +135,7 @@ export const T = {
     subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400', letterSpacing: -0.24 },
     footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: -0.08 },
     caption: { fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0 },
+    caption2: { fontSize: 11, lineHeight: 13, fontWeight: '400', letterSpacing: 0.06 },
     sectionHeader: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
   },
   shadow: {

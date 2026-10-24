@@ -1,18 +1,13 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { T } from '@/constants/theme';
+import { Button, EmptyState, Screen } from '@/components/ui';
 import { useLabReport } from '@vyana/shared';
 import {
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
 } from '@/components/ui-primitives';
 
 export default function LabReportDetailScreen() {
@@ -23,43 +18,35 @@ export default function LabReportDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={T.color.accent} />
-        <Text style={styles.loadingText}>Loading lab report…</Text>
-      </View>
+      <Screen title="Lab Report">
+        <MobileSkeletonCard lines={4} />
+      </Screen>
     );
   }
 
   if (!report) {
     return (
-      <View style={styles.notFoundContainer}>
-        <Text style={styles.notFoundTitle}>Lab Report Not Found</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back to Reports</Text>
-        </Pressable>
-      </View>
+      <Screen title="Lab Report">
+        <EmptyState
+          ios="doc.text.fill"
+          android="description"
+          title="Lab Report Not Found"
+          body="The report may have been removed, or the link that brought you here is wrong."
+          action={
+            <Button title="Back to Reports" onPress={() => router.back()} />
+          }
+        />
+      </Screen>
     );
   }
 
   const values = report.lab_values ?? [];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
-            {report.lab_name || 'Lab Report'}
-          </Text>
-          <Text style={styles.headerSub}>
-            Tested on {report.report_date || '—'}
-          </Text>
-        </View>
-      </View>
+    <Screen title={report.lab_name || 'Lab Report'}>
+      <Text style={styles.headerSub}>
+        Tested on {report.report_date || '—'}
+      </Text>
 
       {/* AI Plain-Language Summary */}
       {report.summary && (
@@ -141,44 +128,12 @@ export default function LabReportDetailScreen() {
       )}
 
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: T.color.canvas },
-  content: { padding: 16, gap: 14 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 8,
-  },
-  loadingText: { fontSize: 13, color: T.color.label2 },
-  notFoundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: T.color.label },
   headerSub: { fontSize: 12, color: T.color.label2 },
-  backBtn: {
-    backgroundColor: T.color.accentStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  backBtnText: { color: T.color.white, fontWeight: '700', fontSize: 12 },
   summaryCard: {
     backgroundColor: T.color.surface,
     borderRadius: 16,

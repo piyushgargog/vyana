@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { T } from '@/constants/theme';
+import { Button, EmptyState, Screen } from '@/components/ui';
 import {
   useCheckInteractions,
   usePrescription,
@@ -19,6 +13,7 @@ import {
   computeItemRefill,
   MobileAiSafetyBanner,
   MobileDisclaimerFooter,
+  MobileSkeletonCard,
 } from '@/components/ui-primitives';
 
 export default function PrescriptionDetailScreen() {
@@ -95,25 +90,25 @@ export default function PrescriptionDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={T.color.accent} />
-        <Text style={styles.loadingText}>Loading prescription…</Text>
-      </View>
+      <Screen title="Prescription Details">
+        <MobileSkeletonCard lines={4} />
+      </Screen>
     );
   }
 
   if (!prescription) {
     return (
-      <View style={styles.notFoundContainer}>
-        <Text style={styles.notFoundTitle}>Prescription Not Found</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>Back to Medicines</Text>
-        </Pressable>
-      </View>
+      <Screen title="Prescription Details">
+        <EmptyState
+          ios="pills.fill"
+          android="medication"
+          title="Prescription Not Found"
+          body="The prescription may have been removed, or the link that brought you here is wrong."
+          action={
+            <Button title="Back to Medicines" onPress={() => router.back()} />
+          }
+        />
+      </Screen>
     );
   }
 
@@ -122,23 +117,19 @@ export default function PrescriptionDetailScreen() {
   const interactionsData = interactionsMutation.data;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
-            {prescription.doctor_name
-              ? `Prescription · ${prescription.doctor_name}`
-              : 'Prescription Details'}
-          </Text>
-          <Text style={styles.headerSub}>
-            Issued on {prescription.issued_on || '—'} · Source:{' '}
-            {prescription.source === 'doctor'
-              ? 'Doctor e-Rx'
-              : 'Scanned Paper Rx'}
-          </Text>
-        </View>
-      </View>
+    <Screen
+      title={
+        prescription.doctor_name
+          ? `Prescription · ${prescription.doctor_name}`
+          : 'Prescription Details'
+      }
+    >
+      <Text style={styles.headerSub}>
+        Issued on {prescription.issued_on || '—'} · Source:{' '}
+        {prescription.source === 'doctor'
+          ? 'Doctor e-Rx'
+          : 'Scanned Paper Rx'}
+      </Text>
 
       {/* Diagnosis & Action Banner */}
       <View style={styles.overviewCard}>
@@ -352,44 +343,12 @@ export default function PrescriptionDetailScreen() {
 
       <MobileAiSafetyBanner feature="prescriptions" />
       <MobileDisclaimerFooter />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: T.color.canvas },
-  content: { padding: 16, gap: 14 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 8,
-  },
-  loadingText: { fontSize: 13, color: T.color.label2 },
-  notFoundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  notFoundTitle: { fontSize: 16, fontWeight: '700', color: T.color.label },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: T.color.label },
   headerSub: { fontSize: 12, color: T.color.label2 },
-  backBtn: {
-    backgroundColor: T.color.accentStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  backBtnText: { color: T.color.white, fontWeight: '700', fontSize: 12 },
   overviewCard: {
     backgroundColor: T.color.surface,
     borderRadius: 16,
