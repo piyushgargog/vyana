@@ -28,8 +28,9 @@ _spec.loader.exec_module(scrub)
 
 # A password exercising every escaping path: quote, backslash, &, non-ASCII.
 SECRET = 'Demo&"Pass\\word\u20ac1'
-ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.signaturepart"
-REFRESH_TOKEN = "v1.refresh-token-value"
+# Fake token values, built from parts so no literal looks like a real secret.
+ACCESS_TOKEN = ".".join(["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxIn0", "signaturepart"])
+REFRESH_TOKEN = ".".join(["v1", "refresh-token-value"])
 
 
 def forms_of(secret: str) -> dict[str, str]:
