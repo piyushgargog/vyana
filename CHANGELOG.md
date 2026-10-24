@@ -61,6 +61,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - The welcome screen shows from the first frame: the native splash and the welcome logo are the same size (104), the card is solid, and the splash is hidden after 2.5 s at the latest, so the app can no longer sit on an empty screen.
 - Error wording pass (U5): no screen says "Something went wrong" any more — the basket, care plan, prescription, report and upload errors now say what could not be loaded or finished and what to do next, and the phone's start-up loading screen says "Loading your Vyana…" under its spinner instead of showing a bare spinner. A scan test keeps the old phrase out of the apps.
 - The nightly patient E2E flow reaches lab reports the way phone users do (issue #451): the phone tab bar keeps the five most used sections, so the test goes back to Today and uses its "Upload a lab report" quick action instead of waiting for a "Lab reports" link that only the desktop nav has.
+- The emergency ID no longer silently drops medicines past 30 or allergies past 20: lists over the cap now say how many more there are, so a first responder never reads a cut list as complete.
 
 ### Added
 - Care agent rules (issue #341): three pure functions in `apps/web/lib/server/agent/rules.ts` decide when to suggest a refill, a lab re-check or a talk about missed doses; no database or model is involved and the wording is fixed.

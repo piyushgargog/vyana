@@ -73,6 +73,18 @@ describe("buildMedicalIdQr", () => {
     expect(line).not.toContain("Medicine number 30 ");
   });
 
+  it("says how many are missing when the lists are over the cap before any trimming", () => {
+    const many = Array.from({ length: 35 }, (_, i) => ({ medicine_name: `Med ${i + 1}` }));
+    const allergies = Array.from({ length: 25 }, (_, i) => `Allergy ${i + 1}`);
+    const text = buildMedicalIdQr({ ...profile, allergies }, many, contact, 2000);
+    const medLine = text.split("\n").find((l) => l.startsWith("Medicines: "))!;
+    const allergyLine = text.split("\n").find((l) => l.startsWith("Allergies: "))!;
+    expect(medLine).toMatch(/; \+5 more$/);
+    expect(allergyLine).toMatch(/; \+5 more$/);
+    expect(text).not.toContain("Med 31");
+    expect(text).not.toContain("Allergy 21");
+  });
+
   it("drops the allergies only after all medicines are gone, and never the essentials", () => {
     const longAllergies = Array.from({ length: 20 }, (_, i) => `Allergy to substance number ${i + 1} with a long name`);
     const text = buildMedicalIdQr({ ...profile, allergies: longAllergies }, meds, contact, 230);
