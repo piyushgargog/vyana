@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
   quote: { fontStyle: 'italic' },
   sources: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: T.space.sm },
   sourcesLabel: { fontWeight: '600' },
-  sourceLink: { minHeight: 32, justifyContent: 'center' },
+  // 44 px minimum touch target (brief #486): the link text itself is footnote-sized.
+  sourceLink: { minHeight: 44, justifyContent: 'center' },
   sourceLinkText: { color: T.color.accentStrong, fontWeight: '600', textDecorationLine: 'underline' },
 });
