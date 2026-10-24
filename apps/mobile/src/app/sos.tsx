@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     ...T.shadow.float,
   },
   countdownPill: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: T.color.onColorFill,
     borderRadius: T.radius.pill,
     borderCurve: 'continuous',
     paddingHorizontal: T.space.md,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   cancelBtn: {
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    backgroundColor: T.color.onColorShade,
     minHeight: 48,
     paddingHorizontal: T.space.lg,
     justifyContent: 'center',

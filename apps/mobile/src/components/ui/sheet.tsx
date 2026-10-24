@@ -41,7 +41,7 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
 
 const styles = StyleSheet.create({
   iosRoot: { flex: 1, backgroundColor: T.color.canvas },
-  androidRoot: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
+  androidRoot: { flex: 1, justifyContent: 'flex-end', backgroundColor: T.color.scrim },
   panel: {
     flexShrink: 1,
     maxHeight: Platform.OS === 'ios' ? undefined : '88%',
