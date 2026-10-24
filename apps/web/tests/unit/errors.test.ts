@@ -93,6 +93,24 @@ describe("parseBody", () => {
     expect(res.status).toBe(400);
     expect((await errorOf(res)).message).toBe("Request body must be valid JSON");
   });
+
+  it("rejects an oversized body with 413 before parsing it", async () => {
+    const res = await call(async (req) => {
+      await parseBody(req, schema);
+      return Response.json({});
+    }, "x".repeat(1_000_001));
+    expect(res.status).toBe(413);
+    expect(await errorOf(res)).toEqual({ code: "PAYLOAD_TOO_LARGE", message: "Request body is too large" });
+  });
+
+  it("rejects a body whose declared content-length exceeds the cap", async () => {
+    const req = new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({ medicine: "Dolo 650" }),
+      headers: { "content-length": "2000000" },
+    });
+    await expect(parseBody(req, schema)).rejects.toMatchObject({ status: 413, code: "PAYLOAD_TOO_LARGE" });
+  });
 });
 
 describe("jsonRes", () => {

@@ -770,6 +770,7 @@ components:
                 - UPSTREAM_ERROR
                 - INTERNAL
                 - RATE_LIMITED
+                - PAYLOAD_TOO_LARGE
             message:
               type: string
           required:
@@ -933,11 +934,11 @@ components:
                       maxLength: 4000
                   required:
                     - type
-                  additionalProperties: {}
+                  additionalProperties: false
             required:
               - role
               - parts
-            additionalProperties: {}
+            additionalProperties: false
       required:
         - messages
       additionalProperties: false

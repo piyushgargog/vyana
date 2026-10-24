@@ -127,11 +127,28 @@ async function enforceRateLimit(req: Request, ctx: RouteContext, limit: RateLimi
   if (verdict && !verdict.allowed) throw rateLimited(verdict.retryAfterSeconds);
 }
 
-/** Reads and validates a JSON body. Invalid JSON or schema → 400 `BAD_REQUEST`. */
+/** A body over this size is rejected before it is parsed. Every POST schema is tiny (ids, short texts, a file
+ * path) except chat history, which realistically stays far below this: no route needs a megabyte of JSON, so a
+ * single caller cannot make the server parse and hold an unbounded body inside their rate-limit quota. */
+export const MAX_REQUEST_BODY_CHARS = 1_000_000;
+
+/** 413 for a body over MAX_REQUEST_BODY_CHARS. */
+export const payloadTooLarge = (message = "Request body is too large") => new AppError("PAYLOAD_TOO_LARGE", message, 413);
+
+/** Reads and validates a JSON body. Oversized → 413 `PAYLOAD_TOO_LARGE`; invalid JSON or schema → 400 `BAD_REQUEST`. */
 export async function parseBody<T>(req: Request, schema: { parse(data: unknown): T }): Promise<T> {
+  const declared = req.headers.get("content-length");
+  if (declared !== null && Number(declared) > MAX_REQUEST_BODY_CHARS) throw payloadTooLarge();
+  let text: string;
+  try {
+    text = await req.text();
+  } catch {
+    throw badRequest("Request body must be valid JSON");
+  }
+  if (text.length > MAX_REQUEST_BODY_CHARS) throw payloadTooLarge();
   let data: unknown;
   try {
-    data = await req.json();
+    data = JSON.parse(text);
   } catch {
     throw badRequest("Request body must be valid JSON");
   }
