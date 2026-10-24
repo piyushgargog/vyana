@@ -14,6 +14,7 @@ import {
   Button,
   Card,
   CardHeader,
+  EmptyState,
   Pill,
   Screen,
   Symbol,
@@ -99,20 +100,18 @@ export default function BasketScreen() {
           </Card>
         ) : (
           <Card>
-            <View style={styles.emptyIconWrap}>
-              <Symbol ios="basket.fill" android="shopping_basket" size={28} color={T.color.accent} />
-            </View>
-            <Text variant="headline" style={styles.center}>
-              No active medicines yet
-            </Text>
-            <Text variant="subhead" tone="tertiary" style={styles.center}>
-              Add medicines from your prescriptions, then come back to look
-              them up on the pharmacy sites.
-            </Text>
-            <Button
-              title="View my medicines"
-              onPress={() => router.push('/(tabs)/meds')}
-              label="View my prescriptions"
+            <EmptyState
+              ios="basket.fill"
+              android="shopping_basket"
+              title="No active medicines yet"
+              body="Add medicines from your prescriptions, then come back to look them up on the pharmacy sites."
+              action={
+                <Button
+                  title="View my medicines"
+                  onPress={() => router.push('/(tabs)/meds')}
+                  label="View my prescriptions"
+                />
+              }
             />
           </Card>
         )
@@ -176,17 +175,6 @@ export default function BasketScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { textAlign: 'center' },
-  emptyIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: T.radius.tile,
-    borderCurve: 'continuous',
-    backgroundColor: T.color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.md },
   medicineList: { gap: T.space.sm },
   medicineBlock: {
