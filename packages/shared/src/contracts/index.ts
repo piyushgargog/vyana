@@ -5,8 +5,16 @@ import { z } from "zod";
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
-export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
-const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
+// The regex alone accepts 2026-02-30, which JS date math silently rolls to March
+// while Postgres rejects it outright — so a date must also be a real calendar day.
+const daysInMonth = (year: number, month: number): number =>
+  [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+const isRealDate = (s: string): boolean => {
+  const [year, month, day] = s.split("-").map(Number);
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(year, month);
+};
+export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDate); // YYYY-MM-DD, a real day
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);      // HH:MM 24h, same bounds as the server's HHMM
 
 // ---------- AI accuracy & safety (plan §2A) ----------
 export const Language = z.enum(["en","hi","hinglish"]);
