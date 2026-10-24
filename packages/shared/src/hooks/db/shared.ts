@@ -33,6 +33,7 @@ export const DB_KEYS = {
   plan: "current-plan",
   consent: "consent",
   timeline: "timeline",
+  weeklySummaries: "weekly-summaries",
 } as const;
 
 /** The Supabase client, the signed-in user's id, and whether queries may run (signed in and loaded). */

@@ -1759,6 +1759,54 @@ export type Database = {
           },
         ]
       }
+      weekly_summaries: {
+        Row: {
+          computed_at: string
+          days_covered: number
+          doses_due: number
+          doses_taken: number
+          id: string
+          patient_id: string
+          rule_flags: Json
+          sleep_avg_minutes: number | null
+          steps_avg: number | null
+          week_start: string
+        }
+        ComputedFields: never
+        Insert: {
+          computed_at?: string
+          days_covered?: number
+          doses_due?: number
+          doses_taken?: number
+          id?: string
+          patient_id: string
+          rule_flags?: Json
+          sleep_avg_minutes?: number | null
+          steps_avg?: number | null
+          week_start: string
+        }
+        Update: {
+          computed_at?: string
+          days_covered?: number
+          doses_due?: number
+          doses_taken?: number
+          id?: string
+          patient_id?: string
+          rule_flags?: Json
+          sleep_avg_minutes?: number | null
+          steps_avg?: number | null
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_summaries_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist: {
         Row: {
           created_at: string
