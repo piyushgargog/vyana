@@ -2,7 +2,7 @@
 // Field names are final: JSON over HTTP is snake_case, the same as the DB columns.
 import { z } from "zod";
 
-export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
+export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED","PAYLOAD_TOO_LARGE"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
@@ -367,9 +367,8 @@ export const ChatBody = z.object({
       z
         .object({
           role: z.enum(["system", "user", "assistant"]),
-          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() }).loose()),
-        })
-        .loose(),
+          parts: z.array(z.object({ type: z.string(), text: z.string().max(4_000).optional() })),
+        }),
     )
     .min(1)
     .max(100),
