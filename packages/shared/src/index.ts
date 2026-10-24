@@ -18,3 +18,4 @@ export * from "./health";
 export * from "./devices";
 export * from "./text/markdown";
 export * from "./text/clean";
+export * from "./text/names";
