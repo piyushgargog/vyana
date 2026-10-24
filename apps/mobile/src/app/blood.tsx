@@ -36,6 +36,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorState,
   Pill,
   Screen,
   Symbol,
@@ -565,10 +566,11 @@ export default function BloodScreen() {
         </Text>
         {requests.isError ? (
           <Card>
-            <Text variant="footnote" tone="danger">
-              Could not load your requests.
-            </Text>
-            <Button title="Retry" variant="plain" size="md" label="Retry loading your requests" onPress={() => requests.refetch()} />
+            <ErrorState
+              title="Could not load your requests."
+              retryLabel="Retry"
+              onRetry={() => requests.refetch()}
+            />
           </Card>
         ) : requests.data && requests.data.length > 0 ? (
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
