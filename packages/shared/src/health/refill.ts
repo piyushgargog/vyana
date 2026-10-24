@@ -2,8 +2,9 @@
 // How many days of a medicine are left, from what was dispensed and what was taken (plan 7.5).
 // Owner: Vaibhav Parmar
 
+import { DEFAULT_TIMES, type FrequencyType } from "../constants";
 import type { DbDoseLog, DbPrescriptionItem } from "../db/types";
-import { daysBetween, formatLocalDate } from "./dates";
+import { addDays, daysBetween, formatLocalDate } from "./dates";
 
 export type RefillItem = Pick<DbPrescriptionItem, "id" | "dose" | "times" | "quantity_total" | "refill_alert_days" | "active" | "end_date">;
 
@@ -56,9 +57,49 @@ export function parseDoseUnits(dose: string | null | undefined): number {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
+ * The one days-left engine (#508). Both "days left" answers in the app run through here, so
+ * they cannot drift apart: the only difference is where `units_left` comes from.
+ *
+ * - `getRefillStatus`: units left from what was actually logged as taken. This is the source
+ *   of truth for refill alerts and the care agent's refill card, because those have the logs.
+ * - `getScheduledRefillStatus`: units left from the schedule — the doses that should have been
+ *   taken since `start_date`. This is the estimate the prescription and dashboard screens show,
+ *   because those screens do not load dose logs; it agrees with the logged answer whenever the
+ *   patient logged every dose they took.
+ *
+ * Days left = units left / units per day, rounded down. A medicine is due for a refill when
+ * `days_left <= refill_alert_days`, unless it is switched off or the course ends before the
+ * pack would run out.
+ */
+export function deriveRefillStatus(
+  input: {
+    units_left: number;
+    /** Units used per day (dose slots per day times units per dose); 0 for as-needed medicines. */
+    units_per_day: number;
+    refill_alert_days: number;
+    active: boolean;
+    end_date: string | null;
+  },
+  today: Date = new Date()
+): RefillStatus {
+  const { units_left: unitsLeft, units_per_day: perDay } = input;
+  const daysLeft = perDay > 0 ? Math.floor(unitsLeft / perDay) : null;
+
+  if (!input.active) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false };
+
+  const todayText = formatLocalDate(today);
+  if (input.end_date) {
+    const daysToEnd = daysBetween(todayText, input.end_date);
+    if (daysToEnd < 0) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // course is over
+    if (daysLeft !== null && daysToEnd < daysLeft) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // finishes first
+  }
+
+  const due = unitsLeft === 0 || (daysLeft !== null && daysLeft <= input.refill_alert_days);
+  return { units_left: unitsLeft, days_left: daysLeft, refill_due: due };
+}
+
+/**
  * Units left = quantity dispensed minus the doses logged as taken (times the units per dose).
- * Days left = units left / (doses per day * units per dose), rounded down. A medicine is due for a
- * refill when `days_left <= refill_alert_days`, unless the course ends before it would run out.
  *
  * Only doses that were logged as taken count, so a patient who takes medicine without logging it
  * looks like they have more left than they do.
@@ -69,18 +110,57 @@ export function getRefillStatus(item: RefillItem, doseLogs: Pick<DbDoseLog, "ite
   const perDose = parseDoseUnits(item.dose);
   const taken = doseLogs.filter((log) => log.item_id === item.id && log.status === "taken").length;
   const unitsLeft = Math.max(0, round2(item.quantity_total - taken * perDose));
-  const perDay = item.times.length * perDose;
-  const daysLeft = perDay > 0 ? Math.floor(unitsLeft / perDay) : null;
+  return deriveRefillStatus(
+    { units_left: unitsLeft, units_per_day: item.times.length * perDose, refill_alert_days: item.refill_alert_days, active: item.active, end_date: item.end_date },
+    today
+  );
+}
 
-  if (!item.active) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false };
+export type ScheduledRefillItem = Omit<
+  Pick<DbPrescriptionItem, "dose" | "times" | "frequency" | "quantity_total" | "start_date" | "end_date" | "refill_alert_days" | "active">,
+  "refill_alert_days"
+> & {
+  /** Null when the item has no alert window saved; the scheduled path falls back to 5 days, as the screens always did. */
+  refill_alert_days: number | null;
+};
 
-  const todayText = formatLocalDate(today);
-  if (item.end_date) {
-    const daysToEnd = daysBetween(todayText, item.end_date);
-    if (daysToEnd < 0) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // course is over
-    if (daysLeft !== null && daysToEnd < daysLeft) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // finishes first
+export type ScheduledRefillStatus = RefillStatus & {
+  /** The calendar day the pack runs out on the schedule, or null when it cannot be worked out. */
+  refill_date: string | null;
+};
+
+/**
+ * The schedule-assumed twin of `getRefillStatus`, for screens that do not load dose logs
+ * (`computeItemRefill` in ui-helpers is a thin shape adapter over this). Units left = quantity
+ * dispensed minus the doses the schedule says should have been taken since `start_date`
+ * (dose slots per day from `times`, falling back to the frequency default, times the units per
+ * dose from `parseDoseUnits` — so "2 tablets" twice a day uses 4 units a day, while a strength
+ * such as "500 mg" still uses 1). An item with no `refill_alert_days` saved falls back to a
+ * 5-day alert window, the default the screens used before the engines were unified. The days-left math itself is `deriveRefillStatus`, shared
+ * with the logged answer, so the two can only differ by logged-vs-assumed consumption — never
+ * by the arithmetic, the per-dose units, or the switched-off / course-ended rules.
+ */
+export function getScheduledRefillStatus(item: ScheduledRefillItem, now: Date = new Date()): ScheduledRefillStatus {
+  if (!item.quantity_total || item.quantity_total <= 0 || !item.start_date) {
+    return { units_left: null, days_left: null, refill_due: false, refill_date: null };
   }
-
-  const due = unitsLeft === 0 || (daysLeft !== null && daysLeft <= item.refill_alert_days);
-  return { units_left: unitsLeft, days_left: daysLeft, refill_due: due };
+  const times =
+    item.times && item.times.length > 0
+      ? item.times
+      : DEFAULT_TIMES[(item.frequency as FrequencyType) ?? "OD"] ?? [];
+  const perDose = parseDoseUnits(item.dose);
+  const perDay = times.length * perDose;
+  if (perDay <= 0) {
+    // As-needed: the pack size is known but no daily rate, so there is no days-left number.
+    return { units_left: item.quantity_total, days_left: null, refill_due: false, refill_date: null };
+  }
+  const todayText = formatLocalDate(now);
+  const elapsedDays = Math.max(0, daysBetween(item.start_date, todayText));
+  const unitsLeft = Math.max(0, round2(item.quantity_total - elapsedDays * perDay));
+  const totalDays = Math.floor(item.quantity_total / perDay);
+  const status = deriveRefillStatus(
+    { units_left: unitsLeft, units_per_day: perDay, refill_alert_days: item.refill_alert_days ?? 5, active: item.active, end_date: item.end_date },
+    now
+  );
+  return { ...status, refill_date: addDays(item.start_date, totalDays) };
 }

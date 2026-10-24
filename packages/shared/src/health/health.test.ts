@@ -7,6 +7,7 @@ import {
   findLastDone,
   formatLocalDate,
   getRefillStatus,
+  getScheduledRefillStatus,
   MAX_DOSE_REMINDERS,
   monthsAgo,
   nextOccurrenceOfHour,
@@ -159,6 +160,92 @@ describe("getRefillStatus", () => {
   it("is due 2 days before running out, like the demo patient", () => {
     const demo: RefillItem = { ...metformin, quantity_total: 34 };
     expect(getRefillStatus(demo, taken(30), today)).toEqual({ units_left: 4, days_left: 2, refill_due: true });
+  });
+});
+
+describe("getScheduledRefillStatus", () => {
+  // 30 tablets, twice a day from 1 Oct 2026; "today" is 12 Oct, so 11 days of the
+  // schedule have passed and 22 doses should have been taken.
+  const item = {
+    dose: "1 tablet",
+    times: ["09:00", "21:00"],
+    frequency: "BD",
+    quantity_total: 30,
+    start_date: "2026-10-01",
+    end_date: null,
+    refill_alert_days: 3,
+    active: true,
+  };
+  const today = at(12, 12);
+
+  it("agrees with the logged answer when every dose was logged", () => {
+    const taken = Array.from({ length: 22 }, () => ({ item_id: "i-1", status: "taken" as const }));
+    const logged = getRefillStatus({ id: "i-1", ...item }, taken, today);
+    const scheduled = getScheduledRefillStatus(item, today);
+    expect(scheduled).toMatchObject({ units_left: 8, days_left: 4, refill_due: false });
+    expect(scheduled).toMatchObject(logged);
+    expect(scheduled.refill_date).toBe("2026-10-16");
+  });
+
+  it("counts units per dose from the dose text, not one unit per dose", () => {
+    // "2 tablets" twice a day, 12 tablets from today -> the pack lasts 3 days, not 6.
+    const r = getScheduledRefillStatus(
+      { ...item, dose: "2 tablets", quantity_total: 12, start_date: "2026-10-24" },
+      new Date(2026, 9, 24, 12)
+    );
+    expect(r).toMatchObject({ units_left: 12, days_left: 3, refill_due: true });
+    expect(r.refill_date).toBe("2026-10-27");
+  });
+
+  it("treats a strength dose like '500 mg' as one unit per dose", () => {
+    const r = getScheduledRefillStatus({ ...item, dose: "500 mg" }, today);
+    expect(r).toMatchObject({ units_left: 8, days_left: 4, refill_due: false });
+  });
+
+  it("handles fractional units per dose", () => {
+    // "1/2 tablet" once a day, 7 tablets from today -> 14 days.
+    const r = getScheduledRefillStatus(
+      { ...item, dose: "1/2 tablet", times: ["09:00"], frequency: "OD", quantity_total: 7, start_date: "2026-10-24" },
+      new Date(2026, 9, 24, 12)
+    );
+    expect(r).toMatchObject({ units_left: 7, days_left: 14, refill_due: false });
+    expect(r.refill_date).toBe("2026-11-07");
+  });
+
+  it("never flags a paused course, a finished course, or one that ends before the pack runs out", () => {
+    const due = { ...item, quantity_total: 8, start_date: "2026-10-11" }; // 3 days left on the schedule
+    expect(getScheduledRefillStatus({ ...due, active: false }, today).refill_due).toBe(false);
+    expect(getScheduledRefillStatus({ ...due, end_date: "2026-10-10" }, today).refill_due).toBe(false);
+    expect(getScheduledRefillStatus({ ...due, end_date: "2026-10-13" }, today).refill_due).toBe(false);
+    expect(getScheduledRefillStatus({ ...due, end_date: "2026-11-30" }, today).refill_due).toBe(true);
+  });
+
+  it("falls back to a 5-day alert window when refill_alert_days is null", () => {
+    // Base item has 4 days left: outside its saved 3-day window, inside the 5-day fallback.
+    // Without the fallback, null would compare as 0 and "refill soon" would never fire.
+    expect(getScheduledRefillStatus({ ...item, refill_alert_days: null }, today)).toMatchObject({ days_left: 4, refill_due: true });
+    expect(getScheduledRefillStatus({ ...item, refill_alert_days: 3 }, today).refill_due).toBe(false);
+  });
+
+  it("knows nothing without a quantity or a start date, and has no days for as-needed medicines", () => {
+    expect(getScheduledRefillStatus({ ...item, quantity_total: null }, today)).toEqual({
+      units_left: null,
+      days_left: null,
+      refill_due: false,
+      refill_date: null,
+    });
+    expect(getScheduledRefillStatus({ ...item, start_date: "" }, today).days_left).toBeNull();
+    const asNeeded = getScheduledRefillStatus({ ...item, times: [], frequency: "SOS" }, today);
+    expect(asNeeded.days_left).toBeNull();
+    expect(asNeeded.refill_date).toBeNull();
+    expect(asNeeded.refill_due).toBe(false);
+  });
+
+  it("falls back to the frequency default when no times are saved", () => {
+    // BD default is two slots a day, so 30 tablets from 1 Oct last 15 days.
+    const r = getScheduledRefillStatus({ ...item, times: [] }, today);
+    expect(r.days_left).toBe(4);
+    expect(r.refill_date).toBe("2026-10-16");
   });
 });
 

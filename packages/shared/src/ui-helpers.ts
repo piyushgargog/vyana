@@ -1,7 +1,7 @@
 import { DEFAULT_TIMES, type FrequencyType } from "./constants";
 import { CarePlan } from "./contracts";
 import type { DbPrescriptionItem, DbShareLink } from "./db/types";
-import { formatLocalDate } from "./health/dates";
+import { getScheduledRefillStatus } from "./health/refill";
 import { carePlanMock } from "./mocks/care-plan";
 
 export function parseCarePlanJson(
@@ -18,15 +18,29 @@ export function parseCarePlanJson(
   return null;
 }
 
+/**
+ * The "days left" the prescription and dashboard screens show (#508). This is only a shape
+ * adapter over `getScheduledRefillStatus` in health/refill — the days-left math lives there,
+ * shared with the logged answer `getRefillStatus` via `deriveRefillStatus`. It is a
+ * schedule-assumed estimate (the doses the schedule says should have been taken since
+ * `start_date`), not the logged answer the refill alerts and the care agent use, because these
+ * screens do not load dose logs. It agrees with the logged answer whenever every taken dose
+ * was logged. `dosesPerDay` is the number of dose slots per day (the units per day also count
+ * the units in each dose — see `parseDoseUnits`); `needsRefillSoon` follows the same
+ * switched-off / course-ended rules as the alerts, so a paused or finished course is never
+ * flagged here either.
+ */
 export function computeItemRefill(
   item: Pick<
     DbPrescriptionItem,
     | "frequency"
     | "times"
+    | "dose"
     | "quantity_total"
     | "start_date"
     | "end_date"
     | "refill_alert_days"
+    | "active"
   >,
   now: Date = new Date()
 ): {
@@ -39,36 +53,12 @@ export function computeItemRefill(
     item.times && item.times.length > 0
       ? item.times
       : DEFAULT_TIMES[(item.frequency as FrequencyType) ?? "OD"] ?? [];
-  const dosesPerDay = times.length;
-  if (
-    dosesPerDay === 0 ||
-    !item.quantity_total ||
-    item.quantity_total <= 0 ||
-    !item.start_date
-  ) {
-    return {
-      dosesPerDay,
-      daysLeft: null,
-      refillDate: null,
-      needsRefillSoon: false,
-    };
-  }
-  const totalDays = Math.floor(item.quantity_total / dosesPerDay);
-  const start = new Date(`${item.start_date}T00:00:00`);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const elapsedDays = Math.max(
-    0,
-    Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  );
-  const daysLeft = Math.max(0, totalDays - elapsedDays);
-  const refillDt = new Date(start);
-  refillDt.setDate(refillDt.getDate() + totalDays);
-  const alertWindow = item.refill_alert_days ?? 5;
+  const status = getScheduledRefillStatus(item, now);
   return {
-    dosesPerDay,
-    daysLeft,
-    refillDate: formatLocalDate(refillDt),
-    needsRefillSoon: daysLeft <= alertWindow,
+    dosesPerDay: times.length,
+    daysLeft: status.days_left,
+    refillDate: status.refill_date,
+    needsRefillSoon: status.refill_due,
   };
 }
 

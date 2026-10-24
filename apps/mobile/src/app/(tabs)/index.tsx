@@ -129,7 +129,7 @@ export default function PatientHomeScreen() {
   const refillDueItems = activeItems
     .map((item) => ({
       item,
-      refill: computeItemRefill(item, now),
+      refill: computeDurationRefill(item, now),
     }))
     .filter((entry) => entry.refill.needsRefillSoon);
 
@@ -477,7 +477,12 @@ export default function PatientHomeScreen() {
   );
 }
 
-function computeItemRefill(item: { start_date?: string | null; duration_days?: number | null }, now: Date) {
+// Course-duration countdown, NOT the pack-stock answer (#508): it counts down
+// `duration_days` from `start_date` and knows nothing about the quantity dispensed or the
+// doses logged. The shared refill engine (`computeItemRefill` in @vyana/shared) is the
+// pack-stock answer the other screens show; this tab keeps its own duration math until its
+// owner switches it over (see the PR body for #508).
+function computeDurationRefill(item: { start_date?: string | null; duration_days?: number | null }, now: Date) {
   if (!item.start_date || !item.duration_days) {
     return { needsRefillSoon: false, daysLeft: 0, refillDate: null };
   }

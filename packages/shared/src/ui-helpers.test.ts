@@ -102,10 +102,12 @@ describe("computeItemRefill", () => {
         {
           frequency: "BD",
           times: [],
+          dose: "1 tablet",
           quantity_total: 30,
           start_date: "2026-10-01",
           end_date: null,
           refill_alert_days: 5,
+          active: true,
         },
         new Date("2026-10-05T12:00:00Z")
       );
@@ -115,5 +117,61 @@ describe("computeItemRefill", () => {
       if (prevTz === undefined) delete process.env.TZ;
       else process.env.TZ = prevTz;
     }
+  });
+
+  it("counts units per dose from the dose text, not one unit per dose", () => {
+    // "2 tablets" twice a day, 12 tablets from today -> the pack lasts 3 days, not 6.
+    const r = computeItemRefill(
+      {
+        frequency: "BD",
+        times: ["09:00", "21:00"],
+        dose: "2 tablets",
+        quantity_total: 12,
+        start_date: "2026-10-24",
+        end_date: null,
+        refill_alert_days: 5,
+        active: true,
+      },
+      new Date("2026-10-24T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(3);
+    expect(r.refillDate).toBe("2026-10-27");
+    expect(r.needsRefillSoon).toBe(true);
+  });
+
+  it("treats a strength dose like '500 mg' as one unit per dose", () => {
+    const r = computeItemRefill(
+      {
+        frequency: "BD",
+        times: [],
+        dose: "500 mg",
+        quantity_total: 30,
+        start_date: "2026-10-01",
+        end_date: null,
+        refill_alert_days: 5,
+        active: true,
+      },
+      new Date("2026-10-05T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(11);
+    expect(r.refillDate).toBe("2026-10-16");
+  });
+
+  it("never flags a paused course, like the refill alerts", () => {
+    const r = computeItemRefill(
+      {
+        frequency: "BD",
+        times: ["09:00", "21:00"],
+        dose: "1 tablet",
+        quantity_total: 8,
+        start_date: "2026-10-24",
+        end_date: null,
+        refill_alert_days: 5,
+        active: false,
+      },
+      new Date("2026-10-24T12:00:00Z")
+    );
+    expect(r.daysLeft).toBe(4);
+    expect(r.needsRefillSoon).toBe(false);
   });
 });
