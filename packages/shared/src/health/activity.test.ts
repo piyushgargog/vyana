@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildActivityCard,
+  buildLabChart,
   buildTrendCharts,
+  formatLabValue,
   TREND_DEVICE_NOTE,
   mergeActivityDays,
   sourceLabel,
   type DailyActivityRow,
   type DeviceSpotReading,
+  type LabValueRow,
 } from "./activity";
 import { addDays } from "./dates";
 import { formatSleep } from "./trends";
@@ -201,5 +204,129 @@ describe("buildTrendCharts", () => {
     const [spo2] = buildTrendCharts([], [reading({ measured_at: "2026-09-01T02:30:00.000Z" })], 90, TODAY);
     expect(spo2.metric).toBe("spo2");
     expect(spo2.latest?.text).toBe("98 %");
+  });
+});
+
+describe("buildLabChart", () => {
+  const labRow = (fields: Partial<LabValueRow>): LabValueRow => ({
+    measured_on: "2025-10-20",
+    value: 5.4,
+    flag: "normal",
+    ref_low: 4,
+    ref_high: 5.6,
+    unit: "%",
+    ...fields,
+  });
+
+  it("returns null when no row has both a value and a date", () => {
+    expect(buildLabChart([], { title: "HbA1c" })).toBeNull();
+    expect(buildLabChart([labRow({ value: null })], { title: "HbA1c" })).toBeNull();
+    expect(buildLabChart([labRow({ measured_on: null })], { title: "HbA1c" })).toBeNull();
+  });
+
+  it("sorts points into chronological order and drops unusable rows", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2026-01-23", value: 6.1, flag: "high" }),
+        labRow({ measured_on: "2025-10-20", value: 5.4 }),
+        labRow({ measured_on: null, value: 9.9 }),
+        labRow({ measured_on: "2025-07-22", value: null }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.points.map((p) => p.day)).toEqual(["2025-10-20", "2026-01-23"]);
+  });
+
+  it("shows the year on the first point and when the year changes, not otherwise", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-01-20" }),
+        labRow({ measured_on: "2025-07-22" }),
+        labRow({ measured_on: "2026-01-23" }),
+        labRow({ measured_on: "2026-10-13" }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.points.map((p) => p.dateLabel)).toEqual([
+      "20 Jan 2025",
+      "22 Jul",
+      "23 Jan 2026",
+      "13 Oct",
+    ]);
+  });
+
+  it("names an out-of-range value in words, from the stored flag", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-10-20", value: 7.2, flag: "high" }),
+        labRow({ measured_on: "2026-01-23", value: 3.8, flag: "low" }),
+        labRow({ measured_on: "2026-04-10", value: 5.1, flag: "normal" }),
+        labRow({ measured_on: "2026-07-01", value: 5.2, flag: "unknown" }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.points.map((p) => [p.status, p.statusText])).toEqual([
+      ["above", "Above range"],
+      ["below", "Below range"],
+      ["in", null],
+      ["in", null],
+    ]);
+    expect(chart?.points[0].a11yLabel).toBe("20 October 2025: 7.2 percent, above range");
+    expect(chart?.points[2].a11yLabel).toBe("10 April 2026: 5.1 percent, in range");
+  });
+
+  it("draws the band from the newest row that states both bounds", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-10-20", ref_low: 4, ref_high: 5.6 }),
+        labRow({ measured_on: "2026-01-23", ref_low: null, ref_high: null }),
+        labRow({ measured_on: "2026-04-10", ref_low: 4.2, ref_high: 5.8 }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.refLow).toBe(4.2);
+    expect(chart?.refHigh).toBe(5.8);
+  });
+
+  it("builds the headline from the latest point and the stated range", () => {
+    const above = buildLabChart(
+      [labRow({ measured_on: "2025-10-13", value: 7.2, flag: "high" })],
+      { title: "HbA1c" },
+    );
+    expect(above?.headline).toBe(
+      "Latest: 7.2% on 13 October 2025 — above the reference range (4–5.6%).",
+    );
+    const inside = buildLabChart(
+      [labRow({ measured_on: "2025-10-13", value: 5.4, flag: "normal" })],
+      { title: "HbA1c" },
+    );
+    expect(inside?.headline).toBe(
+      "Latest: 5.4% on 13 October 2025 — in the reference range (4–5.6%).",
+    );
+    const noRange = buildLabChart(
+      [labRow({ measured_on: "2025-10-13", value: 7.2, flag: "high", ref_low: null, ref_high: null })],
+      { title: "HbA1c" },
+    );
+    expect(noRange?.headline).toBe("Latest: 7.2% on 13 October 2025 — above the range on its report.");
+    expect(noRange?.refLow).toBeNull();
+  });
+
+  it("summarises the chart for a screen reader", () => {
+    const chart = buildLabChart(
+      [
+        labRow({ measured_on: "2025-10-20", value: 5.4 }),
+        labRow({ measured_on: "2026-10-13", value: 7.2, flag: "high" }),
+      ],
+      { title: "HbA1c" },
+    );
+    expect(chart?.label).toBe(
+      "HbA1c, 2 readings, 20 October 2025 to 13 October 2026. Latest: 7.2% on 13 October 2026 — above the reference range (4–5.6%).",
+    );
+  });
+
+  it("formats stored values without float noise", () => {
+    expect(formatLabValue(7.2000000001)).toBe("7.2");
+    expect(formatLabValue(5)).toBe("5");
+    expect(formatLabValue(0.125)).toBe("0.13");
   });
 });
