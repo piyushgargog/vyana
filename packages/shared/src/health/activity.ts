@@ -150,7 +150,7 @@ export function buildActivityCard(rows: DailyActivityRow[], today: string, stepG
     ? { minutes: sleepDay.sleep_minutes.value, text: formatSleep(sleepDay.sleep_minutes.value), from: sleepDay.sleep_minutes.from, day: sleepDay.day }
     : null;
 
-  return { has_data: days.length > 0, steps, resting_hr, sleep };
+  return { has_data: steps !== null || resting_hr !== null || sleep !== null, steps, resting_hr, sleep };
 }
 
 export type TrendRangeDays = 7 | 30 | 90;

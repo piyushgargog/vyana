@@ -85,6 +85,11 @@ describe("buildActivityCard", () => {
     expect(card).toEqual({ has_data: false, steps: null, resting_hr: null, sleep: null });
   });
 
+  it("is empty when the only row carries no readings", () => {
+    const card = buildActivityCard([row(0, {})], TODAY, null);
+    expect(card).toEqual({ has_data: false, steps: null, resting_hr: null, sleep: null });
+  });
+
   it("shows today's steps with a ring fill only when a goal exists", () => {
     const rows = [row(0, { steps: 5000 })];
     expect(buildActivityCard(rows, TODAY, 10000).steps).toEqual({ value: 5000, from: "Pixel Watch", goal: 10000, fill: 0.5 });
