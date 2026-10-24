@@ -71,6 +71,13 @@ describe("createApiClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("retires the routeless plans and AI-usage paths (#530): no such client surface", () => {
+    const api = client(vi.fn());
+    const surface = api as unknown as Record<string, unknown>;
+    expect("plans" in surface).toBe(false);
+    expect("aiUsage" in surface).toBe(false);
+  });
+
   it("trims any number of trailing slashes from the base URL", () => {
     const api = createApiClient({ baseUrl: "https://api.example.com///", getAccessToken: async () => null });
     expect(api.chatUrl).toBe("https://api.example.com/api/assistant/chat");

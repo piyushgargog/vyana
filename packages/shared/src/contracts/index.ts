@@ -147,10 +147,12 @@ export const AdminDoctorCheckReq = z.object({
 });
 
 // ---------- Plans, waitlist and AI usage (v1.3, #305) ----------
-// PROVISIONAL, mock-first: the plans table (plans.features) and the M1/M2 hooks land with
-// Vaibhav's work; these schemas carry the same shape so the screens do not change. The page
-// reads its numbers from the plan's features — never from text typed into a page — and no plan
-// carries a price or a date anywhere.
+// The plans catalogue and the signed-in user's plan now come from the plans table through
+// usePlans / useCurrentPlan, and today's AI usage through useMyAiUsageToday (#418); the
+// waitlist join moves to the database hook with open PR #529. These schemas stay as the
+// shared shapes the client and forms parse against. The page reads its numbers from the
+// plan's features — never from text typed into a page — and no plan carries a price or
+// a date anywhere.
 export const Plan = z.object({
   slug: z.enum(["free", "family"]),
   name: z.string().min(1),
