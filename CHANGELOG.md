@@ -118,6 +118,9 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - When a model rejects its answer, the pool skips that model's other keys and goes straight to the next model, and the log line carries the provider's short reason.
 - The care plan works again on the free Groq tier: the model gets the first 3,500 characters of each guideline page instead of 12,000, because prompt and answer together must fit 8,000 tokens a minute (before, every answer was cut short and the request ended in a timeout).
 
+### Security
+- The E2E workflow's failure artifacts no longer carry the live demo-account passwords: Playwright's trace snapshots recorded the sign-in form fill, so a retained `trace.zip` would have leaked the repository-secret credentials into the downloadable artifact. `.github/scripts/scrub-e2e-traces.py` now rewrites every occurrence as `***REDACTED***` in `test-results/` and `playwright-report/` (inside zips and plain files, including binary entries) before the upload step runs.
+
 ## [1.1.0] - 2026-10-22
 
 ### Added

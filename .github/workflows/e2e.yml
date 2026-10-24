@@ -1,7 +1,9 @@
 name: E2E (Playwright)
 
 # Nightly + manual, against the live site (issue #141).
-# Credentials come from repository secrets; traces and screenshots upload only on failure.
+# Credentials come from repository secrets; traces and screenshots upload only on failure,
+# and a scrub step removes the credential values from the traces first (the sign-in form
+# fill ends up in Playwright's DOM snapshots).
 # The tests never create data that stays.
 
 on:
@@ -20,6 +22,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Test the trace scrubber
+        run: python3 .github/scripts/test_scrub_e2e_traces.py
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -34,8 +38,19 @@ jobs:
           E2E_BASE_URL: https://vyanahealth.app
           E2E_PASSWORD_PATIENT: ${{ secrets.E2E_PASSWORD_PATIENT }}
           E2E_PASSWORD_DOCTOR: ${{ secrets.E2E_PASSWORD_DOCTOR }}
-      - name: Upload traces and screenshots on failure
+      - name: Scrub credentials from failure traces
+        id: scrub
         if: failure()
+        run: python3 .github/scripts/scrub-e2e-traces.py
+        env:
+          E2E_PASSWORD_PATIENT: ${{ secrets.E2E_PASSWORD_PATIENT }}
+          E2E_PASSWORD_DOCTOR: ${{ secrets.E2E_PASSWORD_DOCTOR }}
+      # Fail closed: the upload runs only when the scrub step itself
+      # succeeded. `failure()` alone is true when *any* earlier step
+      # failed, including the scrub, so without the outcome gate a
+      # scrub failure would still publish the raw, unscrubbed traces.
+      - name: Upload traces and screenshots on failure
+        if: failure() && steps.scrub.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-failure-artifacts
