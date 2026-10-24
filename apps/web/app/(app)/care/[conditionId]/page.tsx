@@ -14,6 +14,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorState,
   LargeTitle,
   Pill,
   Reveal,
@@ -122,20 +123,11 @@ export default function CarePlanPage() {
       <div className="space-y-6">
         {titleBlock}
         <Card>
-          <p className="text-[17px] font-semibold text-label">
-            Could not load your care plan
-          </p>
-          <p className="mt-1 text-[15px] text-label-2">
-            Your care plan could not be loaded. Check your connection and try again.
-          </p>
-          <Button
-            variant="secondary"
-            size="md"
-            className="mt-4"
-            onClick={() => refetchPlan()}
-          >
-            Try again
-          </Button>
+          <ErrorState
+            title="Could not load your care plan"
+            body="Your care plan could not be loaded. Check your connection and try again."
+            onRetry={() => refetchPlan()}
+          />
         </Card>
       </div>
     );

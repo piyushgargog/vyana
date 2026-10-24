@@ -31,11 +31,14 @@ export function ErrorState({
   body = 'Pull to refresh or try again.',
   onRetry,
   retryLabel = 'Try again',
+  retryAccessibilityLabel,
 }: {
   title?: string;
   body?: string;
   onRetry?: () => void;
   retryLabel?: string;
+  /** What screen readers announce for the retry when "Try again" is not descriptive enough on its own. */
+  retryAccessibilityLabel?: string;
 }) {
   return (
     <View style={styles.box}>
@@ -54,7 +57,8 @@ export function ErrorState({
         <Button
           title={retryLabel}
           variant="secondary"
-          size="sm"
+          size="md"
+          label={retryAccessibilityLabel}
           onPress={onRetry}
         />
       ) : null}
