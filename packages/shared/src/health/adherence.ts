@@ -19,7 +19,7 @@
 // most medications, and 90% for antiretrovirals"). Checked 2026-10-23.
 // Owner: Vaibhav Parmar
 
-import { addDays, daysBetween, istDayOf } from "./dates";
+import { addDays, istDayOf } from "./dates";
 
 /** PDC at or above this percentage counts as adherent (PQA; see the header). */
 export const ADHERENT_PDC_PERCENT = 80;
@@ -27,8 +27,13 @@ export const ADHERENT_PDC_PERCENT = 80;
 /** Below this many observed days a percentage is not shown on screen (issue #495). */
 export const MIN_DAYS_FOR_PDC = 7;
 
-/** The prescription fields PDC needs: when the medicine runs. */
-export type PdcItem = { id: string; start_date: string; end_date: string | null };
+/**
+ * The prescription fields PDC needs: when the medicine runs, and when in the day it is due.
+ * An item with an empty `times` list is an as-needed (SOS/PRN) medicine — it has no scheduled
+ * doses, so PDC excludes it entirely rather than scoring its untaken days against the patient.
+ * Omitting `times` treats the item as scheduled.
+ */
+export type PdcItem = { id: string; start_date: string; end_date: string | null; times?: string[] };
 
 /** The dose-log fields PDC needs. */
 export type PdcLog = { item_id: string; scheduled_for: string; status: string };
@@ -79,9 +84,11 @@ export function computePdc(items: PdcItem[], logs: PdcLog[], fromDate: string, t
     takenDays.set(log.item_id, set);
   }
 
+  const scheduled = items.filter((item) => item.times === undefined || item.times.length > 0);
+
   const allActive = new Set<string>();
   const allCovered = new Set<string>();
-  const perMedicine = items.map((item) => {
+  const perMedicine = scheduled.map((item) => {
     const from = item.start_date > fromDate ? item.start_date : fromDate;
     const to = item.end_date && item.end_date < toDate ? item.end_date : toDate;
     const active = to < from ? [] : eachDay(from, to);
@@ -95,7 +102,11 @@ export function computePdc(items: PdcItem[], logs: PdcLog[], fromDate: string, t
   return { overall: result(allCovered.size, allActive.size), perMedicine };
 }
 
-/** True when the result has enough days and meets the PQA 80% threshold. */
+/**
+ * True when the result has enough days and meets the PQA 80% threshold. The comparison uses
+ * the unrounded ratio — the threshold is a proportion, and the rounded `pdc` is for display
+ * only (159 of 200 days is 79.5%: it displays as 80 but is under the line).
+ */
 export function isAdherent(r: PdcResult): boolean {
-  return r.enough_data && r.pdc >= ADHERENT_PDC_PERCENT;
+  return r.enough_data && r.days > 0 && r.covered / r.days >= ADHERENT_PDC_PERCENT / 100;
 }
