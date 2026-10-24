@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ENTER_MS,
   FADE_MS,
   FLAG,
   FLAG_COLORS,
+  gradientBands,
   getFlagDimensions,
   SHOW_MS,
   WELCOME_STRINGS,
 } from './welcome-splash.constants';
 
 describe('WelcomeSplash Constants & Helpers (#240)', () => {
-  it('defines the required 3-second display duration', () => {
-    expect(SHOW_MS).toBe(3000);
+  it('defines the required 2.5-second display duration (#488)', () => {
+    expect(SHOW_MS).toBe(2500);
+  });
+
+  it('defines the 600 ms entrance (#488)', () => {
+    expect(ENTER_MS).toBe(600);
   });
 
   it('defines a smooth exit fade duration between 250ms and 500ms', () => {
@@ -32,8 +38,11 @@ describe('WelcomeSplash Constants & Helpers (#240)', () => {
     expect(WELCOME_STRINGS.tagline).toBe('Your health, in one calm place.');
     expect(WELCOME_STRINGS.madeInIndia).toBe('Made with love in India');
     expect(WELCOME_STRINGS.tapToSkip).toBe('Tap anywhere to skip');
-    expect(WELCOME_STRINGS.accessibilityLabel).toContain('Made with love in India');
-    expect(WELCOME_STRINGS.accessibilityLabel).toContain('Tap anywhere to skip');
+    // The label announces only what the #488 welcome screen shows — the name
+    // and the tagline; the made-in-India and tap-to-skip words are gone from it.
+    expect(WELCOME_STRINGS.accessibilityLabel).toBe('Vyana. Your health, in one calm place.');
+    expect(WELCOME_STRINGS.accessibilityLabel).not.toContain('Made with love in India');
+    expect(WELCOME_STRINGS.accessibilityLabel).not.toContain('Tap anywhere to skip');
   });
 
   it('calculates flag dimensions following 3:2 aspect ratio for default 32px width', () => {
@@ -66,5 +75,18 @@ describe('WelcomeSplash Constants & Helpers (#240)', () => {
     expect(dim.stripe).toBeCloseTo(17 / 3);
     expect(dim.chakra).toBe(5);
     expect(dim.spokes).toHaveLength(12);
+  });
+
+  it('builds gradient bands from the top colour to the deep colour (#488)', () => {
+    const bands = gradientBands('#0D9488', '#065F52', 32);
+    expect(bands).toHaveLength(32);
+    expect(bands[0]).toBe('#0D9488');
+    expect(bands[31]).toBe('#065F52');
+    // Every band is a plain #RRGGBB colour, and the green channel deepens all the way.
+    for (const band of bands) expect(band).toMatch(/^#[0-9A-F]{6}$/);
+    const greens = bands.map((b) => parseInt(b.slice(3, 5), 16));
+    for (let i = 1; i < greens.length; i++) expect(greens[i]).toBeLessThanOrEqual(greens[i - 1]);
+    // The curve deepens quickly: halfway down, more than half the distance is covered.
+    expect(greens[16]).toBeLessThan((0x94 + 0x5f) / 2);
   });
 });

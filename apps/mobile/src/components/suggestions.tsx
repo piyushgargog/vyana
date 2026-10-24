@@ -6,9 +6,11 @@ import { MobileSkeletonCard } from '@/components/ui-primitives';
 import { Button, Card, CardHeader, Symbol, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 
-// "Suggestions for you" (#304): care-agent proposals the patient confirms or dismisses, at the
-// top of Today. Mock-first against the provisional contract in @vyana/shared; the wording comes
-// from the proposal itself (rules wrote it), never from this component.
+// "Suggestions for you" (#304): care-agent proposals the patient confirms or dismisses,
+// on Today below the brief card. Mock-first against the provisional contract in
+// @vyana/shared; the wording comes from the proposal itself (rules wrote it), never
+// from this component. When there is nothing to suggest, the section renders nothing
+// at all — no heading, no empty card (#488).
 const MAX_COLLAPSED = 3;
 const DISCLAIMER = 'Vyana suggested this from your own records.';
 
@@ -159,51 +161,59 @@ export function SuggestionsForYou() {
     );
   };
 
-  return (
-    <View style={styles.section}>
-      <CardHeader title="Suggestions for you" />
-
-      {isLoading ? (
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <CardHeader title="Suggestions for you" />
         <MobileSkeletonCard lines={3} />
-      ) : isError ? (
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.section}>
+        <CardHeader title="Suggestions for you" />
         <Card>
           <Text variant="subhead">Suggestions could not be loaded.</Text>
           <Button title="Try again" variant="secondary" label="Try loading suggestions again" onPress={() => refetch()} />
         </Card>
-      ) : proposals.length === 0 ? (
-        <Card>
-          <Text variant="subhead" tone="secondary">
-            Nothing to suggest right now.
-          </Text>
-        </Card>
-      ) : (
-        <>
-          {visible.map((p) => (
-            <ProposalCard
-              key={p.id}
-              proposal={p}
-              busy={decide.isPending && decide.variables?.id === p.id}
-              onDecide={handleDecide}
-            />
-          ))}
-          {!showAll && proposals.length > MAX_COLLAPSED && (
-            <Button
-              title={`See all ${proposals.length} suggestions`}
-              variant="secondary"
-              label="See all suggestions"
-              onPress={() => setShowAll(true)}
-            />
-          )}
-          {undos.map((u) => (
-            <View key={u.id} style={styles.undoBar}>
-              <Text variant="footnote" tone="secondary" style={styles.undoText}>
-                Dismissed: {u.title}
-              </Text>
-              <Button title="Undo" variant="secondary" size="md" label="Undo the dismissal" onPress={() => handleUndo(u.id)} />
-            </View>
-          ))}
-        </>
+      </View>
+    );
+  }
+
+  // Nothing to suggest and no dismissal waiting out its undo seconds: render
+  // nothing at all — #488's rule is no empty suggestions section or heading.
+  if (proposals.length === 0 && undos.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <CardHeader title="Suggestions for you" />
+
+      {visible.map((p) => (
+        <ProposalCard
+          key={p.id}
+          proposal={p}
+          busy={decide.isPending && decide.variables?.id === p.id}
+          onDecide={handleDecide}
+        />
+      ))}
+      {!showAll && proposals.length > MAX_COLLAPSED && (
+        <Button
+          title={`See all ${proposals.length} suggestions`}
+          variant="secondary"
+          label="See all suggestions"
+          onPress={() => setShowAll(true)}
+        />
       )}
+      {undos.map((u) => (
+        <View key={u.id} style={styles.undoBar}>
+          <Text variant="footnote" tone="secondary" style={styles.undoText}>
+            Dismissed: {u.title}
+          </Text>
+          <Button title="Undo" variant="secondary" size="md" label="Undo the dismissal" onPress={() => handleUndo(u.id)} />
+        </View>
+      ))}
     </View>
   );
 }
