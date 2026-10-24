@@ -13,6 +13,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorState,
   Field,
   LargeTitle,
   Pill,
@@ -103,20 +104,11 @@ export default function BasketPage() {
       <div className="space-y-6">
         {titleBlock}
         <Card>
-          <p className="text-[17px] font-semibold text-label">
-            Could not load your medicines
-          </p>
-          <p className="mt-1 text-[15px] text-label-2">
-            Your active prescriptions could not be loaded. Check your connection and try again.
-          </p>
-          <Button
-            variant="secondary"
-            size="md"
-            className="mt-4"
-            onClick={() => refetchItems()}
-          >
-            Try again
-          </Button>
+          <ErrorState
+            title="Could not load your medicines"
+            body="Your active prescriptions could not be loaded. Check your connection and try again."
+            onRetry={() => refetchItems()}
+          />
         </Card>
       </div>
     );
