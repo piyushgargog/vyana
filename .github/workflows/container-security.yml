@@ -32,7 +32,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: container-security-${{ github.ref }}
+  # Scheduled runs get their own group: on main they share github.ref with every
+  # push, and a push during the Monday scan would otherwise cancel that week's scan.
+  group: container-security-${{ github.event_name == 'schedule' && 'scheduled' || github.ref }}
   cancel-in-progress: true
 
 jobs:

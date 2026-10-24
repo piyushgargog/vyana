@@ -16,7 +16,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: dynamic-security-${{ github.ref }}
+  # Scheduled runs get their own group: on main they share github.ref with every
+  # push, and a push during the Wednesday scan would otherwise cancel that week's scan.
+  group: dynamic-security-${{ github.event_name == 'schedule' && 'scheduled' || github.ref }}
   cancel-in-progress: true
 
 jobs:
