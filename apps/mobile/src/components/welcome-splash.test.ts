@@ -38,8 +38,11 @@ describe('WelcomeSplash Constants & Helpers (#240)', () => {
     expect(WELCOME_STRINGS.tagline).toBe('Your health, in one calm place.');
     expect(WELCOME_STRINGS.madeInIndia).toBe('Made with love in India');
     expect(WELCOME_STRINGS.tapToSkip).toBe('Tap anywhere to skip');
-    expect(WELCOME_STRINGS.accessibilityLabel).toContain('Made with love in India');
-    expect(WELCOME_STRINGS.accessibilityLabel).toContain('Tap anywhere to skip');
+    // The label announces only what the #488 welcome screen shows — the name
+    // and the tagline; the made-in-India and tap-to-skip words are gone from it.
+    expect(WELCOME_STRINGS.accessibilityLabel).toBe('Vyana. Your health, in one calm place.');
+    expect(WELCOME_STRINGS.accessibilityLabel).not.toContain('Made with love in India');
+    expect(WELCOME_STRINGS.accessibilityLabel).not.toContain('Tap anywhere to skip');
   });
 
   it('calculates flag dimensions following 3:2 aspect ratio for default 32px width', () => {
