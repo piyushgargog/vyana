@@ -37,8 +37,10 @@ export const WELCOME_STRINGS = {
   tagline: 'Your health, in one calm place.',
   madeInIndia: 'Made with love in India',
   tapToSkip: 'Tap anywhere to skip',
-  accessibilityLabel:
-    'Vyana. Your health, in one calm place. Made with love in India. Tap anywhere to skip.',
+  // What the screen actually shows (#488): the brand mark, the name and the
+  // tagline. "Made with love in India" and the tap-to-skip words are not on
+  // the welcome screen any more, so the label no longer announces them.
+  accessibilityLabel: 'Vyana. Your health, in one calm place.',
 } as const;
 
 /**
