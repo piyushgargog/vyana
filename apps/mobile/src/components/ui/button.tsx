@@ -63,11 +63,13 @@ export function Button({
       ) : (
         <View style={styles.row}>
           {icon}
-          {/* A button label never wraps (issue #489): one line, shrinking to fit. */}
+          {/* A button label never wraps (issue #489): one line, shrinking to fit,
+              but never below 11 px — past that the words stay readable or clip. */}
           <Text
             variant="headline"
             numberOfLines={1}
             adjustsFontSizeToFit
+            minimumFontScale={11 / T.text.headline.fontSize}
             style={{ color: v.text, flexShrink: 1 }}
           >
             {title}
