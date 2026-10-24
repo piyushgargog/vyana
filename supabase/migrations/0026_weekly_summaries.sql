@@ -76,7 +76,10 @@ begin
     left join (
       select i.patient_id, sum(cardinality(i.times))::int as due
       from public.prescription_items i
-      join generate_series(w, w + 6, interval '1 day') d(day)
+      -- The week in progress counts only the days that have elapsed (up to today, IST);
+      -- a closed week counts all seven. Without the cap, Monday's row would already
+      -- promise a full week of doses against a day of takens.
+      join generate_series(w, least(w + 6, (now() at time zone 'Asia/Kolkata')::date), interval '1 day') d(day)
         on d.day::date between i.start_date and coalesce(i.end_date, d.day::date)
       where i.active and i.times is not null and cardinality(i.times) > 0
       group by i.patient_id
@@ -91,9 +94,17 @@ begin
       group by patient_id
     ) logs on logs.patient_id = p.id
     left join (
-      select patient_id, avg(steps) as steps_avg, avg(sleep_minutes) as sleep_avg_minutes
-      from public.daily_activity
-      where day between w and w + 6
+      -- One value per day first: daily_activity holds a row per source, and two sources
+      -- watching the same day overlap, so the day's figure is the max across its sources
+      -- (the most complete record of that day). The average is then over days, never
+      -- over rows — a day with two sources must not weigh twice.
+      select patient_id, avg(day_steps) as steps_avg, avg(day_sleep) as sleep_avg_minutes
+      from (
+        select patient_id, day, max(steps) as day_steps, max(sleep_minutes) as day_sleep
+        from public.daily_activity
+        where day between w and w + 6
+        group by patient_id, day
+      ) per_day
       group by patient_id
     ) act on act.patient_id = p.id
     on conflict (patient_id, week_start) do update set

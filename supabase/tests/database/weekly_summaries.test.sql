@@ -41,6 +41,10 @@ select '10000000-0000-0000-0000-000000000001'::uuid, '41000000-0000-0000-0000-00
 insert into public.daily_activity (patient_id, day, source, steps, sleep_minutes)
 select '10000000-0000-0000-0000-000000000001'::uuid, monday, 'health_connect', 6000, 420 from fx
 union all
+-- A second source watching the same Monday: the day counts once, at the max (6000),
+-- so the week's step average stays (6000 + 9000) / 2, not a row average.
+select '10000000-0000-0000-0000-000000000001'::uuid, monday, 'ble', 4000, 300 from fx
+union all
 select '10000000-0000-0000-0000-000000000001'::uuid, monday + 1, 'health_connect', 9000, 480 from fx;
 
 create function public.tap_login(uid uuid) returns void language sql as $$
@@ -50,7 +54,8 @@ $$;
 select lives_ok($$ select public.fill_weekly_summaries() $$, 'the nightly fill runs');
 select is(
   (select doses_due from public.weekly_summaries, fx where patient_id = '10000000-0000-0000-0000-000000000001' and week_start = fx.monday),
-  14, 'current week: two doses a day for seven days are due');
+  2 * (extract(isodow from (now() at time zone 'Asia/Kolkata')::date)::int),
+  'current week: two doses a day for the days elapsed so far, future days not promised');
 select is(
   (select doses_taken from public.weekly_summaries, fx where patient_id = '10000000-0000-0000-0000-000000000001' and week_start = fx.monday),
   3, 'three were taken');
