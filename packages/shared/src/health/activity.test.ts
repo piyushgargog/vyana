@@ -55,6 +55,20 @@ describe("mergeActivityDays", () => {
     expect(days.map((d) => d.day)).toEqual([addDays(TODAY, -2), TODAY]);
   });
 
+  it("drops negative and non-finite values, the way computeTrend does", () => {
+    const days = mergeActivityDays(
+      [
+        row(1, { steps: -5, sleep_minutes: -10, resting_hr: Number.NaN }),
+        row(0, { steps: 100 }),
+      ],
+      TODAY,
+    );
+    expect(days[0].steps).toBeNull();
+    expect(days[0].sleep_minutes).toBeNull();
+    expect(days[0].resting_hr).toBeNull();
+    expect(days[1].steps).toEqual({ value: 100, from: "Pixel Watch" });
+  });
+
   it("keeps the last row's value per field, with that row's device", () => {
     const days = mergeActivityDays(
       [
