@@ -120,7 +120,7 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/prescriptions/scan')}
           style={styles.scanBtn}
         >
-          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit style={styles.scanBtnText}>
+          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={11 / T.text.footnote.fontSize} style={styles.scanBtnText}>
             + Scan Prescription (OCR)
           </Text>
         </Pressable>
@@ -131,7 +131,7 @@ export default function MobileMedsTab() {
           onPress={() => router.push('/basket')}
           style={styles.basketBtn}
         >
-          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit style={styles.basketBtnText}>
+          <Text variant="footnote" tone="white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={11 / T.text.footnote.fontSize} style={styles.basketBtnText}>
             Compare Medicine Prices →
           </Text>
         </Pressable>
