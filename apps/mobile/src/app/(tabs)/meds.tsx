@@ -20,7 +20,7 @@ import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
 } from '@/components/ui-primitives';
-import { ErrorState, Screen, SosPill, Text } from '@/components/ui';
+import { EmptyState, ErrorState, Screen, SosPill, Text } from '@/components/ui';
 import { T } from '@/constants/theme';
 
 export default function MobileMedsTab() {
@@ -228,21 +228,24 @@ export default function MobileMedsTab() {
         </View>
       ) : rxList.length === 0 ? (
         <View style={styles.card}>
-          <Text variant="headline">No Prescriptions Yet</Text>
-          <Text variant="caption" tone="tertiary" style={styles.cardSub}>
-            Scan a prescription image or receive an e-prescription from your
-            doctor to see your medicines here.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scan a prescription now"
-            onPress={() => router.push('/prescriptions/scan')}
-            style={[styles.orderWholeBtn, { marginTop: T.space.md }]}
-          >
-            <Text variant="footnote" style={styles.orderWholeBtnText}>
-              + Scan Prescription Now
-            </Text>
-          </Pressable>
+          <EmptyState
+            ios="pills.fill"
+            android="medication"
+            title="No Prescriptions Yet"
+            body="Scan a prescription image or receive an e-prescription from your doctor to see your medicines here."
+            action={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Scan a prescription now"
+                onPress={() => router.push('/prescriptions/scan')}
+                style={styles.orderWholeBtn}
+              >
+                <Text variant="footnote" style={styles.orderWholeBtnText}>
+                  + Scan Prescription Now
+                </Text>
+              </Pressable>
+            }
+          />
         </View>
       ) : (
         rxList.map((rx) => (

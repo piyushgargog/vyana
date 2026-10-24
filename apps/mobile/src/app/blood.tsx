@@ -572,11 +572,15 @@ export default function BloodScreen() {
           </Card>
         ) : requests.data && requests.data.length > 0 ? (
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
-        ) : (
+        ) : requests.isLoading ? (
           <Card>
             <Text variant="footnote" tone="tertiary">
-              {requests.isLoading ? 'Loading your requests…' : 'No requests yet.'}
+              Loading your requests…
             </Text>
+          </Card>
+        ) : (
+          <Card>
+            <EmptyState ios="drop.fill" android="water_drop" title="No requests yet." />
           </Card>
         )}
       </View>

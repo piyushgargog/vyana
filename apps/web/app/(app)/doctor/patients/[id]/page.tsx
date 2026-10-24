@@ -21,7 +21,7 @@ import {
   TrendChartSvg,
   type TrendPoint,
 } from "@/components/ui-primitives";
-import { Button, ButtonLink, Card, Pill } from "@/components/ui";
+import { Button, ButtonLink, Card, EmptyState, Pill } from "@/components/ui";
 
 interface LabReportVal {
   test_name: string;
@@ -442,8 +442,8 @@ function DoctorPatientSummaryContent({
           {carePlansLoading ? (
             <SkeletonCard lines={3} />
           ) : !carePlans || carePlans.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
-              No chronic care plans authored or linked for this patient yet.
+            <Card>
+              <EmptyState title="No chronic care plans authored or linked for this patient yet." />
             </Card>
           ) : (
             <div className="space-y-3">
@@ -641,8 +641,8 @@ function DoctorPatientSummaryContent({
           {vitalsLoading ? (
             <SkeletonCard lines={3} />
           ) : vitals.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
-              No vitals logged for this patient yet.
+            <Card>
+              <EmptyState title="No vitals logged for this patient yet." />
             </Card>
           ) : (
             <div className="space-y-4">

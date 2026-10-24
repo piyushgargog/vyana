@@ -341,9 +341,17 @@ export default function BloodPage() {
           <ErrorState onRetry={() => requests.refetch()} />
         ) : requests.data && requests.data.length > 0 ? (
           requests.data.map((r) => <RequestCard key={r.id} request={r} />)
+        ) : requests.isPending ? (
+          <Card>
+            <div className="space-y-3" aria-label="Loading your requests">
+              <SkeletonLine className="w-2/3" />
+              <SkeletonLine />
+              <SkeletonLine className="w-1/2" />
+            </div>
+          </Card>
         ) : (
           <Card>
-            <p className="text-[15px] text-label-3">{requests.isPending ? "Loading your requests…" : "No requests yet."}</p>
+            <EmptyState title="No requests yet." />
           </Card>
         )}
       </section>
