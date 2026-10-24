@@ -11,6 +11,8 @@
  * Changing the table needs a PROGRESS.md entry and a team review (EVALUATION §6 "Interactions table").
  */
 
+import { normalizeName } from "@vyana/shared";
+
 export interface TableSource {
   title: string;
   url: string;
@@ -182,13 +184,15 @@ export const MAJOR_WORDING = ["avoid", "contraindicated", "not usually prescribe
 
 /** Lowercase, trim, collapse spaces, map aliases to the main salt name. */
 export function normalizeSalt(name: string): string {
-  const s = name.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+  const s = normalizeName(name);
   return SALT_ALIASES[s] ?? s;
 }
 
 /** Splits "Sulfamethoxazole + Trimethoprim" or "co-trimoxazole" into its salts, normalized. */
 export function expandSalts(name: string): string[] {
-  const n = name.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+  // The base chain only: `normalizeSalt` would also map aliases, which must
+  // not happen before the `COMBINATIONS` lookup below.
+  const n = normalizeName(name);
   if (COMBINATIONS[n]) return COMBINATIONS[n];
   // Replace separators first, then split: no backtracking-prone regex on user input.
   return n

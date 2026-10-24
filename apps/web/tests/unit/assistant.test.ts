@@ -114,6 +114,30 @@ describe("ReplyGuard", () => {
     expect(g.droppedSentences).toBe(1);
   });
 
+  it("may read the patient's own saved medicine back when it was saved in a fullwidth form", async () => {
+    const g = guardFor();
+    g.allowOwnDoses(["５００ ｍｇ"]);
+    const { shown } = await through(g, ["You take Metformin 500 mg. "]);
+    expect(shown.join("")).toBe("You take Metformin 500 mg. ");
+    expect(g.droppedSentences).toBe(0);
+  });
+
+  it("may read the patient's own saved medicine back when the reply repeats it in a fullwidth form", async () => {
+    const g = guardFor();
+    g.allowOwnDoses(["500 mg"]);
+    const { shown } = await through(g, ["You take Metformin ５００ ｍｇ. "]);
+    expect(shown.join("")).toBe("You take Metformin ５００ ｍｇ. ");
+    expect(g.droppedSentences).toBe(0);
+  });
+
+  it("still drops a fullwidth dose that is not the patient's own", async () => {
+    const g = guardFor();
+    g.allowOwnDoses(["500 mg"]);
+    const { shown } = await through(g, ["Paracetamol ６５０ ｍｇ is common. Talk to someone first."]);
+    expect(shown.join("")).toBe("Talk to someone first.");
+    expect(g.droppedSentences).toBe(1);
+  });
+
   it("keeps advice not to change a dose (only the note is added)", async () => {
     const g = guardFor();
     const { shown } = await through(g, ["Please don't double the dose on your own. "]);
