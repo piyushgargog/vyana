@@ -121,13 +121,14 @@ export async function startAiRun(input: RunRecord, kind: ModelKind): Promise<str
 
 export async function finishAiRun(
   runId: string | null,
-  result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage },
+  result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage; model?: string },
 ): Promise<void> {
   if (!runId) return;
   try {
     const { error } = await supabaseAdmin()
       .from("ai_runs")
-      .update({ output_json: result.output, sources: result.sources, status: result.status, ...(result.usage ?? {}) })
+      // `model` corrects the row when the stream fell back: startAiRun only knew the primary (ADR-056).
+      .update({ output_json: result.output, sources: result.sources, status: result.status, ...(result.model ? { model: result.model } : {}), ...(result.usage ?? {}) })
       .eq("id", runId);
     if (error) throw error;
   } catch {

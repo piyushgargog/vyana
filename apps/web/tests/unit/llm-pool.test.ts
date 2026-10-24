@@ -189,6 +189,20 @@ describe("failover (retryable failures only)", () => {
     expect(await meta()).toEqual({ fallback: "groq:small-model" });
   });
 
+  it("names the fallback that answered a stream, so ai_runs records the model that really did (ADR-056)", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
+    const { streamFallbackOf } = await import("@/lib/server/llm");
+    const primary = getModel("text");
+    expect(await streamText({ model: primary, prompt: "hi", maxRetries: 0 }).text).toBe("groq|k1|main-model");
+    expect(streamFallbackOf(primary)).toBeNull(); // the primary answered
+    script.set("groq|k1|main-model", 429);
+    script.set("groq|k2|main-model", 429);
+    const fallback = getModel("text");
+    expect(await streamText({ model: fallback, prompt: "hi", maxRetries: 0 }).text).toBe("groq|k2|small-model"); // keys rotate: k2 answers
+    expect(streamFallbackOf(fallback)).toBe("groq:small-model");
+  });
+
   it("classifies errors", () => {
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 413 }))).toBe(true);
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 429 }))).toBe(true);

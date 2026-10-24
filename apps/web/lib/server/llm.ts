@@ -160,6 +160,22 @@ function withoutReasoning<P extends { prompt: unknown }>(params: P): P {
 /** Where a fallback leaves its name in the result's provider metadata, so `ai_runs` records the model that really answered. */
 export const POOL_KEY = "vyana_pool";
 
+/**
+ * Streams (the assistant) cannot carry the fallback tag in provider metadata — the V4 stream result has no such
+ * field — so the winning candidate's label is kept here instead. `getModel` builds a fresh wrapped model per call,
+ * so the entry is per request; read it with `streamFallbackOf` after the stream ends. The generate path does the
+ * same thing through `POOL_KEY`.
+ */
+const streamFallbacks = new WeakMap<object, { label: string | null }>();
+
+/**
+ * The `provider:id` label of the fallback candidate that answered a stream through this model, or null when the
+ * primary answered (or the model never streamed). Lets `ai_runs` record the model that really answered (ADR-056).
+ */
+export function streamFallbackOf(model: LanguageModel): string | null {
+  return typeof model === "object" && model !== null ? (streamFallbacks.get(model)?.label ?? null) : null;
+}
+
 export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): LanguageModel {
   const data = options.data ?? "patient";
   const provider = process.env.LLM_PROVIDER;
@@ -217,7 +233,8 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
     throw failed(last);
   }
 
-  return wrapLanguageModel({
+  const fallback: { label: string | null } = { label: null };
+  const wrapped = wrapLanguageModel({
     model: primary,
     middleware: {
       ...dropReasoning,
@@ -232,9 +249,15 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
         try {
           return await doStream();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m) => m.doStream(params));
+          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => {
+            // The V4 stream result has no provider-metadata field, so the winning label is kept per model.
+            fallback.label = label(c);
+            return m.doStream(params);
+          });
         }
       },
     },
   });
+  streamFallbacks.set(wrapped, fallback);
+  return wrapped;
 }

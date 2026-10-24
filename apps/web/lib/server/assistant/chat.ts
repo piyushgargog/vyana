@@ -13,7 +13,7 @@ import { Language, type ChatBody } from "@vyana/shared";
 import { finishAiRun, providerOf, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
-import { getModel, isLlmMock, modelName } from "../llm";
+import { getModel, isLlmMock, modelName, streamFallbackOf } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
@@ -137,13 +137,16 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
     writer.write({ type: "text-end", id });
   };
 
+  // Built once per request so onEnd can ask which fallback answered the stream (ADR-056).
+  const model = chatModel();
+
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.write({ type: "start", messageMetadata: { ai_run_id: runId } });
       // Written by the server before the model runs, so it is always first (§2A rule 4).
       if (emergency) writeText(writer, "emergency-notice", EMERGENCY_NOTICE[language]);
       const result = streamText({
-        model: chatModel(),
+        model,
         instructions: assistantSystemPrompt(language, { emergency }),
         messages,
         tools: assistantTools({ userId: user.id, sb, guard }),
@@ -176,11 +179,16 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
     onError,
     onEnd: async ({ responseMessage, isAborted }) => {
       const status = failed || isAborted ? "rejected" : guard.needsReview ? "needs_review" : "ok";
+      // The model that actually answered (ADR-056): a stream that fell back shows up as "fallback:<id>",
+      // like runAi does for generate calls. Without this the row would credit the primary for the fallback's work.
+      const streamFallback = streamFallbackOf(model);
+      const answered = streamFallback ? `fallback:${streamFallback}` : modelName("text");
       await finishAiRun(runId, {
         output: { text: guard.text, notes: guard.notes, removed_urls: guard.removed, emergency_notice: emergency },
         sources: guard.sources,
         status,
-        usage: { provider: providerOf(modelName("text")), ...tokens, latency_ms: Date.now() - started },
+        model: answered,
+        usage: { provider: providerOf(answered), ...tokens, latency_ms: Date.now() - started },
       });
       log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved
