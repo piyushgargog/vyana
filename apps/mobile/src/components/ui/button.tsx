@@ -63,7 +63,13 @@ export function Button({
       ) : (
         <View style={styles.row}>
           {icon}
-          <Text variant="headline" style={{ color: v.text }}>
+          {/* A button label never wraps (issue #489): one line, shrinking to fit. */}
+          <Text
+            variant="headline"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={{ color: v.text, flexShrink: 1 }}
+          >
             {title}
           </Text>
         </View>
