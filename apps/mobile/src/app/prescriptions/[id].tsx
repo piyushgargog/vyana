@@ -15,6 +15,7 @@ import {
   useSetItemActive,
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
+import { InteractionCard } from '@/components/interaction-card';
 import {
   computeItemRefill,
   MobileAiSafetyBanner,
@@ -196,55 +197,8 @@ export default function PrescriptionDetailScreen() {
             </View>
           ) : (
             interactionsData.interactions.map((inter, i) => (
-              <View key={i} style={styles.interactionRow}>
-                <View style={styles.interBadgeRow}>
-                  <Text
-                    style={[
-                      styles.interBadge,
-                      inter.severity === 'major'
-                        ? styles.interMajor
-                        : inter.severity === 'moderate'
-                          ? styles.interModerate
-                          : styles.interMinor,
-                    ]}
-                  >
-                    {inter.severity.toUpperCase()}
-                  </Text>
-                  <Text style={styles.interNames}>
-                    {inter.medicine_a} + {inter.medicine_b}
-                  </Text>
-                </View>
-
-              {inter.layer && (
-                <Text style={styles.interLayer}>
-                  {inter.layer === 'table'
-                    ? 'From the reviewed list'
-                    : 'From a trusted source'}
-                </Text>
-              )}
-
-              {inter.effect ? (
-                <Text style={styles.interEffect}>{inter.effect}</Text>
-              ) : null}
-
-              <Text style={styles.interAdvice}>Guidance: {inter.advice}</Text>
-
-              {inter.quote ? (
-                <Text style={styles.interQuote}>
-                  Verbatim Evidence: &ldquo;{inter.quote}&rdquo;
-                </Text>
-              ) : null}
-
-              {inter.sources && inter.sources.length > 0 && (
-                <Text style={styles.interSources}>
-                  Sources:{' '}
-                  {inter.sources
-                    .map((s) => `${s.title} (${s.url})`)
-                    .join(' · ')}
-                </Text>
-              )}
-            </View>
-          ))
+              <InteractionCard key={i} interaction={inter} />
+            ))
         )}
 
         {interactionsData.not_checked &&
@@ -409,15 +363,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   interactionsBtnText: { color: T.color.label, fontSize: 13, fontWeight: '600' },
+  // The results container is a plain surface now (issue #489): the warning colour
+  // lives only on each card's severity badge, not on the whole analysis block.
   interactionsCard: {
-    backgroundColor: T.color.warnSoft,
+    backgroundColor: T.color.surface,
     borderColor: T.color.separator,
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
     gap: 8,
   },
-  interactionsTitle: { fontSize: 14, fontWeight: '800', color: T.color.warn },
+  interactionsTitle: { fontSize: 14, fontWeight: '800', color: T.color.label },
   noInteractionsBox: {
     backgroundColor: T.color.okSoft,
     borderColor: T.color.separator,
@@ -426,30 +382,6 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   noInteractionsText: { fontSize: 12, color: T.color.ok, fontWeight: '600' },
-  interactionRow: {
-    backgroundColor: T.color.surface,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  interBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  interBadge: {
-    fontSize: 11,
-    fontWeight: '800',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    color: T.color.white,
-  },
-  interMajor: { backgroundColor: T.color.danger },
-  interModerate: { backgroundColor: T.color.warn },
-  interMinor: { backgroundColor: T.color.label3 },
-  interNames: { fontSize: 13, fontWeight: '700', color: T.color.label },
-  interLayer: { fontSize: 11, fontWeight: '700', color: T.color.accent },
-  interEffect: { fontSize: 12, color: T.color.label, fontWeight: '500' },
-  interAdvice: { fontSize: 12, color: T.color.label },
-  interQuote: { fontSize: 11, color: T.color.label2, fontStyle: 'italic' },
-  interSources: { fontSize: 11, color: T.color.label2 },
   notCheckedText: { fontSize: 11, color: T.color.warn, fontWeight: '600', paddingTop: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: T.color.label },
   itemCard: {
