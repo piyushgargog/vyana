@@ -19,6 +19,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  ErrorState,
   LargeTitle,
   Pill,
   Reveal,
@@ -261,17 +262,11 @@ export default function LabReportDetailPage({
           }
         />
         <Card>
-          <div className="space-y-3 py-2 text-center">
-            <p className="text-[17px] font-semibold text-label">
-              Could not load this report
-            </p>
-            <p className="text-[15px] text-label-2">
-              This report could not be loaded. Please try again.
-            </p>
-            <Button variant="secondary" onClick={() => refetch()}>
-              Try again
-            </Button>
-          </div>
+          <ErrorState
+            title="Could not load this report"
+            body="This report could not be loaded. Please try again."
+            onRetry={() => refetch()}
+          />
         </Card>
       </div>
     );
