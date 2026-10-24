@@ -1,10 +1,10 @@
-// The Today brief card (#488), at the top of Today in place of "Suggestions for you".
-// Its words come from `buildTodayBrief` in @vyana/shared — computed in code from the
-// day's own data (next dose, resting heart rate trend, a waiting care suggestion),
-// never from a model. When there is nothing to say the card is not rendered at all,
-// and no part of it ever shows an empty suggestions section.
+// The Today brief card (#488), at the top of Today. Its words come from
+// `buildTodayBrief` in @vyana/shared — computed in code from the day's own data
+// (next dose, resting heart rate trend, a waiting care suggestion), never from
+// a model. When there is nothing to say the card is not rendered at all, and no
+// part of it ever shows an empty suggestions section.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { buildTodayBrief, useMyAgentProposals, type DayValue } from "@vyana/shared";
@@ -25,9 +25,15 @@ export function BriefCard({
   const { data: proposalsData } = useMyAgentProposals();
   const { today, days } = useDeviceActivity();
 
-  // The clock suggestions.tsx keeps: an expiry is judged against the moment the
-  // card rendered, not a fresh read on every render.
-  const [nowMs] = useState(() => Date.now());
+  // The ticking clock suggestions.tsx keeps: the time is re-read every 30 s,
+  // so a proposal that expires while Today stays open stops counting here too
+  // and its "Ask your doctor" line drops without waiting for a refetch
+  // (#525 review).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, []);
   const hasCareSuggestion = (proposalsData?.proposals ?? []).some(
     (p) => p.expires_at === null || new Date(p.expires_at).getTime() > nowMs,
   );
