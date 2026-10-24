@@ -15,12 +15,20 @@ export function useDeleteDoseLog() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { item_id: string; scheduled_for: string }) => {
-      const { error } = await sb
+      // `.select()` asks for the deleted rows back: under RLS a delete that
+      // matches nothing answers with no error and zero rows, so checking
+      // `error` alone would report success while the dose kept its new status
+      // and the undo was gone (#525 review). Zero rows back is a failure.
+      const { data, error } = await sb
         .from("dose_logs")
         .delete()
         .eq("item_id", input.item_id)
-        .eq("scheduled_for", input.scheduled_for);
+        .eq("scheduled_for", input.scheduled_for)
+        .select("id");
       if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Could not undo that dose. Try again.");
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [DB_KEYS.doseLogs] });
