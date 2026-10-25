@@ -118,7 +118,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - When a model rejects its answer, the pool skips that model's other keys and goes straight to the next model, and the log line carries the provider's short reason.
 - The care plan works again on the free Groq tier: the model gets the first 3,500 characters of each guideline page instead of 12,000, because prompt and answer together must fit 8,000 tokens a minute (before, every answer was cut short and the request ended in a timeout)
 - Doctor workspace now follows the web design system (issue #549): the OPD queue, patient summary, care-plan editor and e-prescription pages use the shared Field, SelectField and TextAreaField controls and LargeTitle page headers, the shared type scale replaces the denser doctor-only sizes, the patient summary tabs and doctor search meet the 44px target height, and the care-plan editor's icon-only remove buttons have accessible names and 44px targets.).
-- - Selects show a dropdown arrow again (issue #549): the shared SelectField hid the native indicator with nothing in its place, so fields like the medicine-form pickers on the doctor's prescribe page did not read as dropdowns; the field now draws its own chevron.
+- Selects show a dropdown arrow again (issue #549): the shared SelectField hid the native indicator with nothing in its place, so fields like the medicine-form pickers on the doctor's prescribe page did not read as dropdowns; the field now draws its own chevron.
 
 ## [1.1.0] - 2026-10-22
 
