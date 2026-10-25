@@ -294,6 +294,21 @@ describe("planFollowUpReminders", () => {
     expect(plan).toHaveLength(1);
     expect(plan[0].at.getTime()).toBe(at(31, 10).getTime());
   });
+
+  it("gives two case-variants of one test different ids, so neither replaces the other", () => {
+    const plan = planFollowUpReminders(
+      "cp-1",
+      [
+        { test: "HbA1c", every_days: 90 },
+        { test: "HBA1C", every_days: 90 },
+      ],
+      {},
+      "2026-01-01",
+      at(12, 12),
+    );
+    expect(plan).toHaveLength(2);
+    expect(new Set(plan.map((p) => p.id)).size).toBe(2);
+  });
 });
 
 describe("findLastDone", () => {

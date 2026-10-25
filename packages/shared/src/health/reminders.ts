@@ -170,14 +170,21 @@ export function planFollowUpReminders(
 ): PlannedNotification[] {
   const today = formatLocalDate(now);
   const planned: PlannedNotification[] = [];
+  // A notification id must be unique within the plan: two case-variants of one
+  // test ("HbA1c", "HBA1C") used to share an id, so scheduling the second
+  // replaced the first and one reminder was silently lost.
+  const seenIds = new Map<string, number>();
   for (const { test, every_days } of tests) {
     if (!(every_days > 0)) continue;
     const base = findLastDone(test, lastDone) ?? approvedOn;
     const due = addDays(base, every_days);
     const dueAt = atLocalTime(due, `${String(REMINDER_HOUR.followUp).padStart(2, "0")}:00`);
     const at = due > today && dueAt.getTime() > now.getTime() ? dueAt : nextOccurrenceOfHour(now, REMINDER_HOUR.followUp);
+    const baseId = `followup:${planId}:${test.trim().toLowerCase()}`;
+    const count = (seenIds.get(baseId) ?? 0) + 1;
+    seenIds.set(baseId, count);
     planned.push({
-      id: `followup:${planId}:${test.trim().toLowerCase()}`,
+      id: count === 1 ? baseId : `${baseId}:${count}`,
       kind: "follow_up",
       at,
       title: "Time for a check-up test",
