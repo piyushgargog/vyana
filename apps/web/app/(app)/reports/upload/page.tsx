@@ -482,7 +482,7 @@ export default function ReportUploadPage() {
             >
               Keep reviewing
             </Button>
-            <Button variant="primary" onClick={handleDiscard}>
+            <Button variant="destructive" onClick={handleDiscard}>
               Start over
             </Button>
           </div>
