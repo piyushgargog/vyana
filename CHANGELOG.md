@@ -117,7 +117,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - A care plan no longer fails with a server error when the first model rejects its long answer (Groq `400 json_validate_failed`): the next model in the pool is tried. Every error that stops the model pool is now logged with its status and code.
 - When a model rejects its answer, the pool skips that model's other keys and goes straight to the next model, and the log line carries the provider's short reason.
 - The care plan works again on the free Groq tier: the model gets the first 3,500 characters of each guideline page instead of 12,000, because prompt and answer together must fit 8,000 tokens a minute (before, every answer was cut short and the request ended in a timeout).
-
+- Two web screens again follow the one-primary-button rule (issue #563): the appointments screen no longer shows its header "Book a token" button alongside the identical primary in the empty state or the no-upcoming card, and starting over from the report-upload review sheet is now a destructive action instead of a primary button, leaving "Done — view report" as that screen's only primary.
 ## [1.1.0] - 2026-10-22
 
 ### Added
