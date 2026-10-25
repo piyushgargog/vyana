@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ComponentProps, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "./cn";
 
 const CONTROL =
@@ -51,9 +52,12 @@ export function SelectField({ label, hint, error, className, id, children, ...re
   const fid = id ?? auto;
   return (
     <Shell id={fid} label={label} hint={hint} error={error} className={className}>
-      <select id={fid} aria-invalid={error ? true : undefined} className={cn(CONTROL, "h-12 appearance-none")} {...rest}>
-        {children}
-      </select>
+      <div className="relative">
+        <select id={fid} aria-invalid={error ? true : undefined} className={cn(CONTROL, "h-12 appearance-none pr-11")} {...rest}>
+          {children}
+        </select>
+        <ChevronDown aria-hidden="true" className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-label-3" />
+      </div>
     </Shell>
   );
 }
