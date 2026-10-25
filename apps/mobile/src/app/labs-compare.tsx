@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { labSearchLinks } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import {
   MobileDisclaimerFooter,
 } from '@/components/ui-primitives';
-import { Button, Card, CardHeader, Screen, Symbol, Text } from '@/components/ui';
+import { Button, Card, CardHeader, Screen, Symbol, Text, TextField } from '@/components/ui';
 import { T } from '@/constants/theme';
 
 const POPULAR_TESTS = [
@@ -46,13 +46,12 @@ export default function LabsCompareScreen() {
 
       <Card>
         <CardHeader title="Find a lab test" />
-        <TextInput
+        <TextField
           accessibilityLabel="Lab test name"
           placeholder="e.g. HbA1c, Vitamin D, Lipid Profile"
           placeholderTextColor={T.color.label3}
           value={testName}
           onChangeText={setTestName}
-          style={styles.input}
         />
 
         <View style={styles.filterBlock}>
@@ -133,18 +132,6 @@ export default function LabsCompareScreen() {
 }
 
 const styles = StyleSheet.create({
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    fontSize: 16,
-    color: T.color.label,
-    minHeight: 44,
-  },
   filterBlock: { gap: T.space.sm },
   chip: {
     minHeight: 44,
