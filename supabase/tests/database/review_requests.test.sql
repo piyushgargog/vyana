@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(37);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'a@vyana.test', '{"full_name":"Patient A"}'),
@@ -99,7 +99,7 @@ select is(
 select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role authenticated;
 select is(
   (select count(*)::int from public.review_requests),
-  1, 'the addressed doctor reads it');
+  0, 'the addressed doctor cannot see it while it is still a draft');
 
 -- No plain update moves a request
 select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
@@ -126,6 +126,11 @@ select is(
   (select from_status || '>' || to_status || '>' || actor_id::text from public.review_events
     where request_id = '51000000-0000-0000-0000-000000000001'),
   'draft>pending>10000000-0000-0000-0000-000000000001', 'and the move is in the audit trail');
+select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role authenticated;
+select is(
+  (select count(*)::int from public.review_requests),
+  1, 'and once sent, the addressed doctor reads it');
+select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
 
 select throws_ok(
   $$ select public.transition_review('51000000-0000-0000-0000-000000000001', 'rejected') $$,

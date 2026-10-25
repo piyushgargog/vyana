@@ -99,9 +99,15 @@ create trigger review_requests_subject_owned
 -- them, born undecided (no edited text, no decision time, no expiry — those arrive only
 -- through the transitions below); nobody updates or deletes a request through the API,
 -- and events are written by the function alone.
+-- The patient reads everything of theirs; the addressed doctor reads a request only
+-- once the patient has sent it — a draft is the patient's unsent text, frozen ai_text
+-- and all, and is invisible to the doctor until it leaves draft.
 create policy "review_requests_select_party" on public.review_requests
   for select to authenticated
-  using ((select auth.uid()) = patient_id or (select auth.uid()) = doctor_id);
+  using (
+    (select auth.uid()) = patient_id
+    or ((select auth.uid()) = doctor_id and status <> 'draft')
+  );
 create policy "review_requests_insert_own_draft" on public.review_requests
   for insert to authenticated
   with check (
