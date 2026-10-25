@@ -3,7 +3,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -40,6 +39,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 
@@ -418,14 +418,13 @@ export default function BloodScreen() {
           })}
         </View>
 
-        <TextInput
+        <TextField
           accessibilityLabel="City"
           placeholder="City, for example Delhi"
           placeholderTextColor={T.color.label3}
           value={cityValue}
           onChangeText={setCity}
           autoComplete="postal-address-locality"
-          style={styles.input}
         />
         <Button
           title="Search blood banks"
@@ -504,38 +503,35 @@ export default function BloodScreen() {
         <Text variant="footnote" tone="secondary">
           Keep track of who you called. Uses the blood group, what is needed and the city above.
         </Text>
-        <TextInput
+        <TextField
           accessibilityLabel="Units needed"
           placeholder="Units needed (1 to 10)"
           placeholderTextColor={T.color.label3}
           value={units}
           onChangeText={setUnits}
           keyboardType="number-pad"
-          style={styles.input}
         />
         {units !== '' && !unitsOk ? (
           <Text variant="footnote" tone="danger">
             Enter 1 to 10 units
           </Text>
         ) : null}
-        <TextInput
+        <TextField
           accessibilityLabel="Hospital"
           placeholder="Hospital, where the blood is needed"
           placeholderTextColor={T.color.label3}
           value={hospital}
           onChangeText={setHospital}
-          style={styles.input}
         />
-        <TextInput
+        <TextField
           accessibilityLabel="Contact name"
           placeholder="Contact name"
           placeholderTextColor={T.color.label3}
           value={nameValue}
           onChangeText={setContactName}
           autoComplete="name"
-          style={styles.input}
         />
-        <TextInput
+        <TextField
           accessibilityLabel="Contact phone"
           placeholder="Contact phone"
           placeholderTextColor={T.color.label3}
@@ -543,7 +539,6 @@ export default function BloodScreen() {
           onChangeText={setContactPhone}
           autoComplete="tel"
           keyboardType="phone-pad"
-          style={styles.input}
         />
         <Button
           title="Start request"
@@ -590,18 +585,6 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   safetyCard: { borderWidth: 1, borderColor: T.color.dangerSoft },
   call108: { alignSelf: 'flex-start' },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    fontSize: 16,
-    color: T.color.label,
-    minHeight: 48,
-  },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: T.space.sm },
   chip: {
     minHeight: 44,
