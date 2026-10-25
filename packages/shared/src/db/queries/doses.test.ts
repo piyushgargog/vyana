@@ -14,7 +14,16 @@ describe("logDose (#495)", () => {
   it("upserts on (item_id, scheduled_for) with the signed-in patient filled in", async () => {
     const f = fakeSupabase({ responses: { dose_logs: [ok({ id: "d1" })] } });
     await logDose(f.sb, { item_id: "i-1", scheduled_for: "2026-10-23T02:30:00.000Z", status: "taken" });
-    const [rows, opts] = f.argsOf("upsert");
+    const [rawRows, opts] = f.argsOf("upsert");
+    // The fake records call arguments as unknown; the upsert payload is the dose_logs
+    // row logDose builds, so name its shape before reading fields off it.
+    const rows = rawRows as {
+      patient_id: string;
+      item_id: string;
+      scheduled_for: string;
+      status: string;
+      logged_at: string;
+    };
     expect(rows).toMatchObject({
       patient_id: "user-1",
       item_id: "i-1",
@@ -24,7 +33,7 @@ describe("logDose (#495)", () => {
     // logged_at is what makes the last write win (issue #495 step 1): it must be on the
     // payload, an ISO instant at the moment of the tap.
     expect(typeof rows.logged_at).toBe("string");
-    expect(Math.abs(Date.now() - new Date(rows.logged_at as string).getTime())).toBeLessThan(60_000);
+    expect(Math.abs(Date.now() - new Date(rows.logged_at).getTime())).toBeLessThan(60_000);
     expect(opts).toEqual({ onConflict: "item_id,scheduled_for" });
   });
 });
