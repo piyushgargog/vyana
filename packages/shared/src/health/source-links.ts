@@ -57,8 +57,24 @@ export function labSearchLinks(test: string): LabLookupLink[] {
 /** The public blood stock page of e-RaktKosh (NHM / C-DAC): no sign-in, the person picks state, district and component. */
 export const E_RAKTKOSH_URL = "https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/stockAvailability.cnt";
 
+/**
+ * The first `max` code points of a string, not UTF-16 units: slicing at `max`
+ * units can split an astral character in half, and the lone surrogate left
+ * behind makes `encodeURIComponent` throw instead of opening the share sheet.
+ */
+const capByCodePoints = (text: string, max: number): string => {
+  let out = "";
+  let count = 0;
+  for (const ch of text) {
+    if (count >= max) break;
+    out += ch;
+    count += 1;
+  }
+  return out;
+};
+
 /** Opens WhatsApp with the text typed in (works with the app and with WhatsApp Web). */
-export const whatsappShareUrl = (text: string): string => `https://wa.me/?text=${encodeURIComponent(text.slice(0, 1000))}`;
+export const whatsappShareUrl = (text: string): string => `https://wa.me/?text=${encodeURIComponent(capByCodePoints(text, 1000))}`;
 
 /** Opens the SMS app with the text typed in. */
-export const smsShareUrl = (text: string): string => `sms:?body=${encodeURIComponent(text.slice(0, 600))}`;
+export const smsShareUrl = (text: string): string => `sms:?body=${encodeURIComponent(capByCodePoints(text, 600))}`;
