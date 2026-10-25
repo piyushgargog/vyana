@@ -2,6 +2,7 @@
 // Rules decide; a model may only write words later. Each returns null or one proposal draft.
 
 import { addDays, getRefillStatus } from "@vyana/shared";
+import { istDate } from "../dates";
 
 export type ProposalKind = "refill_due" | "lab_recheck" | "missed_dose_pattern";
 
@@ -94,7 +95,10 @@ export function missedDosePatternRule(input: MissedDosePatternInput): ProposalDr
   const { today, itemId, medicineName, logs, hasCaregiver } = input;
   const weekStart = addDays(today, -6);
   const missed = logs.filter((log) => {
-    const day = log.scheduled_for.slice(0, 10);
+    // scheduled_for is a UTC timestamp; the window is India calendar days, so
+    // convert first — slicing the UTC date drops a dose taken just after
+    // midnight IST (00:00–05:29 IST is still the previous UTC day).
+    const day = istDate(new Date(log.scheduled_for));
     return log.status === "missed" && day >= weekStart && day <= today;
   }).length;
   if (missed < 3) return null;
