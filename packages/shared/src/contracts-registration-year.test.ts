@@ -35,3 +35,21 @@ describe("registration year", () => {
     expect(now).toBe(ist);
   });
 });
+
+describe("state council bound", () => {
+  it("doctor and admin paths both cap state_council at 80 characters", () => {
+    const ok = "C".repeat(80);
+    const tooLong = "C".repeat(81);
+    expect(DoctorVerifyReq.safeParse({ reg_no: "1", state_council: ok }).success).toBe(true);
+    expect(DoctorVerifyReq.safeParse({ reg_no: "1", state_council: tooLong }).success).toBe(false);
+    const adminCheck = {
+      doctor_id: "00000000-0000-4000-8000-000000000001",
+      decision: "approve",
+      reg_no: "1",
+      year: null,
+      note: "checked",
+    } as const;
+    expect(AdminDoctorCheckReq.safeParse({ ...adminCheck, state_council: ok }).success).toBe(true);
+    expect(AdminDoctorCheckReq.safeParse({ ...adminCheck, state_council: tooLong }).success).toBe(false);
+  });
+});
