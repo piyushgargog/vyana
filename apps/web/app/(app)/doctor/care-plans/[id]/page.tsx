@@ -338,7 +338,8 @@ function DoctorCarePlanReviewContent({
                       do: draftPlan.do.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-label-3 hover:text-danger-text font-bold px-1"
+                  aria-label={`Remove ${item}`}
+                  className="text-label-3 hover:text-danger-text font-bold inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
                 >
                   ✕
                 </button>
@@ -411,7 +412,8 @@ function DoctorCarePlanReviewContent({
                       dont: draftPlan.dont.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-label-3 hover:text-danger-text font-bold px-1"
+                  aria-label={`Remove ${item}`}
+                  className="text-label-3 hover:text-danger-text font-bold inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
                 >
                   ✕
                 </button>
@@ -492,7 +494,8 @@ function DoctorCarePlanReviewContent({
                         },
                       });
                     }}
-                    className="text-label-3 hover:text-danger-text px-1"
+                    aria-label={`Remove ${item}`}
+                    className="text-label-3 hover:text-danger-text inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
                   >
                     ✕
                   </button>
@@ -568,7 +571,8 @@ function DoctorCarePlanReviewContent({
                         },
                       });
                     }}
-                    className="text-label-3 hover:text-danger-text px-1"
+                    aria-label={`Remove ${item}`}
+                    className="text-label-3 hover:text-danger-text inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
                   >
                     ✕
                   </button>
@@ -646,7 +650,8 @@ function DoctorCarePlanReviewContent({
                     red_flags: draftPlan.red_flags.filter((_, i) => i !== idx),
                   });
                 }}
-                className="text-label-3 hover:text-danger-text font-bold px-1"
+                aria-label={`Remove ${item}`}
+                className="text-label-3 hover:text-danger-text font-bold inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
               >
                 ✕
               </button>
@@ -710,7 +715,8 @@ function DoctorCarePlanReviewContent({
                       follow_up_tests: draftPlan.follow_up_tests.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-label-3 hover:text-danger-text px-1"
+                  aria-label={`Remove ${ft.test}`}
+                  className="text-label-3 hover:text-danger-text inline-flex min-h-11 min-w-11 items-center justify-center rounded-row"
                 >
                   ✕
                 </button>
