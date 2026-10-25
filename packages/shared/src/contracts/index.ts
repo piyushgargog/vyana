@@ -16,6 +16,22 @@ export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), 
 const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.string().nullable().optional() };
 
 // ---------- shared pieces ----------
+export const PriceSource = z.enum(["1mg","pharmeasy","netmeds","apollo","janaushadhi","healthians","redcliffe","thyrocare","1mg_labs"]);
+export const PriceQuote = z.object({
+  kind: z.enum(["medicine","lab_test"]),
+  query: z.string(),
+  source: PriceSource,
+  product_name: z.string(),
+  pack_size: z.string().nullable(),
+  price: z.number().nullable(),          // INR selling price
+  mrp: z.number().nullable(),            // INR
+  in_stock: z.boolean().nullable(),
+  product_url: z.string().nullable(),
+  fetched_at: z.string(),                // ISO datetime
+  price_verified: z.boolean().optional(), // CONTRACT CHANGED 13 Oct (ADR-050): price seen on the fetched page
+});
+export const SourceStatus = z.object({ source: PriceSource, status: z.enum(["pending","ok","not_found","timeout","error"]) }); // "pending" added 13 Oct (ADR-050)
+
 export const Hospital = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -57,8 +73,24 @@ export const LabValue = z.object({
 
 export const SourceLink = z.object({ title: z.string(), url: z.string() });
 
+// ---------- single-medicine price check ----------
+// No route of its own (ADR-038): medicines.compare posts a one-item basket and returns BasketCompareRes.
+export const MedicinesCompareReq = z.object({ medicine: z.string().trim().min(2), strength: z.string().optional() });
+
+// ---------- POST /api/labs/compare ----------
+export const LabsCompareReq = z.object({ test_name: z.string().trim().min(2), city: z.string().trim().min(2) });
+export const LabsCompareRes = z.object({            // CONTRACT CHANGED 13 Oct (ADR-050): a job like the basket
+  job_id: z.string().min(1),                          // poll GET /api/labs/compare/{job_id} while running
+  status: z.enum(["running","done"]),
+  query: z.string(), city: z.string(),
+  quotes: z.array(PriceQuote),                        // verified first, by price
+  sources: z.array(SourceStatus),
+  cheapest: PriceQuote.nullable(),                    // lowest VERIFIED price
+  cached: z.boolean(),
+});
+
 // ---------- POST /api/blood/search · GET /api/blood/search/{job_id} ----------  (RapidBlood, v1.1.0)
-// A job like the blood search: POST starts it, poll GET while `status` is "running". Words in the UI are "listed",
+// A job like the basket and the labs: POST starts it, poll GET while `status` is "running". Words in the UI are "listed",
 // never "available": a row is what a public source page showed at `fetched_at`.
 export const BloodGroup = z.enum(["A+","A-","B+","B-","AB+","AB-","O+","O-"]);
 export const BloodComponent = z.enum(["whole_blood","red_cells","platelets","plasma"]);
@@ -247,6 +279,46 @@ export const LabValueCorrectRes = z.object({
   follow_up_tests: z.array(z.string()),
 });
 
+// ---------- POST /api/prescriptions/basket ----------
+export const BasketItemInput = z.object({
+  medicine: z.string().trim().min(2),
+  strength: z.string().optional(),
+  quantity: z.number().int().positive().optional(),   // packs to buy; default 1
+});
+export const BasketCompareReq = z.object({
+  prescription_id: z.guid().optional(),      // price the prescription's active items
+  items: z.array(BasketItemInput).min(1).max(10).optional(), // or an ad-hoc list (e.g. "Reorder" for one item)
+}).refine((b) => Boolean(b.prescription_id) !== Boolean(b.items), { message: "Send prescription_id or items, not both" });
+export const BasketLine = z.object({
+  medicine: z.string(),
+  strength: z.string().nullable(),
+  quantity: z.number().int(),
+  product_name: z.string().nullable(),
+  pack_size: z.string().nullable(),
+  unit_price: z.number().nullable(),                  // INR per pack
+  line_total: z.number().nullable(),                  // unit_price × quantity; null unless price_verified
+  in_stock: z.boolean().nullable(),
+  product_url: z.string().nullable(),
+  price_verified: z.boolean(),                        // the price was found on the fetched product page (plan §2A)
+});
+export const PharmacyBasket = z.object({
+  source: PriceSource,
+  status: z.enum(["pending","ok","partial","not_found","timeout","error"]), // pending = agent still running; partial = some items missing or unverified
+  lines: z.array(BasketLine),
+  total: z.number().nullable(),                       // sum of verified lines
+  missing: z.array(z.string()),                       // medicines not found on this pharmacy
+  checkout_url: z.string().nullable(),                // page the user opens to order and pay
+});
+export const BasketCompareRes = z.object({
+  job_id: z.string().min(1),                          // opaque; poll GET /api/prescriptions/basket/{job_id} while running
+  status: z.enum(["running","done"]),               // done = no basket is pending
+  baskets: z.array(PharmacyBasket),                   // complete baskets first, then by total asc; nulls last
+  cheapest_source: PriceSource.nullable(),            // cheapest COMPLETE basket
+  generic: z.object({ lines: z.array(BasketLine), total: z.number().nullable() }).nullable(), // Jan Aushadhi
+  savings_vs_highest: z.number().nullable(),          // INR: most expensive complete basket − cheapest
+  cached: z.boolean(),
+});
+
 // ---------- POST /api/care-plan ----------  (replaces the v1 nutrition plan)
 export const CarePlan = z.object({
   condition: z.string(),
@@ -304,6 +376,30 @@ export const TriageRes = z.object({
   red_flags: z.array(z.string()),
   disclaimer: z.string(),
   ai: AiMeta,
+});
+
+// ---------- POST /api/hospitals/info ----------
+export const HospitalInfoReq = z.object({ hospital_id: z.guid() });
+export const HospitalInfoRes = z.object({
+  hospital_id: z.guid(),
+  opd: z.array(z.object({ department: z.string(), days: z.string(), timings: z.string() })),
+  notes: z.string().nullable(),
+  source_url: z.string().nullable(),
+  fetched_at: z.string(),
+  cached: z.boolean(),
+});
+
+// ---------- POST /api/schemes/pmjay-hospitals ----------
+export const PmjayHospitalsReq = z.object({ lat: Lat, lng: Lng });
+export const PmjayHospitalsRes = z.object({
+  area: z.string().nullable(),
+  hospitals: z.array(z.object({
+    name: z.string(),
+    address: z.string().nullable(),
+    specialities: z.array(z.string()),
+    source_url: z.string().nullable(),
+  })),
+  cached: z.boolean(),
 });
 
 // ---------- GET /api/share/[token] ----------  (no auth; token in the path)
@@ -411,10 +507,16 @@ export const DeviceConnectionsRes = z.object({
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>;
+export type PriceSource = z.infer<typeof PriceSource>;
+export type PriceQuote = z.infer<typeof PriceQuote>;
+export type SourceStatus = z.infer<typeof SourceStatus>;
 export type Hospital = z.infer<typeof Hospital>;
 export type PrescriptionItem = z.infer<typeof PrescriptionItem>;
 export type LabValue = z.infer<typeof LabValue>;
 export type SourceLink = z.infer<typeof SourceLink>;
+export type MedicinesCompareReq = z.infer<typeof MedicinesCompareReq>;
+export type LabsCompareReq = z.infer<typeof LabsCompareReq>;
+export type LabsCompareRes = z.infer<typeof LabsCompareRes>;
 export type BloodGroup = z.infer<typeof BloodGroup>;
 export type BloodComponent = z.infer<typeof BloodComponent>;
 export type BloodSearchReq = z.infer<typeof BloodSearchReq>;
@@ -448,6 +550,11 @@ export type LabValueCorrectReq = z.infer<typeof LabValueCorrectReq>;
 export type LabValueCorrectRes = z.infer<typeof LabValueCorrectRes>;
 export type Language = z.infer<typeof Language>;
 export type AiMeta = z.infer<typeof AiMeta>;
+export type BasketItemInput = z.infer<typeof BasketItemInput>;
+export type BasketCompareReq = z.infer<typeof BasketCompareReq>;
+export type BasketLine = z.infer<typeof BasketLine>;
+export type PharmacyBasket = z.infer<typeof PharmacyBasket>;
+export type BasketCompareRes = z.infer<typeof BasketCompareRes>;
 export type CarePlan = z.infer<typeof CarePlan>;
 export type CarePlanStatus = z.infer<typeof CarePlanStatus>;
 export type GenerateCarePlanReq = z.infer<typeof GenerateCarePlanReq>;
@@ -457,6 +564,10 @@ export type Interaction = z.infer<typeof Interaction>;
 export type InteractionsRes = z.infer<typeof InteractionsRes>;
 export type TriageReq = z.infer<typeof TriageReq>;
 export type TriageRes = z.infer<typeof TriageRes>;
+export type HospitalInfoReq = z.infer<typeof HospitalInfoReq>;
+export type HospitalInfoRes = z.infer<typeof HospitalInfoRes>;
+export type PmjayHospitalsReq = z.infer<typeof PmjayHospitalsReq>;
+export type PmjayHospitalsRes = z.infer<typeof PmjayHospitalsRes>;
 export type SharedProfile = z.infer<typeof SharedProfile>;
 export type ShareScope = z.infer<typeof ShareScope>;
 export type ShareMemory = z.infer<typeof ShareMemory>;

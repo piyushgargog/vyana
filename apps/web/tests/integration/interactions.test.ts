@@ -29,7 +29,7 @@ const item = (medicine_name: string, strength: string | null, extra: Record<stri
 });
 
 beforeEach(() => {
-  vi.stubEnv("WEB_MOCK", "1");
+  vi.stubEnv("TINYFISH_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   db.rows.prescription_items = [

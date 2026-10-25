@@ -10,7 +10,9 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(self), microphone=(), geolocation=(self)"
 	}
-	# Access log. A ?secret=... query value is redacted so it can never land in a log.
+	# Access log with any webhook secret redacted from the URL (issue #152):
+	# a webhook that can send no custom headers and signs nothing may have to carry
+	# its secret as ?secret=... in the URL. The value must never land in a log.
 	log {
 		format filter {
 			fields {

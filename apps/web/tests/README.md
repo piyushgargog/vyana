@@ -6,8 +6,8 @@ Tests for the API in `apps/web/app/api/**` and the server code in `apps/web/lib/
 
 ```
 tests/
-├─ unit/          # one service at a time, external clients mocked (web readers, LLM, Supabase)
-├─ integration/   # route handlers end to end, with WEB_MOCK=1 and LLM_MOCK=1
+├─ unit/          # one service at a time, external clients mocked (TinyFish, LLM, Supabase)
+├─ integration/   # route handlers end to end, with TINYFISH_MOCK=1, WEB_MOCK=1 and LLM_MOCK=1
 └─ fixtures/      # request bodies and expected responses shared by tests
 ```
 
@@ -15,7 +15,7 @@ The safety cases (emergency phrases, no diagnosis, no dose advice, citations, pr
 
 ## Rules
 
-- **No network in tests.** The web readers, the LLM and Supabase are mocked or run in mock mode. Live-web checks are manual evaluation runs, not tests.
+- **No network in tests.** TinyFish, the LLM and Supabase are mocked or run in mock mode. Live-web checks are manual evaluation runs, not tests.
 - Every route gets at least:
   - happy path (response matches its `...Res` schema)
   - missing token → 401

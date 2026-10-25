@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiError } from "../../api/client";
 import { useApi } from "../../api/context";
 import type {
+  BasketCompareReq,
+  BasketCompareRes,
   BloodSearchReq,
   BloodSearchRes,
   DoctorVerifyReq,
@@ -16,10 +18,17 @@ import type {
   EmergencySosRes,
   GenerateCarePlanReq,
   GenerateCarePlanRes,
+  HospitalInfoReq,
+  HospitalInfoRes,
   InteractionsReq,
   InteractionsRes,
+  LabsCompareReq,
+  LabsCompareRes,
+  MedicinesCompareReq,
   MeExportRes,
   OkRes,
+  PmjayHospitalsReq,
+  PmjayHospitalsRes,
   PrescriptionExtractReq,
   PrescriptionExtractRes,
   ReportAnalyzeReq,
@@ -36,6 +45,57 @@ export { QUERY_ROOTS } from "./query-roots";
 export { useMyAgentProposals, useDecideAgentProposal } from "./agent-proposals";
 export { useJoinWaitlistPage } from "./plans";
 export * from "./devices";
+
+export function useCompareMedicine() {
+  const api = useApi();
+  // A one-item basket job (ADR-038): poll the returned job_id with useBasketJob.
+  return useMutation<BasketCompareRes, ApiError, MedicinesCompareReq>({
+    mutationKey: ["medicines", "compare"],
+    mutationFn: (body) => api.medicines.compare(body),
+  });
+}
+
+export function useBasketCompare() {
+  const api = useApi();
+  return useMutation<BasketCompareRes, ApiError, BasketCompareReq>({
+    mutationKey: ["prescriptions", "basket"],
+    mutationFn: (body) => api.basket.compare(body),
+  });
+}
+
+/** Polls a basket job every 4 s until it is done. Pass the `job_id` from `useBasketCompare`. */
+export function useBasketJob(jobId: string | null | undefined) {
+  const api = useApi();
+  return useQuery<BasketCompareRes, ApiError>({
+    queryKey: [QUERY_ROOTS.basketJob, jobId],
+    queryFn: () => api.basket.job(jobId as string),
+    enabled: Boolean(jobId),
+    // Stops on "done" and also after an error (a 404 for an expired job would otherwise be asked again every 4 s for ever).
+    refetchInterval: (query) => (query.state.error || query.state.data?.status === "done" ? false : 4000),
+    retry: 1,
+  });
+}
+
+export function useCompareLabTest() {
+  const api = useApi();
+  return useMutation<LabsCompareRes, ApiError, LabsCompareReq>({
+    mutationKey: ["labs", "compare"],
+    mutationFn: (body) => api.labs.compare(body),
+  });
+}
+
+/** Polls a lab compare job every 4 s until it is done. Pass the `job_id` from `useCompareLabTest`. */
+export function useLabsJob(jobId: string | null | undefined) {
+  const api = useApi();
+  return useQuery<LabsCompareRes, ApiError>({
+    queryKey: ["labs-job", jobId],
+    queryFn: () => api.labs.job(jobId as string),
+    enabled: Boolean(jobId),
+    // Stops on "done" and also after an error (a 404 for an expired job would otherwise be asked again every 4 s for ever).
+    refetchInterval: (query) => (query.state.error || query.state.data?.status === "done" ? false : 4000),
+    retry: 1,
+  });
+}
 
 export function useSearchBlood() {
   const api = useApi();
@@ -73,6 +133,24 @@ export function useSos() {
     mutationKey: ["emergency", "sos"],
     mutationFn: (body) => api.emergency.sos(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.emergency] }),
+  });
+}
+
+export function useHospitalInfo() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation<HospitalInfoRes, ApiError, HospitalInfoReq>({
+    mutationKey: ["hospitals", "info"],
+    mutationFn: (body) => api.hospitals.info(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_ROOTS.hospitals] }),
+  });
+}
+
+export function usePmjayHospitals() {
+  const api = useApi();
+  return useMutation<PmjayHospitalsRes, ApiError, PmjayHospitalsReq>({
+    mutationKey: ["schemes", "pmjay"],
+    mutationFn: (body) => api.schemes.pmjayHospitals(body),
   });
 }
 

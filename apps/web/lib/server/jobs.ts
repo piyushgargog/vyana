@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TTL, cached } from "./cache";
 import { notFound } from "./errors";
 import { requireEnv } from "./supabase-admin";
+import type { CallCounter, RunState } from "./tinyfish/client";
 
 /**
  * Job tokens (ADR-035): the state of a background job travels inside its id, encrypted and signed with
@@ -45,6 +46,21 @@ export function openJob(token: string): unknown | null {
 
 // ---------------------------------------------------------------- polling a job
 
+/**
+ * TinyFish queues runs beyond the account's browser limit (2 at once on our plan, measured 12 Oct), so a run may
+ * wait for another job to finish before it starts. Every agent job gives a queued run this long from the job's
+ * start. The deadline counts only the wait: once a run has started, its own run deadline is the one that applies,
+ * however long it waited (timing a started run out by the job's age cancelled healthy runs, fixed in #368).
+ */
+export const QUEUE_DEADLINE_MS = 480_000;
+
+/**
+ * The run deadline of a single-task agent: its 150 s cap plus 40 s of grace. This is a deliberate per-job
+ * difference, not a shared rule — a job whose agent does more work (the basket, one run per pharmacy pricing
+ * every item) passes its own scaled deadline to `pollAgentRun` instead of this one.
+ */
+export const FLAT_RUN_DEADLINE_MS = 190_000;
+
 /** Every job poll starts the same way: open the token, check the job belongs to the caller, else not found. */
 export function openJobForUser<S extends z.ZodTypeAny>(schema: S, token: string, uid: string, notFoundMessage: string): z.infer<S> {
   const parsed = schema.safeParse(openJob(token));
@@ -62,4 +78,93 @@ export async function cachedJobResult<T>(key: string, kind: string, expiredMessa
 /** Stores a job's finished result under its key, where the next identical request finds it. */
 export async function cacheJobResult<T>(key: string, kind: string, result: T): Promise<void> {
   await cached<T>(key, kind, TTL.day, async () => result);
+}
+
+export type AgentRunPollState = "completed" | "pending" | "timeout" | "error";
+
+/**
+ * One run's poll decision, shared by every agent job: a finished run is processed, a failed one maps its error
+ * (a provider timeout, an exhausted step budget and a cancellation all read as "timeout"), and a run that is
+ * still going is cancelled once it passes a deadline — the run deadline once it has started, the queue
+ * deadline while it has not.
+ */
+export function agentRunPollDecision(
+  run: RunState,
+  opts: { jobStartedAt: number; runDeadlineMs: number; queueDeadlineMs?: number; now?: number },
+): { state: AgentRunPollState; cancel: boolean } {
+  if (run.status === "COMPLETED") return { state: "completed", cancel: false };
+  if (run.status === "FAILED" || run.status === "CANCELLED") {
+    const state = run.error === "TIMEOUT" || run.error === "MAX_STEPS_EXCEEDED" || run.status === "CANCELLED" ? "timeout" : "error";
+    return { state, cancel: false };
+  }
+  const now = opts.now ?? Date.now();
+  const stuckRunning = run.status === "RUNNING" && run.startedAt !== null && now - run.startedAt > opts.runDeadlineMs;
+  // Only a run TinyFish itself reports as PENDING is queued. A RUNNING report with
+  // no start time can also be `getRun`'s "unknown" answer to a transient failure:
+  // cancelling on the queue deadline then would kill a healthy run that has in
+  // fact started, so no deadline applies until the provider reports a real state.
+  const stuckQueued = run.status === "PENDING" && now - opts.jobStartedAt > (opts.queueDeadlineMs ?? QUEUE_DEADLINE_MS);
+  return stuckRunning || stuckQueued ? { state: "timeout", cancel: true } : { state: "pending", cancel: false };
+}
+
+export type PollAgentRunOutcome<T> =
+  | { state: "completed"; value: T }
+  | { state: Exclude<AgentRunPollState, "completed">; value: null };
+
+/**
+ * Polls one agent run of a job: a run whose processed result is already cached answers from the cache, a
+ * completed run is processed once (by the caller's `processResult`) and cached, and an unfinished run reports
+ * its state. The caller keeps only what is its own: which run deadline its job type uses, and how a finished
+ * run's raw result becomes its answer.
+ */
+type PollAgentRunOpts<T> = {
+  runId: string;
+  cacheKey: string;
+  cacheKind: string;
+  jobStartedAt: number;
+  /** This job type's run deadline — an explicit choice per job (see FLAT_RUN_DEADLINE_MS). */
+  runDeadlineMs: number;
+  queueDeadlineMs?: number;
+  counter?: CallCounter;
+  getRun: (runId: string, opts?: { counter?: CallCounter }) => Promise<RunState>;
+  cancelRun: (runId: string, opts?: { counter?: CallCounter }) => Promise<void>;
+  processResult: (result: unknown) => Promise<T>;
+};
+
+/**
+ * Polls of the same run already in flight in this process, by cache key. `cached()`
+ * shares the underlying compute between concurrent callers, but the poll state is
+ * decided inside that compute — without sharing it too, a caller who joined an
+ * in-flight poll would report "pending" for a run the compute just timed out or
+ * errored. Concurrent callers therefore share the whole outcome, state included.
+ */
+const inFlightPolls = new Map<string, Promise<PollAgentRunOutcome<unknown>>>();
+
+export async function pollAgentRun<T>(opts: PollAgentRunOpts<T>): Promise<PollAgentRunOutcome<T>> {
+  const inFlight = inFlightPolls.get(opts.cacheKey);
+  if (inFlight) return inFlight as Promise<PollAgentRunOutcome<T>>;
+  const run = pollAgentRunOnce(opts) as Promise<PollAgentRunOutcome<unknown>>;
+  inFlightPolls.set(opts.cacheKey, run);
+  try {
+    return (await run) as PollAgentRunOutcome<T>;
+  } finally {
+    inFlightPolls.delete(opts.cacheKey);
+  }
+}
+
+async function pollAgentRunOnce<T>(opts: PollAgentRunOpts<T>): Promise<PollAgentRunOutcome<T>> {
+  let state: Exclude<AgentRunPollState, "completed"> = "pending";
+  const done = await cached<T>(opts.cacheKey, opts.cacheKind, TTL.day, async () => {
+    const run = await opts.getRun(opts.runId, { counter: opts.counter });
+    const decision = agentRunPollDecision(run, {
+      jobStartedAt: opts.jobStartedAt,
+      runDeadlineMs: opts.runDeadlineMs,
+      queueDeadlineMs: opts.queueDeadlineMs,
+    });
+    if (decision.state === "completed") return opts.processResult(run.result);
+    if (decision.cancel) await opts.cancelRun(opts.runId, { counter: opts.counter });
+    state = decision.state;
+    return null;
+  });
+  return done ? { state: "completed", value: done.value } : { state, value: null };
 }

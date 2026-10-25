@@ -100,7 +100,7 @@ Two cases. **They were not rehearsed**: do the first rehearsal on a scratch Supa
 
 ## Rate limits
 
-The AI routes count each signed-in user's calls (table `rate_limits`, function `hit_rate_limit`, migration 0012). Over the limit the API answers `429 RATE_LIMITED` with a `Retry-After` header; the apps show the wait. If the counter itself fails or takes more than 2 seconds, the request goes through (fail open) and `rate_limit_check_failed` is logged. SOS is never limited, and mock runs (`LLM_MOCK=1`, `WEB_MOCK=1`) are not counted.
+The AI and web-agent routes count each signed-in user's calls (table `rate_limits`, function `hit_rate_limit`, migration 0012). Over the limit the API answers `429 RATE_LIMITED` with a `Retry-After` header; the apps show the wait. If the counter itself fails or takes more than 2 seconds, the request goes through (fail open) and `rate_limit_check_failed` is logged. SOS is never limited, and mock runs (`LLM_MOCK=1`, `TINYFISH_MOCK=1`) are not counted.
 
 To let an account run without limits (the safety eval, the prewarm, recording the demo), put its user id in `RATE_LIMIT_EXEMPT_USER_IDS` in `apps/web/.env.production` (comma separated), then run the deploy command. Each exempt call logs `rate_limit_exempt` without the id. Remove the id afterwards.
 

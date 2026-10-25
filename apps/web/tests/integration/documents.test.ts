@@ -21,7 +21,7 @@ const post = (handler: (req: Request, p: undefined) => Promise<Response>, body: 
 const upload = (bucket: string, path: string, bytes = 1000) => db.storage.set(`${bucket}/${path}`, new Blob([new Uint8Array(bytes)], { type: "image/jpeg" }));
 
 beforeEach(() => {
-  vi.stubEnv("WEB_MOCK", "1");
+  vi.stubEnv("TINYFISH_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   db.rows.profiles[0].allergies = ["Metformin"];

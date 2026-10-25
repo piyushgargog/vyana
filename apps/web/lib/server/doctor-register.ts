@@ -1,8 +1,10 @@
 import "server-only";
 
 /**
- * Registration-number matching for the manual doctor check (issue #344): an admin checks the public register
- * by hand, and these two helpers keep the "one registration, one account" rule.
+ * Registration-number matching for the manual doctor check (issue #344): an admin checks the
+ * public register by hand, and these two helpers keep the "one registration, one account" rule.
+ * They are the single definition — `tinyfish/nmc.ts` imports them from here, so the register
+ * lookup and the manual check always agree on what counts as the same number and council.
  */
 
 /** "MCI/12-345" and "mci 12345" are the same number. */

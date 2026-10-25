@@ -19,8 +19,14 @@ export interface RateLimitVerdict {
 /** A broken counter must never keep a patient out, so the check gives up after this long and lets the request through. */
 const CHECK_TIMEOUT_MS = 2000;
 
-/** Mock runs (`LLM_MOCK=1`, `WEB_MOCK=1`) cost nothing, so they are not counted: tests and the eval scripts stay under no limit. */
-const isMockRun = () => process.env.LLM_MOCK === "1" || process.env.WEB_MOCK === "1";
+/**
+ * A run is not counted only when every paid upstream it can reach is mocked: the LLM
+ * (`LLM_MOCK=1`) and the web layer (`TINYFISH_MOCK=1` or `WEB_MOCK=1`). A single mock
+ * flag is not enough — with only `TINYFISH_MOCK=1` the assistant still calls the real
+ * LLM, and its calls must stay counted.
+ */
+const isMockRun = () =>
+  process.env.LLM_MOCK === "1" && (process.env.TINYFISH_MOCK === "1" || process.env.WEB_MOCK === "1");
 
 /**
  * Users who are never counted: `RATE_LIMIT_EXEMPT_USER_IDS`, comma separated, on the server only. It exists so the safety

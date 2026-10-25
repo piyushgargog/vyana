@@ -9,9 +9,12 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "smoke:tinyfish": "tsx --conditions=react-server ../../scripts/smoke-tinyfish.mts",
+    "smoke:basket": "tsx --conditions=react-server ../../scripts/smoke-basket.mts",
     "verify:interactions": "tsx --conditions=react-server ../../scripts/verify-interactions.mts",
     "verify:red-flags": "tsx --conditions=react-server ../../scripts/verify-red-flags.mts",
     "verify:brands": "tsx --conditions=react-server ../../scripts/verify-brands.mts",
+    "prewarm": "tsx --conditions=react-server ../../scripts/prewarm-cache.mts",
     "live:check": "tsx ../../scripts/live-check.mts",
     "review:sheet": "tsx --conditions=react-server ../../scripts/review-sheet.mts",
     "eval:safety": "tsx --conditions=react-server ../../scripts/eval-safety.mts"
