@@ -128,14 +128,22 @@ export default function AppointmentsPage() {
 
   const hasAnyAppointments = appointments.length > 0;
 
+  // One primary button per screen: the empty state and the no-upcoming card
+  // each render their own primary "Book a token", so the header action is
+  // suppressed whenever one of those is on screen.
+  const inlinePrimaryShown =
+    !isLoading && !isError && (!hasAnyAppointments || upcoming.length === 0);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <LargeTitle
         title="My appointments"
         actions={
-          <ButtonLink href="/appointments/book" variant="primary" size="md">
-            Book a token
-          </ButtonLink>
+          inlinePrimaryShown ? undefined : (
+            <ButtonLink href="/appointments/book" variant="primary" size="md">
+              Book a token
+            </ButtonLink>
+          )
         }
       />
 
