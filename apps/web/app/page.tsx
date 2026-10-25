@@ -1,20 +1,19 @@
 import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AuthActions, HeroActions } from "@/components/auth-actions";
+import { AuthActions, LandingActions } from "@/components/auth-actions";
 import {
   BrandMark,
   ButtonLink,
   Card,
-  CardHeader,
   Pill,
+  RevealOnScroll,
   SiteFooter,
 } from "@/components/ui";
 import {
   Activity,
-  Building2,
   CheckCircle2,
-  Download,
+  Clock,
   HeartPulse,
   Receipt,
   ShieldCheck,
@@ -69,30 +68,27 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        {/* 2 & 3. Hero Section with One Headline and One Primary Call to Action */}
-        <section className="mx-auto max-w-6xl px-4 pt-14 pb-12 sm:px-6 sm:pt-20 sm:pb-16 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1 text-[13px] font-semibold text-accent-strong mb-6">
+        {/* 2 & 3. Hero: a full-bleed calm gradient, one headline, one primary action (issue #492) */}
+        <section className="bg-gradient-to-b from-accent-soft via-canvas to-canvas">
+          <div className="mx-auto max-w-6xl px-4 pt-14 pb-12 sm:px-6 sm:pt-20 sm:pb-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3.5 py-1 text-footnote font-semibold text-accent-strong mb-6">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             <span>The calm healthcare companion for India</span>
           </div>
 
-          <h1 className="text-[40px] sm:text-[56px] lg:text-[64px] font-bold tracking-[-0.03em] text-label leading-[1.08] max-w-4xl mx-auto">
+          <h1 className="text-display max-w-4xl mx-auto text-label">
             Your health, in one calm place.
           </h1>
 
-          <p className="mt-5 text-[17px] sm:text-[20px] text-label-2 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-5 text-body sm:text-title-3 font-normal text-label-2 max-w-2xl mx-auto leading-relaxed">
             From daily dose schedules and 108 emergency SOS to links for finding
             your medicines and doctor-approved care plans.
           </p>
 
-          {/* Primary CTA (Rule: one primary action per screen) */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <HeroActions />
-            <ButtonLink href="/download/android" native variant="secondary" size="lg" icon={<Download className="h-5 w-5" aria-hidden="true" />}>
-              Download for Android
-            </ButtonLink>
+            <LandingActions />
           </div>
-          <p className="mt-3 text-[13px] text-label-3">
+          <p className="mt-3 text-footnote text-label-3">
             The Android app is a direct download (APK). On iPhone, use vyanahealth.app in your browser.
           </p>
 
@@ -123,45 +119,45 @@ export default function LandingPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Metformin 500mg</span>
-                      <span className="text-[11px] text-label-3">8:00 AM · After breakfast</span>
+                      <span className="font-semibold text-label block">Morning dose</span>
+                      <span className="text-caption text-label-3">Marked taken</span>
                     </div>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">
                       ✓
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Telmisartan 40mg</span>
-                      <span className="text-[11px] text-label-3">9:00 AM · Morning</span>
+                      <span className="font-semibold text-label block">Midday dose</span>
+                      <span className="text-caption text-label-3">Marked taken</span>
                     </div>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">
                       ✓
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-fill/50 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Atorvastatin 10mg</span>
-                      <span className="text-[11px] text-label-3">9:00 PM · At bedtime</span>
+                      <span className="font-semibold text-label block">Evening dose</span>
+                      <span className="text-caption text-label-3">Not yet marked</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-label-3">Due</span>
+                    <span className="text-caption font-semibold text-label-3">Due</span>
                   </div>
                 </div>
               </Card>
 
               {/* Your Health Group */}
               <Card padded={false} className="overflow-hidden mb-3 text-[13px]">
-                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
+                <div className="px-3.5 pt-3 pb-1 text-caption font-semibold text-label-3">
                   Your health
                 </div>
                 <div className="divide-y divide-separator">
                   <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="font-medium text-label">HbA1c Blood Test</span>
-                    <Pill tone="ok" className="text-[11px]">Report added</Pill>
+                    <span className="font-medium text-label">Lab report</span>
+                    <Pill tone="ok" className="text-caption">Report added</Pill>
                   </div>
                   <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="font-medium text-label">OPD Token · City Hospital</span>
-                    <Pill tone="accent" className="text-[11px]">Token #14</Pill>
+                    <span className="font-medium text-label">OPD visit</span>
+                    <Pill tone="accent" className="text-caption">Booked</Pill>
                   </div>
                 </div>
               </Card>
@@ -173,136 +169,134 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <p className="mt-3 text-[13px] text-label-3">
+          <p className="mt-3 text-footnote text-label-3">
             The Vyana app
           </p>
+          </div>
         </section>
 
-        {/* 5. Four Large Feature Cards */}
+        {/* 5. Four ideas, one per section (issue #492): Doses, Reports, Family, Emergency */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="max-w-2xl mb-10">
-            <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-label leading-tight">
+          <div className="max-w-2xl mb-12">
+            <h2 className="text-title-1 text-label">
               Clinical tools designed for real Indian families
             </h2>
-            <p className="mt-2 text-[16px] text-label-2 leading-relaxed">
+            <p className="mt-2 text-body text-label-2 leading-relaxed">
               Every feature is built around the everyday steps patients, doctors,
               and caregivers actually navigate.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Feature 1: Prescriptions & Basket Compare */}
-            <Card className="flex flex-col justify-between">
-              <div>
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
-                  <Receipt className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <CardHeader
-                  title="Find your medicines at pharmacies"
-                />
-                <p className="text-[15px] leading-relaxed text-label-2">
-                  Scan printed or handwritten prescriptions. Vyana checks every
-                  medicine against the photo, then opens it on 1mg, PharmEasy,
-                  Netmeds or Apollo so you can look up the price yourself.
-                </p>
+          <div className="space-y-14">
+            <RevealOnScroll>
+              <div className="grid items-center gap-6 md:grid-cols-2">
+                <div>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                    <Clock className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="text-title-1 text-label">Doses</h3>
+                  <p className="mt-2 text-body leading-relaxed text-label-2">
+                    Every dose on time, with a gentle nudge when one is late — and an
+                    Undo when a tap was a mistake, never a dead end.
+                  </p>
+                </div>
+                <Card>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between rounded-row bg-ok-soft/40 p-3 text-callout">
+                      <div>
+                        <span className="font-semibold text-label block">Morning dose</span>
+                        <span className="text-footnote text-label-3">Marked taken</span>
+                      </div>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">✓</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-row bg-fill/60 p-3 text-callout">
+                      <div>
+                        <span className="font-semibold text-label block">Evening dose</span>
+                        <span className="text-footnote text-label-3">Not yet marked</span>
+                      </div>
+                      <span className="text-footnote font-semibold text-label-3">Due</span>
+                    </div>
+                  </div>
+                </Card>
               </div>
+            </RevealOnScroll>
 
-              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
-                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Pharmacy links</span>
-                  <span className="text-accent-strong font-medium">You check the price</span>
+            <RevealOnScroll>
+              <div className="grid items-center gap-6 md:grid-cols-2">
+                <div className="md:order-2">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                    <TrendingUp className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="text-title-1 text-label">Reports</h3>
+                  <p className="mt-2 text-body leading-relaxed text-label-2">
+                    Lab values become trends you can follow — every point labelled,
+                    the reference range drawn in, and a headline that says what changed.
+                  </p>
                 </div>
-                <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Opens 1mg, PharmEasy, Netmeds and Apollo</p>
-                  <p>• Vyana shows no price: the pharmacy&apos;s own page does</p>
-                </div>
+                <Card className="md:order-1">
+                  <div className="flex items-center justify-between text-callout font-semibold text-label mb-2">
+                    <span>Your reports, as trends</span>
+                    <span className="text-accent-strong font-medium">One chart</span>
+                  </div>
+                  <div className="space-y-1 text-footnote text-label-3">
+                    <p>• Compared against the standard reference range</p>
+                    <p>• The same chart on the phone and here</p>
+                  </div>
+                </Card>
               </div>
-            </Card>
+            </RevealOnScroll>
 
-            {/* Feature 2: Diagnostic Lab Reports */}
-            <Card className="flex flex-col justify-between">
-              <div>
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
-                  <TrendingUp className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <CardHeader
-                  title="Lab trend tracking over time"
-                />
-                <p className="text-[15px] leading-relaxed text-label-2">
-                  Upload PDF reports or scan physical test sheets. Vyana graphs
-                  your key biomarkers over time against standard Indian reference
-                  ranges, turning isolated lab values into meaningful health
-                  progress you can discuss with your physician.
-                </p>
+            <RevealOnScroll>
+              <div className="grid items-center gap-6 md:grid-cols-2">
+                <div>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
+                    <UserCheck className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="text-title-1 text-label">Family</h3>
+                  <p className="mt-2 text-body leading-relaxed text-label-2">
+                    A caregiver sees only what you share — labs, vitals, medicines,
+                    adherence, each its own switch — and a missed dose reaches them
+                    only when it matters.
+                  </p>
+                </div>
+                <Card>
+                  <div className="flex items-center justify-between text-callout font-semibold text-label mb-2">
+                    <span>Shared with your caregiver</span>
+                    <span className="text-accent-strong font-medium">You choose</span>
+                  </div>
+                  <div className="space-y-1 text-footnote text-label-3">
+                    <p>• Four scopes, each a switch, off by default</p>
+                    <p>• Stop sharing sits next to the link itself</p>
+                  </div>
+                </Card>
               </div>
+            </RevealOnScroll>
 
-              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
-                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Tracked Lab Markers</span>
-                  <span className="text-ok font-medium">Trends graphed</span>
+            <RevealOnScroll>
+              <div className="grid items-center gap-6 md:grid-cols-2">
+                <div className="md:order-2">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger-text mb-5">
+                    <HeartPulse className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="text-title-1 text-label">Emergency</h3>
+                  <p className="mt-2 text-body leading-relaxed text-label-2">
+                    One tap calls 108 and shows your Medical ID — blood group,
+                    allergies, medicines, one contact — even offline, even on the
+                    lock screen.
+                  </p>
                 </div>
-                <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• HbA1c and Blood Glucose over time</p>
-                  <p>• Compared against standard reference ranges</p>
-                </div>
+                <Card className="md:order-1">
+                  <div className="flex items-center justify-between text-callout font-semibold text-label mb-2">
+                    <span>Offline Medical ID</span>
+                    <span className="text-danger-text font-bold">Works offline</span>
+                  </div>
+                  <div className="space-y-1 text-footnote text-label-3">
+                    <p>• Blood group and verified allergies</p>
+                    <p>• Emergency contacts and a lock-screen QR</p>
+                  </div>
+                </Card>
               </div>
-            </Card>
-
-            {/* Feature 3: OPD Tokens & Hospital Directory */}
-            <Card className="flex flex-col justify-between">
-              <div>
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-strong mb-5">
-                  <Building2 className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <CardHeader
-                  title="Hospital OPD tokens & website links"
-                />
-                <p className="text-[15px] leading-relaxed text-label-2">
-                  Book government and private hospital OPD tokens before leaving
-                  home, and open the hospital&apos;s own website for its timings,
-                  so you wait less at the hospital.
-                </p>
-              </div>
-
-              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
-                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Hospital OPD tokens</span>
-                  <span className="text-accent-strong font-medium">Token booking</span>
-                </div>
-                <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• General Medicine and specialty departments</p>
-                  <p>• The hospital&apos;s own website for its timings</p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Feature 4: Emergency SOS & Medical ID */}
-            <Card className="flex flex-col justify-between">
-              <div>
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-soft text-danger-text mb-5">
-                  <HeartPulse className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <CardHeader
-                  title="One-tap 108 SOS & offline Medical ID"
-                />
-                <p className="text-[15px] leading-relaxed text-label-2">
-                  One tap calls 108, shares your location with family, and shows
-                  your medical ID. An offline lock-screen QR keeps your blood
-                  group and allergies visible even without internet.
-                </p>
-              </div>
-
-              <div className="mt-6 rounded-tile bg-fill/50 p-4 border border-separator/60">
-                <div className="flex items-center justify-between text-[13px] font-semibold text-label mb-2">
-                  <span>Offline Medical ID Summary</span>
-                  <span className="text-danger-text font-bold">Works offline</span>
-                </div>
-                <div className="space-y-1 text-[12px] text-label-3">
-                  <p>• Blood group and verified allergies</p>
-                  <p>• Emergency contacts and lock-screen QR</p>
-                </div>
-              </div>
-            </Card>
+            </RevealOnScroll>
           </div>
         </section>
 

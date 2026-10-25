@@ -36,11 +36,46 @@
 
   --radius-row: 12px;
   --radius-tile: 16px;
-  --radius-card: 22px;
+  --radius-card: 20px;
   --radius-feature: 28px;
   --radius-sheet: 28px;
 
-  --font-sans: -apple-system, "SF Pro Text", "SF Pro Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  /* The type scale as text styles (issue #492, brief #486): screens use these utilities
+     (text-large-title, text-body, …), never raw sizes. Display is the marketing headline
+     of the public pages only. */
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.03em;
+  --text-large-title: 2.125rem;
+  --text-large-title--line-height: 2.5625rem;
+  --text-large-title--font-weight: 700;
+  --text-large-title--letter-spacing: -0.02em;
+  --text-title-1: 1.75rem;
+  --text-title-1--line-height: 2.125rem;
+  --text-title-1--font-weight: 700;
+  --text-title-1--letter-spacing: -0.02em;
+  --text-title-2: 1.375rem;
+  --text-title-2--line-height: 1.75rem;
+  --text-title-2--font-weight: 700;
+  --text-title-3: 1.25rem;
+  --text-title-3--line-height: 1.5625rem;
+  --text-title-3--font-weight: 600;
+  --text-headline: 1.0625rem;
+  --text-headline--line-height: 1.375rem;
+  --text-headline--font-weight: 600;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.375rem;
+  --text-callout: 1rem;
+  --text-callout--line-height: 1.3125rem;
+  --text-subheadline: 0.9375rem;
+  --text-subheadline--line-height: 1.25rem;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.125rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
 
   --shadow-glass: 0 8px 32px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.9);
@@ -50,6 +85,19 @@
 
 :root {
   color-scheme: light;
+}
+
+/* Display steps up with the viewport (40px → 56px → 64px, the old hero's steps): one
+   flat size made the phone hero as large as the desktop one (issue #492 review). */
+@media (min-width: 768px) {
+  :root {
+    --text-display: 3.5rem;
+  }
+}
+@media (min-width: 1280px) {
+  :root {
+    --text-display: 4rem;
+  }
 }
 
 /*

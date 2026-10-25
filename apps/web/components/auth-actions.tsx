@@ -73,6 +73,33 @@ export function HeroActions() {
   );
 }
 
+/**
+ * The v2 hero's pair (issue #492): one primary "Get the app", one "Open on the web".
+ * A signed-in visitor gets the single way back in instead.
+ */
+export function LandingActions() {
+  const { status, href } = useSignedInHome();
+  if (status === "in") {
+    return (
+      <ButtonLink href={href} variant="primary" size="lg">
+        Open Vyana
+      </ButtonLink>
+    );
+  }
+  // Like HeroActions, the signed-out pair renders while the session is still loading:
+  // the hero must never sit empty waiting for it.
+  return (
+    <>
+      <ButtonLink href="/download/android" native variant="primary" size="lg">
+        Get the app
+      </ButtonLink>
+      <ButtonLink href="/login" variant="secondary" size="lg">
+        Open on the web
+      </ButtonLink>
+    </>
+  );
+}
+
 /** Signed-in visitors on /login or /signup go straight to the app instead of seeing a sign-in form. */
 export function useRedirectIfSignedIn(): void {
   const router = useRouter();

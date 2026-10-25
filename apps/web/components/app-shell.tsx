@@ -150,7 +150,7 @@ function AppShellContent({
             <span className="text-[17px] font-semibold tracking-tight text-label">Vyana</span>
           </Link>
 
-          <div className="hidden flex-1 justify-center md:flex">
+          <div className="hidden flex-1 justify-center md:flex lg:hidden">
             {stillLoading || !profile ? (
               <SkeletonLine className="h-9 w-96 max-w-full rounded-full" />
             ) : (
@@ -185,19 +185,47 @@ function AppShellContent({
         </div>
       </header>
 
-      <main aria-busy={!showChildren} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:pt-8 md:pb-10">
-        {showChildren ? (
-          children
-        ) : (
-          <div className="space-y-4">
-            <SkeletonCard lines={3} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SkeletonCard lines={2} />
-              <SkeletonCard lines={2} />
+      <div className="flex w-full flex-1">
+        {/* From 1024 px the sections live in a sidebar (issue #492): never both — the tab
+            bar is phone-only and the top segmented nav covers the widths in between. */}
+        <aside className="sticky top-[65px] hidden h-[calc(100vh-65px)] w-60 shrink-0 overflow-y-auto px-3 py-4 lg:block">
+          <nav aria-label="Workspace" className="flex flex-col gap-1">
+            {stillLoading || !profile
+              ? Array.from({ length: 5 }, (_, i) => <SkeletonLine key={i} className="h-11 w-full rounded-row" />)
+              : navItems.map(({ href, label, icon: Icon }) => {
+                  const active = isActive(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-11 items-center gap-3 rounded-row px-3 text-subheadline transition-colors",
+                        active ? "bg-accent-soft font-semibold text-accent-strong" : "text-label-2 hover:bg-fill hover:text-label",
+                      )}
+                    >
+                      <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
+                      {label}
+                    </Link>
+                  );
+                })}
+          </nav>
+        </aside>
+
+        <main aria-busy={!showChildren} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:pt-8 md:pb-10">
+          {showChildren ? (
+            children
+          ) : (
+            <div className="space-y-4">
+              <SkeletonCard lines={3} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SkeletonCard lines={2} />
+                <SkeletonCard lines={2} />
+              </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
 
       <SiteFooter withTabBar />
 
