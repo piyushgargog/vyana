@@ -6,7 +6,7 @@
 // here is the contracts' `ShareMemory` (#246): a scope that is off leaves its key out entirely.
 // Owner: Vaibhav Parmar
 
-import type { ShareMemory, ShareScope } from "../contracts";
+import type { PrescriptionItem, ShareMemory, ShareScope } from "../contracts";
 import { addDays, istDayOf, monthsAgo } from "./dates";
 
 /** The parts of a record a share link can carry (the words of migration 0014 and the contracts). */
@@ -45,12 +45,12 @@ export interface MemoryVital {
   source?: string | null;
 }
 
-/** One medicine as the server read it (a row of `prescription_items`). */
+/** One medicine as the server read it (a row of `prescription_items`, whose check holds frequency to the prescription enum). */
 export interface MemoryMedicineItem {
   medicine_name: string;
   strength: string | null;
   dose: string | null;
-  frequency: string;
+  frequency: PrescriptionItem["frequency"];
   /** The day the medicine was started, when the prescription says; `created_at` is only the fallback. */
   start_date: string | null;
   created_at: string;
