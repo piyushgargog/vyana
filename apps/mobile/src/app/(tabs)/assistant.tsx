@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -24,7 +23,7 @@ import {
 } from '@vyana/shared';
 import { useVyanaMobile } from '@/components/providers';
 import { FormattedMarkdown } from '@/components/formatted-markdown';
-import { Button, EmptyState, Screen, SosPill, Symbol, Text } from '@/components/ui';
+import { Button, EmptyState, Screen, SosPill, Symbol, Text, TextField } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
   MobileAiSafetyBanner,
@@ -497,13 +496,13 @@ export default function MobileAssistantTab() {
 
         {/* Composer */}
         <View style={styles.composer}>
-          <TextInput
+          <TextField
             accessibilityLabel="Ask a health question"
             value={input}
             onChangeText={setInput}
             placeholder="Ask in English, Hindi or Hinglish…"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
+            style={styles.composerInput}
             multiline
           />
           <Button
@@ -661,16 +660,11 @@ const styles = StyleSheet.create({
     paddingTop: T.space.sm,
     paddingBottom: T.space.sm,
   },
-  input: {
+  // The chat composer grows with its text: only the composer's own extras
+  // sit on top of the shared TextField look (#558).
+  composerInput: {
     flex: 1,
-    ...T.text.body,
-    color: T.color.label,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
     paddingVertical: T.space.sm,
-    minHeight: 46,
     maxHeight: 120,
   },
 });

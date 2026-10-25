@@ -4,7 +4,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +24,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 import { T } from '@/constants/theme';
@@ -198,7 +198,7 @@ export default function AppointmentBookScreen() {
             <CardHeader title="1. Select Hospital" />
             {/* A real search field (U2): search keyboard, a clear button, results under it. */}
             <View style={styles.searchRow}>
-              <TextInput
+              <TextField
                 accessibilityLabel="Search hospitals"
                 placeholder="Search hospitals"
                 placeholderTextColor={T.color.label3}
@@ -382,26 +382,24 @@ export default function AppointmentBookScreen() {
               })}
             </View>
 
-            <TextInput
+            <TextField
               accessibilityLabel="Appointment Date YYYY-MM-DD"
               value={appointmentDate}
               onChangeText={setAppointmentDate}
               placeholder="YYYY-MM-DD"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </Card>
 
           {/* 4. Reason */}
           <Card>
             <CardHeader title="4. Reason for Visit (Optional)" />
-            <TextInput
+            <TextField
               accessibilityLabel="Reason for visit"
               value={reason}
               onChangeText={setReason}
               placeholder="e.g., Blood sugar checkup, cough, routine follow-up"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </Card>
 
@@ -511,27 +509,11 @@ const styles = StyleSheet.create({
     backgroundColor: T.color.accent,
     borderColor: T.color.accent,
   },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    minHeight: 44,
-    ...T.text.subhead,
-    color: T.color.label,
-  },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: T.space.sm },
+  // The hospital search field only adds flex on top of the shared
+  // TextField look (#558).
   searchInput: {
     flex: 1,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    minHeight: 44,
-    ...T.text.subhead,
-    color: T.color.label,
   },
   clearBtn: {
     width: 44,

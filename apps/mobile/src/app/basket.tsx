@@ -4,7 +4,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -18,6 +17,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
@@ -156,13 +156,12 @@ export default function BasketScreen() {
 
       <Card>
         <CardHeader title="Any other medicine" />
-        <TextInput
+        <TextField
           accessibilityLabel="Any other medicine name"
           placeholder="Type a medicine name"
           placeholderTextColor={T.color.label3}
           value={other}
           onChangeText={setOther}
-          style={styles.input}
         />
         {other.trim().length > 0 && <PharmacyButtons query={other} />}
         <Text variant="footnote" tone="tertiary">
@@ -206,16 +205,4 @@ const styles = StyleSheet.create({
     gap: T.space.sm,
   },
   buttonsWrap: { gap: T.space.sm },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    fontSize: 16,
-    color: T.color.label,
-    minHeight: 44,
-  },
 });

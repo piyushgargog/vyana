@@ -9,6 +9,7 @@ import {
   CardHeader,
   Screen,
   Text,
+  TextField,
 } from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 import { T } from '@/constants/theme';
@@ -74,6 +75,9 @@ export default function CaregiverEnterCodeScreen() {
         <Text variant="footnote" style={styles.label}>
           6-digit invite code *
         </Text>
+        {/* Intentional deviation from TextField (#558): the one-time-code
+            field is larger with an accent border so the six digits read at
+            a glance; it keeps its own style below. */}
         <TextInput
           accessibilityLabel="6-digit caregiver invite code"
           keyboardType="numeric"
@@ -91,13 +95,12 @@ export default function CaregiverEnterCodeScreen() {
         <Text variant="footnote" style={styles.label}>
           Your relationship to patient (optional)
         </Text>
-        <TextInput
+        <TextField
           accessibilityLabel="Relationship to patient"
           value={relation}
           onChangeText={setRelation}
           placeholder="e.g. Son, Daughter, Spouse, Guardian"
           placeholderTextColor={T.color.label3}
-          style={styles.input}
         />
 
         {errorMessage ? (
@@ -149,18 +152,6 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
     fontFamily: 'monospace',
-  },
-  input: {
-    backgroundColor: T.color.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    minHeight: 48,
-    fontSize: 15,
-    color: T.color.label,
   },
   errorBox: {
     backgroundColor: T.color.dangerSoft,

@@ -4,7 +4,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -45,6 +44,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 
@@ -467,7 +467,7 @@ export default function ConditionCarePlanScreen() {
                 })}
               </View>
 
-              <TextInput
+              <TextField
                 accessibilityLabel="Meal description"
                 placeholder="What did you eat? (e.g. 2 Roti, Sabzi)"
                 placeholderTextColor={T.color.label3}
@@ -477,10 +477,9 @@ export default function ConditionCarePlanScreen() {
                   if (mealError) setMealError(null);
                 }}
                 maxLength={MEAL_DESCRIPTION_MAX}
-                style={styles.input}
               />
 
-              <TextInput
+              <TextField
                 accessibilityLabel="Calories"
                 placeholder="Calories in kcal (optional, 0–5000)"
                 placeholderTextColor={T.color.label3}
@@ -490,7 +489,6 @@ export default function ConditionCarePlanScreen() {
                   setMealCalories(t);
                   if (mealError) setMealError(null);
                 }}
-                style={styles.input}
               />
 
               {mealError && (
@@ -634,14 +632,14 @@ export default function ConditionCarePlanScreen() {
         </ScrollView>
 
         <View style={styles.logRow}>
-          <TextInput
+          <TextField
             accessibilityLabel={`Enter ${vitalLabel(selectedVital)} reading`}
             value={vitalVal}
             onChangeText={setVitalVal}
             placeholder={`Enter value (${VITAL_UNITS[selectedVital]})`}
             placeholderTextColor={T.color.label3}
             keyboardType="numeric"
-            style={[styles.input, styles.logInput]}
+            style={styles.logInput}
           />
           <Button
             title="Log vital"
@@ -708,17 +706,6 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: T.color.accent },
   chipTextActive: { fontWeight: '700' },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    fontSize: 16,
-    color: T.color.label,
-  },
   formBlock: {
     backgroundColor: T.color.fill,
     borderRadius: T.radius.tile,

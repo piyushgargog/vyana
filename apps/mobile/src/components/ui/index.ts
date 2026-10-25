@@ -6,6 +6,7 @@ export { EmptyState, ErrorState } from './empty-state';
 export { Glass } from './glass';
 export { IconTile, ListGroup, ListRow, type TileColor } from './list';
 export { Pill } from './pill';
+export { TextField } from './input';
 export { Screen } from './screen';
 export { SosPill } from './sos-pill';
 export { Sheet } from './sheet';

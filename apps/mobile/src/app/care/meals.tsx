@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   DbMealLog,
@@ -27,6 +27,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 
@@ -262,7 +263,7 @@ export default function MealsScreen() {
         {/* Description Input */}
         <View style={styles.fieldBlock}>
           <Text variant="subhead">What did you eat?</Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Meal description"
             placeholder="e.g. 2 Roti, Moong Dal, Cucumber Salad"
             placeholderTextColor={T.color.label3}
@@ -272,7 +273,6 @@ export default function MealsScreen() {
               if (formError) setFormError(null);
             }}
             maxLength={MEAL_DESCRIPTION_MAX}
-            style={styles.input}
           />
           <Text variant="caption" tone="tertiary" style={styles.charCounter}>
             {description.length}/{MEAL_DESCRIPTION_MAX}
@@ -282,7 +282,7 @@ export default function MealsScreen() {
         {/* Calories Input */}
         <View style={styles.fieldBlock}>
           <Text variant="subhead">Calories (kcal, optional)</Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Meal calories"
             placeholder="e.g. 350 (0 to 5,000)"
             placeholderTextColor={T.color.label3}
@@ -292,7 +292,6 @@ export default function MealsScreen() {
               setCaloriesInput(txt);
               if (formError) setFormError(null);
             }}
-            style={styles.input}
           />
         </View>
 
@@ -415,17 +414,6 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: T.color.accent },
   chipTextActive: { fontWeight: '700' },
   fieldBlock: { gap: T.space.xs },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.md,
-    fontSize: 16,
-    color: T.color.label,
-  },
   charCounter: { alignSelf: 'flex-end' },
   iconBtn: {
     minWidth: 44,
