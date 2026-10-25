@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -29,6 +28,7 @@ import {
   Sheet,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import {
@@ -231,13 +231,12 @@ export default function ReportUploadScreen() {
               <Text variant="footnote" tone="secondary" style={styles.label}>
                 Report date
               </Text>
-              <TextInput
+              <TextField
                 accessibilityLabel="Report test date"
                 value={reportDate}
                 onChangeText={setReportDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={T.color.label3}
-                style={styles.input}
               />
             </View>
             {busy ? (
@@ -331,7 +330,7 @@ export default function ReportUploadScreen() {
                 <Text variant="footnote" tone="secondary">
                   {val.corrected ? 'Corrected:' : 'Measured:'}
                 </Text>
-                <TextInput
+                <TextField
                   accessibilityLabel={`${val.test_name} value`}
                   value={drafts[idx] ?? (val.value !== null ? String(val.value) : val.value_text ?? '')}
                   onChangeText={(t) => setDrafts((prev) => ({ ...prev, [idx]: t }))}
@@ -402,16 +401,6 @@ const styles = StyleSheet.create({
   strong: { fontWeight: '600' },
   field: { gap: T.space.xs },
   label: { fontWeight: '600' },
-  input: {
-    ...T.text.body,
-    color: T.color.label,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.sm,
-    minHeight: 44,
-  },
   loadingBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -432,16 +421,10 @@ const styles = StyleSheet.create({
     gap: T.space.sm,
     flexWrap: 'wrap',
   },
+  // Lab values are short and bold: width and weight are the numeric
+  // field's only extras on top of the shared TextField look (#558).
   numericInput: {
-    ...T.text.body,
     fontWeight: '700',
-    color: T.color.label,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.sm,
-    minHeight: 44,
     minWidth: 88,
   },
   rowSave: { minHeight: 44, justifyContent: 'center' },
