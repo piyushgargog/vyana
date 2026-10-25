@@ -2,8 +2,6 @@
 // Field names are final: JSON over HTTP is snake_case, the same as the DB columns.
 import { z } from "zod";
 
-import { MEAL_TYPES } from "../constants";
-
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
@@ -21,6 +19,12 @@ const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.strin
 // One named shape for each value written in more than one contract, so the copies cannot drift apart.
 export const LabFlag = z.enum(["low", "normal", "high", "unknown"]);
 export const EmergencyContact = z.object({ name: z.string(), phone: z.string() });
+// The care-plan meal, named once here instead of inlined in both the contract and the server.
+// It intentionally does not import MEAL_TYPES from ../constants: this module is also loaded by
+// scripts/generate-openapi.mts under plain Node type-stripping, which cannot resolve a relative
+// import out of this file (extensionless, .js and .ts forms each break one of the loaders),
+// and constants.ts is Vaibhav-owned. The equality test pins the two lists to each other.
+export const CarePlanMeal = z.enum(["breakfast", "lunch", "dinner", "snack"]);
 export const Hospital = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -261,7 +265,7 @@ export const CarePlan = z.object({
   diet: z.object({
     eat_more: z.array(z.string()),
     limit: z.array(z.string()),
-    sample_day: z.array(z.object({ meal: z.enum(MEAL_TYPES), items: z.array(z.string()) })),
+    sample_day: z.array(z.object({ meal: CarePlanMeal, items: z.array(z.string()) })),
   }),
   red_flags: z.array(z.string()),                     // symptoms → go to hospital / call 108
   follow_up_tests: z.array(z.object({ test: z.string(), every_days: z.number().int().positive() })),

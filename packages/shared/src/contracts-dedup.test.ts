@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MEAL_TYPES } from "./constants";
-import { CarePlan, DeviceMetric, EmergencyContact, EmergencySosRes, LabFlag, LabValue, ShareMemory, SharedProfile } from "./contracts";
+import { CarePlan, CarePlanMeal, DeviceMetric, EmergencyContact, EmergencySosRes, LabFlag, LabValue, ShareMemory, SharedProfile } from "./contracts";
 import { ALL_DEVICE_METRICS } from "./devices";
 
 const labValue = (flag: string) => ({
@@ -63,6 +63,9 @@ describe("shared enums and shapes used in more than one contract", () => {
   });
 
   it("the care-plan meal is exactly the shared meal list", () => {
+    // CarePlanMeal deliberately lives in the contracts, not as an import of MEAL_TYPES (see the
+    // comment on it): this test is what pins the two lists to each other, so a drift fails here.
+    expect([...CarePlanMeal.options]).toEqual([...MEAL_TYPES]);
     for (const meal of MEAL_TYPES) {
       expect(CarePlan.safeParse(carePlan(meal)).success).toBe(true);
     }
