@@ -15,6 +15,11 @@ const run = (values: DayValue[], metric: TrendMetric) => {
 const repeat = (n: number, value: number) => Array<number>(n).fill(value);
 
 describe("computeTrend and describeTrend", () => {
+  it("ignores non-finite values instead of averaging them in", () => {
+    const { trend } = run(days([Infinity, ...repeat(6, 7000), ...repeat(7, 7000)]), "steps");
+    expect(trend).toMatchObject({ enough_data: true, current_avg: 7000, previous_avg: 7000, change: 0 });
+  });
+
   it("is flat for 14 steady days", () => {
     const { trend, text } = run(days(repeat(14, 7000)), "steps");
     expect(trend).toMatchObject({ enough_data: true, current_avg: 7000, previous_avg: 7000, change: 0, direction: "flat" });
