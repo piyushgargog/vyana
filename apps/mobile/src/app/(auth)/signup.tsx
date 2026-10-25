@@ -3,7 +3,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,6 +20,7 @@ import {
   Card,
   Screen,
   Text,
+  TextField,
 } from '@/components/ui';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
 import { T } from '@/constants/theme';
@@ -222,13 +222,12 @@ export default function MobileSignupScreen() {
           <Text variant="footnote" style={styles.label}>
             Full Name
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Full Name"
             value={fullName}
             onChangeText={setFullName}
             placeholder="Your full name"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -236,7 +235,7 @@ export default function MobileSignupScreen() {
           <Text variant="footnote" style={styles.label}>
             Email Address
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Email Address"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -244,7 +243,6 @@ export default function MobileSignupScreen() {
             onChangeText={setEmail}
             placeholder="you@example.com"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -252,14 +250,13 @@ export default function MobileSignupScreen() {
           <Text variant="footnote" style={styles.label}>
             Mobile Number (+91)
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Mobile Number"
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
             placeholder="+91 98111 22334"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -267,14 +264,13 @@ export default function MobileSignupScreen() {
           <Text variant="footnote" style={styles.label}>
             Password
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Password"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             placeholder="Minimum 8 characters"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -383,16 +379,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '700',
-  },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    paddingHorizontal: T.space.lg,
-    minHeight: 46,
-    ...T.text.body,
-    color: T.color.label,
   },
   roleRow: {
     flexDirection: 'row',
