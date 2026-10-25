@@ -127,7 +127,7 @@ describe("missedDosePatternRule", () => {
     expect(d?.kind).toBe("missed_dose_pattern");
     expect(d?.title).toBe("A few doses of Quorivex were missed this week");
     expect(d?.reason).toBe("3 doses were marked missed in the last 7 days.");
-    expect(d?.dedupe_key).toBe("missed:item-9:2026-10-16");
+    expect(d?.dedupe_key).toBe("missed:item-9");
     expect(d?.expires_in_days).toBe(3);
     expect(d?.payload).toEqual({ item_id: "item-9", missed: 3, suggest: "tell_doctor" });
   });
@@ -146,13 +146,15 @@ describe("missedDosePatternRule", () => {
     expect(d?.payload).toEqual({ item_id: "item-9", missed: 4, suggest: "tell_caregiver" });
   });
 
-  it("dedupe key is the same on one day and differs in another week", () => {
-    const logs = [log("2026-10-20"), log("2026-10-21"), log("2026-10-22")];
-    const a = missedDosePatternRule({ ...base, logs });
-    const b = missedDosePatternRule({ ...base, logs });
-    const c = missedDosePatternRule({ ...base, today: "2026-10-29", logs: [log("2026-10-27"), log("2026-10-28"), log("2026-10-29")] });
-    expect(a?.dedupe_key).toBe(b?.dedupe_key);
-    expect(c?.dedupe_key).not.toBe(a?.dedupe_key);
+  it("dedupe key is the same on consecutive days for the same item, and differs for another item", () => {
+    const a = missedDosePatternRule({ ...base, logs: [log("2026-10-20"), log("2026-10-21"), log("2026-10-22")] });
+    // Next day, same pattern, window slid one day: still the same key, so the loop
+    // does not mint a second card while the first is still pending.
+    const b = missedDosePatternRule({ ...base, today: "2026-10-23", logs: [log("2026-10-21"), log("2026-10-22"), log("2026-10-23")] });
+    const c = missedDosePatternRule({ ...base, itemId: "item-10", logs: [log("2026-10-20"), log("2026-10-21"), log("2026-10-22")] });
+    expect(a?.dedupe_key).toBe("missed:item-9");
+    expect(b?.dedupe_key).toBe(a?.dedupe_key);
+    expect(c?.dedupe_key).toBe("missed:item-10");
   });
 
   it("title and reason never use banned words", () => {

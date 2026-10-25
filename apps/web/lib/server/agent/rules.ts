@@ -102,7 +102,10 @@ export function missedDosePatternRule(input: MissedDosePatternInput): ProposalDr
     kind: "missed_dose_pattern",
     title: "A few doses of " + medicineName + " were missed this week",
     reason: missed + " doses were marked missed in the last 7 days.",
-    dedupe_key: "missed:" + itemId + ":" + weekStart,
+    // No date in the key: the loop dedupes against pending cards only, and a decided or
+    // expired card frees the key, so one pending card per item is enough. A rolling
+    // window date would mint a fresh card every day while the first is still pending.
+    dedupe_key: "missed:" + itemId,
     expires_in_days: 3,
     evidence: [{ table: "dose_logs", id: itemId, label: "Dose log of the last 7 days" }],
     payload: { item_id: itemId, missed, suggest: hasCaregiver ? "tell_caregiver" : "tell_doctor" },
