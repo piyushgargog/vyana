@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CONSENT_VERSION,
@@ -30,6 +30,7 @@ import {
   SosPill,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 import { MobileDisclaimerFooter } from '@/components/ui-primitives';
@@ -251,11 +252,10 @@ export default function MobileProfileTab() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Full name
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Full name"
             value={fullName}
             onChangeText={setFullName}
-            style={styles.input}
           />
         </View>
         <View style={styles.row}>
@@ -263,11 +263,10 @@ export default function MobileProfileTab() {
             <Text variant="footnote" tone="secondary" style={styles.label}>
               Phone
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Phone number"
               value={phone}
               onChangeText={setPhone}
-              style={styles.input}
               keyboardType="phone-pad"
             />
           </View>
@@ -275,11 +274,10 @@ export default function MobileProfileTab() {
             <Text variant="footnote" tone="secondary" style={styles.label}>
               Blood group
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Blood group"
               value={bloodGroup}
               onChangeText={setBloodGroup}
-              style={styles.input}
             />
           </View>
         </View>
@@ -287,11 +285,10 @@ export default function MobileProfileTab() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Allergies (comma-separated)
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Allergies"
             value={allergiesText}
             onChangeText={setAllergiesText}
-            style={styles.input}
           />
         </View>
         <View style={styles.field}>
@@ -455,26 +452,24 @@ export default function MobileProfileTab() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Name
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="New contact name"
             value={newEcName}
             onChangeText={setNewEcName}
             placeholder="Contact name"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
         <View style={styles.field}>
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Phone
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="New contact phone"
             value={newEcPhone}
             onChangeText={setNewEcPhone}
             placeholder="+91 98111 00000"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
             keyboardType="phone-pad"
           />
         </View>
@@ -482,13 +477,12 @@ export default function MobileProfileTab() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Relationship
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="New contact relationship"
             value={newEcRel}
             onChangeText={setNewEcRel}
             placeholder="Family"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
         <Button
@@ -509,14 +503,13 @@ export default function MobileProfileTab() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Enter your password to confirm
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Confirm password to delete account"
             secureTextEntry
             value={deletePassword}
             onChangeText={setDeletePassword}
             placeholder="Your current password"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
         <Button
@@ -545,16 +538,6 @@ export default function MobileProfileTab() {
 const styles = StyleSheet.create({
   field: { gap: T.space.xs },
   label: { fontWeight: '600' },
-  input: {
-    ...T.text.body,
-    color: T.color.label,
-    backgroundColor: T.color.fill,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.sm,
-    minHeight: 44,
-  },
   row: { flexDirection: 'row', gap: T.space.md },
   chipsRow: { flexDirection: 'row', gap: T.space.sm },
   chip: {
