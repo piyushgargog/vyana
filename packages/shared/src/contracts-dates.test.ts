@@ -22,7 +22,7 @@ describe("isoDate", () => {
   });
 
   it("rejects impossible calendar days the old regex let through", () => {
-    for (const day of ["2026-02-30", "2026-13-01", "2026-04-31", "2023-02-29", "2026-00-10", "2026-01-00"]) {
+    for (const day of ["2026-02-30", "2026-13-01", "2026-04-31", "2023-02-29", "2026-00-10", "2026-01-00", "0000-02-29", "0000-01-01"]) {
       expect(isoDate.safeParse(day).success).toBe(false);
     }
   });
