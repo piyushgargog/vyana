@@ -13,6 +13,7 @@ flowchart LR
   subgraph Server["Next.js API routes (apps/web/app/api)"]
     API["Route handlers<br/>auth · validation · errors"]
     TF["TinyFish layer<br/>Search · Fetch · Agent"]
+    DR["Direct web readers<br/>Overpass · e-RaktKosh · MedlinePlus"]
     AI["AI layer<br/>Vercel AI SDK"]
     C[("web_cache")]
   end
@@ -29,6 +30,7 @@ flowchart LR
   M & W -- "uploads" --> ST
   RT -- "live status" --> M & W
   API --> TF --> WEB
+  API --> DR --> WEB
   API --> AI
   API --> C
   API -- "service role (server-owned writes)" --> DB
@@ -57,13 +59,20 @@ flowchart LR
 | Feature | TinyFish API | What happens |
 |---|---|---|
 | Prescription basket → delivery | **Agent** ×4 (async), **Fetch** | One agent per pharmacy (1mg, PharmEasy, Netmeds, Apollo) finds every medicine on the prescription and returns prices as structured JSON; each price is then confirmed on the product page with Fetch; totals, missing items and savings are computed in code; the user orders on the cheapest pharmacy |
-| Doctor verification | **Agent** | Searches the NMC Indian Medical Register for a registration number and returns the official record |
-| Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link |
-| Nearby emergency hospitals | **Search** + **Fetch** | Hospitals with emergency/ICU care near the user, with phone numbers taken from the source page |
-| Care plans, interaction checks, assistant | **Search** + **Fetch** | Restricted to trusted health domains; every statement keeps its source |
+| Hospital OPD timings | **Search** + **Fetch** | Department-wise OPD timings for the hospital page in booking, with the source link; a page counts only when it can be tied to the hospital |
 | Lab test price compare | **Agent** (async), **Search**, **Fetch** | One agent per lab in the background, like the basket; a price counts only when it appears on the lab's page |
-| Blood stock (RapidBlood) | **Agent** ×up to 4 (async) | One agent per area (the searched city and up to three nearby cities) reads the public e-RaktKosh stock page; a bank is verified only when its copied stock cell equals its unit count and the same row holds its name; cached for 15 minutes |
 | PM-JAY hospitals | **Search** + **Fetch** | Empanelled hospitals near the user from government pages; names, addresses and specialities verbatim |
+
+Not through TinyFish:
+
+| Feature | How it reaches the web |
+|---|---|
+| Doctor verification | No lookup: an admin checks the public register by hand and records the decision; the server compares the saved registration |
+| Nearby emergency hospitals | OpenStreetMap (Overpass) plus the seeded hospitals table; whether a hospital has an ICU is not known from that source, so it is reported as unknown |
+| Care plans | Direct readers (`web/guideline-pages.ts`: MedlinePlus search + our own page fetch) over trusted health domains; every bullet quotes its page |
+| Interaction checks | No web lookup at runtime: a reviewed table in code |
+| Assistant tools | Direct readers (MedlinePlus + page fetch) over trusted health domains; only fetched links can reach the screen |
+| Blood stock (RapidBlood) | The public e-RaktKosh service read directly (`web/eraktkosh.ts`) for the searched city and up to three nearby cities; every row is what the source itself answered; cached for 15 minutes |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
 

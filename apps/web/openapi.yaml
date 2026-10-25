@@ -130,6 +130,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "404":
+          description: Unknown, expired or another user's job (`NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -644,6 +650,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
+        "404":
+          description: Unknown, expired or another user's job (`NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
         "502":
           description: An upstream service failed (`UPSTREAM_ERROR`)
           content:
@@ -662,7 +674,7 @@ paths:
         - Appointments
       summary: Get a hospital's OPD timings
       description: |-
-        Department-wise OPD days and timings taken from the hospital's own pages, with the source link. Cached for 7 days.
+        Department-wise OPD days and timings read from web pages, with the source link. The hospital's own site is searched first when it has one; a page from anywhere else counts only when its text names the hospital, and days and timings must appear on the page. Cached for 7 days.
 
         **Who can call it:** any signed-in user.
       operationId: post_hospitals_info

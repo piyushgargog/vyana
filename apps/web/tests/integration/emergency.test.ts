@@ -151,4 +151,8 @@ describe("POST /api/hospitals/info", () => {
     expect((await post(info, { hospital_id: "52000000-0000-4000-8000-000000000009" })).status).toBe(404);
     expect((await post(info, { hospital_id: "not-a-uuid" })).status).toBe(400);
   });
+
+  it("401s without a token, so the route can never be read anonymously", async () => {
+    expect((await post(info, { hospital_id: H }, null)).status).toBe(401);
+  });
 });

@@ -8,8 +8,9 @@
  *   2. Care plan guideline pages for the demo conditions (MedlinePlus search + the app's own page fetch, free),
  *      through the same `guidelinePages` the app itself calls, so the cache keys warmed are the keys it reads.
  *
- * Needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (the cache lives in the database), TINYFISH_API_KEY and
- * JOB_TOKEN_SECRET in apps/web/.env.local. Uses agent credits (about 4 runs per uncached basket).
+ * Needs NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (the cache lives in the database), a TinyFish
+ * key (TINYFISH_API_KEY or the TINYFISH_API_KEYS pool) and JOB_TOKEN_SECRET in apps/web/.env.local.
+ * Uses agent credits (about 4 runs per uncached basket).
  *
  *   pnpm prewarm --dry-run    # prints the plan and the credit estimate, calls nothing
  *   pnpm prewarm              # runs it
@@ -52,11 +53,15 @@ for (const mock of ["TINYFISH_MOCK", "WEB_MOCK"]) {
     process.exit(1);
   }
 }
-for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "TINYFISH_API_KEY", "JOB_TOKEN_SECRET"]) {
+for (const name of ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "JOB_TOKEN_SECRET"]) {
   if (!process.env[name]) {
     console.error(`${name} is missing in apps/web/.env.local.`);
     process.exit(1);
   }
+}
+if (!process.env.TINYFISH_API_KEY && !process.env.TINYFISH_API_KEYS) {
+  console.error("TINYFISH_API_KEY (or the TINYFISH_API_KEYS pool) is missing in apps/web/.env.local.");
+  process.exit(1);
 }
 
 const counter = { tinyfishCalls: 0 };

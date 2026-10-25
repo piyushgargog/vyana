@@ -192,7 +192,7 @@ export default function PrivacyPolicyPage() {
                       <strong>Resend:</strong> account emails.
                     </li>
                     <li>
-                      <strong>TinyFish:</strong> searches public web pages only (pharmacies, hospitals, the NMC register) and never receives your health data.
+                      <strong>TinyFish:</strong> runs the live web lookups (pharmacy and lab prices, hospital OPD pages, PM-JAY lists). To price a basket it receives the medicine names and strengths from the prescription you choose to price, and for a lab price the test name and city — nothing else from your record: never your reports, readings or notes.
                     </li>
                   </ul>
                 </div>

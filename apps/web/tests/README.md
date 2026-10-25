@@ -7,7 +7,7 @@ Tests for the API in `apps/web/app/api/**` and the server code in `apps/web/lib/
 ```
 tests/
 ├─ unit/          # one service at a time, external clients mocked (TinyFish, LLM, Supabase)
-├─ integration/   # route handlers end to end, with TINYFISH_MOCK=1 and LLM_MOCK=1
+├─ integration/   # route handlers end to end, with TINYFISH_MOCK=1, WEB_MOCK=1 and LLM_MOCK=1
 └─ fixtures/      # request bodies and expected responses shared by tests
 ```
 

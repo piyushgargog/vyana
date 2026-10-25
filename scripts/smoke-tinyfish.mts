@@ -117,7 +117,7 @@ if (withAgent) {
         (r ? `${r.product_name ?? "-"} | ${r.pack_size ?? "-"} | ₹${r.price ?? "-"} (MRP ₹${r.mrp ?? "-"}) | in stock: ${r.in_stock ?? "-"} | url on ${p.domain}: ${onDomain}` : `${out.error ?? ""}`),
     );
     if (r?.product_url) console.log(`       ${productUrl}${productUrl !== r.product_url ? `  (agent gave: ${r.product_url})` : ""}`);
-    if (out.status !== "ok" || !r?.found || onDomain === false) failures++;
+    if (out.status !== "ok" || !r?.found || onDomain !== true) failures++;
   }
 } else {
   section("Agents skipped (--no-agent)");

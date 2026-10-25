@@ -9,15 +9,15 @@
 import { fileURLToPath } from "node:url";
 import type { PharmacyBasket } from "@vyana/shared";
 import {
-  AGENT_MAX_SECONDS,
   BASKET_OUTPUT_SCHEMA,
   QUEUE_DEADLINE_MS,
-  RUN_DEADLINE_MS,
+  agentMaxSeconds,
   basketGoal,
   emptyBasket,
   itemLabel,
   normalizeItems,
   processPharmacyResult,
+  runDeadlineMs,
   summarize,
 } from "../apps/web/lib/server/tinyfish/basket";
 import { cancelRun, getRun, startAgent } from "../apps/web/lib/server/tinyfish/client";
@@ -43,6 +43,12 @@ const items = normalizeItems(
         { medicine: "Pan", strength: "40 mg" },
       ],
 );
+if (items.length > 10) {
+  // The API prices at most 10 items, and the result processor verifies at most 10
+  // product pages: a bigger list could only ever produce a partial smoke result.
+  console.error(`The basket API takes at most 10 items; ${items.length} were given.`);
+  process.exit(1);
+}
 console.log(`Basket: ${items.map(itemLabel).join(", ")}`);
 
 const started = Date.now();
@@ -51,7 +57,7 @@ const runs = await Promise.all(
   PHARMACIES.map(async (p) => ({
     pharmacy: p,
     start: await startAgent(
-      { url: p.searchUrl(itemLabel(items[0])), goal: basketGoal(items, p), output_schema: BASKET_OUTPUT_SCHEMA, browser_profile: "stealth", maxSeconds: AGENT_MAX_SECONDS },
+      { url: p.searchUrl(itemLabel(items[0])), goal: basketGoal(items, p), output_schema: BASKET_OUTPUT_SCHEMA, browser_profile: "stealth", maxSeconds: agentMaxSeconds(items.length) },
       { counter },
     ),
   })),
@@ -82,8 +88,11 @@ while (results.size < runs.length) {
         results.set(pharmacy.source, emptyBasket(pharmacy.source, state.error === "TIMEOUT" || state.status === "CANCELLED" ? "timeout" : "error"));
         console.log(`  [${secs()} s] ${pharmacy.name} ${state.status} ${state.error ?? ""}`);
       } else if (
-        (state.status === "RUNNING" && state.startedAt !== null && Date.now() - state.startedAt > RUN_DEADLINE_MS) ||
-        Date.now() - started > QUEUE_DEADLINE_MS
+        // The same rule as agentRunPollDecision: the queue deadline applies only
+        // while the run has not started (PENDING); a started run is timed by its
+        // own run deadline, counted from when it started.
+        (state.status === "PENDING" && Date.now() - started > QUEUE_DEADLINE_MS) ||
+        (state.status === "RUNNING" && state.startedAt !== null && Date.now() - state.startedAt > runDeadlineMs(items.length))
       ) {
         await cancelRun(start.runId, { counter });
         results.set(pharmacy.source, emptyBasket(pharmacy.source, "timeout"));
@@ -105,3 +114,4 @@ for (const b of summary.baskets) {
 console.log(`\ncheapest complete: ${summary.cheapest_source ?? "none"} · savings vs highest: ${summary.savings_vs_highest ?? "-"}`);
 const withTotals = summary.baskets.filter((b) => b.total !== null).length;
 console.log(withTotals >= 3 ? "\nDone-when check: ≥3 baskets with totals ✓" : `\nDone-when check: only ${withTotals} baskets with totals`);
+if (withTotals < 3) process.exit(1);

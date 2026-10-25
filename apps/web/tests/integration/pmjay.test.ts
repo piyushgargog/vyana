@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PmjayHospitalsRes } from "@vyana/shared";
+import { ApiErrorBody, PmjayHospitalsRes } from "@vyana/shared";
 import { VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
@@ -78,5 +78,18 @@ describe("POST /api/schemes/pmjay-hospitals", () => {
   it("needs a signed-in user and numbers for the location", async () => {
     expect((await post({ lat: 28.5, lng: 77.2 }, "")).status).toBe(401);
     expect((await post({ lat: "x", lng: 77.2 })).status).toBe(400);
+  });
+
+  it("answers 502 when the upstream search fails", async () => {
+    vi.stubEnv("TINYFISH_MOCK", "0");
+    vi.stubEnv("TINYFISH_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+    try {
+      const res = await post({ lat: 28.5672, lng: 77.21 });
+      expect(res.status).toBe(502);
+      expect(ApiErrorBody.parse(await res.json()).error.code).toBe("UPSTREAM_ERROR");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

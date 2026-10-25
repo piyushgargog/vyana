@@ -152,7 +152,7 @@ await check("web_cache: a second identical request is served from the cache", as
   const second = await api("POST", "/api/emergency/nearby", P, { lat: 28.6139, lng: 77.209 });
   expect(first.status === 200 && second.status === 200, "both calls should be 200");
   if (first.json?.hospitals.length) expect(second.json?.cached === true, "the second call should say cached: true");
-  return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (needs a model or TINYFISH_MOCK=1)";
+  return first.json?.hospitals.length ? "cached: true on the second call" : "no hospitals found, nothing to cache (nearby hospitals come from Overpass and the hospitals table, or WEB_MOCK=1 fixtures)";
 });
 
 await check("blood search: Delhi is answered within 5 seconds from the public stock service, at least one bank, every row holds a unit count", async () => {
