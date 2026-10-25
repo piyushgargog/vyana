@@ -9,6 +9,8 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import { relativeTime, useMockDeviceConnections } from "@vyana/shared";
+
 import { Button, Card, CardHeader, Text } from "@/components/ui";
 import { T } from "@/constants/theme";
 import { useActivityCard } from "@/hooks/use-device-activity";
@@ -71,16 +73,33 @@ export function ActivityCard() {
   // the plain number (issue #328 leaves the goal's home as a question on the PR).
   const model = useActivityCard(null);
   const { steps, resting_hr: hr, sleep } = model;
+  // Connected-but-no-readings is its own state (#488): the words say the device is
+  // connected and what to do, instead of reading as if nothing were connected.
+  const { data: connectionsData } = useMockDeviceConnections();
+  const connected = connectionsData?.connections.find((c) => c.status === "connected");
 
   return (
     <Card>
       <CardHeader title="Activity" />
       {!model.has_data ? (
         <View style={styles.empty}>
-          <Text variant="subhead" tone="secondary">
-            No device readings yet. When a watch or band is connected, steps, resting heart
-            rate and sleep appear here.
-          </Text>
+          {connected ? (
+            <>
+              <Text variant="subhead" tone="secondary">
+                {"Connected. Nothing to read yet. Open your band's app and sync it."}
+              </Text>
+              {connected.last_synced_at ? (
+                <Text variant="footnote" tone="tertiary">
+                  Last synced {relativeTime(connected.last_synced_at)}
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <Text variant="subhead" tone="secondary">
+              No device readings yet. When a watch or band is connected, steps, resting heart
+              rate and sleep appear here.
+            </Text>
+          )}
           <Button
             title="Connected devices"
             variant="secondary"

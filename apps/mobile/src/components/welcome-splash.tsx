@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
-  Image,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
-import { T } from '@/constants/theme';
+import { T, useThemeColors } from '@/constants/theme';
+import { useReduceMotion } from '@/hooks/use-accessibility-setting';
 import {
+  ENTER_MS,
   FADE_MS,
   FLAG,
-  getFlagDimensions,
   SHOW_MS,
   WELCOME_STRINGS,
+  getFlagDimensions,
+  gradientBands,
 } from './welcome-splash.constants';
 
 export { FADE_MS, FLAG, SHOW_MS, WELCOME_STRINGS };
@@ -71,16 +67,21 @@ export function IndiaFlag({ width = 32 }: { width?: number }) {
 }
 
 /**
- * A calm, premium welcome screen for the first 3 seconds after the app opens.
- * Tap anywhere to skip. Respects reduced-motion preferences.
- * Adheres strictly to Vyana's Liquid Glass design language.
+ * The welcome (#488, Apple TV style): a full-bleed calm gradient from the brand teal to
+ * its deep end, the brand mark as a tile with soft depth, the name in Large Title and
+ * one line under it. No card, no chips. The content fades and scales in over about
+ * 600 ms — under Reduce Motion it only cross-fades. It hides by itself after 2.5 s at
+ * the latest, and a tap skips it. The gradient is stacked bands of views: the app
+ * ships no gradient library (the flag and the rings are drawn with views too).
  */
 export function WelcomeSplash() {
+  const colors = useThemeColors();
+  const reduceMotion = useReduceMotion();
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(() => !shownThisLaunch);
   const [overlayOpacity] = useState(() => new Animated.Value(1));
+  const [contentOpacity] = useState(() => new Animated.Value(0));
   const [contentScale] = useState(() => new Animated.Value(0.96));
-  // Visible from the first frame: the native splash is held until this screen has been laid out, so nothing blank shows in between.
-  const [contentOpacity] = useState(() => new Animated.Value(1));
   const nativeHidden = useRef(false);
   const hideNativeSplash = useCallback(() => {
     if (nativeHidden.current) return;
@@ -89,16 +90,10 @@ export function WelcomeSplash() {
   }, []);
   const closing = useRef(false);
 
-  const close = useCallback(async () => {
+  const close = useCallback(() => {
     if (closing.current) return;
     closing.current = true;
     shownThisLaunch = true;
-    let reduceMotion = false;
-    try {
-      reduceMotion = await AccessibilityInfo.isReduceMotionEnabled();
-    } catch {
-      reduceMotion = false;
-    }
     if (reduceMotion) {
       setVisible(false);
       return;
@@ -109,31 +104,40 @@ export function WelcomeSplash() {
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start(() => setVisible(false));
-  }, [overlayOpacity]);
+  }, [overlayOpacity, reduceMotion]);
 
   useEffect(() => {
     if (!visible) return;
 
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => {
-        if (enabled) {
-          contentScale.setValue(1);
-        } else {
-          Animated.timing(contentScale, {
-            toValue: 1,
-            duration: 450,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }).start();
-        }
-      })
-      .catch(() => {
-        contentScale.setValue(1);
-      });
+    if (reduceMotion) {
+      // Cross-fade only: no scale, no movement (HIG motion rule).
+      contentScale.setValue(1);
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: ENTER_MS,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: ENTER_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentScale, {
+          toValue: 1,
+          duration: ENTER_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
 
     const timer = setTimeout(close, SHOW_MS);
     return () => clearTimeout(timer);
-  }, [visible, close, contentScale]);
+  }, [visible, close, contentOpacity, contentScale, reduceMotion]);
 
   // Nothing to show this launch (the screen was shown before): let the native splash go.
   useEffect(() => {
@@ -142,63 +146,51 @@ export function WelcomeSplash() {
 
   if (!visible) return null;
 
+  const bands = gradientBands(colors.accent, colors.accentDeep);
+
   return (
     <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} onLayout={hideNativeSplash}>
+      {/* The gradient itself: stacked bands behind everything, from the first frame,
+          so handing over from the native splash never shows a blank screen. */}
+      <View style={styles.bands} pointerEvents="none" accessibilityElementsHidden>
+        {bands.map((color, i) => (
+          <View key={i} style={{ flex: 1, backgroundColor: color }} />
+        ))}
+      </View>
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={WELCOME_STRINGS.accessibilityLabel}
         onPress={close}
-        style={styles.fill}
+        style={[
+          styles.fill,
+          { paddingTop: insets.top + T.space.xl, paddingBottom: insets.bottom + T.space.xl },
+        ]}
       >
-        {/* Subtle ambient accent glow behind the central brand card */}
-        <View style={styles.ambientGlow} pointerEvents="none" />
-
-        <View style={styles.centerContainer}>
-          <Animated.View
-            style={[
-              styles.card,
-              {
-                opacity: contentOpacity,
-                transform: [{ scale: contentScale }],
-              },
-            ]}
-          >
-            {/* Logo container with rounded elevation */}
-            <View style={styles.logoWrapper}>
-              <Image
-                source={require('../../assets/images/splash-logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
-            </View>
-
-            <Text variant="largeTitle" style={styles.name}>
-              {WELCOME_STRINGS.title}
-            </Text>
-
-            <Text variant="body" tone="secondary" style={styles.tagline}>
-              {WELCOME_STRINGS.tagline}
-            </Text>
-
-            {/* Subtle interactive affordance */}
-            <View style={styles.skipBadge}>
-              <Text variant="caption" tone="secondary" style={styles.skipText}>
-                {WELCOME_STRINGS.tapToSkip}
-              </Text>
-            </View>
-          </Animated.View>
-        </View>
-
-        {/* Footer Pill: Flag + Made with love in India */}
-        <View style={styles.footerContainer}>
-          <View style={styles.footerPill}>
-            <IndiaFlag width={26} />
-            <Text variant="subhead" tone="secondary" style={styles.footerText}>
-              {WELCOME_STRINGS.madeInIndia}
-            </Text>
+        <Animated.View
+          style={[
+            styles.center,
+            { opacity: contentOpacity, transform: [{ scale: contentScale }] },
+          ]}
+        >
+          {/* The brand mark as a tile with soft depth, like an app icon on a hero. */}
+          <View style={styles.logoTile}>
+            <Image
+              source={require('../../assets/images/splash-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
           </View>
-        </View>
+
+          <Text variant="largeTitle" style={[styles.name, { color: colors.white }]}>
+            {WELCOME_STRINGS.title}
+          </Text>
+
+          <Text variant="body" style={[styles.tagline, { color: colors.white }]}>
+            {WELCOME_STRINGS.tagline}
+          </Text>
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
@@ -209,47 +201,29 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     zIndex: 1000,
     elevation: 1000,
-    backgroundColor: T.color.canvas,
+  },
+  bands: {
+    ...StyleSheet.absoluteFill,
+    flexDirection: 'column',
   },
   fill: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: T.space.lg,
   },
-  ambientGlow: {
-    position: 'absolute',
-    top: '32%',
-    alignSelf: 'center',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: T.color.accentSoft,
-    opacity: 0.85,
-  },
-  centerContainer: {
+  center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  card: {
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-    // Solid, not glass: on Android the shadow of `elevation` shows through a translucent background and the card looks dirty.
-    backgroundColor: T.color.surface,
-    borderRadius: T.radius.feature,
-    borderWidth: 1,
-    borderColor: T.color.glassBorder,
-    paddingVertical: T.space.xl + T.space.sm,
-    paddingHorizontal: T.space.xl,
-    ...T.shadow.float,
-  },
-  logoWrapper: {
+  logoTile: {
     width: 104,
     height: 104,
+    borderRadius: 24,
+    backgroundColor: T.color.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: T.space.md,
+    marginBottom: T.space.lg,
+    ...T.shadow.float,
   },
   logo: {
     width: 104,
@@ -257,51 +231,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   name: {
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '700',
-    color: T.color.label,
     textAlign: 'center',
-    letterSpacing: 0.35,
   },
   tagline: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginTop: T.space.xs + 2,
+    marginTop: T.space.sm,
     textAlign: 'center',
-    color: T.color.label2,
-  },
-  skipBadge: {
-    marginTop: T.space.lg,
-    backgroundColor: T.color.fill,
-    paddingHorizontal: T.space.md,
-    paddingVertical: T.space.xs,
-    borderRadius: T.radius.pill,
-  },
-  skipText: {
-    fontSize: 12,
-    color: T.color.label3,
-    fontWeight: '500',
-  },
-  footerContainer: {
-    alignItems: 'center',
-    paddingBottom: T.space.xxl + T.space.md,
-  },
-  footerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: T.space.sm,
-    backgroundColor: T.color.surface,
-    borderRadius: T.radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    paddingVertical: T.space.sm,
-    paddingHorizontal: T.space.lg,
-    ...T.shadow.float,
-  },
-  footerText: {
-    fontWeight: '500',
-    color: T.color.label2,
   },
   flag: {
     overflow: 'hidden',

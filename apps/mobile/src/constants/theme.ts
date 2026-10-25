@@ -107,6 +107,9 @@ export const T = {
     fillStrong: 'rgba(120,120,128,0.2)',
     accent: '#0D9488',
     accentStrong: '#0B7A70',
+    // The deep end of the welcome hero gradient (#488): white words on it measure over 7:1,
+    // which the accent itself (about 3.9:1) cannot carry at body size.
+    accentDeep: '#065F52',
     accentSoft: 'rgba(13,148,136,0.12)',
     danger: '#FF3B30',
     dangerText: '#D70015',
@@ -166,6 +169,7 @@ export const darkColors: ThemeColors = {
   fillStrong: 'rgba(120,120,128,0.36)',
   accent: '#2DD4BF',
   accentStrong: '#3EC6B8',
+  accentDeep: '#04332D',
   accentSoft: 'rgba(45,212,191,0.18)',
   danger: '#FF453A',
   dangerText: '#FF6961',
