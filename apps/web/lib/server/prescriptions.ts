@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEFAULT_TIMES, PrescriptionItem, isoDate, type PrescriptionExtractRes } from "@vyana/shared";
+import { DEFAULT_TIMES, PrescriptionItem, addDays, isoDate, istDayOf, type PrescriptionExtractRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
 import { RX_EXTRACT_PROMPT_VERSION, RX_EXTRACT_SYSTEM, rxExtractPrompt } from "./prompts/documents";
@@ -41,14 +41,6 @@ export type RxLlm = z.infer<typeof RxLlm>;
 type Field<T> = { value: T | null; evidence: string | null };
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-const todayIst = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-
-function addDays(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 type Frequency = PrescriptionItem["frequency"];
 
@@ -238,7 +230,7 @@ export async function extractPrescription(
   });
 
   const { text, map } = redact(doc.text, { knownNames: user.fullName ? [user.fullName] : [] });
-  const today = todayIst();
+  const today = istDayOf(new Date().toISOString());
   const { object, ai } = await runAi({
     feature: "rx_extract",
     kind: "text",

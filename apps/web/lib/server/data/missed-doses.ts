@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
+import { readChunked } from "../chunked";
 import { istDate } from "../dates";
 import type { PushMessage, PushResult } from "../push";
 
@@ -21,7 +22,6 @@ export const CATCH_UP_MINUTES = 180;
 
 /** A dose log counts for a due dose when it is for the same medicine and within this many minutes of it. */
 const LOG_MATCH_MINUTES = 30;
-const CHUNK = 100;
 const MINUTE = 60_000;
 
 export interface CareItem {
@@ -112,19 +112,6 @@ export function findMissedDoses(
 export function firstName(fullName: string | null | undefined): string | null {
   const first = (fullName ?? "").trim().split(/\s+/)[0];
   return first ? first : null;
-}
-
-const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
-
-/** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
-async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
-  const out: T[] = [];
-  for (const part of chunks(ids)) {
-    const { data, error } = await query(part);
-    if (error) throw error;
-    out.push(...(data ?? []));
-  }
-  return out;
 }
 
 export type PushSender = (messages: PushMessage[]) => Promise<PushResult>;
