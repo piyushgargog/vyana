@@ -37,7 +37,7 @@ describe("isGovUrl", () => {
 });
 
 describe("verifyPmjay", () => {
-  const page = { url: "https://health.example.gov.in/list", title: "List", text: "Apex Hospital, 4 MG Road, Delhi. Specialities: Cardiology." };
+  const page = { url: "https://health.example.gov.in/list", title: "List", text: "PM-JAY empanelled hospitals: Apex Hospital, 4 MG Road, Delhi. Specialities: Cardiology." };
   it("keeps only names, addresses and specialities written on a government page", () => {
     const out = verifyPmjay(
       {
@@ -51,6 +51,13 @@ describe("verifyPmjay", () => {
     expect(out.hospitals).toEqual([{ name: "Apex Hospital", address: "4 MG Road, Delhi", specialities: ["Cardiology"], source_url: page.url }]);
     expect(out.dropped).toBe(2); // the invented hospital and "Neurology"
     expect(verifyPmjay({ hospitals: [{ name: "Apex Hospital", address: null, specialities: [], page: 0 }] }, [{ ...page, url: "https://blog.example.com/list" }]).hospitals).toEqual([]);
+  });
+
+  it("drops a hospital when the government page names it but never ties it to the scheme", () => {
+    const bare = { ...page, text: "Government hospital directory: Apex Hospital, 4 MG Road, Delhi. Specialities: Cardiology." };
+    const out = verifyPmjay({ hospitals: [{ name: "Apex Hospital", address: null, specialities: [], page: 0 }] }, [bare]);
+    expect(out.hospitals).toEqual([]);
+    expect(out.dropped).toBe(1);
   });
 });
 

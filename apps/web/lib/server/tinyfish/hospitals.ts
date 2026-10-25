@@ -68,6 +68,20 @@ const mentions = (pageText: string, words: string[]) => {
   return words.some((w) => t.includes(w));
 };
 
+/**
+ * A page that says a facility has NO emergency care or NO ICU must not keep the model's
+ * `true` just because the keyword appears: when the page negates the claim, the value is
+ * unknown (null), never evidence of availability.
+ */
+const NEGATIONS: Record<"emergency" | "icu", string[]> = {
+  emergency: ["no emergency", "no casualty", "no trauma care", "emergency care is not available", "emergency services are not available", "does not have emergency", "without emergency"],
+  icu: ["no icu", "no intensive care", "no critical care", "icu is not available", "does not have an icu", "does not have icu", "without icu"],
+};
+const negated = (pageText: string, kind: "emergency" | "icu") => {
+  const t = ` ${normalizeText(pageText)} `;
+  return NEGATIONS[kind].some((p) => t.includes(p));
+};
+
 export function mapsUrl(name: string, address: string | null): string {
   const query = address ? `${name}, ${address}` : name;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -108,8 +122,8 @@ export function verifyNearby(out: NearbyLlm, pages: Page[]): { hospitals: Hospit
       name,
       address,
       phone: phoneOnPage(page.text, h.phone) ? (h.phone as string).trim() : null,
-      has_emergency: mentions(page.text, EMERGENCY_WORDS) ? h.has_emergency : null,
-      has_icu: mentions(page.text, ICU_WORDS) ? h.has_icu : null,
+      has_emergency: mentions(page.text, EMERGENCY_WORDS) && !negated(page.text, "emergency") ? h.has_emergency : null,
+      has_icu: mentions(page.text, ICU_WORDS) && !negated(page.text, "icu") ? h.has_icu : null,
       maps_url: mapsUrl(name, address),
       source_url: page.url,
     });
@@ -175,7 +189,7 @@ export function verifyOpd(out: OpdLlm, pages: Page[]) {
   let dropped = 0;
   for (const row of out.rows) {
     const page = pages[row.page];
-    if (!page || !evidenceFound(page.text, row.timings) || !evidenceFound(page.text, row.department)) {
+    if (!page || !evidenceFound(page.text, row.timings) || !evidenceFound(page.text, row.department) || !evidenceFound(page.text, row.days)) {
       dropped++;
       continue;
     }
@@ -236,7 +250,14 @@ export async function hospitalOpdInfo(
   if (!results.length) results = (await search({ query, location: "IN" }, { counter: ctx.counter })).results;
   const urls = [...new Set(results.map((r) => r.url))].slice(0, 2);
   if (isWebMock() && urls[0]) registerMockPage(urls[0], MOCK_OPD_PAGE);
-  const pages = await readPages(urls, `Find the OPD timings of ${hospital.name}`, ctx.counter);
+  const fetchedPages = await readPages(urls, `Find the OPD timings of ${hospital.name}`, ctx.counter);
+  // A schedule is only ever saved under this hospital when its page can be tied to it:
+  // the page is on the hospital's own site, or its text names the hospital. The
+  // unrestricted-search fallback can return another facility's page; such a page is
+  // dropped here instead of being persisted under the requested hospital.
+  const pages = isWebMock()
+    ? fetchedPages
+    : fetchedPages.filter((p) => (host !== null && hostOf(p.url) === host) || evidenceFound(p.text, hospital.name));
 
   const now = new Date().toISOString();
   const empty: HospitalInfoRes = { hospital_id: hospital.id, opd: [], notes: null, source_url: null, fetched_at: now, cached: false };
@@ -276,6 +297,13 @@ export const PmjayLlm = z.object({
 type PmjayLlm = z.infer<typeof PmjayLlm>;
 export type PmjayHospital = PmjayHospitalsRes["hospitals"][number];
 
+/** The page itself must tie the hospital to the scheme: a government page that merely names a hospital proves nothing about empanelment. */
+const SCHEME_EVIDENCE = ["pm-jay", "pmjay", "ayushman", "jan arogya", "empanel"];
+const pageShowsEmpanelment = (pageText: string) => {
+  const t = normalizeText(pageText);
+  return SCHEME_EVIDENCE.some((w) => t.includes(w));
+};
+
 export function verifyPmjay(out: PmjayLlm, pages: Page[]): { hospitals: PmjayHospital[]; dropped: number } {
   const hospitals: PmjayHospital[] = [];
   const seen = new Set<string>();
@@ -284,7 +312,7 @@ export function verifyPmjay(out: PmjayLlm, pages: Page[]): { hospitals: PmjayHos
     const page = pages[h.page];
     const name = h.name.trim();
     const key = normalizeText(name);
-    if (!page || !isGovUrl(page.url) || !name || !evidenceFound(page.text, name) || seen.has(key)) {
+    if (!page || !isGovUrl(page.url) || !name || !evidenceFound(page.text, name) || !pageShowsEmpanelment(page.text) || seen.has(key)) {
       dropped++;
       continue;
     }

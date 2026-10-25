@@ -70,11 +70,24 @@ describe("verifyNearby", () => {
   it("removes duplicates and keeps at most 5", () => {
     const many = Array.from({ length: 8 }, (_, i) => `Hospital ${i}`);
     const p = [page(many.join("\n"))];
+    // The duplicate comes second, before the 5-cap is reached, so the dedup is what
+    // this case exercises — appended last, the loop would stop at 5 before seeing it.
     const out = verifyNearby(
-      { hospitals: [...many, "hospital 0"].map((name) => ({ name, address: null, phone: null, has_emergency: null, has_icu: null, page: 0 })) },
+      { hospitals: ["Hospital 0", "hospital 0", ...many.slice(1)].map((name) => ({ name, address: null, phone: null, has_emergency: null, has_icu: null, page: 0 })) },
       p,
     );
     expect(out.hospitals.map((h) => h.name)).toEqual(["Hospital 0", "Hospital 1", "Hospital 2", "Hospital 3", "Hospital 4"]);
+    expect(out.dropped).toBe(1);
+  });
+
+  it("nulls an emergency or ICU claim the page itself negates", () => {
+    const p = [page("# Sunrise Clinic\nSunrise Clinic has no emergency care and no ICU. OPD only, call 011-1111 2222.", "https://clinic.example")];
+    const [h] = verifyNearby(
+      { hospitals: [{ name: "Sunrise Clinic", address: null, phone: null, has_emergency: true, has_icu: true, page: 0 }] },
+      p,
+    ).hospitals;
+    expect(h.has_emergency).toBeNull();
+    expect(h.has_icu).toBeNull();
   });
 });
 
@@ -98,6 +111,19 @@ describe("verifyOpd", () => {
     expect(out.dropped).toBe(2);
     expect(out.notes).toBe("Registration closes at 12 noon.");
     expect(out.sourceUrl).toBe("https://hospital.example/contact");
+  });
+
+  it("drops a row whose days are not on the page, even when its timings are", () => {
+    const out = verifyOpd(
+      {
+        rows: [{ department: "Medicine", days: "Tuesday to Friday", timings: "8:00 AM to 1:00 PM", page: 0 }],
+        notes: null,
+        notes_page: null,
+      },
+      pages,
+    );
+    expect(out.opd).toEqual([]);
+    expect(out.dropped).toBe(1);
   });
 
   it("drops notes that aren't quoted from a page", () => {
