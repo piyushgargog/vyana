@@ -116,13 +116,28 @@ export function firstName(fullName: string | null | undefined): string | null {
 
 export const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
 
-/** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
-export async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+/** Rows read per request inside one id chunk: PostgREST never returns more than this at once. */
+const ROW_PAGE = 1000;
+
+/**
+ * Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the
+ * rows. Each chunk is itself paged `ROW_PAGE` rows at a time — an id chunk can hold more rows than one
+ * PostgREST response returns — so `query` takes the row range as well and must order stably, or pages
+ * could overlap or skip rows.
+ */
+export async function readChunked<T>(
+  ids: string[],
+  query: (part: string[], from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
   const out: T[] = [];
   for (const part of chunks(ids)) {
-    const { data, error } = await query(part);
-    if (error) throw error;
-    out.push(...(data ?? []));
+    for (let from = 0; ; from += ROW_PAGE) {
+      const { data, error } = await query(part, from, from + ROW_PAGE - 1);
+      if (error) throw error;
+      const rows = data ?? [];
+      out.push(...rows);
+      if (rows.length < ROW_PAGE) break;
+    }
   }
   return out;
 }
@@ -156,8 +171,8 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   }
 
   const items = (
-    await readChunked<CareItem>([...caregiversOf.keys()], (part) =>
-      sb.from("prescription_items").select("id, patient_id, times, start_date, end_date").in("patient_id", part).eq("active", true),
+    await readChunked<CareItem>([...caregiversOf.keys()], (part, from, to) =>
+      sb.from("prescription_items").select("id, patient_id, times, start_date, end_date").in("patient_id", part).eq("active", true).order("id").range(from, to),
     )
   ).filter((i) => i.times.length > 0);
 
@@ -167,11 +182,11 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   const itemIds = [...new Set(overdue.map((d) => d.item_id))];
   const since = new Date(Math.min(...overdue.map((d) => d.due.getTime())) - LOG_MATCH_MINUTES * MINUTE).toISOString();
   const [logs, alerts] = await Promise.all([
-    readChunked<DoseLogRef>(itemIds, (part) =>
-      sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
+    readChunked<DoseLogRef>(itemIds, (part, from, to) =>
+      sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since).order("id").range(from, to),
     ),
-    readChunked<DoseRef>(itemIds, (part) =>
-      sb.from("missed_dose_alerts").select("item_id, scheduled_for").in("item_id", part).gte("scheduled_for", since),
+    readChunked<DoseRef>(itemIds, (part, from, to) =>
+      sb.from("missed_dose_alerts").select("item_id, scheduled_for").in("item_id", part).gte("scheduled_for", since).order("item_id").order("scheduled_for").range(from, to),
     ),
   ]);
 
@@ -181,8 +196,8 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   // Who to tell: the phones of the patient's caregivers.
   const patientIds = [...new Set(missed.map((m) => m.patient_id))];
   const caregiverIds = [...new Set(patientIds.flatMap((p) => caregiversOf.get(p) ?? []))];
-  const tokenRows = await readChunked<{ user_id: string; token: string }>(caregiverIds, (part) =>
-    sb.from("push_tokens").select("user_id, token").in("user_id", part),
+  const tokenRows = await readChunked<{ user_id: string; token: string }>(caregiverIds, (part, from, to) =>
+    sb.from("push_tokens").select("user_id, token").in("user_id", part).order("token").range(from, to),
   );
   const tokensOf = (patientId: string) =>
     (caregiversOf.get(patientId) ?? []).flatMap((c) => tokenRows.filter((t) => t.user_id === c).map((t) => t.token));
@@ -203,8 +218,8 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   if (claimed.length === 0) return { checked, alerts_sent: 0 };
 
   const names = new Map<string, string>();
-  const profiles = await readChunked<{ id: string; full_name: string | null }>(patientIds, (part) =>
-    sb.from("profiles").select("id, full_name").in("id", part),
+  const profiles = await readChunked<{ id: string; full_name: string | null }>(patientIds, (part, from, to) =>
+    sb.from("profiles").select("id, full_name").in("id", part).order("id").range(from, to),
   );
   for (const p of profiles) if (firstName(p.full_name)) names.set(p.id, firstName(p.full_name) as string);
 

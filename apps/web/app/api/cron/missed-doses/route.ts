@@ -22,13 +22,13 @@ export const POST = withRoute("cron/missed-doses", async (req) => {
   try {
     missed = await runMissedDoseCheck(sb, sendPush);
   } catch (error) {
-    log({ event: "cron_missed_dose_check_failed", error: error instanceof Error ? error.message : String(error) });
+    log({ event: "cron_missed_dose_check_failed", error: error instanceof Error ? error.name : "unknown" });
   }
   let late = { checked: 0, patient_sent: 0, caregiver_sent: 0 };
   try {
     late = await runLateDoseCheck(sb, sendPush);
   } catch (error) {
-    log({ event: "cron_late_dose_check_failed", error: error instanceof Error ? error.message : String(error) });
+    log({ event: "cron_late_dose_check_failed", error: error instanceof Error ? error.name : "unknown" });
   }
   return Response.json({
     checked: missed.checked,

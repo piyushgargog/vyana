@@ -67,6 +67,8 @@ function memoryDb(seed: Record<string, Row[]>) {
       let upserts: Row[] = [];
       let patch: Row = {};
       let limitN = Number.POSITIVE_INFINITY;
+      let rangeFrom = 0;
+      let rangeTo = Number.POSITIVE_INFINITY;
       const same = (a: Row, b: Row) => a.item_id === b.item_id && time(a.scheduled_for) === time(b.scheduled_for);
       const chain = {
         select: () => chain,
@@ -77,6 +79,7 @@ function memoryDb(seed: Record<string, Row[]>) {
         gt: (c: string, v: unknown) => (filters.push((r) => String(r[c]) > String(v)), chain),
         order: () => chain,
         limit: (n: number) => ((limitN = n), chain),
+        range: (from: number, to: number) => ((rangeFrom = from), (rangeTo = to), chain),
         delete: () => ((op = "delete"), chain),
         update: (p: Row) => ((op = "update"), (patch = p), chain),
         upsert: (rows: Row[], opts: { ignoreDuplicates?: boolean }) => {
@@ -100,12 +103,22 @@ function memoryDb(seed: Record<string, Row[]>) {
             const inserted: Row[] = [];
             for (const row of upserts) {
               if (table(name).some((r) => same(r, row))) continue;
-              table(name).push({ ...row });
-              inserted.push({ ...row });
+              // Postgres fills the columns an insert does not name with their
+              // defaults — for late_dose_pushes both stamps default to null.
+              const stored = name === "late_dose_pushes" ? { sent_at: null, caregiver_sent_at: null, ...row } : { ...row };
+              table(name).push(stored);
+              inserted.push({ ...stored });
             }
             return resolve({ data: inserted, error: null });
           }
-          return resolve({ data: table(name).filter((r) => filters.every((f) => f(r))).slice(0, limitN).map((r) => ({ ...r })), error: null });
+          return resolve({
+            data: table(name)
+              .filter((r) => filters.every((f) => f(r)))
+              .slice(rangeFrom, rangeTo === Number.POSITIVE_INFINITY ? undefined : rangeTo + 1)
+              .slice(0, limitN)
+              .map((r) => ({ ...r })),
+            error: null,
+          });
         },
       };
       return chain;
@@ -148,7 +161,7 @@ describe("runLateDoseCheck", () => {
       data: { type: "dose_late", itemId: "i-1", scheduledFor: due.toISOString() },
     });
     expect(db.table("late_dose_pushes")).toEqual([
-      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), sent_at: ist("2026-10-12 09:45").toISOString() },
+      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), sent_at: ist("2026-10-12 09:45").toISOString(), caregiver_sent_at: null },
     ]);
 
     expect(await runLateDoseCheck(db.sb, send, ist("2026-10-12 10:00"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
@@ -196,7 +209,7 @@ describe("runLateDoseCheck", () => {
     expect(send.mock.calls[0][0][0]).toMatchObject({ to: "ExponentPushToken[care1]", channelId: "caregiver-alerts" });
     // The row is the escalation's own claim: caregiver stamped, patient never told.
     expect(db.table("late_dose_pushes")).toEqual([
-      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), caregiver_sent_at: ist("2026-10-12 10:30").toISOString() },
+      { patient_id: "p-1", item_id: "i-1", scheduled_for: due.toISOString(), sent_at: null, caregiver_sent_at: ist("2026-10-12 10:30").toISOString() },
     ]);
   });
 
@@ -242,11 +255,6 @@ describe("runLateDoseCheck", () => {
     const send = vi.fn(async (messages: PushMessage[]) => {
       if (!interleaved && messages[0].to === "ExponentPushToken[patient]") {
         interleaved = true;
-        // The fake stores only the keys an insert names; the real row's other
-        // stamp is NULL, so say so before the nested run reads the row back.
-        for (const row of db.table("late_dose_pushes")) {
-          if (row.caregiver_sent_at === undefined) row.caregiver_sent_at = null;
-        }
         // A second run of the same check overlaps this one: by 10:30 the slot is
         // the caregivers', and it claims and delivers that send on the very row
         // this run inserted, while this run's patient send is still in flight.

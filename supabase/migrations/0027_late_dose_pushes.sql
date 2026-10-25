@@ -22,3 +22,6 @@ create table public.late_dose_pushes (
   unique (item_id, scheduled_for)
 );
 alter table public.late_dose_pushes enable row level security;
+revoke all on public.late_dose_pushes from public, anon, authenticated;
+
+create index late_dose_pushes_patient_id_idx on public.late_dose_pushes (patient_id);

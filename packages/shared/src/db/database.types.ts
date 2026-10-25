@@ -1121,7 +1121,7 @@ export type Database = {
           item_id: string
           patient_id: string
           scheduled_for: string
-          sent_at: string
+          sent_at: string | null
         }
         ComputedFields: never
         Insert: {
@@ -1130,7 +1130,7 @@ export type Database = {
           item_id: string
           patient_id: string
           scheduled_for: string
-          sent_at?: string
+          sent_at?: string | null
         }
         Update: {
           caregiver_sent_at?: string | null
@@ -1138,7 +1138,7 @@ export type Database = {
           item_id?: string
           patient_id?: string
           scheduled_for?: string
-          sent_at?: string
+          sent_at?: string | null
         }
         Relationships: [
           {

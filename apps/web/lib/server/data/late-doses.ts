@@ -117,14 +117,13 @@ interface ProfileRow {
 /** Every profile, one page at a time (keyset on id), with the nudge switch and the name. */
 async function readProfiles(sb: SupabaseClient): Promise<ProfileRow[]> {
   const out: ProfileRow[] = [];
-  let cursor = "";
-  for (let page = 0; page < 100; page++) {
-    const { data, error } = await sb
-      .from("profiles")
-      .select("id, full_name, late_dose_nudge")
-      .order("id")
-      .gt("id", cursor)
-      .limit(PAGE);
+  let cursor: string | null = null;
+  for (;;) {
+    // The cursor filter applies only once there is a cursor: an empty string is not a
+    // uuid, and Postgres refuses to cast it, which would fail the whole check.
+    let query = sb.from("profiles").select("id, full_name, late_dose_nudge").order("id").limit(PAGE);
+    if (cursor !== null) query = query.gt("id", cursor);
+    const { data, error } = await query;
     if (error) throw error;
     const rows = (data ?? []) as ProfileRow[];
     out.push(...rows);
@@ -142,7 +141,8 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
   const items = (
     await readChunked<CareItem>(
       profiles.map((p) => p.id),
-      (part) => sb.from("prescription_items").select("id, patient_id, times, start_date, end_date").in("patient_id", part).eq("active", true),
+      (part, from, to) =>
+        sb.from("prescription_items").select("id, patient_id, times, start_date, end_date").in("patient_id", part).eq("active", true).order("id").range(from, to),
     )
   ).filter((i) => i.times.length > 0);
   const late = listLateDoses(items, now);
@@ -151,20 +151,32 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
   const itemIds = [...new Set(late.map((d) => d.item_id))];
   const since = new Date(Math.min(...late.map((d) => d.due.getTime())) - LOG_MATCH_MINUTES * MINUTE).toISOString();
   const [logs, pushes] = await Promise.all([
-    readChunked<DoseLogRef>(itemIds, (part) => sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since)),
-    readChunked<LatePushRef>(itemIds, (part) =>
-      sb.from("late_dose_pushes").select("item_id, scheduled_for, sent_at, caregiver_sent_at").in("item_id", part).gte("scheduled_for", since),
+    readChunked<DoseLogRef>(itemIds, (part, from, to) =>
+      sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since).order("id").range(from, to),
+    ),
+    readChunked<LatePushRef>(itemIds, (part, from, to) =>
+      sb.from("late_dose_pushes").select("item_id, scheduled_for, sent_at, caregiver_sent_at").in("item_id", part).gte("scheduled_for", since).order("id").range(from, to),
     ),
   ]);
   const { checked, patientDue, caregiverDue } = findLateDoses(items, logs, pushes, now);
 
   const userIds = [...new Set([...patientDue.map((d) => d.patient_id), ...caregiverDue.map((d) => d.patient_id)])];
-  const links = userIds.length === 0 ? [] : await readChunked<{ patient_id: string; caregiver_id: string }>(userIds, (part) => sb.from("care_links").select("patient_id, caregiver_id").in("patient_id", part).eq("status", "active"));
+  const links =
+    userIds.length === 0
+      ? []
+      : await readChunked<{ patient_id: string; caregiver_id: string }>(userIds, (part, from, to) =>
+          sb.from("care_links").select("patient_id, caregiver_id").in("patient_id", part).eq("status", "active").order("patient_id").order("caregiver_id").range(from, to),
+        );
   const caregiversOf = new Map<string, string[]>();
   for (const l of links) caregiversOf.set(l.patient_id, [...(caregiversOf.get(l.patient_id) ?? []), l.caregiver_id]);
 
   const tokenUserIds = [...new Set([...userIds, ...links.map((l) => l.caregiver_id)])];
-  const tokenRows = tokenUserIds.length === 0 ? [] : await readChunked<{ user_id: string; token: string }>(tokenUserIds, (part) => sb.from("push_tokens").select("user_id, token").in("user_id", part));
+  const tokenRows =
+    tokenUserIds.length === 0
+      ? []
+      : await readChunked<{ user_id: string; token: string }>(tokenUserIds, (part, from, to) =>
+          sb.from("push_tokens").select("user_id, token").in("user_id", part).order("token").range(from, to),
+        );
   const tokensOf = (userId: string) => tokenRows.filter((t) => t.user_id === userId).map((t) => t.token);
   const cleanInvalid = async (pushed: PushResult) => {
     if (pushed.invalidTokens.length > 0) await sb.from("push_tokens").delete().in("token", pushed.invalidTokens);
@@ -179,7 +191,8 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
   const pushByKey = new Map(pushes.map((p) => [`${p.item_id}|${new Date(p.scheduled_for).getTime()}`, p]));
   type Stamp = "sent_at" | "caregiver_sent_at";
   const claim = async (dose: DueDose, stamp: Stamp): Promise<"inserted" | "updated" | null> => {
-    const existing = pushByKey.get(`${dose.item_id}|${dose.due.getTime()}`);
+    const key = `${dose.item_id}|${dose.due.getTime()}`;
+    const existing = pushByKey.get(key);
     if (!existing) {
       const { data, error } = await sb
         .from("late_dose_pushes")
@@ -189,7 +202,16 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
         })
         .select("item_id");
       if (error) throw error;
-      return data && data.length > 0 ? "inserted" : null;
+      if (!data || data.length === 0) return null;
+      // Remember the row this run just made, so a second claim in the same run (the
+      // other stamp) takes the update path below instead of inserting again.
+      pushByKey.set(key, {
+        item_id: dose.item_id,
+        scheduled_for: dose.due.toISOString(),
+        sent_at: stamp === "sent_at" ? now.toISOString() : null,
+        caregiver_sent_at: stamp === "caregiver_sent_at" ? now.toISOString() : null,
+      });
+      return "inserted";
     }
     if (existing[stamp] !== null) return null;
     const { data, error } = await sb
@@ -200,7 +222,9 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
       .is(stamp, null)
       .select("item_id");
     if (error) throw error;
-    return data && data.length > 0 ? "updated" : null;
+    if (!data || data.length === 0) return null;
+    existing[stamp] = now.toISOString();
+    return "updated";
   };
   const release = async (dose: DueDose, stamp: Stamp, how: "inserted" | "updated") => {
     if (how === "inserted") {
@@ -253,7 +277,7 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
       to,
       title: "Dose reminder",
       body: `Your ${istTime(dose.due)} dose is not logged yet.`,
-      data: { type: "dose_late", itemId: dose.item_id, scheduledFor: dose.due.toISOString() },
+      data: { kind: "dose", type: "dose_late", itemId: dose.item_id, scheduledFor: dose.due.toISOString() },
       channelId: "doses",
     }));
     if (await sendClaimed(dose, "sent_at", messages)) patientSent++;

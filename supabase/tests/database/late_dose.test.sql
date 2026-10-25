@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(6);
+select plan(10);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'a@vyana.test', '{"full_name":"Patient A"}');
@@ -15,6 +15,18 @@ insert into public.prescriptions (id, patient_id, source) values
   ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'upload');
 insert into public.prescription_items (id, prescription_id, patient_id, medicine_name, frequency) values
   ('41000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Metformin', 'BD');
+-- The table is the server's alone: the migration revokes what the platform's
+-- default grants would otherwise hand to the API roles (checked here, before the
+-- platform-style grant below muddies it).
+select is(has_table_privilege('anon', 'public.late_dose_pushes', 'SELECT'), false,
+  'anon has no select on the nudge record');
+select is(has_table_privilege('anon', 'public.late_dose_pushes', 'TRUNCATE'), false,
+  'anon has no truncate on the nudge record');
+select is(has_table_privilege('authenticated', 'public.late_dose_pushes', 'SELECT'), false,
+  'a signed-in user has no select on the nudge record');
+select is(has_table_privilege('authenticated', 'public.late_dose_pushes', 'TRUNCATE'), false,
+  'a signed-in user has no truncate on the nudge record');
+
 -- Supabase grants table access to authenticated by default and lets the policies decide;
 -- this local harness does not, so grant what the platform would.
 grant select, insert on public.late_dose_pushes to authenticated;

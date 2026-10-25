@@ -45,6 +45,7 @@ describe("POST /api/cron/missed-doses", () => {
     expect(res.status).toBe(401);
     expect((await res.json()).error.code).toBe("UNAUTHORIZED");
     expect(run).not.toHaveBeenCalled();
+    expect(runLate).not.toHaveBeenCalled();
   });
 
   it("refuses a wrong secret, however close", async () => {
@@ -53,6 +54,7 @@ describe("POST /api/cron/missed-doses", () => {
       expect(res.status, secret).toBe(401);
     }
     expect(run).not.toHaveBeenCalled();
+    expect(runLate).not.toHaveBeenCalled();
   });
 
   it("does not accept a user token or a bearer header instead of the secret", async () => {
@@ -66,6 +68,7 @@ describe("POST /api/cron/missed-doses", () => {
     const res = await call({ "x-cron-secret": "" });
     expect(res.status).toBe(500);
     expect(run).not.toHaveBeenCalled();
+    expect(runLate).not.toHaveBeenCalled();
     expect(() => requireEnv("CRON_SECRET")).toThrow("Missing environment variable CRON_SECRET");
   });
 

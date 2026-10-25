@@ -122,12 +122,16 @@ function memoryDb(seed: Record<string, Row[]>) {
       let op: "select" | "delete" | "upsert" = "select";
       let upserts: Row[] = [];
       let ignoreDuplicates = false;
+      let rangeFrom = 0;
+      let rangeTo = Number.POSITIVE_INFINITY;
       const same = (a: Row, b: Row) => a.item_id === b.item_id && time(a.scheduled_for) === time(b.scheduled_for);
       const chain = {
         select: () => chain,
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), chain),
         in: (c: string, list: unknown[]) => (filters.push((r) => list.includes(r[c])), chain),
         gte: (c: string, v: unknown) => (filters.push((r) => time(r[c]) >= time(v)), chain),
+        order: () => chain,
+        range: (from: number, to: number) => ((rangeFrom = from), (rangeTo = to), chain),
         delete: () => ((op = "delete"), chain),
         upsert: (rows: Row[], opts: { ignoreDuplicates?: boolean }) => ((op = "upsert"), (upserts = rows), (ignoreDuplicates = !!opts.ignoreDuplicates), chain),
         then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
@@ -149,7 +153,13 @@ function memoryDb(seed: Record<string, Row[]>) {
             }
             return resolve({ data: inserted, error: null });
           }
-          return resolve({ data: table(name).filter((r) => filters.every((f) => f(r))).map((r) => ({ ...r })), error: null });
+          return resolve({
+            data: table(name)
+              .filter((r) => filters.every((f) => f(r)))
+              .slice(rangeFrom, rangeTo === Number.POSITIVE_INFINITY ? undefined : rangeTo + 1)
+              .map((r) => ({ ...r })),
+            error: null,
+          });
         },
       };
       return chain;
