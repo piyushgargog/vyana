@@ -28,7 +28,7 @@ export function LargeTitle({ eyebrow, title, subtitle, actions, className }: { e
     <header data-compact={compact || undefined} className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
       <div className="min-w-0">
         {eyebrow ? (
-          <div aria-hidden={compact || undefined} className={cn("text-subheadline text-label-3 transition-opacity duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
+          <div aria-hidden={compact || undefined} className={cn("text-subheadline text-label-3 transition-[opacity,visibility] duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
             {eyebrow}
           </div>
         ) : null}
@@ -36,7 +36,7 @@ export function LargeTitle({ eyebrow, title, subtitle, actions, className }: { e
           <h1 className={cn("text-label", compact ? "text-title-2" : "text-large-title")}>{title}</h1>
         </div>
         {subtitle ? (
-          <p aria-hidden={compact || undefined} className={cn("mt-2 max-w-2xl text-body leading-relaxed text-label-2 transition-opacity duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
+          <p aria-hidden={compact || undefined} className={cn("mt-2 max-w-2xl text-body leading-relaxed text-label-2 transition-[opacity,visibility] duration-200 motion-reduce:transition-none", compact && "invisible opacity-0")}>
             {subtitle}
           </p>
         ) : null}

@@ -86,7 +86,7 @@ describe("AppShell navigation (issue #492)", () => {
     expect(tabbar?.textContent).toContain("Dashboard");
 
     const segmentedWrap = el.querySelector(".lg\\:hidden.md\\:flex, div.hidden.md\\:flex.lg\\:hidden");
-    expect(segmentedWrap ?? el.innerHTML).toBeTruthy();
+    expect(segmentedWrap, "segmented navigation is rendered").not.toBeNull();
   });
 });
 
