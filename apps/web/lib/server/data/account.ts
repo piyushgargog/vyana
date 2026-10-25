@@ -133,11 +133,19 @@ async function readTable(sb: SupabaseClient, spec: ExportTable, userId: string):
     // single request URL, which a long history would outgrow.
     const rows: Row[] = [];
     let truncated = parents.truncated;
-    for (let i = 0; i < ids.length; i += 100) {
+    // The cap is on the whole table, not per chunk: a chunk on its own may return
+    // up to MAX_ROWS_PER_TABLE rows, so stop once the table total is reached and
+    // say so — otherwise a long history would overrun the limit while reporting
+    // itself complete.
+    for (let i = 0; i < ids.length && rows.length < MAX_ROWS_PER_TABLE; i += 100) {
       const chunk = ids.slice(i, i + 100);
       const res = await readAll((from, to) => sb.from(spec.table).select("*").in(spec.owner[0], chunk).order(spec.order).range(from, to));
       rows.push(...res.rows);
       truncated ||= res.truncated;
+      if (rows.length >= MAX_ROWS_PER_TABLE) {
+        rows.length = MAX_ROWS_PER_TABLE;
+        truncated = true;
+      }
     }
     return { rows, truncated };
   }
