@@ -234,4 +234,47 @@ describe("runLateDoseCheck", () => {
     expect(await runLateDoseCheck(db.sb, send, ist("2026-10-12 10:30"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
     expect(db.table("late_dose_pushes")[0].caregiver_sent_at).toBeNull();
   });
+
+  it("overlapping runs: the patient claim's release keeps a caregiver claim delivered mid-send", async () => {
+    const db = world();
+    const nestedSend = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    let interleaved = false;
+    const send = vi.fn(async (messages: PushMessage[]) => {
+      if (!interleaved && messages[0].to === "ExponentPushToken[patient]") {
+        interleaved = true;
+        // The fake stores only the keys an insert names; the real row's other
+        // stamp is NULL, so say so before the nested run reads the row back.
+        for (const row of db.table("late_dose_pushes")) {
+          if (row.caregiver_sent_at === undefined) row.caregiver_sent_at = null;
+        }
+        // A second run of the same check overlaps this one: by 10:30 the slot is
+        // the caregivers', and it claims and delivers that send on the very row
+        // this run inserted, while this run's patient send is still in flight.
+        await runLateDoseCheck(db.sb, nestedSend, ist("2026-10-12 10:30"));
+      }
+      return ok(0);
+    });
+
+    const result = await runLateDoseCheck(db.sb, send, ist("2026-10-12 09:45"));
+
+    expect(result).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
+    expect(nestedSend).toHaveBeenCalledTimes(1);
+    expect(nestedSend.mock.calls[0][0][0]).toMatchObject({ to: "ExponentPushToken[care1]", channelId: "caregiver-alerts" });
+    // This run's send delivered nothing, so its claim is released — but the row
+    // carrying the overlapping run's delivered caregiver claim must survive,
+    // or the next run would tell the caregivers a second time.
+    expect(db.table("late_dose_pushes")).toEqual([
+      {
+        patient_id: "p-1",
+        item_id: "i-1",
+        scheduled_for: due.toISOString(),
+        sent_at: ist("2026-10-12 09:45").toISOString(),
+        caregiver_sent_at: ist("2026-10-12 10:30").toISOString(),
+      },
+    ]);
+
+    const sendAgain = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    expect(await runLateDoseCheck(db.sb, sendAgain, ist("2026-10-12 10:45"))).toEqual({ checked: 1, patient_sent: 0, caregiver_sent: 0 });
+    expect(sendAgain).not.toHaveBeenCalled();
+  });
 });

@@ -204,7 +204,18 @@ export async function runLateDoseCheck(sb: SupabaseClient, send: PushSender, now
   };
   const release = async (dose: DueDose, stamp: Stamp, how: "inserted" | "updated") => {
     if (how === "inserted") {
-      await sb.from("late_dose_pushes").delete().eq("item_id", dose.item_id).eq("scheduled_for", dose.due.toISOString());
+      // Guarded like the update below: the row goes only while the other claim
+      // is still empty and this stamp is still this run's — an overlapping run
+      // may have claimed the other send on this same row and delivered it, and
+      // deleting the row would erase that claim and send that message again.
+      const other: Stamp = stamp === "sent_at" ? "caregiver_sent_at" : "sent_at";
+      await sb
+        .from("late_dose_pushes")
+        .delete()
+        .eq("item_id", dose.item_id)
+        .eq("scheduled_for", dose.due.toISOString())
+        .eq(stamp, now.toISOString())
+        .is(other, null);
     } else {
       await sb
         .from("late_dose_pushes")
