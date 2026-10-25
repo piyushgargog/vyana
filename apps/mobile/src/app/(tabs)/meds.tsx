@@ -3,7 +3,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -20,7 +19,7 @@ import {
   MobileDisclaimerFooter,
   MobileSkeletonCard,
 } from '@/components/ui-primitives';
-import { ErrorState, Screen, SosPill, Text } from '@/components/ui';
+import { ErrorState, Screen, SosPill, Text, TextField } from '@/components/ui';
 import { T } from '@/constants/theme';
 
 export default function MobileMedsTab() {
@@ -369,26 +368,24 @@ export default function MobileMedsTab() {
             <Text variant="caption" style={styles.inputLabel}>
               Medicine Name
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Medicine Name"
               value={singleMedQuery}
               onChangeText={setSingleMedQuery}
               placeholder="Enter medicine name"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="caption" style={styles.inputLabel}>
               Strength
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Medicine Strength"
               value={singleStrength}
               onChangeText={setSingleStrength}
               placeholder="Optional"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
         </View>
@@ -583,16 +580,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: T.color.label2,
     marginBottom: T.space.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    paddingHorizontal: T.space.sm,
-    paddingVertical: T.space.sm,
-    minHeight: 44,
-    ...T.text.footnote,
-    color: T.color.label,
   },
   singleResultWrap: { gap: T.space.xs, paddingTop: T.space.xs },
   singlePharmacyRow: {
