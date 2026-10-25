@@ -18,7 +18,7 @@ export {
 export { prescriptionsExtractMock } from "./prescriptions-extract";
 export { reportsAnalyzeMock } from "./reports-analyze";
 export { labValueCorrectMock } from "./lab-value-correct";
-export { basketCompareMock, basketJobRunningMock, singleMedicineJobMock } from "./basket-compare";
+export { basketCompareMock, basketJobRunningMock, singleMedicineCompareMock, singleMedicineJobMock } from "./basket-compare";
 export { carePlanMock } from "./care-plan";
 export { interactionsMock } from "./interactions";
 export { triageMock, triageEmergencyMock, TRIAGE_DISCLAIMER } from "./triage";

@@ -58,11 +58,14 @@ export async function processLabResult(lab: LabSource, test: string, city: strin
   if (!r.found || !url || !isOnDomain(url, lab.domain)) return { status: "not_found", quote: null };
 
   const price = plausiblePrice(r.price, r.mrp);
+  const mrpCandidate = plausiblePrice(r.mrp, null);
   let verified = false;
-  if (price !== null) {
+  let pageText: string | null = null;
+  if (price !== null || mrpCandidate !== null) {
     try {
       const res = await fetchPages({ urls: [url], ttl: 0, purpose: "Confirm the listed price of a lab test" }, { timeoutMs: VERIFY_TIMEOUT_MS, counter });
-      verified = pricesOnPage(res.results[0]?.text ?? "").has(price);
+      pageText = res.results[0]?.text ?? "";
+      verified = price !== null && pricesOnPage(pageText).has(price);
     } catch {
       log({ event: "lab_verify_failed", source: lab.source });
     }
@@ -76,7 +79,10 @@ export async function processLabResult(lab: LabSource, test: string, city: strin
       product_name: r.test_name?.trim() || test,
       pack_size: null,
       price,
-      mrp: plausiblePrice(r.mrp, null),
+      // The MRP is emitted only when the fetched page itself shows that amount:
+      // an agent-reported list price the page never shows would be an invented
+      // number next to a verified selling price.
+      mrp: mrpCandidate !== null && pageText !== null && pricesOnPage(pageText).has(mrpCandidate) ? mrpCandidate : null,
       in_stock: null,
       product_url: url,
       fetched_at: new Date().toISOString(),

@@ -70,7 +70,8 @@ export function useBasketJob(jobId: string | null | undefined) {
     queryKey: [QUERY_ROOTS.basketJob, jobId],
     queryFn: () => api.basket.job(jobId as string),
     enabled: Boolean(jobId),
-    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    // Stops on "done" and also after an error (a 404 for an expired job would otherwise be asked again every 4 s for ever).
+    refetchInterval: (query) => (query.state.error || query.state.data?.status === "done" ? false : 4000),
     retry: 1,
   });
 }
@@ -90,7 +91,8 @@ export function useLabsJob(jobId: string | null | undefined) {
     queryKey: ["labs-job", jobId],
     queryFn: () => api.labs.job(jobId as string),
     enabled: Boolean(jobId),
-    refetchInterval: (query) => (query.state.data?.status === "done" ? false : 4000),
+    // Stops on "done" and also after an error (a 404 for an expired job would otherwise be asked again every 4 s for ever).
+    refetchInterval: (query) => (query.state.error || query.state.data?.status === "done" ? false : 4000),
     retry: 1,
   });
 }

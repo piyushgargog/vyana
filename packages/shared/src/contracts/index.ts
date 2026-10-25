@@ -75,10 +75,10 @@ export const SourceLink = z.object({ title: z.string(), url: z.string() });
 
 // ---------- single-medicine price check ----------
 // No route of its own (ADR-038): medicines.compare posts a one-item basket and returns BasketCompareRes.
-export const MedicinesCompareReq = z.object({ medicine: z.string().min(2), strength: z.string().optional() });
+export const MedicinesCompareReq = z.object({ medicine: z.string().trim().min(2), strength: z.string().optional() });
 
 // ---------- POST /api/labs/compare ----------
-export const LabsCompareReq = z.object({ test_name: z.string().min(2), city: z.string().min(2) });
+export const LabsCompareReq = z.object({ test_name: z.string().trim().min(2), city: z.string().trim().min(2) });
 export const LabsCompareRes = z.object({            // CONTRACT CHANGED 13 Oct (ADR-050): a job like the basket
   job_id: z.string().min(1),                          // poll GET /api/labs/compare/{job_id} while running
   status: z.enum(["running","done"]),
@@ -281,7 +281,7 @@ export const LabValueCorrectRes = z.object({
 
 // ---------- POST /api/prescriptions/basket ----------
 export const BasketItemInput = z.object({
-  medicine: z.string().min(2),
+  medicine: z.string().trim().min(2),
   strength: z.string().optional(),
   quantity: z.number().int().positive().optional(),   // packs to buy; default 1
 });

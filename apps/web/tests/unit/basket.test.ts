@@ -7,7 +7,7 @@ vi.mock("@/lib/server/tinyfish/client", async (orig) => ({
   fetchPages: (...args: unknown[]) => fetchPagesMock(...args),
 }));
 
-const { basketGoal, basketKey, normalizeItems, plausiblePrice, pricesOnPage, processPharmacyResult, summarize, BASKET_OUTPUT_SCHEMA } =
+const { basketGoal, basketKey, normalizeItems, plausiblePrice, pricesOnPage, pricesOnPageByKind, processPharmacyResult, summarize, BASKET_OUTPUT_SCHEMA } =
   await import("@/lib/server/tinyfish/basket");
 const { PHARMACIES } = await import("@/lib/server/tinyfish/sources");
 
@@ -82,6 +82,12 @@ describe("price checks", () => {
     expect(pricesOnPage("₹32.00").has(32)).toBe(true);
   });
 
+  it("separates selling amounts from MRP amounts, including an MRP written before the rupee sign", () => {
+    const { selling, mrp } = pricesOnPageByKind("Price ₹22.66 | MRP ₹198 | MRP: 32.28 | Rs. 1,200");
+    expect([...selling].sort((a, b) => a - b)).toEqual([22.66, 1200]);
+    expect([...mrp].sort((a, b) => a - b)).toEqual([32.28, 198]);
+  });
+
   it("ignores letters that only end with a marker", () => {
     expect(pricesOnPage("hours 15 / colours 20").size).toBe(0);
   });
@@ -99,14 +105,38 @@ describe("processPharmacyResult", () => {
         { index: 2, found: true, product_name: "Telma 40", pack_size: "30", price: 198, mrp: 210, in_stock: true, product_url: "https://www.apollopharmacy.in/otc/telma-40" },
       ],
     });
-    expect(b.status).toBe("ok");
+    // The Telma price appears on its page only as the MRP amount, and the agent's
+    // own MRP (210) is a different number: that is an MRP mislabelled as a selling
+    // price, so the line stays unconfirmed and out of the total.
+    expect(b.status).toBe("partial");
     expect(b.lines.map((l) => [l.product_url, l.price_verified, l.line_total])).toEqual([
       ["https://www.apollopharmacy.in/otc/dolo-650", true, 32],
-      ["https://www.apollopharmacy.in/otc/telma-40", true, 396],
+      ["https://www.apollopharmacy.in/otc/telma-40", false, null],
     ]);
-    expect(b.total).toBe(428);
+    expect(b.total).toBe(32);
     expect(b.checkout_url).toBe(apollo.homeUrl);
     expect(fetchPagesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirms a price equal to the page's MRP when the agent reports that same MRP (no discount)", async () => {
+    pages({ "https://www.netmeds.com/product/telma": "Telma 40 MRP ₹198" });
+    const b = await processPharmacyResult(netmeds, items.slice(1), {
+      items: [{ index: 1, found: true, product_name: "Telma 40", price: 198, mrp: 198, product_url: "https://www.netmeds.com/product/telma" }],
+    });
+    expect(b.lines[0].price_verified).toBe(true);
+    expect(b.total).toBe(396);
+  });
+
+  it("retries a product page the batch fetch reported as an error, instead of leaving its price unverified", async () => {
+    fetchPagesMock
+      .mockResolvedValueOnce({ results: [], errors: [{ url: "https://www.netmeds.com/product/dolo", error: "bot_blocked" }] })
+      .mockResolvedValueOnce({ results: [{ url: "https://www.netmeds.com/product/dolo", text: "Dolo 650 Tablet ₹30" }], errors: [] });
+    const b = await processPharmacyResult(netmeds, items.slice(0, 1), {
+      items: [{ index: 1, found: true, product_name: "Dolo", price: 30, product_url: "https://www.netmeds.com/product/dolo" }],
+    });
+    expect(fetchPagesMock).toHaveBeenCalledTimes(2);
+    expect(b.lines[0].price_verified).toBe(true);
+    expect(b.total).toBe(30);
   });
 
   it("keeps a price the page doesn't show, but unconfirmed and out of the total", async () => {

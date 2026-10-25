@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { BasketCompareRes, BasketLine, PharmacyBasket, PriceSource } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart, sha1 } from "../cache";
-import { notFound } from "../errors";
+import { badRequest, notFound } from "../errors";
 import { FLAT_RUN_DEADLINE_MS, QUEUE_DEADLINE_MS, cacheJobResult, cachedJobResult, openJobForUser, pollAgentRun, sealJob } from "../jobs";
 import { log } from "../log";
 import { supabaseAdmin } from "../supabase-admin";
@@ -34,7 +34,7 @@ export { QUEUE_DEADLINE_MS };
  * the flat AGENT_MAX_SECONDS. The run deadline keeps its 40 s grace over the agent
  * cap and stays under the queue deadline.
  */
-function agentMaxSeconds(itemCount: number): number {
+export function agentMaxSeconds(itemCount: number): number {
   return Math.min(420, AGENT_MAX_SECONDS + Math.max(0, itemCount - 1) * 30);
 }
 
@@ -128,12 +128,15 @@ export function plausiblePrice(price: number | null | undefined, mrp: number | n
 const MARKERS = ["₹", "rs.", "rs", "inr", "mrp"];
 
 /**
- * Every amount on the page written after a currency marker (₹ 22.66, Rs. 1,200, MRP: 32.28, INR 99).
- * A plain scan instead of a regex, so a long page can't cause slow backtracking.
+ * Every amount on the page written after a currency marker (₹ 22.66, Rs. 1,200, MRP: 32.28, INR 99),
+ * split by what the amount is labelled as: an amount introduced by "MRP" — including
+ * "MRP ₹198", where the rupee sign follows the label — is the list price, not a selling
+ * price. A plain scan instead of a regex, so a long page can't cause slow backtracking.
  */
-export function pricesOnPage(text: string): Set<number> {
+export function pricesOnPageByKind(text: string): { selling: Set<number>; mrp: Set<number> } {
   const lower = text.toLowerCase();
-  const found = new Set<number>();
+  const selling = new Set<number>();
+  const mrp = new Set<number>();
   for (let i = 0; i < lower.length; i++) {
     const marker = MARKERS.find((m) => lower.startsWith(m, i));
     if (!marker) continue;
@@ -144,9 +147,17 @@ export function pricesOnPage(text: string): Set<number> {
     let digits = "";
     while (j < lower.length && /[\d,.]/.test(lower[j])) digits += lower[j++];
     const cleaned = digits.replace(/,/g, "").replace(/\.$/, "");
-    if (/^\d+(\.\d+)?$/.test(cleaned)) found.add(round2(Number(cleaned)));
+    if (!/^\d+(\.\d+)?$/.test(cleaned)) continue;
+    const isMrp = marker === "mrp" || lower.slice(Math.max(0, i - 6), i).trimEnd().endsWith("mrp");
+    (isMrp ? mrp : selling).add(round2(Number(cleaned)));
   }
-  return found;
+  return { selling, mrp };
+}
+
+/** Every amount on the page after any currency marker, MRP amounts included. */
+export function pricesOnPage(text: string): Set<number> {
+  const { selling, mrp } = pricesOnPageByKind(text);
+  return new Set([...selling, ...mrp]);
 }
 
 // ---------------------------------------------------------------- one pharmacy
@@ -191,6 +202,13 @@ export async function processPharmacyResult(
   for (const it of parsed.data.items) if (!byIndex.has(it.index)) byIndex.set(it.index, it);
 
   const startUrl = pharmacy.searchUrl(itemLabel(items[0]));
+  // The agent's own MRP per line, kept alongside: a price that appears on the page
+  // only as the MRP amount counts as confirmed only when it equals this MRP (a
+  // no-discount price), never when the agent reports a different MRP of its own.
+  const lineMrps: (number | null)[] = items.map((_, n) => {
+    const mrp = byIndex.get(n + 1)?.mrp;
+    return typeof mrp === "number" && Number.isFinite(mrp) && mrp > 0 ? round2(mrp) : null;
+  });
   const lines: BasketLine[] = items.map((item, n) => {
     const it = byIndex.get(n + 1);
     const url = absoluteUrl(it?.product_url, startUrl);
@@ -206,29 +224,37 @@ export async function processPharmacyResult(
   });
 
   const toVerify = [...new Set(lines.filter((l) => l.unit_price !== null && l.product_url).map((l) => l.product_url as string))].slice(0, 10);
-  const pages = new Map<string, Set<number>>();
+  const pages = new Map<string, { selling: Set<number>; mrp: Set<number> }>();
   if (toVerify.length) {
-    const fetchPrices = async () => {
-      const res = await fetchPages({ urls: toVerify, ttl: 0, purpose: "Confirm the listed price of a medicine" }, { timeoutMs: VERIFY_TIMEOUT_MS, counter });
-      for (const r of res.results) pages.set(r.url, pricesOnPage(r.text ?? ""));
+    const fetchPrices = async (urls: string[]) => {
+      const res = await fetchPages({ urls, ttl: 0, purpose: "Confirm the listed price of a medicine" }, { timeoutMs: VERIFY_TIMEOUT_MS, counter });
+      for (const r of res.results) pages.set(r.url, pricesOnPageByKind(r.text ?? ""));
     };
     try {
-      await fetchPrices();
+      await fetchPrices(toVerify);
     } catch {
       // One failed batch must not zero the whole pharmacy (#225: a basket showed
       // "Partial" with no total although the agent had found every item, because
-      // the single confirmation fetch failed) — retry once before giving up.
+      // the single confirmation fetch failed) — the missing-URL retry below is
+      // that second attempt.
+    }
+    // fetchPages reports per-URL failures in `errors` without throwing, so a page
+    // that failed or is simply absent gets one retry of its own before its prices
+    // are left unverified.
+    const missing = toVerify.filter((u) => !pages.has(u));
+    if (missing.length) {
       try {
-        await fetchPrices();
+        await fetchPrices(missing);
       } catch {
         log({ event: "basket_verify_failed", source: pharmacy.source });
       }
     }
   }
 
-  for (const l of lines) {
+  for (const [i, l] of lines.entries()) {
     if (l.unit_price === null || !l.product_url) continue;
-    l.price_verified = pages.get(l.product_url)?.has(l.unit_price) ?? false;
+    const page = pages.get(l.product_url);
+    l.price_verified = !!page && (page.selling.has(l.unit_price) || (page.mrp.has(l.unit_price) && lineMrps[i] === l.unit_price));
     l.line_total = l.price_verified ? round2(l.unit_price * l.quantity) : null;
   }
 
@@ -401,5 +427,9 @@ export async function itemsFromPrescription(sb: SupabaseClient, prescriptionId: 
   if (error) throw error;
   const rows = (data ?? []) as { medicine_name: string; strength: string | null }[];
   if (!rows.length) throw notFound("No active medicines found on this prescription.");
-  return normalizeItems(rows.slice(0, 10).map((r) => ({ medicine: r.medicine_name, strength: r.strength })));
+  // A basket prices at most 10 medicines (the same cap the items contract sets).
+  // Slicing here would silently drop the rest and present a partial comparison as
+  // complete, so an over-cap prescription is refused instead.
+  if (rows.length > 10) throw badRequest(`A basket can price at most 10 medicines; this prescription has ${rows.length} active ones.`);
+  return normalizeItems(rows.map((r) => ({ medicine: r.medicine_name, strength: r.strength })));
 }

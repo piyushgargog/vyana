@@ -259,13 +259,21 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       compare: (body) => post("/api/prescriptions/basket", BasketCompareReq, BasketCompareRes, body, mocks.basketJobRunningMock),
       job: (jobId) => {
         if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
-        return request({ method: "GET", path: `/api/prescriptions/basket/${encodeURIComponent(jobId)}`, resSchema: BasketCompareRes, mock: mocks.basketCompareMock });
+        return request({
+          method: "GET",
+          path: `/api/prescriptions/basket/${encodeURIComponent(jobId)}`,
+          resSchema: BasketCompareRes,
+          // A single-medicine job completes as a one-medicine basket, not as the full three-medicine fixture.
+          mock: () => (jobId === mocks.singleMedicineJobMock.job_id ? mocks.singleMedicineCompareMock : mocks.basketCompareMock),
+        });
       },
     },
     labs: {
       compare: (body) => post("/api/labs/compare", LabsCompareReq, LabsCompareRes, body, mocks.labsJobRunningMock),
-      job: (jobId) =>
-        request({ method: "GET", path: `/api/labs/compare/${encodeURIComponent(jobId)}`, resSchema: LabsCompareRes, mock: mocks.labsCompareMock }),
+      job: (jobId) => {
+        if (!jobId.trim()) return Promise.reject(new ApiError("BAD_REQUEST", "job_id: missing", 400));
+        return request({ method: "GET", path: `/api/labs/compare/${encodeURIComponent(jobId)}`, resSchema: LabsCompareRes, mock: mocks.labsCompareMock });
+      },
     },
     blood: {
       search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
@@ -278,7 +286,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       nearby: (body) => post("/api/emergency/nearby", EmergencyNearbyReq, EmergencyNearbyRes, body, mocks.emergencyNearbyMock),
       sos: (body) => post("/api/emergency/sos", EmergencySosReq, EmergencySosRes, body, mocks.emergencySosMock),
     },
-    hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, mocks.hospitalInfoMock) },
+    hospitals: { info: (body) => post("/api/hospitals/info", HospitalInfoReq, HospitalInfoRes, body, () => ({ ...mocks.hospitalInfoMock, hospital_id: body.hospital_id })) },
     schemes: { pmjayHospitals: (body) => post("/api/schemes/pmjay-hospitals", PmjayHospitalsReq, PmjayHospitalsRes, body, mocks.pmjayHospitalsMock) },
     doctors: { verify: (body) => post("/api/doctors/verify", DoctorVerifyReq, DoctorVerifyRes, body, mocks.doctorsVerifyMock) },
     plans: {

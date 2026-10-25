@@ -84,6 +84,15 @@ describe("basket job (mock mode, no network)", () => {
     expect(done.baskets[0].lines.map((l) => l.medicine)).toEqual(["Dolo"]);
   });
 
+  it("refuses a prescription with more active medicines than a basket can price, instead of silently dropping some", async () => {
+    for (let i = 0; i < 11; i++) {
+      db.prescription_items.push({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4", medicine_name: `Med ${i + 1}`, strength: null, active: true });
+    }
+    const res = await post({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4" });
+    expect(res.status).toBe(400);
+    expect(ApiErrorBody.parse(await res.json()).error.code).toBe("BAD_REQUEST");
+  });
+
   it("returns 404 for a prescription with no active items", async () => {
     const res = await post({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4" });
     expect(res.status).toBe(404);

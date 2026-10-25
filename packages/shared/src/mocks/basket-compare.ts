@@ -69,7 +69,7 @@ const dolo = (source: PharmacyBasket["source"], price: number, url: string, home
 
 /** A single-medicine check (a one-item basket) while two pharmacies are still working. */
 export const singleMedicineJobMock: BasketCompareRes = {
-  job_id: MOCK_JOB_ID,
+  job_id: "mock-single-medicine-job",
   status: "running",
   baskets: [
     dolo("pharmeasy", 28.9, "https://pharmeasy.in/online-medicine-order/dolo-650", "https://pharmeasy.in"),
@@ -80,5 +80,21 @@ export const singleMedicineJobMock: BasketCompareRes = {
   cheapest_source: "pharmeasy",
   generic: null,
   savings_vs_highest: 1.6,
+  cached: false,
+};
+
+/** The finished single-medicine job: the same one medicine, every pharmacy done — polling the job must not turn it into the three-medicine basket. */
+export const singleMedicineCompareMock: BasketCompareRes = {
+  job_id: "mock-single-medicine-job",
+  status: "done",
+  baskets: [
+    dolo("pharmeasy", 28.9, "https://pharmeasy.in/online-medicine-order/dolo-650", "https://pharmeasy.in"),
+    dolo("1mg", 30.5, "https://www.1mg.com/drugs/dolo-650-tablet", "https://www.1mg.com"),
+    dolo("netmeds", 29.9, "https://www.netmeds.com/products/dolo-650", "https://www.netmeds.com"),
+    dolo("apollo", 31, "https://www.apollopharmacy.in/otc/dolo-650", "https://www.apollopharmacy.in"),
+  ],
+  cheapest_source: "pharmeasy",
+  generic: null,
+  savings_vs_highest: 2.1,
   cached: false,
 };
