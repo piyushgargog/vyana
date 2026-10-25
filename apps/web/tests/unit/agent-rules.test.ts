@@ -160,4 +160,29 @@ describe("missedDosePatternRule", () => {
     expect(d?.title).not.toMatch(BANNED);
     expect(d?.reason).not.toMatch(BANNED);
   });
+
+  it("counts a dose by its India calendar day, not its UTC date", () => {
+    // 2026-10-15T19:00Z is 2026-10-16 00:30 IST: inside the window starting
+    // 2026-10-16, although slicing the UTC date would put it outside.
+    const d = missedDosePatternRule({
+      ...base,
+      logs: [
+        { scheduled_for: "2026-10-15T19:00:00Z", status: "missed" },
+        log("2026-10-20"),
+        log("2026-10-22"),
+      ],
+    });
+    expect(d?.payload).toEqual({ item_id: "item-9", missed: 3, suggest: "tell_doctor" });
+  });
+
+  it("ignores a dose whose India day falls after today", () => {
+    // 2026-10-22T20:00Z is 2026-10-23 01:30 IST: after today 2026-10-22,
+    // although slicing the UTC date would count it.
+    expect(
+      missedDosePatternRule({
+        ...base,
+        logs: [log("2026-10-20"), log("2026-10-21"), { scheduled_for: "2026-10-22T20:00:00Z", status: "missed" }],
+      }),
+    ).toBeNull();
+  });
 });
