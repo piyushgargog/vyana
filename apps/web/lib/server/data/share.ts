@@ -9,6 +9,7 @@ import {
   type MemoryDoseLog,
   type MemoryLabValue,
   type MemoryVital,
+  type PrescriptionItem,
   type ShareRes,
   type ShareScope,
   type TimelineSources,
@@ -97,7 +98,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
       sb.from("profiles").select("full_name, dob, blood_group, allergies").eq("id", patient),
     ),
     rows<{ name: string }>(sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at")),
-    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
+    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: PrescriptionItem["frequency"]; start_date: string | null; end_date: string | null; created_at: string }>(
       sb.from("prescription_items").select("medicine_name, strength, dose, frequency, start_date, end_date, created_at").eq("patient_id", patient).eq("active", true).order("created_at"),
     ),
     row.kind === "medical_id"

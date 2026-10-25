@@ -317,7 +317,7 @@ export const SharedProfile = z.object({
     name: z.string(),
     strength: z.string().nullable(),
     dose: z.string().nullable(),
-    frequency: z.string(),
+    frequency: PrescriptionItem.shape.frequency, // the DB check holds this to the prescription enum, so the card gets the same guarantee
   })),
   emergency_contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
 });
@@ -335,7 +335,7 @@ export const ShareMemory = z.object({
     points: z.array(z.object({ at: z.string(), value: z.number(), value2: z.number().nullable(), from_device: z.boolean().optional() })),
   })).optional(),
   medicines: z.array(z.object({
-    name: z.string(), strength: z.string().nullable(), dose: z.string().nullable(), frequency: z.string(),
+    name: z.string(), strength: z.string().nullable(), dose: z.string().nullable(), frequency: PrescriptionItem.shape.frequency,
     start: isoDate, end: isoDate.nullable(),
   })).optional(),
   adherence: z.object({                               // last 30 days, India dates
