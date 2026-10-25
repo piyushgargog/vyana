@@ -80,6 +80,11 @@ export default function MobileTabsLayout() {
     }
   };
 
+  // Every tab's icon is the outline glyph unselected and the filled glyph selected (#486),
+  // on Android as on iOS. Material Symbols ships both variants for home, the chat bubble and
+  // person, so those swap; `medication` and `lab_profile` have no filled variant anywhere in
+  // the set (checked against the expo-symbols catalog), so Medicines and Reports keep their
+  // single glyph and take the selected tint — the only two tabs where Android cannot swap.
   return (
     <NativeTabs
       labelVisibilityMode="labeled"
@@ -92,7 +97,10 @@ export default function MobileTabsLayout() {
     >
       <NativeTabs.Trigger name="index" listeners={{ tabPress: retap('/') }}>
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'house', selected: 'house.fill' }}
+          md={{ default: 'home', selected: 'home_filled' }}
+        />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="meds" listeners={{ tabPress: retap('/meds') }}>
         <NativeTabs.Trigger.Label>Medicines</NativeTabs.Trigger.Label>
@@ -100,7 +108,10 @@ export default function MobileTabsLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="reports" listeners={{ tabPress: retap('/reports') }}>
         <NativeTabs.Trigger.Label>Reports</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} md="lab_profile" />
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'doc.text', selected: 'doc.text.fill' }}
+          md="lab_profile"
+        />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="assistant" listeners={{ tabPress: retap('/assistant') }}>
         <NativeTabs.Trigger.Label>Ask</NativeTabs.Trigger.Label>
@@ -109,14 +120,14 @@ export default function MobileTabsLayout() {
             default: 'bubble.left.and.text.bubble.right',
             selected: 'bubble.left.and.text.bubble.right.fill',
           }}
-          md="forum"
+          md={{ default: 'chat_bubble_outline', selected: 'chat_bubble' }}
         />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile" listeners={{ tabPress: retap('/profile') }}>
         <NativeTabs.Trigger.Label>Me</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
-          md="account_circle"
+          md={{ default: 'person_outline', selected: 'person' }}
         />
       </NativeTabs.Trigger>
     </NativeTabs>

@@ -31,7 +31,7 @@ import {
   CardHeader,
   EmptyState,
   ErrorState,
-  HEADER_COLLAPSE_OFFSET,
+  isHeaderCollapsed,
   Pill,
   Screen,
   ScreenHeader,
@@ -149,7 +149,7 @@ export default function TimelineScreen() {
   // bar above the list takes the small title once it has scrolled past.
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const handleListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = event.nativeEvent.contentOffset.y > HEADER_COLLAPSE_OFFSET;
+    const next = isHeaderCollapsed(event.nativeEvent.contentOffset.y);
     setHeaderCollapsed((previous) => (previous === next ? previous : next));
   }, []);
   // A link turned off (or expired) in Profile must not keep showing here as active.

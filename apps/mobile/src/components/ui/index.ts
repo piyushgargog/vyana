@@ -7,8 +7,13 @@ export { Glass } from './glass';
 export { IconTile, ListGroup, ListRow, type TileColor } from './list';
 export { Pill } from './pill';
 export { Screen } from './screen';
-export { HEADER_COLLAPSE_OFFSET, ScreenHeader, ScreenTopBar } from './screen-header';
-export { registerScreenScroll, scrollScreenToTop } from './screen-scroll';
+export { ScreenHeader, ScreenTopBar } from './screen-header';
+export {
+  HEADER_COLLAPSE_OFFSET,
+  isHeaderCollapsed,
+  registerScreenScroll,
+  scrollScreenToTop,
+} from './screen-scroll';
 export { SosPill } from './sos-pill';
 export { Sheet } from './sheet';
 export { Symbol } from './symbol';
