@@ -11,7 +11,7 @@ import {
   type DbProfile,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, ButtonLink, Card, Pill } from "@/components/ui";
+import { Button, ButtonLink, Card, LargeTitle, Pill, TextAreaField } from "@/components/ui";
 import { AiSafetyBanner, SkeletonCard } from "@/components/ui-primitives";
 
 interface ConditionWithPatient extends DbCondition {
@@ -191,9 +191,9 @@ function DoctorCarePlanReviewContent({
 
   if (planError || !carePlan || !draftPlan) {
     return (
-      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-sm text-danger-text">
-        <h2 className="text-base font-bold">Care Plan Not Available</h2>
-        <p className="mt-1 text-xs">
+      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-danger-text">
+        <h2 className="text-xl font-semibold">Care Plan Not Available</h2>
+        <p className="mt-1 text-[15px]">
           {planError || "Unable to locate care plan document for review."}
         </p>
         <ButtonLink href="/doctor" size="sm" className="mt-4">
@@ -213,14 +213,14 @@ function DoctorCarePlanReviewContent({
         <div className="flex items-center gap-3">
           <Link
             href="/doctor"
-            className="text-xs font-semibold text-accent-strong hover:text-accent"
+            className="text-[13px] font-semibold text-accent-strong hover:text-accent"
           >
             ← OPD Queue
           </Link>
           {conditionInfo?.patient_id && (
             <Link
               href={`/doctor/patients/${conditionInfo.patient_id}`}
-              className="text-xs font-semibold text-label-2 hover:text-label"
+              className="text-[13px] font-semibold text-label-2 hover:text-label"
             >
               · Patient Profile
             </Link>
@@ -241,12 +241,10 @@ function DoctorCarePlanReviewContent({
 
       {/* Hero Review Card */}
       <Card className="p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-label">
-              Care Plan: {draftPlan.condition}
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-label-2">
+        <LargeTitle
+          title={`Care Plan: ${draftPlan.condition}`}
+          subtitle={
+            <>
               Patient:{" "}
               <strong>
                 {conditionInfo?.patient?.full_name || "Assigned Patient"}
@@ -256,11 +254,10 @@ function DoctorCarePlanReviewContent({
                   (Approved on {carePlan.reviewed_at.slice(0, 10)})
                 </span>
               )}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!isApproved ? (
+            </>
+          }
+          actions={
+            !isApproved ? (
               <Button
                 size="sm"
                 disabled={approveMutation.isPending}
@@ -277,34 +274,28 @@ function DoctorCarePlanReviewContent({
               >
                 {approveMutation.isPending ? "Updating…" : "Update Approved Plan"}
               </Button>
-            )}
-          </div>
-        </div>
+            )
+          }
+        />
 
         {/* Clinical Safety Banner */}
         {!isApproved && (
-          <div className="mt-4 rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-xs text-label">
+          <div className="mt-4 rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-[15px] text-label">
             <strong>Clinical Safety Rule:</strong> Patients cannot see draft care plans until a verified doctor reviews and approves them. You may edit recommendations, add clinical red flags, and set diagnostic follow-up test frequencies before publishing.
           </div>
         )}
       </Card>
 
       {/* Summary Field */}
-      <Card className="space-y-2 p-5">
-        <label
-          htmlFor="plan-summary"
-          className="block text-xs font-bold uppercase tracking-wider text-label-2"
-        >
-          Clinical Summary & Overview
-        </label>
-        <textarea
+      <Card className="p-5">
+        <TextAreaField
           id="plan-summary"
+          label="Clinical Summary & Overview"
           rows={3}
           value={draftPlan.summary}
           onChange={(e) =>
             setDraftPlan({ ...draftPlan, summary: e.target.value })
           }
-          className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label focus:border-accent focus:outline-none"
         />
       </Card>
 
@@ -313,19 +304,20 @@ function DoctorCarePlanReviewContent({
         {/* Recommended Actions (Do) */}
         <Card className="space-y-3 border border-accent/30 p-5">
           <div className="flex items-center justify-between border-b border-separator pb-2">
-            <h2 className="text-sm font-bold text-label">
+            <h2 className="text-xl font-semibold text-label">
               Recommended Actions (Do)
             </h2>
-            <span className="text-[11px] text-accent-strong font-semibold">
+            <span className="text-[13px] text-accent-strong font-semibold">
               {draftPlan.do.length} items
             </span>
           </div>
 
+          {/* Inline item edits stay raw inputs: a stacked Field label would break the chip row; each input keeps its aria-label. */}
           <div className="space-y-2">
             {draftPlan.do.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 rounded-row bg-accent-soft border border-accent/20 p-2 text-xs"
+                className="flex items-center gap-2 rounded-row bg-accent-soft border border-accent/20 p-2 text-[15px]"
               >
                 <input
                   type="text"
@@ -354,6 +346,7 @@ function DoctorCarePlanReviewContent({
             ))}
           </div>
 
+          {/* Compact add-item row stays a raw input: a stacked Field label would break the row; restyled to the system scale. */}
           <div className="flex gap-2 pt-1">
             <input
               type="text"
@@ -361,7 +354,7 @@ function DoctorCarePlanReviewContent({
               onChange={(e) => setNewDoItem(e.target.value)}
               placeholder="Add recommended action…"
               aria-label="Add recommended action"
-              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+              className="flex-1 h-11 rounded-row border border-separator bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
             <Button
               variant="secondary"
@@ -384,19 +377,20 @@ function DoctorCarePlanReviewContent({
         {/* Actions to Avoid (Don't) */}
         <Card className="space-y-3 border border-danger/30 p-5">
           <div className="flex items-center justify-between border-b border-separator pb-2">
-            <h2 className="text-sm font-bold text-label">
+            <h2 className="text-xl font-semibold text-label">
               Actions to Avoid (Don&apos;t)
             </h2>
-            <span className="text-[11px] text-danger-text font-semibold">
+            <span className="text-[13px] text-danger-text font-semibold">
               {draftPlan.dont.length} items
             </span>
           </div>
 
+          {/* Inline item edits stay raw inputs: a stacked Field label would break the chip row; each input keeps its aria-label. */}
           <div className="space-y-2">
             {draftPlan.dont.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 rounded-row bg-danger-soft border border-danger/20 p-2 text-xs"
+                className="flex items-center gap-2 rounded-row bg-danger-soft border border-danger/20 p-2 text-[15px]"
               >
                 <input
                   type="text"
@@ -425,6 +419,7 @@ function DoctorCarePlanReviewContent({
             ))}
           </div>
 
+          {/* Compact add-item row stays a raw input: a stacked Field label would break the row; restyled to the system scale. */}
           <div className="flex gap-2 pt-1">
             <input
               type="text"
@@ -432,7 +427,7 @@ function DoctorCarePlanReviewContent({
               onChange={(e) => setNewDontItem(e.target.value)}
               placeholder="Add restriction / contraindication…"
               aria-label="Add restriction / contraindication"
-              className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+              className="flex-1 h-11 rounded-row border border-separator bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
             />
             <Button
               variant="secondary"
@@ -455,21 +450,22 @@ function DoctorCarePlanReviewContent({
 
       {/* Dietary Guidelines */}
       <Card className="space-y-4 p-5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-label">
+        <h2 className="text-xl font-semibold text-label">
           Dietary Guidelines
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Foods to Eat More */}
           <div className="space-y-2">
-            <span className="font-bold text-ok block">
+            <span className="block text-[15px] font-semibold text-ok">
               Foods to Include (Eat More):
             </span>
+            {/* Inline item edits stay raw inputs: a stacked Field label would break the chip row; each input keeps its aria-label. */}
             <div className="space-y-1.5">
               {(draftPlan.diet.eat_more || []).map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 rounded-row bg-ok-soft border border-ok/20 p-1.5"
+                  className="flex items-center gap-2 rounded-row bg-ok-soft border border-ok/20 p-1.5 text-[15px]"
                 >
                   <input
                     type="text"
@@ -504,6 +500,7 @@ function DoctorCarePlanReviewContent({
               ))}
             </div>
 
+            {/* Compact add-item row stays a raw input: a stacked Field label would break the row; restyled to the system scale. */}
             <div className="flex gap-1.5 pt-1">
               <input
                 type="text"
@@ -511,7 +508,7 @@ function DoctorCarePlanReviewContent({
                 onChange={(e) => setNewEatMoreItem(e.target.value)}
                 placeholder="e.g. Green leafy vegetables…"
                 aria-label="Add food to include"
-                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+                className="flex-1 h-11 rounded-row border border-separator bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
               <Button
                 variant="secondary"
@@ -536,14 +533,15 @@ function DoctorCarePlanReviewContent({
 
           {/* Foods to Limit */}
           <div className="space-y-2">
-            <span className="font-bold text-warn block">
+            <span className="block text-[15px] font-semibold text-warn">
               Foods to Limit / Avoid:
             </span>
+            {/* Inline item edits stay raw inputs: a stacked Field label would break the chip row; each input keeps its aria-label. */}
             <div className="space-y-1.5">
               {(draftPlan.diet.limit || []).map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 rounded-row bg-warn-soft border border-warn/20 p-1.5"
+                  className="flex items-center gap-2 rounded-row bg-warn-soft border border-warn/20 p-1.5 text-[15px]"
                 >
                   <input
                     type="text"
@@ -578,6 +576,7 @@ function DoctorCarePlanReviewContent({
               ))}
             </div>
 
+            {/* Compact add-item row stays a raw input: a stacked Field label would break the row; restyled to the system scale. */}
             <div className="flex gap-1.5 pt-1">
               <input
                 type="text"
@@ -585,7 +584,7 @@ function DoctorCarePlanReviewContent({
                 onChange={(e) => setNewLimitItem(e.target.value)}
                 placeholder="e.g. Refined sugars, high-sodium snacks…"
                 aria-label="Add food to limit"
-                className="flex-1 rounded-row border border-separator bg-surface px-2.5 py-1 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+                className="flex-1 h-11 rounded-row border border-separator bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
               />
               <Button
                 variant="secondary"
@@ -613,19 +612,20 @@ function DoctorCarePlanReviewContent({
       {/* Red Flags: Critical Hospital / 108 Symptoms */}
       <Card className="space-y-3 border border-danger/40 bg-danger-soft p-5">
         <div className="flex items-center justify-between border-b border-danger/30 pb-2">
-          <h2 className="text-sm font-bold text-danger-text">
+          <h2 className="text-xl font-semibold text-danger-text">
             Emergency Red Flags (Immediate Hospital / 108 Escalation)
           </h2>
-          <span className="text-[11px] text-danger-text font-semibold">
+          <span className="text-[13px] text-danger-text font-semibold">
             {draftPlan.red_flags.length} symptoms
           </span>
         </div>
 
+        {/* Inline item edits stay raw inputs: a stacked Field label would break the chip row; each input keeps its aria-label. */}
         <div className="space-y-2">
           {draftPlan.red_flags.map((item, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 rounded-row bg-surface border border-danger/30 p-2 text-xs text-label"
+              className="flex items-center gap-2 rounded-row bg-surface border border-danger/30 p-2 text-[15px] text-label"
             >
               <input
                 type="text"
@@ -654,6 +654,7 @@ function DoctorCarePlanReviewContent({
           ))}
         </div>
 
+        {/* Compact add-item row stays a raw input: a stacked Field label would break the row; restyled to the system scale. */}
         <div className="flex gap-2 pt-1">
           <input
             type="text"
@@ -661,7 +662,7 @@ function DoctorCarePlanReviewContent({
             onChange={(e) => setNewRedFlagItem(e.target.value)}
             placeholder="Add red flag symptom (e.g. Sudden severe chest pain, loss of consciousness)…"
             aria-label="Add red flag symptom"
-            className="flex-1 rounded-row border border-danger/30 bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+            className="flex-1 h-11 rounded-row border border-danger/30 bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
           <Button
             variant="secondary"
@@ -684,10 +685,10 @@ function DoctorCarePlanReviewContent({
       {/* Follow-up Diagnostic Tests */}
       <Card className="space-y-3 p-5">
         <div className="flex items-center justify-between border-b border-separator pb-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-label">
+          <h2 className="text-xl font-semibold text-label">
             Recommended Follow-up Diagnostic Tests
           </h2>
-          <span className="text-[11px] text-label-3">
+          <span className="text-[13px] text-label-3">
             Triggers automatic reminders on the patient mobile app
           </span>
         </div>
@@ -696,7 +697,7 @@ function DoctorCarePlanReviewContent({
           {draftPlan.follow_up_tests.map((ft, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between gap-3 rounded-row bg-fill border border-separator p-2.5 text-xs"
+              className="flex items-center justify-between gap-3 rounded-row bg-fill border border-separator p-2.5 text-[15px]"
             >
               <span className="font-bold text-label">{ft.test}</span>
               <div className="flex items-center gap-2">
@@ -718,6 +719,7 @@ function DoctorCarePlanReviewContent({
           ))}
         </div>
 
+        {/* Compact add-test row stays raw inputs: the name field plus the inline "Every N days" group form one row a stacked Field label would break; restyled to the system scale. */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <input
             type="text"
@@ -725,9 +727,9 @@ function DoctorCarePlanReviewContent({
             onChange={(e) => setNewTestName(e.target.value)}
             placeholder="Test name (e.g. HbA1c, Serum Creatinine)…"
             aria-label="Follow-up test name"
-            className="flex-1 rounded-row border border-separator bg-surface px-3 py-1.5 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
+            className="flex-1 h-11 rounded-row border border-separator bg-surface px-3 text-[15px] text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
           />
-          <div className="flex items-center gap-1 text-xs text-label-2">
+          <div className="flex items-center gap-1 text-[15px] text-label-2">
             <span>Every</span>
             <input
               type="number"
@@ -735,7 +737,7 @@ function DoctorCarePlanReviewContent({
               value={newTestDays}
               onChange={(e) => setNewTestDays(parseInt(e.target.value) || 30)}
               aria-label="Days between follow-up tests"
-              className="w-16 rounded-row border border-separator bg-surface px-2 py-1.5 text-xs text-center text-label focus:border-accent focus:outline-none"
+              className="h-11 w-16 rounded-row border border-separator bg-surface px-2 text-center text-[15px] text-label focus:border-accent focus:outline-none"
             />
             <span>days</span>
           </div>
@@ -763,7 +765,7 @@ function DoctorCarePlanReviewContent({
       {/* Clinical Sources & Evidence Citations */}
       {draftPlan.sources && draftPlan.sources.length > 0 && (
         <Card className="space-y-2 p-5">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-label-2">
+          <h2 className="text-xl font-semibold text-label-2">
             Clinical Guideline References
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -773,7 +775,7 @@ function DoctorCarePlanReviewContent({
                 href={s.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-row bg-accent-soft border border-accent/20 px-2.5 py-1 text-xs font-medium text-accent-strong hover:underline"
+                className="inline-flex items-center gap-1 rounded-row bg-accent-soft border border-accent/20 px-2.5 py-1 text-[13px] font-medium text-accent-strong hover:underline"
               >
                 ↗ {s.title}
               </a>
@@ -786,7 +788,7 @@ function DoctorCarePlanReviewContent({
       <Card className="flex flex-col items-center justify-between gap-3 p-5 sm:flex-row">
         <Link
           href="/doctor"
-          className="text-xs font-semibold text-label-2 hover:text-label"
+          className="text-[13px] font-semibold text-label-2 hover:text-label"
         >
           Cancel & Return to OPD Queue
         </Link>
