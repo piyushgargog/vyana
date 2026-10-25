@@ -43,7 +43,7 @@ function averageOf(values: Map<string, number>, from: string, to: string): { avg
 export function computeTrend(values: DayValue[], today: string, metric: TrendMetric): Trend {
   const byDay = new Map<string, number>();
   for (const v of values) {
-    if (typeof v.value !== "number" || Number.isNaN(v.value) || v.value < 0) continue;
+    if (typeof v.value !== "number" || !Number.isFinite(v.value) || v.value < 0) continue;
     byDay.set(v.day, v.value); // the last entry of a day wins
   }
   const a = averageOf(byDay, addDays(today, -6), today);

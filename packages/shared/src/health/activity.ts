@@ -70,16 +70,22 @@ export interface MergedDay {
  * One entry per day, oldest first. A day can carry one row per source; for each field the
  * last row (in the order given) that holds a value wins, with that row's device — the same
  * "last entry of a day wins" rule `computeTrend` applies. Rows after `today` are dropped.
+ * A value counts only when it is a finite number at or above zero — the same gate
+ * `computeTrend` applies — so a negative or non-finite reading never surfaces as a
+ * negative step count, negative sleep or negative chart point while the trend sentence
+ * computed from the same data silently ignores it.
  */
 export function mergeActivityDays(rows: DailyActivityRow[], today: string): MergedDay[] {
   const byDay = new Map<string, MergedDay>();
+  const counts = (value: number | null): value is number =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0;
   for (const row of rows) {
     if (row.day > today) continue;
     const day = byDay.get(row.day) ?? { day: row.day, steps: null, sleep_minutes: null, resting_hr: null };
     const from = sourceLabel(row.source, row.device_name);
-    if (row.steps !== null) day.steps = { value: row.steps, from };
-    if (row.sleep_minutes !== null) day.sleep_minutes = { value: row.sleep_minutes, from };
-    if (row.resting_hr !== null) day.resting_hr = { value: row.resting_hr, from };
+    if (counts(row.steps)) day.steps = { value: row.steps, from };
+    if (counts(row.sleep_minutes)) day.sleep_minutes = { value: row.sleep_minutes, from };
+    if (counts(row.resting_hr)) day.resting_hr = { value: row.resting_hr, from };
     byDay.set(row.day, day);
   }
   return [...byDay.values()].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
