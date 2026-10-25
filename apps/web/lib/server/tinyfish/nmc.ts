@@ -1,7 +1,10 @@
 import "server-only";
 import { z } from "zod";
+import { councilKey, normalizeRegNo } from "../doctor-register";
 import { runAgent, type CallCounter, type OutputSchema } from "./client";
 import { NMC_REGISTER_URL } from "./sources";
+
+export { councilKey, normalizeRegNo };
 
 /**
  * Doctor verification on the NMC Indian Medical Register (SPEC §7, PLAN §2A, ADR-047). The agent only reads the
@@ -58,16 +61,9 @@ export function nmcGoal(regNo: string, council: string): string {
 
 // ---------------------------------------------------------------- matching (code decides)
 
-/** "MCI/12-345" and "mci 12345" are the same number. */
-export const normalizeRegNo = (s: string) => s.toLowerCase().replace(/[\s./\\-]+/g, "");
-
-const COUNCIL_FILLER = new Set(["state", "medical", "council", "of", "the"]);
-export const councilKey = (s: string) =>
-  s
-    .toLowerCase()
-    .split(/[^a-z]+/)
-    .filter((w) => w && !COUNCIL_FILLER.has(w))
-    .join(" ");
+// `normalizeRegNo` and `councilKey` are imported from `../doctor-register` (and
+// re-exported above), so the register lookup and the manual admin check can never
+// drift into two different notions of the same registration number or council.
 
 const NAME_FILLER = new Set(["dr", "doctor", "mr", "mrs", "ms", "smt", "shri"]);
 export function nameTokens(name: string): string[] {

@@ -43,11 +43,22 @@ describe("closestRecord", () => {
     expect(closestRecord([other, sameNo], claim)).toBe(sameNo);
     expect(closestRecord([], claim)).toBeNull();
   });
+
+  it("breaks a same-number tie by the closer name", () => {
+    const far = { name: "AMIT SHAH", reg_no: "12345", state_council: "Delhi Medical Council" };
+    const near = { name: "SNEHA GUPTA", reg_no: "12345", state_council: "Delhi Medical Council" };
+    expect(closestRecord([far, near], claim)).toBe(near);
+    expect(closestRecord([near, far], claim)).toBe(near);
+  });
 });
 
 describe("NMC_OUTPUT_SCHEMA", () => {
   it("marks optional fields with nullable: true (TinyFish answers 400 to a type list)", async () => {
     const { NMC_OUTPUT_SCHEMA } = await import("@/lib/server/tinyfish/nmc");
     expect(JSON.stringify(NMC_OUTPUT_SCHEMA)).not.toMatch(/"type":\[/);
+    // The year field itself: an integer that may be null — a schema that dropped
+    // either half would still satisfy the no-type-list check above.
+    const records = NMC_OUTPUT_SCHEMA.properties.records as { items: { properties: Record<string, unknown> } };
+    expect(records.items.properties.year_of_registration).toEqual({ type: "integer", nullable: true });
   });
 });

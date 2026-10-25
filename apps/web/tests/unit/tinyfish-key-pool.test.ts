@@ -58,13 +58,23 @@ describe("key pool", () => {
 
   it("tries the next key when one is out of credits or rate limited, and gives up when all are", async () => {
     vi.stubEnv("TINYFISH_API_KEYS", "k0,k1");
-    fetchMock.mockImplementation(async (_url, init) =>
-      (init?.headers as Record<string, string>)["X-API-Key"] === "k0" ? json({}, 402) : json({ run_id: "ok", error: null }),
-    );
+    // Fail the FIRST request with 402, whichever key the rotation starts on (the
+    // module-level rotation counter is shared with the earlier tests, so keying
+    // the failure to one named key could start on the other key and never fall back).
+    let firstCall = true;
+    fetchMock.mockImplementation(async () => {
+      if (firstCall) {
+        firstCall = false;
+        return json({}, 402);
+      }
+      return json({ run_id: "ok", error: null });
+    });
     const out = await startAgent(params);
     expect(out.status === "started" && out.runId.endsWith("~ok")).toBe(true);
     const keysTried = fetchMock.mock.calls.map(keyOf);
-    expect(keysTried).toContain("k1");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new Set(keysTried).size).toBe(2); // the retry went out on the other key
+    expect(out.status === "started" && out.runId.startsWith(`${keysTried[1] === "k0" ? "0" : "1"}~`)).toBe(true);
 
     fetchMock.mockReset();
     fetchMock.mockResolvedValue(json({}, 429));
