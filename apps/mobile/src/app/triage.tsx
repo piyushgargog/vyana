@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   useMyProfile,
@@ -15,6 +15,7 @@ import {
   Screen,
   Symbol,
   Text,
+  TextField,
 } from '@/components/ui';
 import {
   MobileAiSafetyBanner,
@@ -145,7 +146,7 @@ export default function TriageScreen() {
           <Text variant="footnote" tone="secondary" style={styles.label}>
             What symptoms are you experiencing? *
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Symptoms description"
             multiline
             numberOfLines={4}
@@ -153,19 +154,18 @@ export default function TriageScreen() {
             onChangeText={setSymptoms}
             placeholder="e.g. Sudden severe chest tightness with shortness of breath, or mild dry cough for 3 days…"
             placeholderTextColor={T.color.label3}
-            style={[styles.input, styles.textArea]}
+            style={styles.textArea}
           />
 
           <Text variant="footnote" tone="secondary" style={styles.label}>
             Duration (Optional)
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Duration of symptoms"
             value={duration}
             onChangeText={setDuration}
             placeholder="e.g. 2 hours, 3 days, 1 week"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
 
           <View style={styles.row}>
@@ -173,14 +173,13 @@ export default function TriageScreen() {
               <Text variant="footnote" tone="secondary" style={styles.label}>
                 Age (Optional)
               </Text>
-              <TextInput
+              <TextField
                 accessibilityLabel="Age"
                 keyboardType="numeric"
                 value={age}
                 onChangeText={setAge}
                 placeholder={profile?.dob ? 'Auto-filled' : 'Years'}
                 placeholderTextColor={T.color.label3}
-                style={styles.input}
               />
             </View>
 
@@ -371,17 +370,6 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   noticeCard: { backgroundColor: T.color.accentSoft },
   label: { fontWeight: '700', marginTop: T.space.xs },
-  input: {
-    backgroundColor: T.color.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    borderCurve: 'continuous',
-    paddingHorizontal: T.space.md,
-    minHeight: 44,
-    ...T.text.body,
-    color: T.color.label,
-  },
   textArea: {
     minHeight: 96,
     paddingVertical: T.space.md,
