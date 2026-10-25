@@ -35,7 +35,7 @@ const departments = (...names: string[]) => {
 };
 
 beforeEach(() => {
-  vi.stubEnv("WEB_MOCK", "1");
+  vi.stubEnv("TINYFISH_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
   aiCalls.length = 0;

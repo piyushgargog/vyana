@@ -8,7 +8,7 @@ We will reply as soon as possible.
 
 ## How we protect this project
 
-- **Secrets:** API keys (LLM, Supabase service role) live only in server-side environment variables. The mobile app and the browser never receive them.
+- **Secrets:** API keys (TinyFish, LLM, Supabase service role) live only in server-side environment variables. The mobile app and the browser never receive them.
 - **Committed files:** only `.env.example` files are committed. Secret scanning with push protection is enabled, and CI runs a secret scan on every PR.
 - **Data access:** Supabase Row Level Security restricts every table, so users can read only their own health data.
 - **Blood requests:** the `blood_requests` table holds the contact name and phone number that a patient types for a request. Only its owner can read or change a row. Signed-in users can write only the listed columns, the database sets the id and timestamps, and signed-out visitors have no access. The rows are part of the data download.
@@ -22,6 +22,6 @@ We will reply as soon as possible.
 
 ## Accepted risks
 
-- **A secret in a URL (2026-10-14, issue #152): no longer applicable.** The medicine quality alerts feature, its webhook route and the `monitor:create` script were removed on 2026-10-20, so no secret travels in a URL any more.
+- **TinyFish monitor webhook secret in the URL (2026-10-14, issue #152): no longer applicable.** The medicine quality alerts feature, its webhook route and the `monitor:create` script were removed on 2026-10-20, so no secret travels in a URL any more.
 
 - **Dev-toolchain audit exceptions (2026-10-14, issue #154):** `pnpm audit` reports GHSA-86w9-cpqp-85rv (node-forge, RSA signature verification), GHSA-vfj7-8cjw-p6xm (braces, ReDoS), GHSA-w5hq-g745-h8pq (uuid, buffer bounds) and GHSA-vcc3-ghjq-m6fr (decode-uri-component, DoS). All four reach us only through the Expo/mobile dev toolchain (`@expo/cli`, metro) and the web devDependencies (`eslint-config-next`); `pnpm why` confirms none of them is in the production web image, which ships only the Next.js standalone output. No patched version exists upstream yet. They are ignored in `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (pnpm v11+ reads auditConfig only from there, not from `package.json`) and in `.trivyignore`. Re-check on Dependabot alerts; remove an ignore when a patched version exists.

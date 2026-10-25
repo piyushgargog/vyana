@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { emergencyNearbyMock, shareMock } from "../mocks";
+import { basketCompareMock, shareMock, singleMedicineJobMock } from "../mocks";
 import { ApiError, createApiClient, type ApiClientOptions } from "./client";
 
 const json = (status: number, body: unknown) =>
@@ -12,62 +12,64 @@ function client(fetchImpl: ApiClientOptions["fetch"], token: string | null = "to
 
 describe("createApiClient", () => {
   it("posts JSON with the bearer token and returns the validated response", async () => {
-    const fetchMock = vi.fn(async () => json(200, emergencyNearbyMock));
-    const res = await client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 });
+    const fetchMock = vi.fn(async () => json(200, singleMedicineJobMock));
+    const res = await client(fetchMock).medicines.compare({ medicine: "Dolo", strength: "650" });
 
-    expect(res).toEqual(emergencyNearbyMock);
+    expect(res).toEqual(singleMedicineJobMock);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://api.example.com/api/emergency/nearby");
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
-    expect(JSON.parse(init.body as string)).toEqual({ lat: 28.6358, lng: 77.2945 });
+    // A single medicine is a one-item basket job (ADR-038).
+    expect(JSON.parse(init.body as string)).toEqual({ items: [{ medicine: "Dolo", strength: "650" }] });
   });
 
   it("omits the Authorization header when signed out", async () => {
-    const fetchMock = vi.fn(async () => json(200, emergencyNearbyMock));
-    await client(fetchMock, null).emergency.nearby({ lat: 28.6358, lng: 77.2945 });
+    const fetchMock = vi.fn(async () => json(200, singleMedicineJobMock));
+    await client(fetchMock, null).medicines.compare({ medicine: "Dolo" });
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
   });
 
   it("maps a server error body to ApiError", async () => {
-    const fetchMock = vi.fn(async () => json(504, { error: { code: "UPSTREAM_TIMEOUT", message: "The map service took too long" } }));
-    await expect(client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 })).rejects.toMatchObject({
-      name: "ApiError", code: "UPSTREAM_TIMEOUT", message: "The map service took too long", status: 504,
+    const fetchMock = vi.fn(async () => json(504, { error: { code: "UPSTREAM_TIMEOUT", message: "Pharmacies took too long" } }));
+    await expect(client(fetchMock).medicines.compare({ medicine: "Dolo" })).rejects.toMatchObject({
+      name: "ApiError", code: "UPSTREAM_TIMEOUT", message: "Pharmacies took too long", status: 504,
     });
   });
 
   it("falls back to a code from the HTTP status when the error body is not JSON", async () => {
     const fetchMock = vi.fn(async () => new Response("<html>Unauthorized</html>", { status: 401 }));
-    await expect(client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 })).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
+    await expect(client(fetchMock).medicines.compare({ medicine: "Dolo" })).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
   });
 
   it("rejects a response that does not match the schema", async () => {
     const fetchMock = vi.fn(async () => json(200, { query: "dolo 650" }));
-    await expect(client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    // (an old single-compare response is not a basket job)
+    await expect(client(fetchMock).medicines.compare({ medicine: "Dolo" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
   it("reports network failures as NETWORK_ERROR", async () => {
     const fetchMock = vi.fn(async () => { throw new TypeError("Failed to fetch"); });
-    const err = await client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 }).catch((e: unknown) => e);
+    const err = await client(fetchMock).medicines.compare({ medicine: "Dolo" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ code: "NETWORK_ERROR", status: 0 });
   });
 
   it("validates the request before sending it", async () => {
     const fetchMock = vi.fn();
-    await expect(client(fetchMock).emergency.nearby({ lat: 128.6, lng: 77.2945 })).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
+    await expect(client(fetchMock).medicines.compare({ medicine: "D" })).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns a copy of the fixture in mock mode without calling fetch", async () => {
     const fetchMock = vi.fn();
     const api = createApiClient({ baseUrl: "", getAccessToken: async () => null, useMocks: true, mockDelayMs: [0, 0], fetch: fetchMock });
-    const res = await api.emergency.nearby({ lat: 28.6358, lng: 77.2945 });
+    const res = await api.medicines.compare({ medicine: "Dolo 650" });
 
-    expect(res).toEqual(emergencyNearbyMock);
-    expect(res).not.toBe(emergencyNearbyMock);
+    expect(res).toEqual(singleMedicineJobMock);
+    expect(res).not.toBe(singleMedicineJobMock);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -80,6 +82,38 @@ describe("createApiClient", () => {
     const api = client(vi.fn());
     expect(api.chatUrl).toBe("https://api.example.com/api/assistant/chat");
     await expect(api.authHeaders()).resolves.toEqual({ Authorization: "Bearer tok-123" });
+  });
+
+  it("posts a basket compare request and validates the response", async () => {
+    const fetchMock = vi.fn(async () => json(200, basketCompareMock));
+    const res = await client(fetchMock).basket.compare({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4" });
+    expect(res.cheapest_source).toBe("pharmeasy");
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket");
+  });
+
+  it("polls a basket job with GET, auth and an encoded job id", async () => {
+    const fetchMock = vi.fn(async () => json(200, basketCompareMock));
+    const res = await client(fetchMock).basket.job("abc/DEF_-");
+    expect(res.status).toBe("done");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example.com/api/prescriptions/basket/abc%2FDEF_-");
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+  });
+
+  it("rejects an empty basket job id without calling the server", async () => {
+    const fetchMock = vi.fn();
+    await expect(client(fetchMock).basket.job(" ")).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a basket request with both prescription_id and items before sending", async () => {
+    const fetchMock = vi.fn();
+    await expect(
+      client(fetchMock).basket.compare({ prescription_id: "28d7de60-7dd9-4769-98ec-a26bfdfaa7a4", items: [{ medicine: "Dolo" }] }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("reads a share link with GET, an encoded token and NO auth header", async () => {
@@ -130,7 +164,7 @@ describe("createApiClient", () => {
       onRateLimit: onRateLimitMock,
     });
 
-    const err = await testClient.emergency.nearby({ lat: 28.6358, lng: 77.2945 }).catch((e: unknown) => e);
+    const err = await testClient.medicines.compare({ medicine: "Dolo" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({
       code: "RATE_LIMITED",
@@ -152,7 +186,7 @@ describe("createApiClient", () => {
           { status: 429, headers: { "Content-Type": "application/json" } },
         ),
     );
-    const err = await client(fetchMock).emergency.nearby({ lat: 28.6358, lng: 77.2945 }).catch((e: unknown) => e);
+    const err = await client(fetchMock).medicines.compare({ medicine: "Dolo" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({
       code: "RATE_LIMITED",

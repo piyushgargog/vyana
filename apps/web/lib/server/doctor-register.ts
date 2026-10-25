@@ -1,7 +1,8 @@
 import "server-only";
 
 /**
- * Registration-number matching for the manual doctor check (issue #344): an admin checks the public register
+ * Registration-number matching for the manual doctor check (issue #344). Copied unchanged from
+ * `tinyfish/nmc.ts`, which goes away with the rest of that folder: an admin checks the public register
  * by hand, and these two helpers keep the "one registration, one account" rule.
  */
 

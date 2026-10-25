@@ -43,7 +43,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://mock.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key
       NEXT_PUBLIC_USE_MOCKS: "true"
-      WEB_MOCK: "1"
+      TINYFISH_MOCK: "1"
       LLM_MOCK: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

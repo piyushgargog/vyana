@@ -56,7 +56,7 @@ const counter = (over: Partial<{ allowed: boolean; remaining: number; seconds: n
 
 beforeEach(() => {
   vi.stubEnv("LLM_MOCK", "");
-  vi.stubEnv("WEB_MOCK", "");
+  vi.stubEnv("TINYFISH_MOCK", "");
   getUser.mockReset().mockImplementation(async (token: string) =>
     token === VALID ? { data: { user: { id: USER_ID, email: "patient@vyana.test" } }, error: null } : { data: { user: null }, error: new Error("invalid JWT") },
   );
@@ -163,7 +163,7 @@ describe("the routes of the app", () => {
   });
 
   it("never limit SOS, polling a job, the account, the share page, the cron job or the webhook", () => {
-    for (const name of ["emergency/sos", "blood/search/[job_id]", "me", "me/export", "share/[token]", "cron/missed-doses"]) {
+    for (const name of ["emergency/sos", "labs/compare/[job_id]", "prescriptions/basket/[job_id]", "me", "me/export", "share/[token]", "cron/missed-doses"]) {
       const f = found.find((x) => x.name === name);
       expect(f, name).toBeDefined();
       expect(f?.bucket, name).toBeNull();

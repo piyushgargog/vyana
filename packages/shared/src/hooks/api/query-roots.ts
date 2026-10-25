@@ -18,4 +18,5 @@ export const QUERY_ROOTS = {
   plans: "plans",
   planAiUsage: "plan-ai-usage",
   devices: "devices",
+  basketJob: "basket-job",
 } as const;
