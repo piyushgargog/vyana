@@ -21,7 +21,7 @@ import {
   TrendChartSvg,
   type TrendPoint,
 } from "@/components/ui-primitives";
-import { Button, ButtonLink, Card, Pill } from "@/components/ui";
+import { Button, ButtonLink, Card, LargeTitle, Pill } from "@/components/ui";
 
 interface LabReportVal {
   test_name: string;
@@ -155,8 +155,8 @@ function DoctorPatientSummaryContent({
   if (profileError || !patientProfile) {
     return (
       <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-sm text-danger-text">
-        <h2 className="text-base font-bold">Patient record not accessible</h2>
-        <p className="mt-1 text-xs">
+        <h2 className="text-xl font-semibold">Patient record not accessible</h2>
+        <p className="mt-1 text-[15px]">
           {profileError ||
             "Unable to access patient summary under clinical authorization rules."}
         </p>
@@ -173,7 +173,7 @@ function DoctorPatientSummaryContent({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/doctor"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-strong hover:text-accent"
+          className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-accent-strong hover:text-accent"
         >
           ← Back to OPD Queue
         </Link>
@@ -191,14 +191,16 @@ function DoctorPatientSummaryContent({
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl font-bold text-label">
-                {patientProfile.full_name || "Patient Record"}
-              </h1>
-              <Pill tone="neutral">Patient ID: {patientId.slice(0, 8)}…</Pill>
-            </div>
+            <LargeTitle
+              title={
+                <span className="inline-flex flex-wrap items-center gap-2.5">
+                  {patientProfile.full_name || "Patient Record"}
+                  <Pill tone="neutral">Patient ID: {patientId.slice(0, 8)}…</Pill>
+                </span>
+              }
+            />
 
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-label-2">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-[15px] text-label-2">
               {patientProfile.blood_group && (
                 <span className="inline-flex items-center gap-1 font-bold text-danger-text bg-danger-soft border border-danger/30 rounded-row px-2 py-0.5">
                   Blood Group: {patientProfile.blood_group}
@@ -222,7 +224,7 @@ function DoctorPatientSummaryContent({
 
             {/* Emergency Contacts */}
             {contacts && contacts.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-label-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-label-2">
                 <span className="font-semibold text-label">
                   Emergency Contacts:
                 </span>
@@ -241,7 +243,7 @@ function DoctorPatientSummaryContent({
           {/* Critical Safety: Known Allergies Warning */}
           <div className="w-full sm:w-80 shrink-0">
             {patientProfile.allergies && patientProfile.allergies.length > 0 ? (
-              <div className="rounded-tile border border-danger/40 bg-danger-soft p-3.5 text-xs text-label">
+              <div className="rounded-tile border border-danger/40 bg-danger-soft p-3.5 text-[13px] text-label">
                 <div className="flex items-center gap-2 font-bold text-danger-text">
                   <span
                     aria-hidden="true"
@@ -259,7 +261,7 @@ function DoctorPatientSummaryContent({
                 </p>
               </div>
             ) : (
-              <div className="rounded-tile border border-separator bg-fill p-3 text-xs text-label-2">
+              <div className="rounded-tile border border-separator bg-fill p-3 text-[13px] text-label-2">
                 <span className="font-semibold text-label">Allergies:</span>{" "}
                 No known drug allergies reported by patient.
               </div>
@@ -283,7 +285,7 @@ function DoctorPatientSummaryContent({
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-t-xl px-4 py-2 text-xs font-bold transition border-b-2 ${
+            className={`inline-flex min-h-[44px] shrink-0 items-center rounded-t-xl px-4 py-2 text-[15px] font-bold transition border-b-2 ${
               activeTab === tab.id
                 ? "border-accent bg-surface text-accent-strong"
                 : "border-transparent text-label-2 hover:text-label hover:bg-fill"
@@ -299,10 +301,10 @@ function DoctorPatientSummaryContent({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-label">
+              <h2 className="text-xl font-semibold text-label">
                 Active Prescribed Medicines
               </h2>
-              <p className="text-xs text-label-3">
+              <p className="text-[13px] text-label-3">
                 Current active regimens from digital prescriptions and verified records.
               </p>
             </div>
@@ -320,7 +322,7 @@ function DoctorPatientSummaryContent({
 
           {/* Interaction Notice / Results */}
           {interactionNotice && (
-            <div className="rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-xs text-label">
+            <div className="rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-[13px] text-label">
               <p className="font-semibold">{interactionNotice}</p>
             </div>
           )}
@@ -328,16 +330,16 @@ function DoctorPatientSummaryContent({
           {interactionResult && (
             <Card className="space-y-3 p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-label">
+                <h3 className="text-[15px] font-semibold text-label">
                   Drug Interaction Safety Analysis
                 </h3>
-                <span className="text-xs text-label-3">
+                <span className="text-[13px] text-label-3">
                   Checked {interactionResult.checked_medicines?.length || 0} drugs
                 </span>
               </div>
 
               {interactionResult.interactions?.length === 0 ? (
-                <div className="rounded-tile bg-ok-soft border border-ok/20 p-3 text-xs text-ok">
+                <div className="rounded-tile bg-ok-soft border border-ok/20 p-3 text-[13px] text-ok">
                   No interaction found in:{" "}
                   {interactionResult.sources_checked?.map((s) => s.title).join(", ") || "the checked sources"}.
                   {interactionResult.not_checked && interactionResult.not_checked.length > 0
@@ -349,7 +351,7 @@ function DoctorPatientSummaryContent({
                   {interactionResult.interactions?.map((it, idx: number) => (
                     <div
                       key={idx}
-                      className={`rounded-tile border p-3 text-xs ${
+                      className={`rounded-tile border p-3 text-[13px] ${
                         it.severity === "major"
                           ? "border-danger/40 bg-danger-soft text-label"
                           : "border-warn/40 bg-warn-soft text-label"
@@ -391,7 +393,7 @@ function DoctorPatientSummaryContent({
           {rxLoading ? (
             <SkeletonCard lines={3} />
           ) : allActiveItems.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
+            <Card className="p-8 text-center text-[15px] text-label-3">
               No active medications currently registered for this patient.
             </Card>
           ) : (
@@ -400,10 +402,10 @@ function DoctorPatientSummaryContent({
                 <Card key={item.id} className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-bold text-label">
+                      <h3 className="text-[15px] font-semibold text-label">
                         {item.medicine_name} {item.strength || ""}
                       </h3>
-                      <p className="text-xs text-label-2">
+                      <p className="text-[13px] text-label-2">
                         {item.form || "Tablet"} · {item.frequency}
                         {item.times && item.times.length > 0
                           ? ` (${item.times.join(", ")})`
@@ -414,7 +416,7 @@ function DoctorPatientSummaryContent({
                   </div>
 
                   {item.instructions && (
-                    <p className="mt-2 text-xs text-label-2 bg-fill p-2 rounded-row border border-separator">
+                    <p className="mt-2 text-[13px] text-label-2 bg-fill p-2 rounded-row border border-separator">
                       <strong>Instructions:</strong> {item.instructions}
                     </p>
                   )}
@@ -434,7 +436,7 @@ function DoctorPatientSummaryContent({
       {activeTab === "conditions" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-label">
+            <h2 className="text-xl font-semibold text-label">
               Chronic Care Plans & Disease Management
             </h2>
           </div>
@@ -442,7 +444,7 @@ function DoctorPatientSummaryContent({
           {carePlansLoading ? (
             <SkeletonCard lines={3} />
           ) : !carePlans || carePlans.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
+            <Card className="p-8 text-center text-[15px] text-label-3">
               No chronic care plans authored or linked for this patient yet.
             </Card>
           ) : (
@@ -466,7 +468,7 @@ function DoctorPatientSummaryContent({
                             {cp.status}
                           </Pill>
                         </div>
-                        <p className="mt-0.5 text-xs text-label-3">
+                        <p className="mt-0.5 text-[13px] text-label-3">
                           {isApproved
                             ? `Approved on ${cp.reviewed_at?.slice(0, 10)}`
                             : "Draft plan pending doctor review"}
@@ -485,13 +487,13 @@ function DoctorPatientSummaryContent({
 
                     {/* Summary & Key Do's */}
                     {planDoc?.summary && (
-                      <p className="mt-3 text-xs sm:text-sm text-label-2">
+                      <p className="mt-3 text-[15px] text-label-2">
                         {planDoc.summary}
                       </p>
                     )}
 
                     {planDoc?.do && planDoc.do.length > 0 && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
                         <div className="rounded-tile bg-accent-soft p-3 border border-accent/20">
                           <span className="font-bold text-accent-strong block mb-1">
                             Recommended Actions (Do):
@@ -528,14 +530,14 @@ function DoctorPatientSummaryContent({
       {/* Tab 3: Lab Reports */}
       {activeTab === "labs" && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold text-label">
+          <h2 className="text-xl font-semibold text-label">
             Diagnostic Laboratory Reports
           </h2>
 
           {labsLoading ? (
             <SkeletonCard lines={3} />
           ) : !labReports || labReports.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
+            <Card className="p-8 text-center text-[15px] text-label-3">
               No laboratory reports uploaded for this patient.
             </Card>
           ) : (
@@ -550,10 +552,10 @@ function DoctorPatientSummaryContent({
                   <Card key={report.id} className="p-5">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator pb-2.5">
                       <div>
-                        <h3 className="text-sm font-bold text-label">
+                        <h3 className="text-[15px] font-semibold text-label">
                           {report.lab_name || "Diagnostic Report"}
                         </h3>
-                        <p className="text-xs text-label-3">
+                        <p className="text-[13px] text-label-3">
                           Report Date: {report.report_date || report.created_at.slice(0, 10)}
                         </p>
                       </div>
@@ -561,7 +563,7 @@ function DoctorPatientSummaryContent({
                     </div>
 
                     {report.summary && (
-                      <p className="mt-2.5 text-xs text-label-2 bg-fill p-2.5 rounded-tile border border-separator">
+                      <p className="mt-2.5 text-[13px] text-label-2 bg-fill p-2.5 rounded-tile border border-separator">
                         <strong>Clinical Summary:</strong> {report.summary}
                       </p>
                     )}
@@ -569,7 +571,7 @@ function DoctorPatientSummaryContent({
                     {/* Table of test values */}
                     {values.length > 0 && (
                       <div className="mt-3 overflow-x-auto">
-                        <table className="w-full text-left text-xs text-label-2 border-collapse">
+                        <table className="w-full text-left text-[13px] text-label-2 border-collapse">
                           <thead>
                             <tr className="border-b border-separator text-label-3 font-semibold">
                               <th className="py-1.5 pr-3">Test</th>
@@ -634,14 +636,14 @@ function DoctorPatientSummaryContent({
       {/* Tab 4: Vitals & Trends */}
       {activeTab === "vitals" && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold text-label">
+          <h2 className="text-xl font-semibold text-label">
             Vital Signs & Trend Visualizations
           </h2>
 
           {vitalsLoading ? (
             <SkeletonCard lines={3} />
           ) : vitals.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
+            <Card className="p-8 text-center text-[15px] text-label-3">
               No vitals logged for this patient yet.
             </Card>
           ) : (
@@ -672,7 +674,7 @@ function DoctorPatientSummaryContent({
 
               {/* Vitals Table */}
               <Card className="overflow-x-auto p-4">
-                <table className="w-full text-left text-xs text-label-2 border-collapse">
+                <table className="w-full text-left text-[13px] text-label-2 border-collapse">
                   <thead>
                     <tr className="border-b border-separator text-label-3 font-semibold">
                       <th className="py-2 pr-3">Measured On</th>
@@ -708,14 +710,14 @@ function DoctorPatientSummaryContent({
       {/* Tab 5: Clinical Timeline */}
       {activeTab === "timeline" && (
         <div className="space-y-4">
-          <h2 className="text-base font-bold text-label">
+          <h2 className="text-xl font-semibold text-label">
             Chronological Care History
           </h2>
 
           {timelineLoading ? (
             <SkeletonCard lines={3} />
           ) : !timeline || timeline.length === 0 ? (
-            <Card className="p-8 text-center text-xs text-label-3">
+            <Card className="p-8 text-center text-[15px] text-label-3">
               No historical health events recorded.
             </Card>
           ) : (
@@ -734,11 +736,11 @@ function DoctorPatientSummaryContent({
                       {entry.kind}
                     </span>
                   </div>
-                  <h3 className="mt-1 text-sm font-bold text-label">
+                  <h3 className="mt-1 text-[15px] font-semibold text-label">
                     {entry.title}
                   </h3>
                   {entry.subtitle && (
-                    <p className="mt-0.5 text-xs text-label-2">
+                    <p className="mt-0.5 text-[13px] text-label-2">
                       {entry.subtitle}
                     </p>
                   )}

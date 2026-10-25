@@ -19,6 +19,8 @@ import {
   ChipGroup,
   EmptyState,
   ErrorState,
+  Field,
+  LargeTitle,
   Pill,
   Sheet,
   TextAreaField,
@@ -113,12 +115,10 @@ export default function DoctorQueuePage() {
     <div className="space-y-6">
       {/* Top Header Card */}
       <Card>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl font-bold text-label">
-                OPD Consultation Queue
-              </h1>
+        <LargeTitle
+          title={
+            <span className="inline-flex flex-wrap items-center gap-2.5">
+              OPD Consultation Queue
               {doctorProfile?.verification_status === "verified" ? (
                 <Pill tone="ok" icon={<span className="h-2 w-2 rounded-full bg-ok" />}>
                   Verified Doctor
@@ -133,42 +133,41 @@ export default function DoctorQueuePage() {
                   </Pill>
                 </Link>
               )}
-            </div>
-            <p className="mt-1 text-xs sm:text-sm text-label-2">
+            </span>
+          }
+          subtitle={
+            <>
               {profile?.full_name ? `Dr. ${profile.full_name.replace(/^Dr\.\s*/i, "")}` : "Doctor Portal"}
               {doctorProfile?.specialization ? ` · ${doctorProfile.specialization}` : ""}
               {doctorProfile?.reg_no ? ` (Reg: ${doctorProfile.reg_no})` : ""}
-            </p>
-          </div>
-
-          {/* Date Picker Controls */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="queue-date" className="text-xs font-semibold text-label-2">
-              Queue Date:
-            </label>
-            <input
-              id="queue-date"
-              type="date"
-              aria-label="Queue date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-row border border-transparent bg-fill px-3 py-1.5 text-xs sm:text-sm font-semibold text-label outline-none transition-colors focus:border-accent focus:bg-surface"
-            />
-            {selectedDate !== todayStr && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setSelectedDate(todayStr)}
-              >
-                Today
-              </Button>
-            )}
-          </div>
-        </div>
+            </>
+          }
+          actions={
+            <>
+              <Field
+                id="queue-date"
+                label="Queue Date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-44"
+              />
+              {selectedDate !== todayStr && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedDate(todayStr)}
+                >
+                  Today
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Department Capacity Banner */}
         {tokensInfo && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-tile bg-accent-soft border border-accent/20 p-3 text-xs text-label">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-tile bg-accent-soft border border-accent/20 p-3 text-[13px] text-label">
             <div className="flex items-center gap-2">
               <span className="font-bold text-accent-strong">Department Tokens Status:</span>
               <span>
@@ -196,7 +195,7 @@ export default function DoctorQueuePage() {
               : "border-separator bg-surface hover:bg-canvas"
           }`}
         >
-          <p className="text-xs font-medium text-label-3">Total in Queue</p>
+          <p className="text-[13px] font-medium text-label-3">Total in Queue</p>
           <p className="mt-1 text-xl sm:text-2xl font-bold text-label">{totalCount}</p>
         </button>
 
@@ -209,7 +208,7 @@ export default function DoctorQueuePage() {
               : "border-separator bg-surface hover:bg-canvas"
           }`}
         >
-          <p className="text-xs font-medium text-warn">Waiting / Requested</p>
+          <p className="text-[13px] font-medium text-warn">Waiting / Requested</p>
           <p className="mt-1 text-xl sm:text-2xl font-bold text-warn">{requestedCount}</p>
         </button>
 
@@ -222,7 +221,7 @@ export default function DoctorQueuePage() {
               : "border-separator bg-surface hover:bg-canvas"
           }`}
         >
-          <p className="text-xs font-medium text-accent-strong">Called / Confirmed</p>
+          <p className="text-[13px] font-medium text-accent-strong">Called / Confirmed</p>
           <p className="mt-1 text-xl sm:text-2xl font-bold text-accent-strong">{confirmedCount}</p>
         </button>
 
@@ -235,7 +234,7 @@ export default function DoctorQueuePage() {
               : "border-separator bg-surface hover:bg-canvas"
           }`}
         >
-          <p className="text-xs font-medium text-ok">Consultation Done</p>
+          <p className="text-[13px] font-medium text-ok">Consultation Done</p>
           <p className="mt-1 text-xl sm:text-2xl font-bold text-ok">{completedCount}</p>
         </button>
       </div>
@@ -250,19 +249,15 @@ export default function DoctorQueuePage() {
           ))}
         </ChipGroup>
 
-        <div className="w-full sm:w-72">
-          <label htmlFor="search-queue" className="sr-only">
-            Search Queue
-          </label>
-          <input
-            id="search-queue"
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search patient name, token #, reason…"
-            className="w-full rounded-row border border-transparent bg-fill px-3.5 py-1.5 text-xs sm:text-sm text-label placeholder:text-label-3 outline-none transition-colors focus:border-accent focus:bg-surface"
-          />
-        </div>
+        <Field
+          id="search-queue"
+          label="Search Queue"
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search patient name, token #, reason…"
+          className="w-full sm:w-72"
+        />
       </div>
 
       {/* Queue Entries List */}
@@ -338,13 +333,13 @@ export default function DoctorQueuePage() {
                         </Pill>
                       </div>
 
-                      <p className="mt-1 text-xs sm:text-sm text-label-2">
+                      <p className="mt-1 text-[15px] text-label-2">
                         <span className="font-semibold text-label">Reason:</span>{" "}
                         {entry.reason || "General consultation / OPD token"}
                       </p>
 
                       {entry.doctor_notes && (
-                        <p className="mt-1.5 text-xs text-label-2 bg-fill border border-separator rounded-row p-2">
+                        <p className="mt-1.5 text-[15px] text-label-2 bg-fill border border-separator rounded-row p-2">
                           <span className="font-semibold text-label">Doctor Notes:</span>{" "}
                           {entry.doctor_notes}
                         </p>
@@ -436,7 +431,7 @@ export default function DoctorQueuePage() {
             </div>
           }
         >
-          <p className="text-xs text-label-2">
+          <p className="text-[15px] text-label-2">
             Patient: {completingEntry.patient?.full_name || "Patient Record"}
           </p>
 
