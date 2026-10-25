@@ -420,6 +420,9 @@ export const DeviceConnectionsRes = z.object({
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>;
+export type LabFlag = z.infer<typeof LabFlag>;
+export type EmergencyContact = z.infer<typeof EmergencyContact>;
+export type CarePlanMeal = z.infer<typeof CarePlanMeal>;
 export type Hospital = z.infer<typeof Hospital>;
 export type PrescriptionItem = z.infer<typeof PrescriptionItem>;
 export type LabValue = z.infer<typeof LabValue>;

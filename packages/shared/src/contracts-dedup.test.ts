@@ -60,6 +60,26 @@ describe("shared enums and shapes used in more than one contract", () => {
       emergency_contacts: [{ name: "Ravi", phone: "+91 90000 00001" }],
     }).success).toBe(true);
     expect(EmergencyContact.safeParse({ name: "Ravi" }).success).toBe(false);
+    // The holders themselves must reject a contact without a phone, so a holder
+    // that drifted to its own looser inline shape would fail here, not just the
+    // direct EmergencyContact check above.
+    expect(EmergencySosRes.safeParse({
+      request_id: "00000000-0000-4000-8000-000000000001",
+      status: "requested",
+      eta_minutes: 10,
+      hospitals: [],
+      contacts: [{ name: "Ravi" }],
+      sms_body: "help",
+    }).success).toBe(false);
+    expect(SharedProfile.safeParse({
+      full_name: null,
+      age: null,
+      blood_group: null,
+      allergies: [],
+      conditions: [],
+      active_medicines: [],
+      emergency_contacts: [{ name: "Ravi" }],
+    }).success).toBe(false);
   });
 
   it("the care-plan meal is exactly the shared meal list", () => {
