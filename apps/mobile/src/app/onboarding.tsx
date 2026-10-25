@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -29,6 +28,7 @@ import {
   Pill,
   Screen,
   Text,
+  TextField,
 } from '@/components/ui';
 import { T } from '@/constants/theme';
 
@@ -252,13 +252,12 @@ export default function MobileOnboardingScreen() {
             <Text variant="footnote" style={styles.label}>
               NMC Registration No.
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="NMC Registration Number"
               value={regNo}
               onChangeText={setRegNo}
               placeholder="e.g., DMC-45892"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
 
@@ -266,13 +265,12 @@ export default function MobileOnboardingScreen() {
             <Text variant="footnote" style={styles.label}>
               State Medical Council
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="State Medical Council"
               value={stateCouncil}
               onChangeText={setStateCouncil}
               placeholder="e.g., Delhi Medical Council"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
 
@@ -280,13 +278,12 @@ export default function MobileOnboardingScreen() {
             <Text variant="footnote" style={styles.label}>
               Specialization
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Doctor Specialization"
               value={specialization}
               onChangeText={setSpecialization}
               placeholder="e.g., General Medicine"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
         </Card>
@@ -298,12 +295,11 @@ export default function MobileOnboardingScreen() {
           <Text variant="footnote" style={styles.label}>
             Full Name
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Full Name"
             value={fullName}
             onChangeText={setFullName}
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -311,13 +307,12 @@ export default function MobileOnboardingScreen() {
           <Text variant="footnote" style={styles.label}>
             Mobile Number
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Mobile Number"
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -326,25 +321,23 @@ export default function MobileOnboardingScreen() {
             <Text variant="footnote" style={styles.label}>
               Date of Birth (YYYY-MM-DD)
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Date of Birth"
               value={dob}
               onChangeText={setDob}
               placeholder="1980-01-15"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
           <View style={styles.half}>
             <Text variant="footnote" style={styles.label}>
               Blood Group
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Blood Group"
               value={bloodGroup}
               onChangeText={setBloodGroup}
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
         </View>
@@ -353,12 +346,11 @@ export default function MobileOnboardingScreen() {
           <Text variant="footnote" style={styles.label}>
             City
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="City"
             value={city}
             onChangeText={setCity}
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
 
@@ -399,13 +391,12 @@ export default function MobileOnboardingScreen() {
           <Text variant="footnote" style={styles.label}>
             Known Allergies (comma-separated)
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Known Allergies"
             value={allergiesStr}
             onChangeText={setAllergiesStr}
             placeholder="e.g., Penicillin, Peanuts"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
       </Card>
@@ -420,13 +411,13 @@ export default function MobileOnboardingScreen() {
           </View>
         )}
         <View style={styles.row}>
-          <TextInput
+          <TextField
             accessibilityLabel="Add new chronic condition"
             value={newCondition}
             onChangeText={setNewCondition}
             placeholder="e.g., Asthma, Hypothyroidism"
             placeholderTextColor={T.color.label3}
-            style={[styles.input, { flex: 1 }]}
+            style={{ flex: 1 }}
           />
           <Button
             title="Add"
@@ -456,13 +447,12 @@ export default function MobileOnboardingScreen() {
           <Text variant="footnote" style={styles.label}>
             Contact Name
           </Text>
-          <TextInput
+          <TextField
             accessibilityLabel="Emergency Contact Name"
             value={ecName}
             onChangeText={setEcName}
             placeholder="Family member name"
             placeholderTextColor={T.color.label3}
-            style={styles.input}
           />
         </View>
         <View style={styles.row}>
@@ -470,26 +460,24 @@ export default function MobileOnboardingScreen() {
             <Text variant="footnote" style={styles.label}>
               Mobile Number
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Emergency Contact Phone"
               keyboardType="phone-pad"
               value={ecPhone}
               onChangeText={setEcPhone}
               placeholder="+91 98111 00000"
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
           <View style={styles.half}>
             <Text variant="footnote" style={styles.label}>
               Relationship
             </Text>
-            <TextInput
+            <TextField
               accessibilityLabel="Emergency Contact Relationship"
               value={ecRel}
               onChangeText={setEcRel}
               placeholderTextColor={T.color.label3}
-              style={styles.input}
             />
           </View>
         </View>
@@ -519,16 +507,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '700',
-  },
-  input: {
-    backgroundColor: T.color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: T.color.separator,
-    borderRadius: T.radius.row,
-    paddingHorizontal: T.space.md,
-    minHeight: 46,
-    ...T.text.body,
-    color: T.color.label,
   },
   row: {
     flexDirection: 'row',
