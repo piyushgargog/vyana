@@ -84,6 +84,16 @@ describe("search", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("surfaces a missing API key as a configuration error, without any fetch or retry", async () => {
+    vi.stubEnv("TINYFISH_API_KEYS", "");
+    vi.stubEnv("TINYFISH_API_KEY", "");
+    const err = await search({ query: "x" }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(AppError);
+    expect((err as Error).message).toContain("TINYFISH_API_KEY");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("returns fixtures without network calls in mock mode", async () => {
     vi.stubEnv("TINYFISH_MOCK", "1");
     const res = await search({ query: "Dolo 650", include_domains: ["janaushadhi.gov.in"] });

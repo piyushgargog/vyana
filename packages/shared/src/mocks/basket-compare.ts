@@ -89,8 +89,8 @@ export const singleMedicineCompareMock: BasketCompareRes = {
   status: "done",
   baskets: [
     dolo("pharmeasy", 28.9, "https://pharmeasy.in/online-medicine-order/dolo-650", "https://pharmeasy.in"),
-    dolo("1mg", 30.5, "https://www.1mg.com/drugs/dolo-650-tablet", "https://www.1mg.com"),
     dolo("netmeds", 29.9, "https://www.netmeds.com/products/dolo-650", "https://www.netmeds.com"),
+    dolo("1mg", 30.5, "https://www.1mg.com/drugs/dolo-650-tablet", "https://www.1mg.com"),
     dolo("apollo", 31, "https://www.apollopharmacy.in/otc/dolo-650", "https://www.apollopharmacy.in"),
   ],
   cheapest_source: "pharmeasy",

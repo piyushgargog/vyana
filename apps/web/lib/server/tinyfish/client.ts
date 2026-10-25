@@ -116,11 +116,14 @@ export async function search(params: SearchParams, opts?: CallOptions): Promise<
   if (params.purpose) qs.set("purpose", params.purpose);
 
   const timeoutMs = opts?.timeoutMs ?? TIMEOUTS.search;
+  // Resolved before the retry loop: a missing API key is a configuration error,
+  // and it must surface as itself — never be retried or logged as a network failure.
+  const hdrs = headers(false);
   for (let attempt = 1; ; attempt++) {
     count(opts);
     let res: Response;
     try {
-      res = await fetch(`${SEARCH_URL}?${qs}`, { headers: headers(false), signal: AbortSignal.timeout(timeoutMs) });
+      res = await fetch(`${SEARCH_URL}?${qs}`, { headers: hdrs, signal: AbortSignal.timeout(timeoutMs) });
     } catch (err) {
       const isTimeout = err instanceof Error && err.name === "TimeoutError";
       if (!isTimeout && attempt === 1) continue; // network error: retry once

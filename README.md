@@ -59,7 +59,7 @@ Full details, with the request flow, are in [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | Nearby emergency hospitals | Not TinyFish: OpenStreetMap (Overpass) plus the seeded hospitals table | `POST /api/emergency/nearby`, `POST /api/emergency/sos` | [`web/overpass.ts`](apps/web/lib/server/web/overpass.ts) |
 | Care plans | Not TinyFish: direct reads of trusted guideline pages (MedlinePlus search + our own page fetch); every bullet quotes its page | `POST /api/care-plan` | [`care-plan.ts`](apps/web/lib/server/care-plan.ts) |
 | Drug interaction check | No web lookup at runtime: a reviewed table in code; pairs it does not cover are listed as not checked | `POST /api/medicines/interactions` | [`interactions.ts`](apps/web/lib/server/interactions.ts) |
-| AI assistant | Direct web readers as the assistant's tools (MedlinePlus + page fetch), trusted health sites only; only fetched links can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
+| AI assistant | Direct web readers as the assistant's tools (MedlinePlus + page fetch), trusted health sites only; only links returned by the assistant's tools can reach the screen | `POST /api/assistant/chat` | [`assistant/tools.ts`](apps/web/lib/server/assistant/tools.ts) |
 | Lab test price compare | **Agent** per lab in the background; each price is confirmed on the lab's page with **Fetch** | `POST /api/labs/compare`, `GET /api/labs/compare/{job_id}` | [`tinyfish/labs.ts`](apps/web/lib/server/tinyfish/labs.ts) |
 | PM-JAY hospitals | **Search** + **Fetch**, government pages only | `POST /api/schemes/pmjay-hospitals` | [`tinyfish/hospitals.ts`](apps/web/lib/server/tinyfish/hospitals.ts) |
 

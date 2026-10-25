@@ -71,7 +71,7 @@ Not through TinyFish:
 | Nearby emergency hospitals | OpenStreetMap (Overpass) plus the seeded hospitals table; whether a hospital has an ICU is not known from that source, so it is reported as unknown |
 | Care plans | Direct readers (`web/guideline-pages.ts`: MedlinePlus search + our own page fetch) over trusted health domains; every bullet quotes its page |
 | Interaction checks | No web lookup at runtime: a reviewed table in code |
-| Assistant tools | Direct readers (MedlinePlus + page fetch) over trusted health domains; only fetched links can reach the screen |
+| Assistant tools | Direct readers (MedlinePlus + page fetch) over trusted health domains; only links returned by the assistant's tools can reach the screen |
 | Blood stock (RapidBlood) | The public e-RaktKosh service read directly (`web/eraktkosh.ts`) for the searched city and up to three nearby cities; every row is what the source itself answered; cached for 15 minutes |
 
 Web results are cached in Postgres (`web_cache`), so repeated lookups are instant and cost nothing.
