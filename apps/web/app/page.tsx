@@ -119,45 +119,45 @@ export default function LandingPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Metformin 500mg</span>
-                      <span className="text-[11px] text-label-3">8:00 AM · After breakfast</span>
+                      <span className="font-semibold text-label block">Morning dose</span>
+                      <span className="text-caption text-label-3">Marked taken</span>
                     </div>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">
                       ✓
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-ok-soft/40 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Telmisartan 40mg</span>
-                      <span className="text-[11px] text-label-3">9:00 AM · Morning</span>
+                      <span className="font-semibold text-label block">Midday dose</span>
+                      <span className="text-caption text-label-3">Marked taken</span>
                     </div>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-[11px] font-bold">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok text-white text-caption font-bold">
                       ✓
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[13px] rounded-row bg-fill/50 p-2">
                     <div>
-                      <span className="font-semibold text-label block">Atorvastatin 10mg</span>
-                      <span className="text-[11px] text-label-3">9:00 PM · At bedtime</span>
+                      <span className="font-semibold text-label block">Evening dose</span>
+                      <span className="text-caption text-label-3">Not yet marked</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-label-3">Due</span>
+                    <span className="text-caption font-semibold text-label-3">Due</span>
                   </div>
                 </div>
               </Card>
 
               {/* Your Health Group */}
               <Card padded={false} className="overflow-hidden mb-3 text-[13px]">
-                <div className="px-3.5 pt-3 pb-1 text-[11px] font-semibold text-label-3">
+                <div className="px-3.5 pt-3 pb-1 text-caption font-semibold text-label-3">
                   Your health
                 </div>
                 <div className="divide-y divide-separator">
                   <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="font-medium text-label">HbA1c Blood Test</span>
-                    <Pill tone="ok" className="text-[11px]">Report added</Pill>
+                    <span className="font-medium text-label">Lab report</span>
+                    <Pill tone="ok" className="text-caption">Report added</Pill>
                   </div>
                   <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="font-medium text-label">OPD Token · City Hospital</span>
-                    <Pill tone="accent" className="text-[11px]">Token #14</Pill>
+                    <span className="font-medium text-label">OPD visit</span>
+                    <Pill tone="accent" className="text-caption">Booked</Pill>
                   </div>
                 </div>
               </Card>
