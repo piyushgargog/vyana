@@ -48,6 +48,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - The decorative phone mockup on the landing page is hidden from screen readers (`aria-hidden`), so its fictional doses and times are no longer announced as page content (issue #431); the visible "The Vyana app" caption remains the description.
 - A doctor's registration year is checked like the admin's check: years before 1950 or after the current year (India calendar) are rejected instead of being stored.
 - A doctor's own registration number is capped at 40 characters on submit, like the admin manual-check schema for the same column (unbounded values were storable before).
+- A doctor's state council is capped at 80 characters on submit, matching the admin manual-check schema, and two unused job-cache helpers and a duplicate bearer-token parse were removed.
 - Lab report reading: a reference range the model wrote backwards (the low bound above the high bound, for example "100 - 70" where the report prints "70 - 100") no longer computes a wrong flag — the value is left unflagged and marked for review instead.
 - The number check on lab-report values no longer counts digits glued to a letter ("HbA1c", "T3") as written numbers (the care plan and prescription checks stay strict), so a value can only be verified by a number that is actually written in its evidence.
 - One shared text cleaner (`cleanInlineText` in `@vyana/shared`): the medical ID, blood request message and search-link builders no longer re-type the same collapse-whitespace/trim/cap logic.
