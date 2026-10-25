@@ -2,6 +2,8 @@
 // Field names are final: JSON over HTTP is snake_case, the same as the DB columns.
 import { z } from "zod";
 
+import { MEAL_TYPES } from "../constants";
+
 export const ErrorCode = z.enum(["UNAUTHORIZED","FORBIDDEN","BAD_REQUEST","NOT_FOUND","UPSTREAM_TIMEOUT","UPSTREAM_ERROR","INTERNAL","RATE_LIMITED"]);
 export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, message: z.string() }) });
 
@@ -16,6 +18,9 @@ export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), 
 const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.string().nullable().optional() };
 
 // ---------- shared pieces ----------
+// One named shape for each value written in more than one contract, so the copies cannot drift apart.
+export const LabFlag = z.enum(["low", "normal", "high", "unknown"]);
+export const EmergencyContact = z.object({ name: z.string(), phone: z.string() });
 export const Hospital = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -50,7 +55,7 @@ export const LabValue = z.object({
   unit: z.string().nullable(),
   ref_low: z.number().nullable(),
   ref_high: z.number().nullable(),
-  flag: z.enum(["low","normal","high","unknown"]),
+  flag: LabFlag,
   ...aiReviewFields,
   corrected: z.boolean().optional(),                  // the patient corrected this value (ADR-062)
 });
@@ -114,7 +119,7 @@ export const EmergencySosRes = z.object({
   status: z.enum(["requested","dispatched","arriving","completed","cancelled"]),
   eta_minutes: z.number().int(),
   hospitals: z.array(Hospital),
-  contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
+  contacts: z.array(EmergencyContact),
   sms_body: z.string(),                  // includes https://maps.google.com/?q=<lat>,<lng>
 });
 
@@ -256,7 +261,7 @@ export const CarePlan = z.object({
   diet: z.object({
     eat_more: z.array(z.string()),
     limit: z.array(z.string()),
-    sample_day: z.array(z.object({ meal: z.enum(["breakfast","lunch","dinner","snack"]), items: z.array(z.string()) })),
+    sample_day: z.array(z.object({ meal: z.enum(MEAL_TYPES), items: z.array(z.string()) })),
   }),
   red_flags: z.array(z.string()),                     // symptoms → go to hospital / call 108
   follow_up_tests: z.array(z.object({ test: z.string(), every_days: z.number().int().positive() })),
@@ -319,7 +324,7 @@ export const SharedProfile = z.object({
     dose: z.string().nullable(),
     frequency: z.string(),
   })),
-  emergency_contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
+  emergency_contacts: z.array(EmergencyContact),
 });
 // Health Memory Graph (v1.1.0): what the patient chose to put in the link. Only the sections whose scope is on are
 // present; every number is a stored row (flags are the stored, code-computed ones), there is no AI text.
@@ -328,7 +333,7 @@ export const ShareMemory = z.object({
   labs: z.array(z.object({                            // max 24 tests, 24 points each, last 24 months
     test_name: z.string(), unit: z.string().nullable(),
     ref_low: z.number().nullable(), ref_high: z.number().nullable(),
-    points: z.array(z.object({ date: isoDate, value: z.number(), flag: z.enum(["low","normal","high","unknown"]) })),
+    points: z.array(z.object({ date: isoDate, value: z.number(), flag: LabFlag })),
   })).optional(),
   vitals: z.array(z.object({                          // last 12 months; value2 = the second number (diastolic)
     type: z.string(), unit: z.string().nullable(),
