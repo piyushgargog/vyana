@@ -1604,6 +1604,116 @@ export type Database = {
           },
         ]
       }
+      review_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          request_id: string
+          to_status: string
+        }
+        ComputedFields: never
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          request_id: string
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          request_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "review_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_requests: {
+        Row: {
+          ai_text: string
+          created_at: string
+          decided_at: string | null
+          doctor_id: string | null
+          edited_text: string | null
+          expires_at: string | null
+          id: string
+          patient_id: string
+          sources: Json
+          status: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          ai_text: string
+          created_at?: string
+          decided_at?: string | null
+          doctor_id?: string | null
+          edited_text?: string | null
+          expires_at?: string | null
+          id?: string
+          patient_id: string
+          sources?: Json
+          status?: string
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          ai_text?: string
+          created_at?: string
+          decided_at?: string | null
+          doctor_id?: string | null
+          edited_text?: string | null
+          expires_at?: string | null
+          id?: string
+          patient_id?: string
+          sources?: Json
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_requests_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           created_at: string
@@ -1979,6 +2089,7 @@ export type Database = {
         }[]
       }
       expire_proposals: { Args: Record<PropertyKey, never>; Returns: number }
+      expire_review_requests: { Args: Record<PropertyKey, never>; Returns: number }
       hit_rate_limit: {
         Args: {
           p_bucket: string
@@ -2025,6 +2136,35 @@ export type Database = {
       run_missed_dose_check: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      transition_review: {
+        Args: {
+          p_edited_text?: string
+          p_id: string
+          p_note?: string
+          p_to: string
+        }
+        Returns: {
+          ai_text: string
+          created_at: string
+          decided_at: string | null
+          doctor_id: string
+          edited_text: string | null
+          expires_at: string | null
+          id: string
+          patient_id: string
+          sources: Json
+          status: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "review_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
