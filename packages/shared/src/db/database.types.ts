@@ -1655,7 +1655,7 @@ export type Database = {
           ai_text: string
           created_at: string
           decided_at: string | null
-          doctor_id: string
+          doctor_id: string | null
           edited_text: string | null
           expires_at: string | null
           id: string
@@ -1671,7 +1671,7 @@ export type Database = {
           ai_text: string
           created_at?: string
           decided_at?: string | null
-          doctor_id: string
+          doctor_id?: string | null
           edited_text?: string | null
           expires_at?: string | null
           id?: string
@@ -1686,7 +1686,7 @@ export type Database = {
           ai_text?: string
           created_at?: string
           decided_at?: string | null
-          doctor_id?: string
+          doctor_id?: string | null
           edited_text?: string | null
           expires_at?: string | null
           id?: string

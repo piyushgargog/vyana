@@ -7,7 +7,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(44);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('10000000-0000-0000-0000-000000000001', 'a@vyana.test', '{"full_name":"Patient A"}'),
@@ -96,6 +96,9 @@ select public.tap_login('10000000-0000-0000-0000-000000000002'); set local role 
 select is(
   (select count(*)::int from public.review_requests),
   0, 'an unrelated patient reads no requests');
+select is(
+  public.review_doctor_linked('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003'),
+  false, 'and another patient cannot probe who a patient''s doctor is');
 select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role authenticated;
 select is(
   (select count(*)::int from public.review_requests),
@@ -152,7 +155,7 @@ select throws_ok(
   $$ select public.transition_review('51000000-0000-0000-0000-000000000001', 'pending') $$,
   '22023', null, 'a confirmed request is finished: no move out of it');
 
--- A second request: an edited text cannot ride on a rejection, and expiry is the cron's
+-- A second request: an edited text cannot ride on a rejection, and the cron's expiry
 reset role;
 insert into public.review_requests (id, patient_id, doctor_id, subject_type, subject_id, ai_text, status, expires_at) values
   ('51000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001',
@@ -162,8 +165,13 @@ select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role 
 select throws_ok(
   $$ select public.transition_review('51000000-0000-0000-0000-000000000002', 'rejected', 'Not safe', 'Walk weekly.') $$,
   '22023', null, 'an edited text can only ride on a confirmation');
+select throws_ok(
+  $$ select public.expire_review_requests() $$,
+  '42501', null, 'expiry is the service role''s job: an authenticated user is refused');
 reset role;
+set local role service_role;
 select is(public.expire_review_requests(), 1, 'the overdue request expires');
+reset role;
 select is(
   (select status from public.review_requests where id = '51000000-0000-0000-0000-000000000002'),
   'expired', 'and is marked expired');
@@ -192,6 +200,30 @@ select ok(
 select is(
   (select note from public.review_events where request_id = '51000000-0000-0000-0000-000000000003' and to_status = 'rejected'),
   'Please recheck with a fasting sample first.', 'and the note the patient reads is in the audit row');
+
+-- A decision attempted after the deadline: the request expires instead of being decided
+reset role;
+insert into public.review_requests (id, patient_id, doctor_id, subject_type, subject_id, ai_text, status, expires_at) values
+  ('51000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000003', 'lab_summary', '40000000-0000-0000-0000-000000000001',
+   'Your sugar is high.', 'pending', now() - interval '1 hour');
+select public.tap_login('10000000-0000-0000-0000-000000000003'); set local role authenticated;
+select throws_ok(
+  $$ select public.transition_review('51000000-0000-0000-0000-000000000005', 'confirmed') $$,
+  '22023', null, 'a decision after the deadline is refused: the request has expired');
+-- The refusal raises inside the function's own statement, so its expiry write rolls
+-- back with it (a statement is atomic); the nightly function below is what lands the
+-- expiry — what matters is the decision did not, and the request ends expired.
+reset role;
+set local role service_role;
+select public.expire_review_requests();
+reset role;
+select is(
+  (select status from public.review_requests where id = '51000000-0000-0000-0000-000000000005'),
+  'expired', 'and the request ends up expired, not decided');
+select is(
+  (select count(*)::int from public.review_events where request_id = '51000000-0000-0000-0000-000000000005' and from_status = 'pending' and to_status = 'expired' and actor_id is null),
+  1, 'with the expiry in the audit trail, written by no user');
 
 select public.tap_login('10000000-0000-0000-0000-000000000001'); set local role authenticated;
 select lives_ok(
@@ -223,6 +255,17 @@ select public.unschedule_review_expiry();
 select is(
   (select count(*)::int from cron.job where jobname = 'review-requests-expiry'),
   0, 'unscheduling removes it');
+
+-- Deleting the doctor's profile (their account going) must not erase the patient's
+-- requests or their audit trail — the references turn to null instead (0010's rule)
+reset role;
+delete from public.profiles where id = '10000000-0000-0000-0000-000000000003';
+select is(
+  (select count(*)::int from public.review_requests where patient_id = '10000000-0000-0000-0000-000000000001'),
+  5, 'the doctor''s profile going does not erase the patient''s requests');
+select is(
+  (select count(*)::int from public.review_requests where patient_id = '10000000-0000-0000-0000-000000000001' and doctor_id is null),
+  5, 'their doctor references are set null instead');
 
 select * from finish();
 rollback;

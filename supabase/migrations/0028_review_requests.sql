@@ -9,7 +9,11 @@
 create table public.review_requests (
   id uuid primary key default gen_random_uuid(),
   patient_id uuid not null references public.profiles(id) on delete cascade,
-  doctor_id uuid not null references public.profiles(id) on delete cascade,
+  -- Nullable, and set null when the doctor's profile goes: the account-deletion policy
+  -- (0010) converts doctor references to null rather than erasing the patient's records —
+  -- a doctor deleting their account must not take the patient's requests, or the audit
+  -- trail in review_events, with them.
+  doctor_id uuid references public.profiles(id) on delete set null,
   subject_type text not null check (subject_type in ('lab_summary', 'care_plan')),
   -- The lab report or care plan this summary belongs to. No foreign key: the subject
   -- lives in one of two tables, and the frozen text below is what the doctor reviews.
@@ -65,8 +69,13 @@ as $$
           select department_id from public.doctors
           where id = p_doctor and verification_status = 'verified'
         ))
-    );
+    )
+    -- Only the patient themself may probe their own links (the service role, with no
+    -- user id, may too); nobody else can use this to map who sees which doctor.
+    and ((select auth.uid()) is null or (select auth.uid()) = p_patient);
 $$;
+revoke all on function public.review_doctor_linked(uuid, uuid) from public, anon;
+grant execute on function public.review_doctor_linked(uuid, uuid) to authenticated, service_role;
 
 -- The subject must be the patient's own: a lab_summary points at their lab report, a
 -- care_plan at their care plan. A trigger, because a check constraint cannot look across
@@ -126,7 +135,8 @@ create policy "review_events_select_party" on public.review_events
 -- The only way a request changes state. Actor rules: the patient sends their own draft;
 -- the addressed doctor confirms (an edited text may ride along) or rejects (a note is
 -- required — the patient reads it). Everything else is refused, including any move out
--- of a finished state. Expiry is the cron's own function below.
+-- of a finished state. Expiry is the cron's function below, and this function honours
+-- it too: a decision attempted after the deadline expires the request instead.
 create or replace function public.transition_review(
   p_id uuid,
   p_to text,
@@ -150,6 +160,21 @@ begin
   old_status := req.status;
   if p_edited_text is not null and p_to <> 'confirmed' then
     raise exception 'an edited text can only be set when confirming' using errcode = '22023';
+  end if;
+
+  -- A doctor decision on a request whose time has run out lands as an expiry instead:
+  -- the request moves to expired with its audit event (the same shape the nightly
+  -- expire_review_requests() writes), and the decision itself is refused. Expiry is
+  -- not only the cron's business — a request past its deadline must not be decidable
+  -- just because the job has not run yet.
+  if req.status = 'pending' and p_to in ('confirmed', 'rejected')
+     and req.expires_at is not null and req.expires_at <= now() then
+    update public.review_requests
+      set status = 'expired', updated_at = now()
+      where id = p_id;
+    insert into public.review_events (request_id, actor_id, from_status, to_status, note)
+    values (p_id, null, 'pending', 'expired', null);
+    raise exception 'this review request has expired' using errcode = '22023';
   end if;
 
   if req.status = 'draft' and p_to = 'pending' then

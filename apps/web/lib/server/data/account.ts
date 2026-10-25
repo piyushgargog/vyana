@@ -129,8 +129,17 @@ async function readTable(sb: SupabaseClient, spec: ExportTable, userId: string):
     const parents = await readAll((from, to) => sb.from(t.table).select(t.key).eq(t.ownerColumn, userId).order(t.key).range(from, to));
     const ids = parents.rows.map((r) => String(r[t.key]));
     if (ids.length === 0) return { rows: [], truncated: parents.truncated };
-    const res = await readAll((from, to) => sb.from(spec.table).select("*").in(spec.owner[0], ids).order(spec.order).range(from, to));
-    return { rows: res.rows, truncated: parents.truncated || res.truncated };
+    // The parent ids go in chunks: one .in() with every id would put them all in a
+    // single request URL, which a long history would outgrow.
+    const rows: Row[] = [];
+    let truncated = parents.truncated;
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const res = await readAll((from, to) => sb.from(spec.table).select("*").in(spec.owner[0], chunk).order(spec.order).range(from, to));
+      rows.push(...res.rows);
+      truncated ||= res.truncated;
+    }
+    return { rows, truncated };
   }
   const seen = new Set<string>();
   const out: Row[] = [];
