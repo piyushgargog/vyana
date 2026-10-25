@@ -15,7 +15,7 @@ import {
   type InteractionsRes,
 } from "@vyana/shared";
 import { useVyanaWeb } from "@/components/providers";
-import { Button, ButtonLink, Card } from "@/components/ui";
+import { Button, ButtonLink, Card, Field, LargeTitle, SelectField, TextAreaField } from "@/components/ui";
 import { SkeletonCard } from "@/components/ui-primitives";
 
 interface PrescribeFormItem extends DoctorPrescriptionItem {
@@ -348,9 +348,9 @@ function DoctorPrescribeContent({
 
   if (!isNewAppointment && apptError) {
     return (
-      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-sm text-danger-text">
-        <h2 className="text-base font-bold">Appointment record not found</h2>
-        <p className="mt-1 text-xs">{apptError}</p>
+      <div className="rounded-card border border-danger/30 bg-danger-soft p-6 text-[15px] text-danger-text">
+        <h2 className="text-xl font-semibold">Appointment record not found</h2>
+        <p className="mt-1">{apptError}</p>
         <ButtonLink href="/doctor" size="sm" className="mt-4">
           Return to Queue
         </ButtonLink>
@@ -364,7 +364,7 @@ function DoctorPrescribeContent({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/doctor"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-strong hover:text-accent"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-accent-strong hover:text-accent"
         >
           ← Return to OPD Queue
         </Link>
@@ -388,16 +388,14 @@ function DoctorPrescribeContent({
                 Rx
               </span>
               <div>
-                <h1 className="text-xl font-bold text-label">
-                  Write Digital E-Prescription
-                </h1>
-                <p className="text-xs text-label-3">
-                  Official clinical prescription with automatic condition registration and care plan drafting
-                </p>
+                <LargeTitle
+                  title="Write Digital E-Prescription"
+                  subtitle="Official clinical prescription with automatic condition registration and care plan drafting"
+                />
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-label-2">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-[15px] text-label-2">
               <span className="font-bold text-label">
                 Patient: {patient?.full_name || "Patient Record"}
               </span>
@@ -417,7 +415,7 @@ function DoctorPrescribeContent({
           {/* Allergies Notice */}
           <div className="w-full sm:w-72 shrink-0">
             {patient?.allergies && (Array.isArray(patient.allergies) ? patient.allergies.length > 0 : Boolean(patient.allergies)) ? (
-              <div className="rounded-tile border border-danger/40 bg-danger-soft p-3 text-xs text-label">
+              <div className="rounded-tile border border-danger/40 bg-danger-soft p-3 text-[15px] text-label">
                 <span className="font-bold text-danger-text block">
                   Patient Allergies Alert:
                 </span>
@@ -426,7 +424,7 @@ function DoctorPrescribeContent({
                 </span>
               </div>
             ) : (
-              <div className="rounded-tile border border-separator bg-fill p-2.5 text-xs text-label-2">
+              <div className="rounded-tile border border-separator bg-fill p-2.5 text-[15px] text-label-2">
                 No drug allergies on record.
               </div>
             )}
@@ -438,48 +436,30 @@ function DoctorPrescribeContent({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Diagnosis & Clinical Notes Section */}
         <Card className="space-y-4 p-5 sm:p-6">
-          <div>
-            <label
-              htmlFor="rx-diagnosis"
-              className="block text-xs font-bold uppercase tracking-wider text-label mb-1"
-            >
-              Clinical Diagnosis <span className="text-danger-text">* (Required)</span>
-            </label>
-            <input
-              id="rx-diagnosis"
-              type="text"
-              required
-              value={diagnosis}
-              onChange={(e) => setDiagnosis(e.target.value)}
-              placeholder="e.g. Type 2 Diabetes Mellitus, Essential Hypertension, Upper Respiratory Tract Infection"
-              className="w-full rounded-row border border-separator bg-surface p-3 text-sm font-semibold text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-            />
-            <p className="mt-1 text-[11px] text-accent-strong">
-              Saving this diagnosis automatically records the chronic condition and generates an AI draft care plan for your review.
-            </p>
-          </div>
+          <Field
+            id="rx-diagnosis"
+            label="Clinical Diagnosis * (Required)"
+            type="text"
+            required
+            value={diagnosis}
+            onChange={(e) => setDiagnosis(e.target.value)}
+            placeholder="e.g. Type 2 Diabetes Mellitus, Essential Hypertension, Upper Respiratory Tract Infection"
+            hint="Saving this diagnosis automatically records the chronic condition and generates an AI draft care plan for your review."
+          />
 
-          <div>
-            <label
-              htmlFor="rx-clinical-notes"
-              className="block text-xs font-bold uppercase tracking-wider text-label-2 mb-1"
-            >
-              Doctor Clinical Notes & Advice (Optional)
-            </label>
-            <textarea
-              id="rx-clinical-notes"
-              rows={2}
-              value={clinicalNotes}
-              onChange={(e) => setClinicalNotes(e.target.value)}
-              placeholder="General patient instructions, dietary restrictions, follow-up date…"
-              className="w-full rounded-row border border-separator bg-surface p-3 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-            />
-          </div>
+          <TextAreaField
+            id="rx-clinical-notes"
+            label="Doctor Clinical Notes & Advice (Optional)"
+            rows={2}
+            value={clinicalNotes}
+            onChange={(e) => setClinicalNotes(e.target.value)}
+            placeholder="General patient instructions, dietary restrictions, follow-up date…"
+          />
         </Card>
 
         {/* Existing Medications Warning Bar */}
         {existingActiveItems.length > 0 && (
-          <div className="rounded-tile border border-accent/20 bg-accent-soft p-3.5 text-xs text-label">
+          <div className="rounded-tile border border-accent/20 bg-accent-soft p-3.5 text-[15px] text-label">
             <span className="font-bold text-accent-strong">
               Current Patient Medications on Record:
             </span>
@@ -492,10 +472,10 @@ function DoctorPrescribeContent({
         {/* Medication Builder Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-label">
+            <h2 className="text-xl font-semibold text-label">
               Prescribed Medicines ({medicines.length})
             </h2>
-            <p className="text-xs text-label-3">
+            <p className="text-[15px] text-label-3">
               Specify dosage, frequency, and reminder schedule for home pharmacy fulfillment and dose tracking.
             </p>
           </div>
@@ -516,7 +496,7 @@ function DoctorPrescribeContent({
 
         {/* Drug Interactions Feedback Card */}
         {interactionNotice && (
-          <div className="rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-xs text-label">
+          <div className="rounded-tile border border-warn/30 bg-warn-soft p-3.5 text-[15px] text-label">
             <p className="font-semibold">{interactionNotice}</p>
           </div>
         )}
@@ -524,17 +504,17 @@ function DoctorPrescribeContent({
         {interactionResult && (
           <Card className="space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-label">
+              <h3 className="text-xl font-semibold text-label">
                 Drug Interaction Analysis
               </h3>
-              <span className="text-[11px] text-label-3">
+              <span className="text-[13px] text-label-3">
                 {interactionResult.interactions?.length || 0} interaction(s) found
               </span>
             </div>
 
             {interactionResult.not_checked &&
               interactionResult.not_checked.length > 0 && (
-                <div className="rounded-tile border border-warn/30 bg-warn-soft p-2.5 text-xs text-label">
+                <div className="rounded-tile border border-warn/30 bg-warn-soft p-2.5 text-[15px] text-label">
                   <span>Not checked (unknown salt/formulation): </span>
                   <span className="font-semibold">
                     {interactionResult.not_checked.join(", ")}
@@ -543,14 +523,14 @@ function DoctorPrescribeContent({
               )}
 
             {interactionResult.interactions?.length === 0 ? (
-              <div className="rounded-tile bg-fill border border-separator p-2.5 text-xs text-label-2">
+              <div className="rounded-tile bg-fill border border-separator p-2.5 text-[15px] text-label-2">
                 No drug-drug interactions detected in checked sources.
               </div>
             ) : (
               interactionResult.interactions?.map((it, i) => (
                 <div
                   key={i}
-                  className={`rounded-tile border p-3 text-xs ${
+                  className={`rounded-tile border p-3 text-[15px] ${
                     it.severity === "major"
                       ? "border-danger/40 bg-danger-soft text-label"
                       : "border-warn/40 bg-warn-soft text-label"
@@ -562,11 +542,11 @@ function DoctorPrescribeContent({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {it.layer && (
-                        <span className="text-[11px] px-1.5 py-0.5 rounded-row bg-fill text-label-2 font-medium">
+                        <span className="text-[13px] px-1.5 py-0.5 rounded-row bg-fill text-label-2 font-medium">
                           Layer: {it.layer}
                         </span>
                       )}
-                      <span className="uppercase text-[11px] px-1.5 py-0.5 rounded-row bg-surface/80">
+                      <span className="uppercase text-[13px] px-1.5 py-0.5 rounded-row bg-surface/80">
                         {it.severity}
                       </span>
                     </div>
@@ -574,12 +554,12 @@ function DoctorPrescribeContent({
                   <p className="mt-1">{it.effect}</p>
                   {it.advice && <p className="mt-1 font-semibold">{it.advice}</p>}
                   {it.quote && (
-                    <p className="mt-1 text-[11px] italic text-label-2 bg-surface/50 p-1.5 rounded-row border border-separator">
+                    <p className="mt-1 text-[13px] italic text-label-2 bg-surface/50 p-1.5 rounded-row border border-separator">
                       &ldquo;{it.quote}&rdquo;
                     </p>
                   )}
                   {it.sources && it.sources.length > 0 && (
-                    <div className="mt-1.5 text-[11px] text-label-3">
+                    <div className="mt-1.5 text-[13px] text-label-3">
                       <span>Sources: </span>
                       {it.sources.map((src, sIdx) => (
                         <a
@@ -600,7 +580,7 @@ function DoctorPrescribeContent({
 
             {interactionResult.sources_checked &&
               interactionResult.sources_checked.length > 0 && (
-                <div className="text-[11px] text-label-3 pt-1 border-t border-separator">
+                <div className="text-[13px] text-label-3 pt-1 border-t border-separator">
                   <span>Sources checked: </span>
                   {interactionResult.sources_checked.map((s, idx) => (
                     <a
@@ -623,14 +603,14 @@ function DoctorPrescribeContent({
           {medicines.map((med, idx) => (
             <Card key={med.id} className="space-y-3 p-4 sm:p-5">
               <div className="flex items-center justify-between border-b border-separator pb-2.5">
-                <span className="text-xs font-bold text-accent-strong">
+                <span className="text-[13px] font-bold text-accent-strong">
                   Medicine #{idx + 1}
                 </span>
                 {medicines.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveMedicine(med.id)}
-                    className="text-xs font-semibold text-danger-text hover:text-danger"
+                    className="text-[13px] font-semibold text-danger-text hover:text-danger"
                   >
                     Remove
                   </button>
@@ -639,161 +619,123 @@ function DoctorPrescribeContent({
 
               {/* Row 1: Name, Strength, Form */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label htmlFor={`${med.id}-medicine-name`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Medicine Name *
-                  </label>
-                  <input
-                    id={`${med.id}-medicine-name`}
-                    type="text"
-                    required
-                    value={med.medicine_name}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "medicine_name", e.target.value)
-                    }
-                    placeholder="e.g. Metformin, Paracetamol, Telmisartan"
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-                  />
-                </div>
+                <Field
+                  id={`${med.id}-medicine-name`}
+                  label="Medicine Name *"
+                  type="text"
+                  required
+                  value={med.medicine_name}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "medicine_name", e.target.value)
+                  }
+                  placeholder="e.g. Metformin, Paracetamol, Telmisartan"
+                  className="sm:col-span-2"
+                />
 
-                <div>
-                  <label htmlFor={`${med.id}-strength`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Strength / Dose
-                  </label>
-                  <input
-                    id={`${med.id}-strength`}
-                    type="text"
-                    value={med.strength || ""}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "strength", e.target.value)
-                    }
-                    placeholder="e.g. 500 mg, 10 mg"
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs sm:text-sm text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-                  />
-                </div>
+                <Field
+                  id={`${med.id}-strength`}
+                  label="Strength / Dose"
+                  type="text"
+                  value={med.strength || ""}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "strength", e.target.value)
+                  }
+                  placeholder="e.g. 500 mg, 10 mg"
+                />
               </div>
 
               {/* Row 2: Form, Frequency, Food Timing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label htmlFor={`${med.id}-form`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Form
-                  </label>
-                  <select
-                    id={`${med.id}-form`}
-                    value={med.form}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "form", e.target.value)
-                    }
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
-                  >
-                    <option value="tablet">Tablet</option>
-                    <option value="capsule">Capsule</option>
-                    <option value="syrup">Syrup</option>
-                    <option value="injection">Injection</option>
-                    <option value="drop">Drop</option>
-                    <option value="ointment">Ointment</option>
-                  </select>
-                </div>
+                <SelectField
+                  id={`${med.id}-form`}
+                  label="Form"
+                  value={med.form}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "form", e.target.value)
+                  }
+                >
+                  <option value="tablet">Tablet</option>
+                  <option value="capsule">Capsule</option>
+                  <option value="syrup">Syrup</option>
+                  <option value="injection">Injection</option>
+                  <option value="drop">Drop</option>
+                  <option value="ointment">Ointment</option>
+                </SelectField>
 
-                <div>
-                  <label htmlFor={`${med.id}-frequency`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Frequency
-                  </label>
-                  <select
-                    id={`${med.id}-frequency`}
-                    value={med.frequency}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "frequency", e.target.value)
-                    }
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
-                  >
-                    <option value="OD">OD — Once Daily (09:00)</option>
-                    <option value="BD">BD — Twice Daily (09:00, 21:00)</option>
-                    <option value="TDS">TDS — Thrice Daily (08:00, 14:00, 20:00)</option>
-                    <option value="QID">QID — Four Times (08:00, 12:00, 16:00, 20:00)</option>
-                    <option value="HS">HS — Bedtime (22:00)</option>
-                    <option value="SOS">SOS — As Needed</option>
-                    <option value="custom">Custom Schedule</option>
-                  </select>
-                </div>
+                <SelectField
+                  id={`${med.id}-frequency`}
+                  label="Frequency"
+                  value={med.frequency}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "frequency", e.target.value)
+                  }
+                >
+                  <option value="OD">OD — Once Daily (09:00)</option>
+                  <option value="BD">BD — Twice Daily (09:00, 21:00)</option>
+                  <option value="TDS">TDS — Thrice Daily (08:00, 14:00, 20:00)</option>
+                  <option value="QID">QID — Four Times (08:00, 12:00, 16:00, 20:00)</option>
+                  <option value="HS">HS — Bedtime (22:00)</option>
+                  <option value="SOS">SOS — As Needed</option>
+                  <option value="custom">Custom Schedule</option>
+                </SelectField>
 
-                <div>
-                  <label htmlFor={`${med.id}-with-food`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Relation to Food
-                  </label>
-                  <select
-                    id={`${med.id}-with-food`}
-                    value={med.with_food}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "with_food", e.target.value)
-                    }
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label focus:border-accent focus:outline-none"
-                  >
-                    <option value="after">After Food</option>
-                    <option value="before">Before Food / Empty Stomach</option>
-                    <option value="any">Any / With Water</option>
-                  </select>
-                </div>
+                <SelectField
+                  id={`${med.id}-with-food`}
+                  label="Relation to Food"
+                  value={med.with_food}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "with_food", e.target.value)
+                  }
+                >
+                  <option value="after">After Food</option>
+                  <option value="before">Before Food / Empty Stomach</option>
+                  <option value="any">Any / With Water</option>
+                </SelectField>
               </div>
 
               {/* Row 3: Instructions & Quantity */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label htmlFor={`${med.id}-instructions`} className="block text-[11px] font-bold text-label-2 mb-1">
-                    Patient Instructions
-                  </label>
-                  <input
-                    id={`${med.id}-instructions`}
-                    type="text"
-                    value={med.instructions || ""}
-                    onChange={(e) =>
-                      handleUpdateMedicine(med.id, "instructions", e.target.value)
-                    }
-                    placeholder="e.g. Take with warm water after dinner"
-                    className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-                  />
-                </div>
+                <Field
+                  id={`${med.id}-instructions`}
+                  label="Patient Instructions"
+                  type="text"
+                  value={med.instructions || ""}
+                  onChange={(e) =>
+                    handleUpdateMedicine(med.id, "instructions", e.target.value)
+                  }
+                  placeholder="e.g. Take with warm water after dinner"
+                  className="sm:col-span-2"
+                />
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor={`${med.id}-quantity-total`} className="block text-[11px] font-bold text-label-2 mb-1">
-                      Total Units
-                    </label>
-                    <input
-                      id={`${med.id}-quantity-total`}
-                      type="number"
-                      min="1"
-                      value={med.quantity_total ?? ""}
-                      onChange={(e) =>
-                        handleUpdateMedicine(
-                          med.id,
-                          "quantity_total",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={`${med.id}-duration-days`} className="block text-[11px] font-bold text-label-2 mb-1">
-                      Days
-                    </label>
-                    <input
-                      id={`${med.id}-duration-days`}
-                      type="number"
-                      min="1"
-                      value={med.duration_days ?? ""}
-                      onChange={(e) =>
-                        handleUpdateMedicine(
-                          med.id,
-                          "duration_days",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      className="w-full rounded-row border border-separator bg-surface p-2 text-xs text-label placeholder:text-label-3 focus:border-accent focus:outline-none"
-                    />
-                  </div>
+                  <Field
+                    id={`${med.id}-quantity-total`}
+                    label="Total Units"
+                    type="number"
+                    min="1"
+                    value={med.quantity_total ?? ""}
+                    onChange={(e) =>
+                      handleUpdateMedicine(
+                        med.id,
+                        "quantity_total",
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
+                  <Field
+                    id={`${med.id}-duration-days`}
+                    label="Days"
+                    type="number"
+                    min="1"
+                    value={med.duration_days ?? ""}
+                    onChange={(e) =>
+                      handleUpdateMedicine(
+                        med.id,
+                        "duration_days",
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
                 </div>
               </div>
             </Card>
@@ -802,7 +744,7 @@ function DoctorPrescribeContent({
 
         {/* Pipeline Execution Banner */}
         {isSubmitting && (
-          <div className="rounded-card border border-accent/30 bg-accent-soft p-4 text-xs text-label flex items-center gap-3">
+          <div className="rounded-card border border-accent/30 bg-accent-soft p-4 text-[15px] text-label flex items-center gap-3">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             <span className="font-semibold">{pipelineStep}</span>
           </div>
