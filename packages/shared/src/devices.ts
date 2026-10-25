@@ -3,17 +3,10 @@
 // screens and the permission explainer use. Labels and explanations only — this file
 // holds no reading, no range and no advice text.
 
-import type { DeviceMetric } from "./contracts";
+import { DeviceMetric } from "./contracts";
 
-export const ALL_DEVICE_METRICS: DeviceMetric[] = [
-  "steps",
-  "heart_rate",
-  "sleep",
-  "blood_oxygen",
-  "blood_pressure",
-  "blood_glucose",
-  "weight",
-];
+// Derived from the DeviceMetric enum, so adding a metric cannot leave this list behind.
+export const ALL_DEVICE_METRICS: DeviceMetric[] = [...DeviceMetric.options];
 
 /** Display name for a metric — labels only, never a value or a range. */
 export const DEVICE_METRIC_LABELS: Record<DeviceMetric, string> = {

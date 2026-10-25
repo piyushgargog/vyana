@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { Language, type CarePlan, type GenerateCarePlanReq, type GenerateCarePlanRes, type SourceLink } from "@vyana/shared";
+import { CarePlanMeal, Language, type CarePlan, type GenerateCarePlanReq, type GenerateCarePlanRes, type SourceLink } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
 import { forbidden, notFound, upstream } from "./errors";
@@ -21,7 +21,7 @@ import { guidelinePages, type Page } from "./web/guideline-pages";
 
 const Bullet = z.object({ text: z.string(), quote: z.string(), source: z.number().int() });
 type Bullet = z.infer<typeof Bullet>;
-const Meal = z.enum(["breakfast", "lunch", "dinner", "snack"]);
+const Meal = CarePlanMeal;
 
 /** What the model returns: the contract's `CarePlan`, but every bullet with its quote and page number. */
 export const CarePlanLlm = z.object({

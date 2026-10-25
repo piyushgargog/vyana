@@ -16,6 +16,15 @@ export const AiMeta = z.object({ model: z.string(), prompt_version: z.string(), 
 const aiReviewFields = { needs_review: z.boolean().optional(), evidence: z.string().nullable().optional() };
 
 // ---------- shared pieces ----------
+// One named shape for each value written in more than one contract, so the copies cannot drift apart.
+export const LabFlag = z.enum(["low", "normal", "high", "unknown"]);
+export const EmergencyContact = z.object({ name: z.string(), phone: z.string() });
+// The care-plan meal, named once here instead of inlined in both the contract and the server.
+// It intentionally does not import MEAL_TYPES from ../constants: this module is also loaded by
+// scripts/generate-openapi.mts under plain Node type-stripping, which cannot resolve a relative
+// import out of this file (extensionless, .js and .ts forms each break one of the loaders),
+// and constants.ts is Vaibhav-owned. The equality test pins the two lists to each other.
+export const CarePlanMeal = z.enum(["breakfast", "lunch", "dinner", "snack"]);
 export const Hospital = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -50,7 +59,7 @@ export const LabValue = z.object({
   unit: z.string().nullable(),
   ref_low: z.number().nullable(),
   ref_high: z.number().nullable(),
-  flag: z.enum(["low","normal","high","unknown"]),
+  flag: LabFlag,
   ...aiReviewFields,
   corrected: z.boolean().optional(),                  // the patient corrected this value (ADR-062)
 });
@@ -114,7 +123,7 @@ export const EmergencySosRes = z.object({
   status: z.enum(["requested","dispatched","arriving","completed","cancelled"]),
   eta_minutes: z.number().int(),
   hospitals: z.array(Hospital),
-  contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
+  contacts: z.array(EmergencyContact),
   sms_body: z.string(),                  // includes https://maps.google.com/?q=<lat>,<lng>
 });
 
@@ -256,7 +265,7 @@ export const CarePlan = z.object({
   diet: z.object({
     eat_more: z.array(z.string()),
     limit: z.array(z.string()),
-    sample_day: z.array(z.object({ meal: z.enum(["breakfast","lunch","dinner","snack"]), items: z.array(z.string()) })),
+    sample_day: z.array(z.object({ meal: CarePlanMeal, items: z.array(z.string()) })),
   }),
   red_flags: z.array(z.string()),                     // symptoms → go to hospital / call 108
   follow_up_tests: z.array(z.object({ test: z.string(), every_days: z.number().int().positive() })),
@@ -319,7 +328,7 @@ export const SharedProfile = z.object({
     dose: z.string().nullable(),
     frequency: z.string(),
   })),
-  emergency_contacts: z.array(z.object({ name: z.string(), phone: z.string() })),
+  emergency_contacts: z.array(EmergencyContact),
 });
 // Health Memory Graph (v1.1.0): what the patient chose to put in the link. Only the sections whose scope is on are
 // present; every number is a stored row (flags are the stored, code-computed ones), there is no AI text.
@@ -328,7 +337,7 @@ export const ShareMemory = z.object({
   labs: z.array(z.object({                            // max 24 tests, 24 points each, last 24 months
     test_name: z.string(), unit: z.string().nullable(),
     ref_low: z.number().nullable(), ref_high: z.number().nullable(),
-    points: z.array(z.object({ date: isoDate, value: z.number(), flag: z.enum(["low","normal","high","unknown"]) })),
+    points: z.array(z.object({ date: isoDate, value: z.number(), flag: LabFlag })),
   })).optional(),
   vitals: z.array(z.object({                          // last 12 months; value2 = the second number (diastolic)
     type: z.string(), unit: z.string().nullable(),
@@ -411,6 +420,9 @@ export const DeviceConnectionsRes = z.object({
 // ---------- inferred types ----------
 export type ErrorCode = z.infer<typeof ErrorCode>;
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>;
+export type LabFlag = z.infer<typeof LabFlag>;
+export type EmergencyContact = z.infer<typeof EmergencyContact>;
+export type CarePlanMeal = z.infer<typeof CarePlanMeal>;
 export type Hospital = z.infer<typeof Hospital>;
 export type PrescriptionItem = z.infer<typeof PrescriptionItem>;
 export type LabValue = z.infer<typeof LabValue>;
