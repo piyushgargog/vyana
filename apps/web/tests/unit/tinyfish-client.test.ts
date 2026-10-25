@@ -76,6 +76,14 @@ describe("search", () => {
     await expect(search({ query: "x" })).rejects.toMatchObject({ code: "UPSTREAM_ERROR" });
   });
 
+  it("maps a network failure that survives the retry to an upstream error, not a raw throw", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    const err = await search({ query: "x" }).catch((e) => e);
+    expect(err).toBeInstanceOf(AppError);
+    expect(err).toMatchObject({ code: "UPSTREAM_ERROR", status: 502 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("returns fixtures without network calls in mock mode", async () => {
     vi.stubEnv("TINYFISH_MOCK", "1");
     const res = await search({ query: "Dolo 650", include_domains: ["janaushadhi.gov.in"] });
@@ -170,6 +178,14 @@ describe("runAgent", () => {
     expect(out.status).toBe("ok");
     expect(progress).toEqual(["Opening PharmEasy"]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a COMPLETE event from a CRLF-framed stream", async () => {
+    const text =
+      `data: ${JSON.stringify({ type: "PROGRESS", run_id: "r9", purpose: "Searching" })}\r\n\r\n` +
+      `data: ${JSON.stringify({ type: "COMPLETE", run_id: "r9", status: "COMPLETED", result: { price: 27 } })}\r\n\r\n`;
+    fetchMock.mockResolvedValueOnce(new Response(text, { status: 200, headers: { "content-type": "text/event-stream" } }));
+    expect(await runAgent({ ...params, onProgress: () => {} })).toEqual({ status: "ok", result: { price: 27 }, runId: "r9" });
   });
 
   it("reports a stream that ends without COMPLETE as an error", async () => {

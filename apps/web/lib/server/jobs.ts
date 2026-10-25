@@ -99,7 +99,11 @@ export function agentRunPollDecision(
   }
   const now = opts.now ?? Date.now();
   const stuckRunning = run.status === "RUNNING" && run.startedAt !== null && now - run.startedAt > opts.runDeadlineMs;
-  const stuckQueued = run.startedAt === null && now - opts.jobStartedAt > (opts.queueDeadlineMs ?? QUEUE_DEADLINE_MS);
+  // Only a run TinyFish itself reports as PENDING is queued. A RUNNING report with
+  // no start time can also be `getRun`'s "unknown" answer to a transient failure:
+  // cancelling on the queue deadline then would kill a healthy run that has in
+  // fact started, so no deadline applies until the provider reports a real state.
+  const stuckQueued = run.status === "PENDING" && now - opts.jobStartedAt > (opts.queueDeadlineMs ?? QUEUE_DEADLINE_MS);
   return stuckRunning || stuckQueued ? { state: "timeout", cancel: true } : { state: "pending", cancel: false };
 }
 
@@ -113,7 +117,7 @@ export type PollAgentRunOutcome<T> =
  * its state. The caller keeps only what is its own: which run deadline its job type uses, and how a finished
  * run's raw result becomes its answer.
  */
-export async function pollAgentRun<T>(opts: {
+type PollAgentRunOpts<T> = {
   runId: string;
   cacheKey: string;
   cacheKind: string;
@@ -125,7 +129,30 @@ export async function pollAgentRun<T>(opts: {
   getRun: (runId: string, opts?: { counter?: CallCounter }) => Promise<RunState>;
   cancelRun: (runId: string, opts?: { counter?: CallCounter }) => Promise<void>;
   processResult: (result: unknown) => Promise<T>;
-}): Promise<PollAgentRunOutcome<T>> {
+};
+
+/**
+ * Polls of the same run already in flight in this process, by cache key. `cached()`
+ * shares the underlying compute between concurrent callers, but the poll state is
+ * decided inside that compute — without sharing it too, a caller who joined an
+ * in-flight poll would report "pending" for a run the compute just timed out or
+ * errored. Concurrent callers therefore share the whole outcome, state included.
+ */
+const inFlightPolls = new Map<string, Promise<PollAgentRunOutcome<unknown>>>();
+
+export async function pollAgentRun<T>(opts: PollAgentRunOpts<T>): Promise<PollAgentRunOutcome<T>> {
+  const inFlight = inFlightPolls.get(opts.cacheKey);
+  if (inFlight) return inFlight as Promise<PollAgentRunOutcome<T>>;
+  const run = pollAgentRunOnce(opts) as Promise<PollAgentRunOutcome<unknown>>;
+  inFlightPolls.set(opts.cacheKey, run);
+  try {
+    return (await run) as PollAgentRunOutcome<T>;
+  } finally {
+    inFlightPolls.delete(opts.cacheKey);
+  }
+}
+
+async function pollAgentRunOnce<T>(opts: PollAgentRunOpts<T>): Promise<PollAgentRunOutcome<T>> {
   let state: Exclude<AgentRunPollState, "completed"> = "pending";
   const done = await cached<T>(opts.cacheKey, opts.cacheKind, TTL.day, async () => {
     const run = await opts.getRun(opts.runId, { counter: opts.counter });

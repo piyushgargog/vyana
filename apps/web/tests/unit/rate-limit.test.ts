@@ -26,6 +26,7 @@ beforeEach(() => {
   adminError = null;
   vi.stubEnv("LLM_MOCK", "");
   vi.stubEnv("TINYFISH_MOCK", "");
+  vi.stubEnv("WEB_MOCK", "");
   vi.stubEnv("RATE_LIMIT_EXEMPT_USER_IDS", "");
 });
 afterEach(() => {
@@ -101,10 +102,21 @@ describe("fail open: no verdict means the request goes through", () => {
 });
 
 describe("mock runs", () => {
-  it.each(["LLM_MOCK", "TINYFISH_MOCK"])("are not counted when %s=1, and the database is not asked", async (name) => {
-    vi.stubEnv(name, "1");
+  it.each([
+    ["LLM_MOCK", "TINYFISH_MOCK"],
+    ["LLM_MOCK", "WEB_MOCK"],
+  ])("are not counted when every paid upstream is mocked (%s=1 and %s=1), and the database is not asked", async (a, b) => {
+    vi.stubEnv(a, "1");
+    vi.stubEnv(b, "1");
     expect(await checkRateLimit(USER, LIMIT, NOW)).toBeNull();
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["LLM_MOCK", "TINYFISH_MOCK", "WEB_MOCK"])("are still counted when only %s=1, because another paid upstream is live", async (name) => {
+    vi.stubEnv(name, "1");
+    rpc.mockResolvedValue(row());
+    expect(await checkRateLimit(USER, LIMIT, NOW)).not.toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 });
 

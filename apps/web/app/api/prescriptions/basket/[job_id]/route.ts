@@ -3,8 +3,10 @@ import { requireUser } from "@/lib/server/auth";
 import { withRoute } from "@/lib/server/errors";
 import { pollBasketJob } from "@/lib/server/tinyfish/basket";
 
-// Room for the run status checks plus one price-verification Fetch per finished pharmacy.
-export const maxDuration = 60;
+// Room for the run status checks plus the price-verification Fetch per finished
+// pharmacy — which is itself retried once (two 45 s attempts) before prices are
+// left unverified, so the limit must cover both attempts, not just one.
+export const maxDuration = 150;
 
 export const GET = withRoute<RouteContext<"/api/prescriptions/basket/[job_id]">>(
   "prescriptions/basket/[job_id]",

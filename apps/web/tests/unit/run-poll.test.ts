@@ -7,7 +7,7 @@ const run = (partial: Partial<RunState>): RunState => ({ status: "PENDING", resu
 const decide = (r: RunState, jobStartedAt: number) =>
   agentRunPollDecision(r, { jobStartedAt, runDeadlineMs: FLAT_RUN_DEADLINE_MS, now: NOW });
 
-describe("agent run poll decision (shared by the basket, lab and blood job pollers)", () => {
+describe("agent run poll decision (shared by the basket and lab job pollers)", () => {
   it("processes a completed run and never cancels it", () => {
     expect(decide(run({ status: "COMPLETED" }), NOW - QUEUE_DEADLINE_MS * 2)).toEqual({ state: "completed", cancel: false });
   });
@@ -22,6 +22,13 @@ describe("agent run poll decision (shared by the basket, lab and blood job polle
   it("gives up on a run that waited in the queue past the queue deadline", () => {
     expect(decide(run({ status: "PENDING" }), NOW - QUEUE_DEADLINE_MS - 1000)).toEqual({ state: "timeout", cancel: true });
     expect(decide(run({ status: "PENDING" }), NOW - QUEUE_DEADLINE_MS + 1000)).toEqual({ state: "pending", cancel: false });
+  });
+
+  it("does not cancel on the queue deadline when the run's state is unknown", () => {
+    // getRun answers a transient failure as RUNNING with no start time: that is an
+    // unknown, not a queued run, so even a very old job must not cancel it.
+    const unknown = run({ status: "RUNNING", startedAt: null });
+    expect(decide(unknown, NOW - QUEUE_DEADLINE_MS * 3)).toEqual({ state: "pending", cancel: false });
   });
 
   it("does not time out a run that has started, however long it waited in the queue (#368)", () => {

@@ -124,7 +124,11 @@ export async function search(params: SearchParams, opts?: CallOptions): Promise<
     } catch (err) {
       const isTimeout = err instanceof Error && err.name === "TimeoutError";
       if (!isTimeout && attempt === 1) continue; // network error: retry once
-      throw err; // a timeout becomes 504 in withRoute
+      if (isTimeout) throw err; // a timeout becomes 504 in withRoute
+      // An exhausted network failure is an upstream failure (502), not a server
+      // bug: letting the raw error escape would report it as INTERNAL/500.
+      log({ event: "tinyfish_network_error", api: "search" });
+      throw upstream("The live web lookup failed. Try again.");
     }
     if (res.status >= 500 && attempt === 1) continue;
     if (!res.ok) throw httpFailure("search", res.status);
@@ -301,6 +305,13 @@ async function runSse(
       const { value, done } = await reader.read();
       if (done) break;
       buffer += value;
+      // SSE permits CRLF and CR line endings as well as LF: normalize them before
+      // looking for the blank-line separator, or such a stream never dispatches its
+      // COMPLETE event. A trailing "\r" is held back: it may be half of a CRLF pair
+      // split across chunks.
+      const holdCR = buffer.endsWith("\r");
+      buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      if (holdCR) buffer = buffer.slice(0, -1) + "\r";
       let sep: number;
       while ((sep = buffer.indexOf("\n\n")) !== -1) {
         const block = buffer.slice(0, sep);
@@ -347,12 +358,17 @@ export async function runAgent<T = unknown>(params: AgentParams<T>, opts?: CallO
   // Stop the remote run when we stop waiting, so a slow site doesn't keep spending credits.
   const body = agentBody(params, Math.ceil(timeoutMs / 1000));
   const signal = AbortSignal.timeout(timeoutMs);
-  count(opts);
   const started = Date.now();
   let outcome: AgentOutcome<T>;
   try {
+    // Count every request actually made: the sync call, and the SSE call when the
+    // sync endpoint falls back to it, are two separate TinyFish requests.
+    if (!params.onProgress) count(opts);
     let run: RunResult | "fallback" | { httpStatus: number } = params.onProgress ? "fallback" : await runSync(body, signal);
-    if (run === "fallback") run = await runSse(body, signal, params.onProgress);
+    if (run === "fallback") {
+      count(opts);
+      run = await runSse(body, signal, params.onProgress);
+    }
     outcome =
       "httpStatus" in run
         ? { status: "error", result: null, runId: null, error: `http_${run.httpStatus}` }
@@ -420,7 +436,6 @@ export async function startAgent(
     log({ event: "tinyfish_credit_guard", limit_per_minute: AGENT_CALLS_PER_MINUTE });
     return { status: "error", error: "credit_guard" };
   }
-  count(opts);
   try {
     const pool = apiKeys().length;
     const first = nextKey++ % pool; // rotate: each new run starts on the next key
@@ -428,6 +443,7 @@ export async function startAgent(
     let used = first;
     // Out of credits (402) or rate limited (429) on one key: try the next one before giving up.
     for (let attempt = 0; attempt < pool; attempt++) {
+      count(opts); // one count per request actually made, retries included
       used = (first + attempt) % pool;
       res = await fetch(`${AGENT_URL}/automation/run-async`, {
         method: "POST",
@@ -464,7 +480,11 @@ function toMs(iso: string | null | undefined): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
-/** Current state of a run. A network or HTTP problem is reported as still RUNNING, so the caller simply asks again. */
+/**
+ * Current state of a run. A network or HTTP problem is reported as still RUNNING, so the caller simply asks
+ * again; that report is an unknown, not a fact about the run, so the poll decision applies no deadline to it
+ * (see `agentRunPollDecision`: only a run TinyFish itself reports as PENDING is on the queue deadline).
+ */
 export async function getRun(runId: string, opts?: CallOptions): Promise<RunState> {
   if (isMock()) {
     if (!mockRuns.has(runId)) return { status: "FAILED", result: null, error: "unknown_run", startedAt: null };

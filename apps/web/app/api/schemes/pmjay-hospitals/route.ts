@@ -11,5 +11,6 @@ export const POST = withRoute("schemes/pmjay-hospitals", async (req, ctx) => {
   ctx.userId = user.id;
   const body = await parseBody(req, PmjayHospitalsReq);
   const res = await findPmjayHospitals(body.lat, body.lng, { userId: user.id, counter: ctx });
+  ctx.cache = res.cached ? "hit" : "miss";
   return Response.json(process.env.NODE_ENV === "production" ? res : PmjayHospitalsRes.parse(res));
 }, { rateLimit: rateLimitOf("agent") });
