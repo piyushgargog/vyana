@@ -398,7 +398,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DoctorVerifyReq"
+              oneOf:
+                - $ref: "#/components/schemas/DoctorVerifyReq"
+                - $ref: "#/components/schemas/AdminDoctorCheckReq"
       responses:
         "200":
           description: Success
@@ -753,6 +755,43 @@ components:
       scheme: bearer
       bearerFormat: Supabase JWT
   schemas:
+    AdminDoctorCheckReq:
+      type: object
+      properties:
+        doctor_id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        decision:
+          type: string
+          enum:
+            - approve
+            - reject
+        reg_no:
+          type: string
+          minLength: 1
+          maxLength: 40
+        state_council:
+          type: string
+          minLength: 2
+          maxLength: 80
+        year:
+          anyOf:
+            - type: integer
+              minimum: 1950
+              maximum: 9007199254740991
+            - type: "null"
+        note:
+          type: string
+          maxLength: 300
+      required:
+        - doctor_id
+        - decision
+        - reg_no
+        - state_council
+        - year
+        - note
+      additionalProperties: false
     ApiErrorBody:
       type: object
       properties:
