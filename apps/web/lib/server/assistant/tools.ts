@@ -111,5 +111,3 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
     }),
   };
 }
-
-export type AssistantTools = ReturnType<typeof assistantTools>;
