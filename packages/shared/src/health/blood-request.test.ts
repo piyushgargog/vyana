@@ -41,6 +41,16 @@ describe("buildBloodRequestMessage", () => {
     for (const claim of ["available", "in stock", "guaranteed", "will reach", "matched", "safe"]) expect(text).not.toContain(claim);
   });
 
+  it("drops an empty hospital name instead of leaving a leading comma", () => {
+    expect(buildBloodRequestMessage({ ...request, hospital_name: "" })).toContain("Hospital: Noida\n");
+    expect(buildBloodRequestMessage({ ...request, hospital_name: "" })).not.toContain("Hospital: ,");
+  });
+
+  it("drops an empty contact name instead of leaving a leading space", () => {
+    expect(buildBloodRequestMessage({ ...request, contact_name: "" })).toContain("Contact: +91 00000 00002");
+    expect(buildBloodRequestMessage({ ...request, contact_name: "" })).not.toContain("Contact:  ");
+  });
+
   it("tidies the spaces of what the patient typed", () => {
     const messy = buildBloodRequestMessage({ ...request, hospital_name: "  Fortis   Hospital ", contact_phone: "+91  00000   00002" });
     expect(messy).toContain("Hospital: Fortis Hospital, Noida");
