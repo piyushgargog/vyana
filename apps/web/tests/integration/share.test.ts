@@ -14,6 +14,7 @@ const T_REVOKED = hex("d");
 const T_EDGE = hex("e");
 const T_SCOPED = "9".repeat(48);
 const T_MEDICAL_SCOPED = "8".repeat(48);
+const T_MEDICINES_SCOPED = "7".repeat(48);
 
 let db: ReturnType<typeof memoryDb>;
 vi.mock("@/lib/server/supabase-admin", () => ({
@@ -36,6 +37,7 @@ function world(): Record<string, Row[]> {
       { token: T_EDGE, patient_id: PATIENT, kind: "medical_id", expires_at: NOW.toISOString(), revoked: false },
       { token: T_SCOPED, patient_id: PATIENT, kind: "timeline", expires_at: "2026-10-14T06:00:00Z", revoked: false, scopes: ["labs", "adherence"], open_count: 2, last_opened_at: null },
       { token: T_MEDICAL_SCOPED, patient_id: PATIENT, kind: "medical_id", expires_at: "2026-10-14T06:00:00Z", revoked: false, scopes: ["labs"], open_count: 0, last_opened_at: null },
+      { token: T_MEDICINES_SCOPED, patient_id: PATIENT, kind: "timeline", expires_at: "2026-10-14T06:00:00Z", revoked: false, scopes: ["medicines"] },
     ],
     profiles: [
       { id: PATIENT, full_name: "Aryan Sharma", dob: "1990-05-15", blood_group: "O+", allergies: ["Penicillin"], phone: "+91 00000 00001" },
@@ -50,6 +52,7 @@ function world(): Record<string, Row[]> {
       { id: "i1", patient_id: PATIENT, medicine_name: "Metformin", strength: "500 mg", dose: "1 tablet", frequency: "BD", active: true, end_date: null, created_at: "2026-01-01T00:00:00Z" },
       { id: "i2", patient_id: PATIENT, medicine_name: "Antibiotic", strength: null, dose: null, frequency: "TDS", active: true, end_date: "2026-10-01", created_at: "2026-01-02T00:00:00Z" },
       { id: "i3", patient_id: PATIENT, medicine_name: "Switched off", strength: null, dose: null, frequency: "OD", active: false, end_date: null, created_at: "2026-01-03T00:00:00Z" },
+      { id: "i5", patient_id: PATIENT, medicine_name: "Old course", strength: null, dose: null, frequency: "OD", active: false, end_date: "2026-08-01", created_at: "2026-01-05T00:00:00Z" },
       { id: "i4", patient_id: OTHER, medicine_name: "Not mine", strength: null, dose: null, frequency: "OD", active: true, end_date: null, created_at: "2026-01-04T00:00:00Z" },
     ],
     emergency_contacts: [
@@ -235,6 +238,15 @@ describe("GET /api/share/[token] with scopes (the Health Memory Graph, #237)", (
     expect(body.memory?.vitals).toBeUndefined();
     expect(body.memory?.medicines).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain("SecretTest");
+  });
+
+  it("puts a deactivated medicine that ended inside the window in the memory bars, while active_medicines stays active-only", async () => {
+    const body = ShareRes.parse(await (await get(T_MEDICINES_SCOPED)).json());
+    expect(body.profile.active_medicines.map((m) => m.name)).toEqual(["Metformin"]);
+    const names = body.memory?.medicines?.map((m) => m.name) ?? [];
+    expect(names).toContain("Old course");
+    expect(names).toContain("Metformin");
+    expect(names).not.toContain("Not mine");
   });
 
   it("never puts the memory on a medical ID link, even one created with scopes", async () => {

@@ -8,6 +8,7 @@ import {
   MEMORY_LAB_TESTS,
   type MemoryDoseLog,
   type MemoryLabValue,
+  type MemoryMedicineItem,
   type MemoryVital,
   type ShareRes,
   type ShareScope,
@@ -153,10 +154,11 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   // first responder reads, and it never carries the long view, whatever scopes it was given.
   if (row.kind === "timeline" && scopes.length > 0) {
     // Only the scopes that are on are read, in parallel, each capped; buildMemory applies the
-    // windows (labs 24 months, vitals 12, adherence 30 days). The medicines are the active items
-    // already read for the profile, so that scope needs no query of its own.
+    // windows (labs 24 months, vitals 12, adherence 30 days). The medicines scope reads every
+    // prescription item, not just the active ones the profile lists, so a medicine that ended
+    // inside the window and was deactivated still gets its bar (issue #600).
     const doseWindowStart = new Date(new Date(`${today}T00:00:00+05:30`).getTime() - 29 * 24 * 60 * 60 * 1000).toISOString();
-    const [labs, vitals, doseLogs] = await Promise.all([
+    const [labs, vitals, doseLogs, memoryMedicines] = await Promise.all([
       scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
       scopes.includes("vitals")
         ? rows<MemoryVital>(
@@ -174,8 +176,13 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
               .limit(MEMORY_DOSE_ROWS),
           )
         : Promise.resolve([] as MemoryDoseLog[]),
+      scopes.includes("medicines")
+        ? rows<MemoryMedicineItem>(
+            sb.from("prescription_items").select("medicine_name, strength, dose, frequency, start_date, end_date, created_at").eq("patient_id", patient).order("created_at"),
+          )
+        : Promise.resolve(items),
     ]);
-    res.memory = buildMemory({ labs, vitals, medicines: items, adherence: doseLogs }, scopes, today);
+    res.memory = buildMemory({ labs, vitals, medicines: memoryMedicines, adherence: doseLogs }, scopes, today);
   }
 
   // A successful open counts for the patient ("Opened N times"). The bump is one atomic
