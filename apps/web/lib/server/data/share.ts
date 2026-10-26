@@ -160,7 +160,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
       scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
       scopes.includes("vitals")
         ? rows<MemoryVital>(
-            sb.from("vitals").select("type, value, value2, unit, measured_at").eq("patient_id", patient).order("measured_at", { ascending: false }).limit(MEMORY_VITAL_ROWS),
+            sb.from("vitals").select("type, value, value2, unit, measured_at, source").eq("patient_id", patient).order("measured_at", { ascending: false }).limit(MEMORY_VITAL_ROWS),
           )
         : Promise.resolve([] as MemoryVital[]),
       scopes.includes("adherence")

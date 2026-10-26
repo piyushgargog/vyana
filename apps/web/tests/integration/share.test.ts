@@ -276,6 +276,19 @@ describe("token format", () => {
   });
 });
 
+// The share memory's vitals carry a device mark only when the fetch selects the source column:
+// buildMemory sets from_device from r.source, and the real database returns exactly the columns
+// the select lists. The in-memory fake below returns whole rows whatever the select says, so a
+// behaviour test through it cannot catch a missing column — this test reads the select instead,
+// the same way the rate-limit test reads the route files.
+describe("the share memory's vitals fetch", () => {
+  it("selects the vitals source column, so device readings keep their from-device mark", () => {
+    const source = readFileSync(resolve(__dirname, "../../lib/server/data/share.ts"), "utf8");
+    const columns = /from\("vitals"\)\.select\("([^"]+)"\)/.exec(source)?.[1].split(",").map((c) => c.trim()) ?? [];
+    expect(columns).toContain("source");
+  });
+});
+
 describe("ageFromDob", () => {
   const today = new Date("2026-10-13T06:00:00Z");
   it("counts whole years and the birthday itself", () => {
