@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShareRes } from "@vyana/shared";
 import { ageFromDob, SHARE_TOKEN_FORMAT } from "@/lib/server/data/share";
