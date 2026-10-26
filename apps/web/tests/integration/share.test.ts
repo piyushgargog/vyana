@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShareRes } from "@vyana/shared";
 import { ageFromDob, SHARE_TOKEN_FORMAT } from "@/lib/server/data/share";
@@ -273,6 +275,19 @@ describe("token format", () => {
     expect(SHARE_TOKEN_FORMAT.test(hex("a"))).toBe(true);
     expect(SHARE_TOKEN_FORMAT.test("0123456789abcdef".repeat(3))).toBe(true);
     expect(SHARE_TOKEN_FORMAT.test(hex("A"))).toBe(false);
+  });
+});
+
+// The share memory's vitals carry a device mark only when the fetch selects the source column:
+// buildMemory sets from_device from r.source, and the real database returns exactly the columns
+// the select lists. The in-memory fake below returns whole rows whatever the select says, so a
+// behaviour test through it cannot catch a missing column — this test reads the select instead,
+// the same way the rate-limit test reads the route files.
+describe("the share memory's vitals fetch", () => {
+  it("selects the vitals source column, so device readings keep their from-device mark", () => {
+    const source = readFileSync(resolve(__dirname, "../../lib/server/data/share.ts"), "utf8");
+    const columns = /from\("vitals"\)\.select\("([^"]+)"\)/.exec(source)?.[1].split(",").map((c) => c.trim()) ?? [];
+    expect(columns).toContain("source");
   });
 });
 
