@@ -612,6 +612,18 @@ describe("timeline", () => {
     expect(t[4]).toMatchObject({ date: "2026-01-02", subtitle: null });
   });
 
+  it("falls back to the India day, not the UTC day, for undated items", () => {
+    const t = buildTimeline({
+      prescriptions: [],
+      reports: [{ id: "lab-night", report_date: null, created_at: "2026-10-09T19:00:00Z", lab_name: null, summary: null }],
+      appointments: [],
+      conditions: [{ id: "cond-night", diagnosed_on: null, created_at: "2026-10-09T19:30:00Z", name: "Asthma", source: "patient" }],
+    });
+    // 19:00Z / 19:30Z on 9 Oct is 00:30 / 01:00 IST on 10 Oct.
+    expect(t.find((e) => e.id === "lab-night")).toMatchObject({ date: "2026-10-10" });
+    expect(t.find((e) => e.id === "cond-night")).toMatchObject({ date: "2026-10-10" });
+  });
+
   it("loads the four sources in parallel for the signed-in patient", async () => {
     const f = fakeSupabase({
       responses: { prescriptions: [ok([])], lab_reports: [ok([])], appointments: [ok([])], conditions: [ok([])] },

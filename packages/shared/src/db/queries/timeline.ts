@@ -1,6 +1,7 @@
 // packages/shared/src/db/queries/timeline.ts
 // One list of a patient's care history. Owner: Vaibhav Parmar
 
+import { istDayOf } from "../../health/dates";
 import { requireUserId, unwrap, type Sb } from "./helpers";
 
 export type TimelineKind = "prescription" | "report" | "appointment" | "condition";
@@ -44,7 +45,7 @@ export function buildTimeline(sources: TimelineSources): TimelineEntry[] {
     ...sources.reports.map((r): TimelineEntry => ({
       kind: "report",
       id: r.id,
-      date: r.report_date ?? r.created_at.slice(0, 10),
+      date: r.report_date ?? istDayOf(r.created_at),
       title: r.lab_name ? `Lab report: ${r.lab_name}` : "Lab report",
       subtitle: r.summary,
     })),
@@ -58,7 +59,7 @@ export function buildTimeline(sources: TimelineSources): TimelineEntry[] {
     ...sources.conditions.map((c): TimelineEntry => ({
       kind: "condition",
       id: c.id,
-      date: c.diagnosed_on ?? c.created_at.slice(0, 10),
+      date: c.diagnosed_on ?? istDayOf(c.created_at),
       title: c.name,
       subtitle: c.source === "doctor" ? "Diagnosed by a doctor" : null,
     })),
