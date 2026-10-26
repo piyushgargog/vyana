@@ -79,8 +79,11 @@ jobs:
             exit 0
           fi
 
-          # The previous finished run of this workflow: two failures in a row make an incident.
-          previous=$(gh run list --workflow uptime.yml --status completed --limit 1 --json conclusion --jq '.[0].conclusion // empty')
+          # The previous finished scheduled run of this workflow: two failures in a row make an incident.
+          # A failed pull-request run must not count: the workflow also runs on pull requests that touch this
+          # file, and the latest completed run may be one of those. Fetch enough runs to find the latest
+          # scheduled one (pull-request runs only happen when this file changes, so 20 entries back is plenty).
+          previous=$(gh run list --workflow uptime.yml --status completed --limit 20 --json event,conclusion --jq '[.[] | select(.event == "schedule")][0].conclusion // empty')
           if [ "$previous" != "failure" ]; then
             echo "First failed check: no incident yet."
             exit 0
