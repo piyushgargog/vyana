@@ -43,7 +43,7 @@ export function buildBloodRequestMessage(input: BloodRequestMessageInput): strin
     "Blood needed",
     `Group: ${cleanInlineText(input.blood_group, 10)}`,
     `Component: ${component}${units}`,
-    `Hospital: ${city ? `${hospital}, ${city}` : hospital}`,
-    `Contact: ${phone ? `${contact} ${phone}` : contact}`,
+    `Hospital: ${[hospital, city].filter(Boolean).join(", ")}`,
+    `Contact: ${[contact, phone].filter(Boolean).join(" ")}`,
   ].join("\n");
 }
