@@ -58,11 +58,14 @@ export function buildMedicalIdQr(
   contact: MedicalIdContact | null,
   maxLength: number = MEDICAL_ID_MAX_LENGTH,
 ): string {
-  const medicines = meds
+  // The pre-caps (30 medicines, 20 allergies) are display caps only: the "+N more" marker
+  // counts against the full cleaned lists, so a shortened list never reads as complete.
+  const allMedicines = meds
     .map((m) => cleanInlineText(m.strength ? `${m.medicine_name} ${m.strength}` : m.medicine_name, 80))
-    .filter((m) => m !== "")
-    .slice(0, 30);
-  const allergies = profile.allergies.map((a) => cleanInlineText(a, 60)).filter((a) => a !== "").slice(0, 20);
+    .filter((m) => m !== "");
+  const medicines = allMedicines.slice(0, 30);
+  const allAllergies = profile.allergies.map((a) => cleanInlineText(a, 60)).filter((a) => a !== "");
+  const allergies = allAllergies.slice(0, 20);
 
   const blood = cleanInlineText(profile.blood_group, 10) || NOT_RECORDED;
   const phone = contact ? cleanInlineText(contact.phone, 30) : "";
@@ -75,8 +78,8 @@ export function buildMedicalIdQr(
       MEDICAL_ID_TITLE,
       `Name: ${name}`,
       `Blood group: ${blood}`,
-      listLine("Allergies", allergies.slice(0, a), allergies.length),
-      listLine("Medicines", medicines.slice(0, m), medicines.length),
+      listLine("Allergies", allergies.slice(0, a), allAllergies.length),
+      listLine("Medicines", medicines.slice(0, m), allMedicines.length),
       hasContact ? `Emergency contact: ${contactName ? `${contactName} ${phone}` : phone}` : `Emergency contact: ${NOT_RECORDED}`,
     ].join("\n");
 
