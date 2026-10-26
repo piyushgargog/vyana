@@ -100,6 +100,7 @@ describe("Scope v2 constants", () => {
       agent: { windowSeconds: 3600, max: 10 },
       lookup: { windowSeconds: 600, max: 20 },
       public: { windowSeconds: 600, max: 30 },
+      data_export: { windowSeconds: 3600, max: 5 },
     });
     expect(rateLimitOf("agent")).toEqual({ bucket: "agent", windowSeconds: 3600, max: 10 });
   });
@@ -107,10 +108,11 @@ describe("Scope v2 constants", () => {
   it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
     expect(Object.keys(RATE_LIMITED_ROUTES).sort()).toEqual([
       "assistant/chat", "blood/search", "care-plan", "doctors/verify", "emergency/nearby",
-      "medicines/interactions", "prescriptions/extract", "reports/analyze", "reports/values/correct", "triage",
+      "me/export", "medicines/interactions", "prescriptions/extract", "reports/analyze", "reports/values/correct", "triage",
     ]);
     expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();
     expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("lookup");
+    expect(RATE_LIMITED_ROUTES["me/export"]).toBe("data_export");
     for (const bucket of Object.values(RATE_LIMITED_ROUTES)) expect(RATE_LIMITS[bucket]).toBeDefined();
   });
 

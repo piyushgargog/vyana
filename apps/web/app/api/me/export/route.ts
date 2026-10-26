@@ -1,4 +1,4 @@
-import { MeExportRes } from "@vyana/shared";
+import { MeExportRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { exportMyData } from "@/lib/server/data/account";
 import { jsonRes, NO_STORE, withRoute } from "@/lib/server/errors";
@@ -19,4 +19,4 @@ export const GET = withRoute("me/export", async (req, ctx) => {
       "content-disposition": `attachment; filename="vyana-my-data-${today}.json"`,
     },
   });
-});
+}, { rateLimit: rateLimitOf("data_export") });

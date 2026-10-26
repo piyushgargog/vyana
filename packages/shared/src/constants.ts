@@ -74,6 +74,8 @@ export const RATE_LIMITS = {
   lookup: { windowSeconds: 10 * 60, max: 20 },
   /** Nearby emergency hospitals. SOS itself is never limited. */
   public: { windowSeconds: 10 * 60, max: 30 },
+  /** Downloading your own data: the heaviest read in the app, so a low envelope — a real download is one or two calls. */
+  data_export: { windowSeconds: 60 * 60, max: 5 },
 } as const;
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
 
@@ -92,4 +94,5 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   "blood/search": "lookup",
   "doctors/verify": "lookup",
   "emergency/nearby": "public",
+  "me/export": "data_export",
 };
