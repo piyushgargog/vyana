@@ -14,7 +14,6 @@ export const MAX_EXPORT_FILES = 500;
 const SIGNED_URL_SECONDS = 60 * 60;
 const SIGN_BATCH = 100;
 const REMOVE_BATCH = 100;
-const FOLDER_DEPTH = 3;
 
 /** Deleting an account asks for a sign-in this recent (the contract says "requires a recent login"). */
 export const RECENT_LOGIN_MINUTES = 15;
@@ -141,7 +140,11 @@ interface StorageEntry {
   metadata?: { size?: number } | null;
 }
 
-/** Every file under `{userId}/` of a bucket, folders included (a folder is an entry without an id). */
+/**
+ * Every file under `{userId}/` of a bucket, at any folder depth (a folder is an entry
+ * without an id). The walk stops only at the caller's limit, so a file in a deeply nested
+ * folder is never left out of an export or left behind by an account deletion.
+ */
 export async function listUserFiles(
   sb: SupabaseClient,
   bucket: string,
@@ -149,7 +152,7 @@ export async function listUserFiles(
   limit: number = Number.POSITIVE_INFINITY,
 ): Promise<{ path: string; size: number | null; created_at: string | null }[]> {
   const files: { path: string; size: number | null; created_at: string | null }[] = [];
-  const walk = async (folder: string, depth: number): Promise<void> => {
+  const walk = async (folder: string): Promise<void> => {
     for (let offset = 0; files.length < limit; offset += PAGE) {
       const { data, error } = await sb.storage.from(bucket).list(folder, { limit: PAGE, offset, sortBy: { column: "name", order: "asc" } });
       if (error) throw error;
@@ -157,7 +160,7 @@ export async function listUserFiles(
       for (const entry of entries) {
         if (files.length >= limit) return;
         if (entry.id === null) {
-          if (depth < FOLDER_DEPTH) await walk(`${folder}/${entry.name}`, depth + 1);
+          await walk(`${folder}/${entry.name}`);
         } else {
           files.push({ path: `${folder}/${entry.name}`, size: entry.metadata?.size ?? null, created_at: entry.created_at ?? null });
         }
@@ -165,7 +168,7 @@ export async function listUserFiles(
       if (entries.length < PAGE) return;
     }
   };
-  await walk(userId, 1);
+  await walk(userId);
   return files;
 }
 
