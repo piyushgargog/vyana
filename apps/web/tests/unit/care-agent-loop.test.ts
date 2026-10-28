@@ -48,7 +48,9 @@ function memoryDb(seed: Record<string, Row[]>) {
           let rows = table(name).filter((r) => filters.every((f) => f(r)));
           if (orderCol) rows = [...rows].sort((a, b) => String(a[orderCol as string]).localeCompare(String(b[orderCol as string])));
           if (slice) rows = rows.slice(slice[0], slice[1] + 1);
-          if (limitN !== null) rows = rows.slice(0, limitN);
+          // PostgREST answers at most 1000 rows to a read with no explicit limit, so the fake
+          // caps an unbounded read the same way: a loop read that does not page stops at 1000.
+          rows = rows.slice(0, limitN ?? 1000);
           return resolve({ data: rows.map((r) => ({ ...r })), error: null });
         },
       };
@@ -74,8 +76,9 @@ const now = istInstant("2026-10-22", "10:30"); // India, so "today" in the loop 
 
 const takenLogs = (itemId: string, n: number): Row[] =>
   Array.from({ length: n }, (_, i) => ({
+    id: `${itemId}-log-${String(i).padStart(4, "0")}`,
     item_id: itemId,
-    scheduled_for: `2026-10-${String(10 + i).padStart(2, "0")}T02:30:00.000Z`,
+    scheduled_for: `2026-10-${String(10 + (i % 20)).padStart(2, "0")}T02:30:00.000Z`,
     status: "taken",
   }));
 
@@ -162,7 +165,8 @@ describe("runCareAgentLoop", () => {
   });
 
   it("proposes telling the caregiver when three doses were missed in a week and a caregiver is linked", async () => {
-    const missed = ["2026-10-20", "2026-10-21", "2026-10-22"].map((d) => ({
+    const missed = ["2026-10-20", "2026-10-21", "2026-10-22"].map((d, i) => ({
+      id: `missed-${i}`,
       item_id: "i-2",
       scheduled_for: `${d}T02:30:00.000Z`,
       status: "missed",
@@ -197,7 +201,7 @@ describe("runCareAgentLoop", () => {
       prescription_items: [],
       dose_logs: [],
       care_plans: [{ patient_id: "p-1", status: "approved", plan_json: plan }],
-      lab_values: [{ patient_id: "p-1", test_name: "HbA1c", measured_on: "2026-06-01", report_id: "rep-1" }],
+      lab_values: [{ id: "lab-0", patient_id: "p-1", test_name: "HbA1c", measured_on: "2026-06-01", report_id: "rep-1" }],
     });
     const result = await runCareAgentLoop(db.sb, now);
     expect(result.created).toBe(1);
@@ -235,7 +239,8 @@ describe("runCareAgentLoop", () => {
   });
 
   it("ignores missed doses older than 14 days for the missed-dose pattern", async () => {
-    const missed = ["2026-09-01", "2026-09-02", "2026-09-03"].map((d) => ({
+    const missed = ["2026-09-01", "2026-09-02", "2026-09-03"].map((d, i) => ({
+      id: `old-missed-${i}`,
       item_id: "i-2",
       scheduled_for: `${d}T02:30:00.000Z`,
       status: "missed",
@@ -246,5 +251,55 @@ describe("runCareAgentLoop", () => {
       care_links: [{ patient_id: "p-1", caregiver_id: "c-1", status: "active" }],
     });
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(0);
+  });
+
+  it("counts taken doses past the 1000-row page, so a long-used pack still alerts on time", async () => {
+    // 2000 tablets, one a day, 1998 taken: 2 days left, inside the 3-day alert window. A
+    // single unbounded read would stop at 1000 taken doses and see 1000 days left instead.
+    const db = world({
+      prescription_items: [refillItem({ quantity_total: 2000, refill_alert_days: 3 })],
+      dose_logs: takenLogs("i-1", 1998),
+    });
+    const result = await runCareAgentLoop(db.sb, now);
+    expect(result.created).toBe(1);
+    expect(db.table("agent_proposals")[0]).toMatchObject({ kind: "refill_due", payload: { item_id: "i-1", days_left: 2 } });
+  });
+
+  it("still finds a follow-up test's latest result past the 1000-row page", async () => {
+    const plan = {
+      condition: "Diabetes",
+      summary: "Keep the sugar steady.",
+      do: [],
+      dont: [],
+      diet: { eat_more: [], limit: [], sample_day: [] },
+      red_flags: [],
+      follow_up_tests: [{ test: "HbA1c", every_days: 90 }],
+      sources: [],
+      language: "en",
+    };
+    // The overdue HbA1c row sorts after 1005 newer rows of other tests: a single unbounded
+    // read would stop at 1000 and never see it, so no re-check would be proposed.
+    const fillers = Array.from({ length: 1005 }, (_, i) => ({
+      id: `lab-${String(i).padStart(4, "0")}`,
+      patient_id: "p-1",
+      test_name: "Filler",
+      measured_on: "2026-10-01",
+      report_id: `rep-f-${i}`,
+    }));
+    const db = world({
+      prescription_items: [],
+      dose_logs: [],
+      care_plans: [{ patient_id: "p-1", status: "approved", plan_json: plan }],
+      lab_values: [
+        ...fillers,
+        { id: "lab-1005", patient_id: "p-1", test_name: "HbA1c", measured_on: "2026-06-01", report_id: "rep-1" },
+      ],
+    });
+    const result = await runCareAgentLoop(db.sb, now);
+    expect(result.created).toBe(1);
+    expect(db.table("agent_proposals")[0]).toMatchObject({
+      kind: "lab_recheck",
+      evidence: [{ table: "lab_reports", id: "rep-1", label: "Last HbA1c result" }],
+    });
   });
 });

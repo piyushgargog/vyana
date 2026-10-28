@@ -23,6 +23,13 @@ import {
 const PAGE = 200;
 /** 50 pages of 200 = 10,000 patients a run. */
 export const MAX_PAGES = 50;
+/**
+ * One PostgREST request answers at most 1000 rows, so no read in this loop may trust a single
+ * request: every row read pages by the id cursor (the same shape as listPatients) until a page
+ * comes back empty. A short page is not "done" — the server may clamp the limit below this —
+ * only an empty page is.
+ */
+const ROW_PAGE = 1000;
 /** The missed-dose rule looks at the last 7 days; 14 leaves room for the timezone edge and a late run. */
 const LOG_WINDOW_DAYS = 14;
 const CHUNK = 100;
@@ -48,12 +55,14 @@ interface ItemRow {
 }
 
 interface LogRow {
+  id: string;
   item_id: string;
   scheduled_for: string;
   status: "taken" | "missed" | "skipped";
 }
 
 interface LabRow {
+  id: string;
   test_name: string;
   measured_on: string;
   report_id: string;
@@ -62,16 +71,38 @@ interface LabRow {
 const chunks = <T>(list: T[]): T[][] =>
   Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
 
+/**
+ * Every row of one filtered query, paged by the id cursor: the cursor only moves forward, so a
+ * row is never skipped or repeated, and the loop ends only on an empty page. `id` is the tables'
+ * primary key, so it is always present in the rows the query selects.
+ */
+async function readPaged<T extends { id: string }>(
+  query: (cursor: string | null) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  let cursor: string | null = null;
+  for (;;) {
+    const { data, error } = await query(cursor);
+    if (error) throw error;
+    const rows = data ?? [];
+    if (rows.length === 0) return out;
+    out.push(...rows);
+    const lastId = rows[rows.length - 1].id;
+    if (typeof lastId !== "string" || lastId.length === 0) {
+      throw new Error("care agent loop: a paged read returned a row without an id");
+    }
+    cursor = lastId;
+  }
+}
+
 /** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
-async function readChunked<T>(
+async function readChunked<T extends { id: string }>(
   ids: string[],
-  query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  query: (part: string[], cursor: string | null) => PromiseLike<{ data: T[] | null; error: unknown }>,
 ): Promise<T[]> {
   const out: T[] = [];
   for (const part of chunks(ids)) {
-    const { data, error } = await query(part);
-    if (error) throw error;
-    out.push(...(data ?? []));
+    out.push(...(await readPaged((cursor) => query(part, cursor))));
   }
   return out;
 }
@@ -135,20 +166,34 @@ async function draftsForPatient(
   // - refill: every dose TAKEN from the active pack, because the rule subtracts them from the pack size. A 14 day
   //   window would count too few, show more days left than there are, and the refill alert would come late. The
   //   read is bounded by the pack (about one row per dose of an active item), not by the patient's history.
+  // Both reads page (readChunked): one unbounded request would silently stop at the server's row
+  // cap, undercounting taken doses — a late refill alert — or dropping missed doses.
   const itemIds = items.map((i) => i.id);
   const since = new Date(now.getTime() - LOG_WINDOW_DAYS * DAY_MS).toISOString();
   const logs =
     items.length === 0
       ? []
-      : await readChunked<LogRow>(itemIds, (part) =>
-          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
-        );
+      : await readChunked<LogRow>(itemIds, (part, cursor) => {
+          let query = sb
+            .from("dose_logs")
+            .select("id, item_id, scheduled_for, status")
+            .in("item_id", part)
+            .gte("scheduled_for", since);
+          if (cursor !== null) query = query.gt("id", cursor);
+          return query.order("id").limit(ROW_PAGE);
+        });
   const takenLogs =
     items.length === 0
       ? []
-      : await readChunked<LogRow>(itemIds, (part) =>
-          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).eq("status", "taken"),
-        );
+      : await readChunked<LogRow>(itemIds, (part, cursor) => {
+          let query = sb
+            .from("dose_logs")
+            .select("id, item_id, scheduled_for, status")
+            .in("item_id", part)
+            .eq("status", "taken");
+          if (cursor !== null) query = query.gt("id", cursor);
+          return query.order("id").limit(ROW_PAGE);
+        });
   const logsOf = (itemId: string) => logs.filter((l) => l.item_id === itemId);
   const takenOf = (itemId: string) => takenLogs.filter((l) => l.item_id === itemId);
 
@@ -186,13 +231,18 @@ async function draftsForPatient(
     return parsed.success ? parsed.data.follow_up_tests : [];
   });
   if (followUps.length > 0) {
-    const { data: labData, error: labError } = await sb
-      .from("lab_values")
-      .select("test_name, measured_on, report_id")
-      .eq("patient_id", patientId)
-      .not("measured_on", "is", null);
-    if (labError) throw labError;
-    const labRows = (labData ?? []) as LabRow[];
+    // Paged like the dose reads: one unbounded request would silently drop rows past the
+    // server's cap, and the dropped row could be the newest result of a follow-up test — a
+    // lab re-check proposed for a test that was already repeated.
+    const labRows = await readPaged<LabRow>((cursor) => {
+      let query = sb
+        .from("lab_values")
+        .select("id, test_name, measured_on, report_id")
+        .eq("patient_id", patientId)
+        .not("measured_on", "is", null);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query.order("id").limit(ROW_PAGE);
+    });
     for (const followUp of followUps) {
       const last = lastLab(followUp.test, labRows);
       const draft = labRecheckRule({
