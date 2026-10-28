@@ -4,8 +4,12 @@ import {
   buildMemory,
   buildTimeline,
   isShareScope,
+  istDayOf,
+  MEMORY_LAB_MONTHS,
   MEMORY_LAB_POINTS,
   MEMORY_LAB_TESTS,
+  MEMORY_VITAL_MONTHS,
+  monthsAgo,
   type MemoryDoseLog,
   type MemoryLabValue,
   type MemoryVital,
@@ -152,28 +156,16 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   // The memory belongs to the timeline record only: a medical ID link is the emergency card a
   // first responder reads, and it never carries the long view, whatever scopes it was given.
   if (row.kind === "timeline" && scopes.length > 0) {
-    // Only the scopes that are on are read, in parallel, each capped; buildMemory applies the
-    // windows (labs 24 months, vitals 12, adherence 30 days). The medicines are the active items
-    // already read for the profile, so that scope needs no query of its own.
+    // Only the scopes that are on are read, in parallel; buildMemory applies the windows
+    // (labs 24 months, vitals 12, adherence 30 days), and the fetches below page past the
+    // row cap up to those windows, so a frequent reading cannot crowd a rarer one out of
+    // the graph. The medicines are the active items already read for the profile, so that
+    // scope needs no query of its own.
     const doseWindowStart = new Date(new Date(`${today}T00:00:00+05:30`).getTime() - 29 * 24 * 60 * 60 * 1000).toISOString();
     const [labs, vitals, doseLogs] = await Promise.all([
-      scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
-      scopes.includes("vitals")
-        ? rows<MemoryVital>(
-            sb.from("vitals").select("type, value, value2, unit, measured_at").eq("patient_id", patient).order("measured_at", { ascending: false }).limit(MEMORY_VITAL_ROWS),
-          )
-        : Promise.resolve([] as MemoryVital[]),
-      scopes.includes("adherence")
-        ? rows<MemoryDoseLog>(
-            sb
-              .from("dose_logs")
-              .select("scheduled_for, status")
-              .eq("patient_id", patient)
-              .gte("scheduled_for", doseWindowStart)
-              .order("scheduled_for", { ascending: false })
-              .limit(MEMORY_DOSE_ROWS),
-          )
-        : Promise.resolve([] as MemoryDoseLog[]),
+      scopes.includes("labs") ? fetchLabs(sb, patient, today) : Promise.resolve([] as MemoryLabValue[]),
+      scopes.includes("vitals") ? fetchVitals(sb, patient, today) : Promise.resolve([] as MemoryVital[]),
+      scopes.includes("adherence") ? fetchDoseLogs(sb, patient, doseWindowStart) : Promise.resolve([] as MemoryDoseLog[]),
     ]);
     res.memory = buildMemory({ labs, vitals, medicines: items, adherence: doseLogs }, scopes, today);
   }
@@ -194,16 +186,14 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
  * recently (at most the graph's test cap), then each test's newest points (at most the point
  * cap). One shared newest-first fetch would let a single frequent test (a diabetic's glucose)
  * fill the whole cap and starve every other test out of the graph.
+ *
+ * The test discovery pages past the row cap up to the graph's window: with one newest-first
+ * fetch, a test whose latest point sits past the 1000th newest row never got discovered, even
+ * inside the window. The pages order by day then id, so a page boundary never drops or repeats
+ * a row the way an unordered tie would.
  */
-async function fetchLabs(sb: SupabaseClient, patient: string): Promise<MemoryLabValue[]> {
-  const recent = await rows<{ test_name: string }>(
-    sb.from("lab_values").select("test_name").eq("patient_id", patient).order("measured_on", { ascending: false }).limit(MEMORY_VITAL_ROWS),
-  );
-  const names: string[] = [];
-  for (const r of recent) {
-    if (!names.includes(r.test_name)) names.push(r.test_name);
-    if (names.length === MEMORY_LAB_TESTS) break;
-  }
+async function fetchLabs(sb: SupabaseClient, patient: string, today: string): Promise<MemoryLabValue[]> {
+  const names = await fetchLabNames(sb, patient, monthsAgo(today, MEMORY_LAB_MONTHS));
   const perTest = await Promise.all(
     names.map((name) =>
       rows<MemoryLabValue>(
@@ -218,4 +208,74 @@ async function fetchLabs(sb: SupabaseClient, patient: string): Promise<MemoryLab
     ),
   );
   return perTest.flat();
+}
+
+/** The tests measured inside the window, most recent first, up to the graph's test cap. */
+async function fetchLabNames(sb: SupabaseClient, patient: string, cutoff: string): Promise<string[]> {
+  const names: string[] = [];
+  for (let from = 0; ; from += MEMORY_VITAL_ROWS) {
+    const page = await rows<{ test_name: string }>(
+      sb
+        .from("lab_values")
+        .select("test_name")
+        .eq("patient_id", patient)
+        .gte("measured_on", cutoff)
+        .order("measured_on", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, from + MEMORY_VITAL_ROWS - 1),
+    );
+    for (const r of page) {
+      if (!names.includes(r.test_name)) names.push(r.test_name);
+      if (names.length === MEMORY_LAB_TESTS) return names;
+    }
+    if (page.length < MEMORY_VITAL_ROWS) return names;
+  }
+}
+
+/**
+ * The vital rows inside the window, newest first. One newest-first fetch capped at the row cap
+ * dropped a whole vital type when a frequent type filled the cap; the pages stop at a short
+ * page, or once the page's oldest reading falls outside the window (the order is newest first,
+ * so nothing after it can be inside).
+ */
+async function fetchVitals(sb: SupabaseClient, patient: string, today: string): Promise<MemoryVital[]> {
+  const cutoff = monthsAgo(today, MEMORY_VITAL_MONTHS);
+  const out: MemoryVital[] = [];
+  for (let from = 0; ; from += MEMORY_VITAL_ROWS) {
+    const page = await rows<MemoryVital>(
+      sb
+        .from("vitals")
+        .select("type, value, value2, unit, measured_at")
+        .eq("patient_id", patient)
+        .order("measured_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, from + MEMORY_VITAL_ROWS - 1),
+    );
+    out.push(...page);
+    if (page.length < MEMORY_VITAL_ROWS) return out;
+    if (istDayOf(page[page.length - 1].measured_at) < cutoff) return out;
+  }
+}
+
+/**
+ * The dose logs inside the window, newest first. The window filter is on the query, so the
+ * pages stop at a short page; a single capped fetch counted only the newest 1000 logs, which
+ * skewed the taken percentage for a patient logging more than that in 30 days.
+ */
+async function fetchDoseLogs(sb: SupabaseClient, patient: string, windowStart: string): Promise<MemoryDoseLog[]> {
+  const out: MemoryDoseLog[] = [];
+  for (let from = 0; ; from += MEMORY_DOSE_ROWS) {
+    const page = await rows<MemoryDoseLog>(
+      sb
+        .from("dose_logs")
+        .select("scheduled_for, status")
+        .eq("patient_id", patient)
+        .gte("scheduled_for", windowStart)
+        .order("scheduled_for", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, from + MEMORY_DOSE_ROWS - 1),
+    );
+    out.push(...page);
+    if (page.length < MEMORY_DOSE_ROWS) return out;
+  }
 }
