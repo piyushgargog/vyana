@@ -10,7 +10,13 @@ type Row = Record<string, unknown>;
  * extended with order/range/limit/not/insert and the expire_proposals rpc). The insert enforces
  * the table's real rule: one pending proposal per patient and dedupe key (migration 0017).
  */
-function memoryDb(seed: Record<string, Row[]>) {
+/**
+ * The fake's clock is the run's clock, not the wall clock: the loop passes its `now` to
+ * every rule, so the database it talks to must expire against the same moment. Pinning
+ * expiry to Date.now() made the refill tests pass only while the wall clock stayed before
+ * the proposals' expiry (they broke on 30 Oct, once it passed the 29 Oct expiry).
+ */
+function memoryDb(seed: Record<string, Row[]>, clockMs: number = Date.now()) {
   const tables: Record<string, Row[]> = JSON.parse(JSON.stringify(seed));
   const table = (name: string) => (tables[name] ??= []);
   const time = (v: unknown) => new Date(String(v)).getTime();
@@ -59,7 +65,7 @@ function memoryDb(seed: Record<string, Row[]>) {
       if (fn !== "expire_proposals") throw new Error(`unknown rpc ${fn}`);
       let count = 0;
       for (const r of table("agent_proposals")) {
-        if (r.status === "pending" && r.expires_at && time(r.expires_at) <= Date.now()) {
+        if (r.status === "pending" && r.expires_at && time(r.expires_at) <= clockMs) {
           r.status = "expired";
           count += 1;
         }
@@ -107,7 +113,7 @@ function world(extra: Record<string, Row[]> = {}) {
     lab_values: [],
     agent_proposals: [],
     ...extra,
-  });
+  }, now.getTime());
 }
 
 describe("runCareAgentLoop", () => {
@@ -149,7 +155,7 @@ describe("runCareAgentLoop", () => {
           status: "pending",
           rule_id: "refill-v1",
           dedupe_key: "refill:i-1:2026-10",
-          expires_at: "2026-10-20T00:00:00.000Z", // before the real clock too: the rpc closes it
+          expires_at: "2026-10-20T00:00:00.000Z", // before the run's clock: the rpc closes it
         },
       ],
     });
