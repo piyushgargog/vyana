@@ -209,6 +209,35 @@ describe("runCareAgentLoop", () => {
     });
   });
 
+  it("picks the report of the follow-up test itself, not another test measured the same day", async () => {
+    const plan = {
+      condition: "Diabetes",
+      summary: "Keep the sugar steady.",
+      do: [],
+      dont: [],
+      diet: { eat_more: [], limit: [], sample_day: [] },
+      red_flags: [],
+      follow_up_tests: [{ test: "HbA1c", every_days: 90 }],
+      sources: [],
+      language: "en",
+    };
+    const db = world({
+      prescription_items: [],
+      dose_logs: [],
+      care_plans: [{ patient_id: "p-1", status: "approved", plan_json: plan }],
+      lab_values: [
+        { patient_id: "p-1", test_name: "CBC", measured_on: "2026-06-01", report_id: "rep-cbc" },
+        { patient_id: "p-1", test_name: "Glycated Haemoglobin (HbA1c)", measured_on: "2026-06-01", report_id: "rep-hba1c" },
+      ],
+    });
+    const result = await runCareAgentLoop(db.sb, now);
+    expect(result.created).toBe(1);
+    expect(db.table("agent_proposals")[0]).toMatchObject({
+      kind: "lab_recheck",
+      evidence: [{ table: "lab_reports", id: "rep-hba1c", label: "Last HbA1c result" }],
+    });
+  });
+
   it("pages through every patient: 450 patients, three due refills, one proposal each, none on a second run", async () => {
     const profiles = Array.from({ length: 450 }, (_, i) => ({
       id: `p-${String(i).padStart(3, "0")}`,

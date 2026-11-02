@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CarePlan, findLastDone } from "@vyana/shared";
+import { CarePlan, findLastDone, normaliseTestName } from "@vyana/shared";
 import { istDate } from "../dates";
 import {
   labRecheckRule,
@@ -99,8 +99,11 @@ async function listPatients(sb: SupabaseClient): Promise<{ ids: string[]; capped
 
 /**
  * The last time a follow-up test was measured, and the report that holds that result (the rule's
- * evidence). The date is matched the way the reminders match it (`findLastDone`: names compare
- * ignoring case, spaces and punctuation); the report is the newest row on that date.
+ * evidence). Both the date and the report are matched the way the reminders match them
+ * (`findLastDone`: names compare ignoring case, spaces and punctuation, and one name may contain
+ * the other). Matching only the date and then taking the first row on it could attach an unrelated
+ * test measured the same day (for example a CBC row when the plan asks for HbA1c); when no row on
+ * that date matches the test, the report is unknown rather than wrong.
  */
 function lastLab(test: string, rows: LabRow[]): { date: string; reportId: string | null } | null {
   const byName: Record<string, string> = {};
@@ -110,9 +113,15 @@ function lastLab(test: string, rows: LabRow[]): { date: string; reportId: string
   }
   const date = findLastDone(test, byName);
   if (date === null) return null;
-  const onThatDate = rows.filter((r) => r.measured_on === date);
-  const exact = onThatDate.find((r) => r.test_name.toLowerCase() === test.toLowerCase());
-  return { date, reportId: (exact ?? onThatDate[0])?.report_id ?? null };
+  const wanted = normaliseTestName(test);
+  const matches = (name: string): boolean => {
+    if (wanted.length < 4) return name.trim().toLowerCase() === test.trim().toLowerCase();
+    const key = normaliseTestName(name);
+    return key === wanted || key.includes(wanted) || wanted.includes(key);
+  };
+  const matched = rows.filter((r) => r.measured_on === date && matches(r.test_name));
+  const exact = matched.find((r) => normaliseTestName(r.test_name) === wanted);
+  return { date, reportId: (exact ?? matched[0])?.report_id ?? null };
 }
 
 /** Every draft the three rules return for one patient, from only the rows they need. */
