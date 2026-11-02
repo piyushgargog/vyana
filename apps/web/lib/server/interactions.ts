@@ -29,6 +29,26 @@ const meta = (): AiMeta => ({ model: "none", prompt_version: INTERACTIONS_VERSIO
 const joined = (m: Medicine) => m.salts.join(" + ");
 
 /**
+ * Everything the answer must say was not checked, for the medicines on file right now: medicines with no known
+ * salt, every pair of known medicines the reviewed table does not cover, and the empty-answer note. Built from the
+ * current rows, never from a saved answer, so a cached answer says exactly what a fresh answer would say.
+ */
+function buildNotChecked(rowCount: number, known: Medicine[], unknownNames: string[]): string[] {
+  const notChecked = [...unknownNames];
+  const uncovered: string[] = [];
+  for (let i = 0; i < known.length; i++) {
+    for (let j = i + 1; j < known.length; j++) {
+      if (lookupInteractions([joined(known[i]), joined(known[j])]).length === 0) uncovered.push(`${known[i].name} + ${known[j].name}`);
+    }
+  }
+  for (const pair of uncovered.slice(0, MAX_PAIRS)) notChecked.push(`${pair} (not in the reviewed list yet)`);
+  if (uncovered.length > MAX_PAIRS) notChecked.push(`${uncovered.length - MAX_PAIRS} more pairs (not in the reviewed list yet)`);
+  if (rowCount === 0) notChecked.push("No medicines were found to check");
+  else if (known.length === 1 && notChecked.length === 0) notChecked.push("Only one medicine is saved, so there is no pair to check");
+  return notChecked;
+}
+
+/**
  * Whose medicines are checked: the patient themselves, or a patient of the calling doctor (ADR-061).
  * The caller is a patient or a doctor — the route checks the role; this only settles whose record it is.
  */
@@ -64,14 +84,15 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
   const rows = (data ?? []) as { medicine_name: string; strength: string | null }[];
 
   const known: Medicine[] = [];
-  const notChecked: string[] = [];
+  const unknownNames: string[] = [];
   for (const r of rows) {
     const name = display(r);
     if (known.some((m) => m.name === name)) continue;
     const match = saltsFor(r.medicine_name);
     if (match) known.push({ name, salts: match.salts });
-    else if (!notChecked.includes(name)) notChecked.push(name);
+    else if (!unknownNames.includes(name)) unknownNames.push(name);
   }
+  const notChecked = buildNotChecked(rows.length, known, unknownNames);
 
   // A saved result for the same medicines, less than a week old.
   const admin = supabaseAdmin();
@@ -103,20 +124,6 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
       layer: "table",
     };
   });
-
-  // Every pair of known medicines the table does not cover is said to be not checked.
-  const uncovered: string[] = [];
-  for (let i = 0; i < known.length; i++) {
-    for (let j = i + 1; j < known.length; j++) {
-      if (lookupInteractions([joined(known[i]), joined(known[j])]).length === 0) uncovered.push(`${known[i].name} + ${known[j].name}`);
-    }
-  }
-  for (const pair of uncovered.slice(0, MAX_PAIRS)) notChecked.push(`${pair} (not in the reviewed list yet)`);
-  if (uncovered.length > MAX_PAIRS) notChecked.push(`${uncovered.length - MAX_PAIRS} more pairs (not in the reviewed list yet)`);
-
-  // An answer with nothing in it must not read as "all clear": say what was not checked and why.
-  if (rows.length === 0) notChecked.push("No medicines were found to check");
-  else if (known.length === 1 && notChecked.length === 0) notChecked.push("Only one medicine is saved, so there is no pair to check");
 
   const sourcesChecked = new Map<string, SourceLink>();
   for (const i of interactions) for (const s of i.sources) sourcesChecked.set(s.url, s);

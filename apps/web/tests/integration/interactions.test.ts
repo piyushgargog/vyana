@@ -66,10 +66,12 @@ describe("POST /api/medicines/interactions", () => {
   });
 
   it("returns the saved result for the same medicines", async () => {
-    await post();
+    const first = InteractionsRes.parse(await (await post()).json());
     const again = InteractionsRes.parse(await (await post()).json());
     expect(again.cached).toBe(true);
     expect(again.interactions).toHaveLength(1);
+    // A cached answer must say the same things were not checked: the uncovered pairs, not just the unknown medicine.
+    expect(again.not_checked).toEqual(first.not_checked);
   });
 
   it("checks only one prescription when asked", async () => {
