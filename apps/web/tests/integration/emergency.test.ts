@@ -93,6 +93,26 @@ describe("POST /api/emergency/sos", () => {
     expect(scheduled).toHaveLength(1);
   });
 
+  it("returns the active request on a repeat call and opens no new row", async () => {
+    const first = EmergencySosRes.parse(await (await post(sos, { lat: 28.6358, lng: 77.2945, note: "chest pain" })).json());
+    const again = await post(sos, { lat: 28.6358, lng: 77.2945, note: "chest pain" });
+    expect(again.status).toBe(200);
+    const body = EmergencySosRes.parse(await again.json());
+    expect(body.request_id).toBe(first.request_id);
+    expect(body.status).toBe("requested");
+    expect(db.rows.emergency_requests).toHaveLength(1);
+    expect(scheduled).toHaveLength(1);
+  });
+
+  it("opens a fresh row once the previous request is fully resolved", async () => {
+    const first = EmergencySosRes.parse(await (await post(sos, { lat: 28.6358, lng: 77.2945 })).json());
+    db.rows.emergency_requests.find((r) => r.id === first.request_id)!.status = "completed";
+    const second = EmergencySosRes.parse(await (await post(sos, { lat: 28.6358, lng: 77.2945 })).json());
+    expect(second.request_id).not.toBe(first.request_id);
+    expect(db.rows.emergency_requests).toHaveLength(2);
+    expect(scheduled).toHaveLength(2);
+  });
+
   it("is for patients only", async () => {
     db.rows.profiles[0].role = "doctor";
     expect((await post(sos, { lat: 28.6, lng: 77.2 })).status).toBe(403);

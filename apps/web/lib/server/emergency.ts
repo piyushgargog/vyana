@@ -14,6 +14,9 @@ const NEARBY_BUDGET_MS = 8000;
 export const DISPATCHED_AFTER_MS = 20_000;
 export const ARRIVING_AFTER_MS = 60_000;
 
+/** A request in one of these states is still being handled; a repeat SOS returns it instead of opening a new one. */
+const ACTIVE_SOS_STATUSES = ["requested", "dispatched", "arriving"];
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Nearby hospitals within the SOS time budget; an empty list on timeout or error (SOS must never fail). */
@@ -27,11 +30,42 @@ export function smsBody(fullName: string | null, lat: number, lng: number): stri
   return `EMERGENCY: ${fullName?.trim() || "A Vyana user"} needs help. Location: https://maps.google.com/?q=${lat},${lng}. Sent from Vyana.`;
 }
 
+async function loadContacts(sb: SupabaseClient, patientId: string): Promise<{ name: string; phone: string }[]> {
+  const { data } = await sb
+    .from("emergency_contacts")
+    .select("name, phone")
+    .eq("patient_id", patientId);
+  return ((data ?? []) as { name: string; phone: string }[]).map((c) => ({ name: c.name, phone: c.phone }));
+}
+
 export async function startSos(
   user: { id: string; fullName: string | null },
   sb: SupabaseClient,
   body: EmergencySosReq,
-): Promise<EmergencySosRes> {
+): Promise<EmergencySosRes & { existing: boolean }> {
+  // A repeat call while a request is still active returns that request: a double tap or a looping
+  // client must never open a second emergency row, and a genuine second emergency is never hard
+  // blocked with a 429. Only once the previous request is fully resolved does a call open a fresh row.
+  const { data: priorRows } = await supabaseAdmin()
+    .from("emergency_requests")
+    .select("id, status, eta_minutes, lat, lng, hospitals_json")
+    .eq("patient_id", user.id);
+  const active = ((priorRows ?? []) as { id: string; status: string; eta_minutes: number; lat: number; lng: number; hospitals_json: Hospital[] | null }[]).find((r) =>
+    ACTIVE_SOS_STATUSES.includes(r.status),
+  );
+  if (active) {
+    const contacts = await loadContacts(sb, user.id);
+    return {
+      request_id: active.id,
+      status: active.status as EmergencySosRes["status"],
+      eta_minutes: active.eta_minutes,
+      hospitals: active.hospitals_json ?? [],
+      contacts,
+      sms_body: smsBody(user.fullName, active.lat, active.lng),
+      existing: true,
+    };
+  }
+
   const eta = 8 + Math.floor(Math.random() * 8); // 8–15 min, simulated
   const { data: row, error } = await supabaseAdmin()
     .from("emergency_requests")
@@ -41,14 +75,7 @@ export async function startSos(
   if (error || !row) throw error ?? new Error("emergency request not created");
   const requestId = (row as { id: string }).id;
 
-  const [nearby, contacts] = await Promise.all([
-    nearbyWithin(body.lat, body.lng),
-    sb
-      .from("emergency_contacts")
-      .select("name, phone")
-      .eq("patient_id", user.id)
-      .then(({ data }) => ((data ?? []) as { name: string; phone: string }[]).map((c) => ({ name: c.name, phone: c.phone }))),
-  ]);
+  const [nearby, contacts] = await Promise.all([nearbyWithin(body.lat, body.lng), loadContacts(sb, user.id)]);
 
   const { error: updateError } = await supabaseAdmin()
     .from("emergency_requests")
@@ -63,6 +90,7 @@ export async function startSos(
     hospitals: nearby.hospitals,
     contacts,
     sms_body: smsBody(user.fullName, body.lat, body.lng),
+    existing: false,
   };
 }
 

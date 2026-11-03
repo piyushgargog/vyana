@@ -13,7 +13,17 @@ export const POST = withRoute("emergency/sos", async (req, ctx) => {
   requireRole(profile, "patient");
   const body = await parseBody(req, EmergencySosReq);
   const res = await startSos({ id: user.id, fullName: profile.full_name }, sb, body);
-  // Scheduled only once the request exists: after() also runs when a handler throws.
-  after(() => simulateAmbulance(res.request_id));
-  return jsonRes(EmergencySosRes, res);
+  // Scheduled only once the request exists, and only for a fresh request: a repeat call returns
+  // the active request whose simulated status is already running. after() also runs when a handler throws.
+  if (!res.existing) after(() => simulateAmbulance(res.request_id));
+  // The existing flag is internal only: production responses pass through unparsed, so build the
+  // contract body without it.
+  return jsonRes(EmergencySosRes, {
+    request_id: res.request_id,
+    status: res.status,
+    eta_minutes: res.eta_minutes,
+    hospitals: res.hospitals,
+    contacts: res.contacts,
+    sms_body: res.sms_body,
+  });
 });
