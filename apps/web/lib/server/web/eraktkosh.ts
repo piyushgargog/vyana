@@ -2,6 +2,7 @@ import "server-only";
 import type { BloodBank, BloodComponent, BloodGroup } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
+import { readTextCapped } from "./fetch-page";
 
 /**
  * e-RaktKosh (NHM / C-DAC) blood stock, read the way its own public page reads it (ADR-072): three GET calls that answer JSON
@@ -82,8 +83,9 @@ async function getJson(query: string): Promise<unknown | null> {
       log({ event: "eraktkosh_http", status: res.status });
       return null;
     }
-    const text = await res.text();
-    if (text.length > MAX_BYTES) {
+    const text = await readTextCapped(res, MAX_BYTES);
+    if (text === null) {
+      // readTextCapped streams with the cap and cancels the reader past it, so an oversized answer is never held whole in memory.
       log({ event: "eraktkosh_too_large" });
       return null;
     }

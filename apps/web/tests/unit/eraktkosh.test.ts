@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { parseRow, unitsFromCell, type Area } from "@/lib/server/web/eraktkosh";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Area } from "@/lib/server/web/eraktkosh";
+import { fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
+
+vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
+
+const { parseRow, searchArea, unitsFromCell } = await import("@/lib/server/web/eraktkosh");
 
 const area: Area = { label: "Delhi", stateCode: "97", districtCode: "-1", mustContain: null };
 const at = "2026-10-21T10:00:00.000Z";
@@ -60,5 +65,48 @@ describe("parseRow", () => {
     const strict: Area = { ...area, mustContain: "pune" };
     expect(parseRow(row("Pune Blood Bank<br/>Road, Pune<br/>Phone: 9000000007", "Available, B-Ve:3"), strict, "c", at)).not.toBeNull();
     expect(parseRow(row("Other Bank<br/>Road, Nagpur<br/>Phone: 9000000008", "Available, B-Ve:3"), strict, "c", at)).toBeNull();
+  });
+});
+
+describe("oversized upstream answer", () => {
+  // The 2 MB cap in the source; 12 chunks of 256 KiB make a 3 MiB body.
+  const CHUNK = 256 * 1024;
+  const CHUNKS = 12;
+  const CAP = 2_000_000;
+
+  beforeEach(() => {
+    resetDb();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("cuts the answer off at the cap without pulling the whole body", async () => {
+    let pulled = 0;
+    let sent = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= CHUNKS) {
+          controller.close();
+          return;
+        }
+        sent += 1;
+        pulled += CHUNK;
+        controller.enqueue(new Uint8Array(CHUNK).fill(120));
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(stream, { status: 200, headers: { "content-type": "application/json" } })),
+    );
+
+    const result = await searchArea(area, "O+", "whole_blood");
+
+    expect(result.status).toBe("error");
+    // The reader is cancelled once the cap is passed, so the tail of the body is never pulled. The stream may
+    // pre-pull one chunk past the cap (its queue holds one extra chunk when the cancel lands), so the bound is the
+    // cap plus two chunks, not the cap plus one.
+    expect(pulled).toBeLessThan(CHUNK * CHUNKS);
+    expect(pulled).toBeLessThanOrEqual(CAP + 2 * CHUNK);
   });
 });
