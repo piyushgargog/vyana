@@ -46,4 +46,14 @@ describe("share and blood links", () => {
     expect(whatsappShareUrl("Blood needed\nGroup: B-")).toBe("https://wa.me/?text=Blood%20needed%0AGroup%3A%20B-");
     expect(smsShareUrl("Blood needed")).toBe("sms:?body=Blood%20needed");
   });
+
+  it("never splits an astral character at the cut, so the link builds instead of throwing", () => {
+    // 999 letters plus an emoji is exactly 1000 code points but 1001 UTF-16 units, so a unit-based
+    // cut would leave a lone surrogate behind and encodeURIComponent would throw.
+    const longText = `${"a".repeat(999)}😀y`;
+    const url = whatsappShareUrl(longText);
+    expect(new URLSearchParams(new URL(url).search).get("text")).toBe(`${"a".repeat(999)}😀`);
+    const sms = smsShareUrl(`${"a".repeat(599)}😀y`);
+    expect(decodeURIComponent(sms.slice("sms:?body=".length))).toBe(`${"a".repeat(599)}😀`);
+  });
 });
