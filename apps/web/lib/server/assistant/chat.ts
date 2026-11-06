@@ -85,6 +85,14 @@ function chatModel(): LanguageModel {
   return isLlmMock() ? scriptedAssistantModel() : getModel("text");
 }
 
+/**
+ * The title of a new chat session: the first 60 code points of the question.
+ * The cap counts code points, not UTF-16 units: slicing at 60 units can split
+ * an astral character in half, and the lone surrogate left behind has no UTF-8
+ * encoding, so Postgres rejects the insert and the whole chat request errors.
+ */
+export const sessionTitle = (text: string): string => [...text].slice(0, 60).join("");
+
 async function openSession({ sb, user }: AuthedUser, sessionId: string | undefined, firstText: string): Promise<string> {
   if (sessionId) {
     const { data, error } = await sb.from("chat_sessions").select("id").eq("id", sessionId).maybeSingle();
@@ -92,7 +100,7 @@ async function openSession({ sb, user }: AuthedUser, sessionId: string | undefin
     if (!data) throw notFound("This conversation was not found.");
     return sessionId;
   }
-  const { data, error } = await sb.from("chat_sessions").insert({ user_id: user.id, title: firstText.slice(0, 60) }).select("id").single();
+  const { data, error } = await sb.from("chat_sessions").insert({ user_id: user.id, title: sessionTitle(firstText) }).select("id").single();
   if (error || !data) throw error ?? new Error("chat session not created");
   return (data as { id: string }).id;
 }
