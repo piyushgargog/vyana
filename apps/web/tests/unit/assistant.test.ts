@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TextStreamPart, ToolSet } from "ai";
 import { ReplyGuard, readyLength } from "@/lib/server/assistant/guard";
-import { historyFrom, isDoseQuestion } from "@/lib/server/assistant/chat";
+import { historyFrom, isDoseQuestion, sessionTitle } from "@/lib/server/assistant/chat";
 import { assistantTools } from "@/lib/server/assistant/tools";
 import { isTrustedHealthUrl } from "@/lib/server/web/domains";
 
@@ -193,5 +193,22 @@ describe("isDoseQuestion", () => {
       expect(isDoseQuestion(q), q).toBe(true);
     }
     for (const q of ["What is the Ayushman Bharat scheme?", "My HbA1c is 7.4, is that high?"]) expect(isDoseQuestion(q), q).toBe(false);
+  });
+});
+
+describe("sessionTitle", () => {
+  it("keeps an emoji whole when it sits across the 60 mark", () => {
+    const question = `${"a".repeat(59)}😀 and more`;
+    expect(sessionTitle(question)).toBe(`${"a".repeat(59)}😀`);
+    expect([...sessionTitle(question)].length).toBe(60);
+  });
+
+  it("caps a long question at 60 code points", () => {
+    expect(sessionTitle("a".repeat(100))).toBe("a".repeat(60));
+    expect(sessionTitle(`${"😀"}${"a".repeat(100)}`)).toBe(`${"😀"}${"a".repeat(59)}`);
+  });
+
+  it("leaves a short question unchanged", () => {
+    expect(sessionTitle("Can I take Dolo 650?")).toBe("Can I take Dolo 650?");
   });
 });
