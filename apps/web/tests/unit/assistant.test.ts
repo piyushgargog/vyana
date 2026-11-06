@@ -189,9 +189,15 @@ describe("assistant tools", () => {
 
 describe("isDoseQuestion", () => {
   it("finds questions about how much, how often or changing a medicine", () => {
-    for (const q of ["How many Dolo 650 can I take in a day?", "Can I take 2 Pan 40 instead of 1?", "Insulin kitna badhana chahiye?", "Can I skip my thyroid tablet on weekends?", "दवा कितनी लेनी है?", "Should I double my metformin?"]) {
+    for (const q of ["How many Dolo 650 can I take in a day?", "Can I take 2 Pan 40 instead of 1?", "Insulin kitna badhana chahiye?", "Can I skip my thyroid tablet on weekends?", "दवा कितनी लेनी है?", "Should I double my metformin?", "Should I double my Thyronorm?", "Can I reduce my insulin?"]) {
       expect(isDoseQuestion(q), q).toBe(true);
     }
     for (const q of ["What is the Ayushman Bharat scheme?", "My HbA1c is 7.4, is that high?"]) expect(isDoseQuestion(q), q).toBe(false);
+  });
+
+  it("ignores bare change or quantity words with no medicine nearby", () => {
+    for (const q of ["How can I reduce my sugar?", "How do I double my walking?", "Kitna time lagega?", "What does dose mean?"]) {
+      expect(isDoseQuestion(q), q).toBe(false);
+    }
   });
 });

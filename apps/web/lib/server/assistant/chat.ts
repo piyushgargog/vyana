@@ -16,6 +16,7 @@ import { badRequest, notFound } from "../errors";
 import { getModel, isLlmMock, modelName } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
+import { BRAND_SALTS } from "../safety/brand-salts";
 import { matchRedFlags } from "../safety/red-flags";
 import { redact } from "../safety/redact";
 import { ReplyGuard } from "./guard";
@@ -35,10 +36,90 @@ const MAX_TEXT = 4_000;
 const HISTORY_CHARS = 6_000;
 /** Separates messages while the whole history is redacted in one pass (one placeholder per person). */
 const SEPARATOR = "\n\n␞\n\n";
+/**
+ * Words that put a bare change or quantity word next to a medicine: dose words, medicine forms, and the brand and salt
+ * names the interaction table already verifies (`pnpm verify:brands`). A medicine the table does not list cannot anchor
+ * a bare change word, so the strong signals above stay the backstop for those.
+ */
+const DOSE_ANCHOR = new Set<string>([
+  "dose",
+  "dosage",
+  "medicine",
+  "medicines",
+  "meds",
+  "tablet",
+  "tablets",
+  "capsule",
+  "capsules",
+  "pill",
+  "pills",
+  "injection",
+  "insulin",
+  "syrup",
+  "drop",
+  "drops",
+  "dawai",
+  "दवा",
+  "दवाई",
+  "goli",
+  "गोली",
+  "गोलियां",
+  "goliyan",
+  "mg",
+  "ml",
+  "unit",
+  "units",
+  ...BRAND_SALTS.flatMap((b) => [...b.salts, ...(b.match.includes(" ") ? [] : [b.match])]),
+]);
+
+/** Bare change or quantity words: on their own they also match walking, sugar and time, so they need a medicine nearby. */
+const WEAK_DOSE_WORD = new Set([
+  "double",
+  "skip",
+  "halve",
+  "increase",
+  "reduce",
+  "kitna",
+  "kitne",
+  "kitni",
+  "badha",
+  "chhod",
+  "कितनी",
+  "कितना",
+  "खुराक",
+]);
+
+/** Words, keeping Devanagari vowel signs attached (they are marks, not letters). */
+const WORD = /[\p{L}\p{M}\p{N}]+/gu;
+/** How far a bare change or quantity word may sit from a medicine word and still count. */
+const ANCHOR_WINDOW = 5;
+
+/** A bare change or quantity word within a few words of a medicine word. */
+function hasWeakDoseWordNearMedicine(q: string): boolean {
+  const words = q.toLowerCase().match(WORD) ?? [];
+  const anchors: number[] = [];
+  words.forEach((w, i) => {
+    if (DOSE_ANCHOR.has(w)) anchors.push(i);
+  });
+  if (anchors.length === 0) return false;
+  for (let i = 0; i < words.length; i++) {
+    const weak = WEAK_DOSE_WORD.has(words[i]) || (words[i] === "kam" && words[i + 1] === "kar");
+    if (!weak) continue;
+    if (anchors.some((a) => Math.abs(a - i) <= ANCHOR_WINDOW)) return true;
+  }
+  return false;
+}
+
 /** The question asks how much or how often to take a medicine, or whether to change it (ADR-065). */
-export const isDoseQuestion = (q: string): boolean =>
-  findDosePatterns(q).length > 0 ||
-  /\b(?:how (?:much|many)|what dose|dosage|dose|double|skip|stop taking|halve|increase|reduce|take (?:\d|two|three|half)|instead of \d|kitn[aie]|badha|kam kar|chhod)\b|कितनी|कितना|खुराक/iu.test(q);
+export const isDoseQuestion = (q: string): boolean => {
+  // "What does dose mean?" asks for a definition, not about the patient's dose.
+  if (/\bwhat does (?:the |a )?(?:dose|dosage) mean\b/i.test(q)) return false;
+  return (
+    findDosePatterns(q).length > 0 ||
+    /\b(?:how (?:much|many)|what dose|dosage|dose|stop taking|take (?:\d|two|three|half)|instead of \d)\b/iu.test(q) ||
+    hasWeakDoseWordNearMedicine(q)
+  );
+};
 
 const SAFE_ERROR = "The answer could not be finished. Please try again.";
 
