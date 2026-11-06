@@ -17,15 +17,6 @@ export function canonicalUrl(raw: string): string | null {
   return `${host}${path}${u.search}`;
 }
 
-export function makeAllowList(urls: Iterable<string>): Set<string> {
-  const set = new Set<string>();
-  for (const url of urls) {
-    const c = canonicalUrl(url);
-    if (c) set.add(c);
-  }
-  return set;
-}
-
 export function isAllowedUrl(url: string, allowed: Set<string>): boolean {
   const c = canonicalUrl(url);
   return c !== null && allowed.has(c);
@@ -78,15 +69,4 @@ export function filterCitationsInText(text: string, allowed: Set<string>): { cle
   }
   out += text.slice(last);
   return { cleaned: removed.length ? out.replace(/[ \t]{2,}/g, " ") : out, removed };
-}
-
-/** Keeps only the sources whose URL is allowed (structured output). */
-export function filterSources<T extends { url: string }>(sources: T[], allowed: Set<string>): { kept: T[]; removed: string[] } {
-  const kept: T[] = [];
-  const removed: string[] = [];
-  for (const s of sources) {
-    if (isAllowedUrl(s.url, allowed)) kept.push(s);
-    else removed.push(s.url);
-  }
-  return { kept, removed };
 }
