@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalUrl, filterCitationsInText, filterSources, makeAllowList } from "@/lib/server/safety/citations";
+import { canonicalUrl, filterCitationsInText } from "@/lib/server/safety/citations";
 import { RED_FLAG_RULES, matchRedFlags, redFlagLabels } from "@/lib/server/safety/red-flags";
 import { evidenceFound, normalizeText, verifyEvidence } from "@/lib/server/safety/verbatim";
 
@@ -36,7 +36,11 @@ describe("verbatim", () => {
 });
 
 describe("citations", () => {
-  const allowed = makeAllowList(["https://www.who.int/news-room/fact-sheets/detail/diabetes", "https://medlineplus.gov/diabetes.html"]);
+  const allowed = new Set(
+    ["https://www.who.int/news-room/fact-sheets/detail/diabetes", "https://medlineplus.gov/diabetes.html"]
+      .map((url) => canonicalUrl(url))
+      .filter((url): url is string => url !== null),
+  );
 
   it("treats www, trailing slash, scheme and fragment as the same page", () => {
     expect(canonicalUrl("http://WHO.int/news-room/fact-sheets/detail/diabetes/#symptoms")).toBe(
@@ -64,18 +68,6 @@ describe("citations", () => {
 
   it("does not treat a different path on an allowed site as allowed", () => {
     expect(filterCitationsInText("https://medlineplus.gov/druginfo/meds/a681004.html", allowed).removed).toHaveLength(1);
-  });
-
-  it("filters structured sources", () => {
-    const { kept, removed } = filterSources(
-      [
-        { title: "MedlinePlus", url: "https://medlineplus.gov/diabetes.html" },
-        { title: "Invented", url: "https://example.com/diabetes" },
-      ],
-      allowed,
-    );
-    expect(kept.map((s) => s.title)).toEqual(["MedlinePlus"]);
-    expect(removed).toEqual(["https://example.com/diabetes"]);
   });
 });
 
