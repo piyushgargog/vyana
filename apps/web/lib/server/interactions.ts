@@ -73,10 +73,14 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
     else if (!notChecked.includes(name)) notChecked.push(name);
   }
 
-  // A saved result for the same medicines, less than a week old.
+  // A saved result for the same medicines and the same table version, less than a week old.
+  // The version is part of the key: a table update must not keep serving an answer that
+  // predates it, since a new entry can add an interaction the saved answer omits.
   const admin = supabaseAdmin();
   // SHA-256: the key is built from health data (medicine names).
-  const medicinesKey = createHash("sha256").update(JSON.stringify(known.map((m) => `${m.name}|${m.salts.join("+")}`).sort())).digest("hex");
+  const medicinesKey = createHash("sha256")
+    .update(JSON.stringify([INTERACTIONS_VERSION, known.map((m) => `${m.name}|${m.salts.join("+")}`).sort()]))
+    .digest("hex");
   const { data: saved } = await admin
     .from("interaction_checks")
     .select("id, result_json, created_at")
