@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CarePlan, findLastDone } from "@vyana/shared";
+import { readChunked } from "../chunked";
 import { istDate } from "../dates";
 import {
   labRecheckRule,
@@ -25,7 +26,6 @@ const PAGE = 200;
 export const MAX_PAGES = 50;
 /** The missed-dose rule looks at the last 7 days; 14 leaves room for the timezone edge and a late run. */
 const LOG_WINDOW_DAYS = 14;
-const CHUNK = 100;
 const DAY_MS = 86_400_000;
 
 /** The rule that wrote a proposal, in the versioned shape the table already uses (0017 tests). */
@@ -57,23 +57,6 @@ interface LabRow {
   test_name: string;
   measured_on: string;
   report_id: string;
-}
-
-const chunks = <T>(list: T[]): T[][] =>
-  Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
-
-/** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
-async function readChunked<T>(
-  ids: string[],
-  query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>,
-): Promise<T[]> {
-  const out: T[] = [];
-  for (const part of chunks(ids)) {
-    const { data, error } = await query(part);
-    if (error) throw error;
-    out.push(...(data ?? []));
-  }
-  return out;
 }
 
 /**
