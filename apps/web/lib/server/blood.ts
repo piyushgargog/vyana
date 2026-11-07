@@ -67,18 +67,24 @@ const BloodJob = z.object({
 });
 type BloodJob = z.infer<typeof BloodJob>;
 
-async function run(req: BloodSearchReq): Promise<Omit<BloodSearchRes, "job_id" | "cached">> {
+async function run(req: BloodSearchReq): Promise<Omit<BloodSearchRes, "job_id">> {
   let areas: Area[] = [];
   try {
     areas = await bloodAreas(req.city);
   } catch {
     // the source's state and district lists did not answer: say so, do not fail the request
-    return { query: bloodQuery(req), area: req.city, ...summarizeBlood([{ area: req.city, status: "error", banks: [] }]) };
+    return {
+      query: bloodQuery(req),
+      area: req.city,
+      ...summarizeBlood([{ area: req.city, status: "error", banks: [], cached: false }]),
+      cached: false,
+    };
   }
   const results = areas.length
     ? await Promise.all(areas.map((a) => searchArea(a, req.blood_group, req.component)))
-    : [{ area: req.city, status: "not_found" as const, banks: [] }]; // the city matches no district of the source
-  return { query: bloodQuery(req), area: req.city, ...summarizeBlood(results) };
+    : [{ area: req.city, status: "not_found" as const, banks: [], cached: false }]; // the city matches no district of the source
+  // Cached only when every area was served from the 15 minute stock cache; a city with no area fetched nothing.
+  return { query: bloodQuery(req), area: req.city, ...summarizeBlood(results), cached: areas.length > 0 && results.every((r) => r.cached) };
 }
 
 /** POST: the search runs now; the id lets the poll route repeat it from the cache. */
@@ -92,5 +98,6 @@ export async function startBloodJob(uid: string, reqIn: BloodSearchReq): Promise
 export async function pollBloodJob(uid: string, jobId: string): Promise<BloodSearchRes> {
   const job = openJobForUser(BloodJob, jobId, uid, "This blood search was not found. Start a new one.");
   const req = BloodSearchReq.parse({ blood_group: job.blood_group, component: job.component, city: job.city });
-  return { ...(await run(req)), job_id: jobId, cached: true };
+  // `cached` is the real answer from the area cache now, not assumed: a poll after the cache expired refetches and says so.
+  return { ...(await run(req)), job_id: jobId };
 }

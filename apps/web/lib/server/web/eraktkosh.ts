@@ -214,10 +214,12 @@ export interface AreaResult {
   area: string;
   status: AreaStatus;
   banks: BloodBank[];
+  /** True when every stock read behind this answer came from the 15 minute area cache. */
+  cached: boolean;
 }
 
 /** The banks of one component code, or null when the source did not answer — an empty answer is a list, not null. */
-async function stockFor(area: Area, group: BloodGroup, c: { code: string; label: string }): Promise<BloodBank[] | null> {
+async function stockFor(area: Area, group: BloodGroup, c: { code: string; label: string }): Promise<{ banks: BloodBank[]; cached: boolean } | null> {
   const q = `hmode=GETNEARBYSTOCKDETAILS&stateCode=${encodeURIComponent(area.stateCode)}&districtCode=${encodeURIComponent(area.districtCode)}&bloodGroup=${GROUP_CODE[group]}&bloodComponent=${c.code}&lang=0`;
   const hit = await cached<{ rows: unknown[]; at: string }>(`erk:stock:${q}`, "erk_stock", TTL.quarter, async () => {
     const body = (await getJson(q)) as { data?: unknown[] } | null;
@@ -225,7 +227,10 @@ async function stockFor(area: Area, group: BloodGroup, c: { code: string; label:
     return { rows: Array.isArray(body.data) ? body.data : [], at: new Date().toISOString() };
   });
   if (!hit) return null;
-  return hit.value.rows.map((r) => parseRow(r, area, c.label, hit.value.at)).filter((b): b is BloodBank => b !== null);
+  return {
+    banks: hit.value.rows.map((r) => parseRow(r, area, c.label, hit.value.at)).filter((b): b is BloodBank => b !== null),
+    cached: hit.cached,
+  };
 }
 
 /** Stock for one area: every code of the component, merged, most units first. A failed call is an error, an empty answer is not_found. */
@@ -234,11 +239,11 @@ export async function searchArea(area: Area, group: BloodGroup, component: Blood
     const lists = await Promise.all(COMPONENT_CODES[component].map((c) => stockFor(area, group, c)));
     if (lists.includes(null)) {
       log({ event: "eraktkosh_error", area: area.label });
-      return { area: area.label, status: "error", banks: [] };
+      return { area: area.label, status: "error", banks: [], cached: false };
     }
     const seen = new Set<string>();
     const banks = lists
-      .flatMap((l) => l ?? [])
+      .flatMap((l) => l?.banks ?? [])
       .filter((b) => {
         const k = `${b.name.toLowerCase()}|${b.component}`;
         if (seen.has(k)) return false;
@@ -247,9 +252,9 @@ export async function searchArea(area: Area, group: BloodGroup, component: Blood
       })
       .sort((a, b) => (b.units ?? 0) - (a.units ?? 0))
       .slice(0, MAX_BANKS_PER_AREA);
-    return { area: area.label, status: banks.length ? "ok" : "not_found", banks };
+    return { area: area.label, status: banks.length ? "ok" : "not_found", banks, cached: lists.every((l) => l?.cached ?? false) };
   } catch (err) {
     log({ event: "eraktkosh_error", area: area.label, error: err instanceof Error ? err.message.slice(0, 80) : "unknown" });
-    return { area: area.label, status: "error", banks: [] };
+    return { area: area.label, status: "error", banks: [], cached: false };
   }
 }
