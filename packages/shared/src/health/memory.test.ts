@@ -162,6 +162,16 @@ describe("buildMemory", () => {
     const reversed = buildMemory(src({ medicines: [...rows].reverse() }), ["medicines"], TODAY).medicines;
     expect(forward).toEqual(reversed);
     expect(forward?.map((m) => m.strength)).toEqual(["1000 mg", "500 mg"]);
+
+    // A missing strength and an empty one are different rows, so they order differently too.
+    const nullVsEmpty = [
+      { medicine_name: "Metformin", strength: "", dose: null, frequency: "BD", start_date: "2026-11-01", created_at: "2026-11-01T10:00:00Z", end_date: null },
+      { medicine_name: "Metformin", strength: null, dose: null, frequency: "BD", start_date: "2026-11-01", created_at: "2026-11-01T11:00:00Z", end_date: null },
+    ];
+    const nullFirst = buildMemory(src({ medicines: nullVsEmpty }), ["medicines"], TODAY).medicines;
+    const nullLast = buildMemory(src({ medicines: [...nullVsEmpty].reverse() }), ["medicines"], TODAY).medicines;
+    expect(nullFirst).toEqual(nullLast);
+    expect(nullFirst?.map((m) => m.strength)).toEqual([null, ""]);
   });
 
   it("counts adherence over exactly the last 30 days in India, with a percent of what was logged", () => {
