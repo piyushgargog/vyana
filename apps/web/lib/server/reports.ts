@@ -316,6 +316,10 @@ export async function analyzeReport(
 
     return { report_id: reportId, lab_name: verified.lab_name, report_date: reportDate, summary, values: verified.values, follow_up_tests: followUps, ai };
   } catch (err) {
+    // The values were already inserted: without this they would still feed trends, the assistant, the care agent
+    // and share links even though the report failed, so remove them before marking the report failed.
+    const { error: cleanupError } = await admin.from("lab_values").delete().eq("report_id", reportId);
+    if (cleanupError) log({ event: "report_analyze_cleanup_failed", error: cleanupError.message });
     await admin.from("lab_reports").update({ status: "failed" }).eq("id", reportId);
     log({ event: "report_analyze_failed", error: err instanceof Error ? err.name : "Error" });
     if (err instanceof AppError) throw err;
