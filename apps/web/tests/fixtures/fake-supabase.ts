@@ -55,6 +55,8 @@ function query(name: string) {
   let pendingUpdate: Row | null = null;
   let pendingDelete = false;
   let limitN = Infinity;
+  let rangeFrom = 0;
+  let rangeTo = Infinity;
   const notNull: string[] = [];
   const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v) && notNull.every((c) => r[c] != null));
 
@@ -66,6 +68,8 @@ function query(name: string) {
     gt: (_col: string, value: string) => ((gtExpires = value), chain),
     order: () => chain,
     limit: (n: number) => ((limitN = n), chain),
+    // inclusive bounds, like the real client: range(0, 999) is the first 1000 rows
+    range: (from: number, to: number) => ((rangeFrom = from), (rangeTo = to), chain),
     maybeSingle: async () => {
       if (name === "web_cache") {
         const key = filters.find(([c]) => c === "key")?.[1] as string;
@@ -117,7 +121,7 @@ function query(name: string) {
         rows[name] = table(name).filter((r) => !gone.has(r));
         return resolve({ data: null, error: null });
       }
-      return resolve({ data: matching().slice(0, limitN), error: null });
+      return resolve({ data: matching().slice(rangeFrom, Math.min(rangeTo + 1, rangeFrom + limitN)), error: null });
     },
   };
   return chain;

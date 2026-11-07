@@ -113,6 +113,7 @@ All notable changes to Vyana are recorded here. The format follows [Keep a Chang
 - The Android app no longer takes part in Google cloud backup or device-to-device transfer (`allowBackup` is set to false in the Expo config): the local data on the phone — cached health data and app state — stays on the device it was created on instead of travelling with a Google account backup.
 
 ### Fixed
+- The admin doctor check now pages through every verified doctor (issue #687): past 1000 verified doctors the unpaged read went blind, so a second account on the same registration could be approved until the database guard refused it with a raw error instead of the plain already linked message.
 - Chat history stays in step between the phone and the web: a chat started on one device is listed on the other when the assistant opens (the history is no longer kept for 5 minutes without a check), the saved chat is read again after every reply, and on the phone the first reply of a new chat no longer disappears (the guard the web already had).
 - A care plan no longer fails with a server error when the first model rejects its long answer (Groq `400 json_validate_failed`): the next model in the pool is tried. Every error that stops the model pool is now logged with its status and code.
 - When a model rejects its answer, the pool skips that model's other keys and goes straight to the next model, and the log line carries the provider's short reason.

@@ -24,6 +24,9 @@ interface DoctorRow {
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === "object" && err !== null && (err as { code?: unknown }).code === "23505";
 
+/** PostgREST answers at most this many rows to a query with no explicit limit, silently. */
+const PAGE_SIZE = 1000;
+
 /** A doctor sends their registration details. Stays `pending` until an admin checks them. */
 export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: DoctorVerifyReq): Promise<DoctorVerifyRes> {
   const { data: doctor, error } = await sb
@@ -65,6 +68,23 @@ export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: D
   return { status, match: null, checked_at: checkedAt };
 }
 
+/** Every verified doctor, in stable id order, one page at a time — the check below must see all of them, not just the first 1000. */
+async function listVerifiedDoctors(admin: ReturnType<typeof supabaseAdmin>): Promise<DoctorRow[]> {
+  const rows: DoctorRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("doctors")
+      .select("id, reg_no, state_council")
+      .eq("verification_status", "verified")
+      .order("id")
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const part = (data ?? []) as DoctorRow[];
+    rows.push(...part);
+    if (part.length < PAGE_SIZE) return rows;
+  }
+}
+
 /** An admin records the outcome of checking a doctor's registration in the public register by hand. */
 export async function adminCheckDoctor({ user }: AuthedUser, body: AdminDoctorCheckReq): Promise<DoctorVerifyRes> {
   const admin = supabaseAdmin();
@@ -87,12 +107,11 @@ export async function adminCheckDoctor({ user }: AuthedUser, body: AdminDoctorCh
   }
 
   // One registration, one account: a number already verified for another doctor cannot be approved again.
-  const { data: verifiedRows, error: listError } = await admin
-    .from("doctors")
-    .select("id, reg_no, state_council")
-    .eq("verification_status", "verified");
-  if (listError) throw listError;
-  const taken = ((verifiedRows ?? []) as DoctorRow[]).some(
+  // PostgREST answers at most 1000 rows to a query with no explicit limit, silently, so the read is
+  // paged: past 1000 verified doctors the unpaged check went blind and the duplicate was approved
+  // until the database guard refused it with a raw error instead of this plain message.
+  const verifiedRows = await listVerifiedDoctors(admin);
+  const taken = verifiedRows.some(
     (d) =>
       d.id !== body.doctor_id &&
       normalizeRegNo(d.reg_no ?? "") === normalizeRegNo(body.reg_no) &&
