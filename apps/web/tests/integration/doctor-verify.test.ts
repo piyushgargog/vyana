@@ -247,6 +247,16 @@ describe("POST /api/doctors/verify", () => {
     expect((await post({ ...send, reg_no: "1".repeat(41) })).status).toBe(400);
   });
 
+  it("still refuses a doctor who sends a decision along with their own registration fields", async () => {
+    // The decision check reads the body the route parsed, not a raw read (issue #666): a doctor body
+    // carrying a decision is refused even when every doctor field is present, and nothing is saved.
+    const res = await post({ ...send, decision: "approve" });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toBe("Only an admin can record a check. Send your registration number and state council.");
+    expect(row(USER_ID).reg_no).toBe("old-reg");
+  });
+
   it("rejects a registration year outside 1950 to the current year with 400 and saves nothing", async () => {
     const currentYear = currentRegistrationYear();
     // Same range as the admin's check (AdminDoctorCheckReq.year); junk years must not reach the database.
