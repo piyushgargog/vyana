@@ -22,6 +22,10 @@ type Route = {
   upstream?: boolean;
   /** No bearer token (e.g. share links, which carry their own token in the path). */
   publicRoute?: boolean;
+  /** A public route answers 404 with this wording; `false` when the route never answers 404. */
+  notFound?: string | false;
+  /** A 429 the route answers through its own limit, not the per-user buckets of issue 138. */
+  rateLimited?: string;
   pathParams?: { name: string; description: string }[];
 };
 
@@ -40,6 +44,7 @@ const routes: Route[] = [
   { path: "/api/share/{token}", method: "get", publicRoute: true, pathParams: [{ name: "token", description: "Share token from the medical ID QR or a timeline link" }], tag: "Sharing", summary: "Read a shared medical ID or timeline", description: "Read-only record for a doctor or first responder. Works only while the link is valid and not revoked; otherwise 404.", req: null, res: c.ShareRes, roles: "anyone with a valid share link" },
   { path: "/api/me/export", method: "get", tag: "Account", summary: "Download all of my data", description: "Every record the signed-in user owns, as JSON.", req: null, res: c.MeExportRes, roles: "any signed-in user" },
   { path: "/api/me", method: "delete", tag: "Account", summary: "Delete my account", description: "Deletes the user, all their records and their uploaded files. Requires a recent login.", req: null, res: c.OkRes, roles: "any signed-in user" },
+  { path: "/api/waitlist", tag: "Plans", summary: "Join the Family plan waitlist", description: "Adds one email to the Family waitlist, or answers `already_on_list` when it is already there. The `join_waitlist()` database function is the gate: it lower-cases the address and refuses a second entry. No sign-in: the public plans page form posts here.", req: c.JoinWaitlistReq, res: c.JoinWaitlistRes, roles: "anyone (no sign-in)", publicRoute: true, notFound: false, rateLimited: "Over the anonymous limit of 30 joins an hour across all callers (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header" },
 ];
 
 const components: Record<string, unknown> = {};
@@ -76,10 +81,13 @@ for (const r of routes) {
   if (!r.publicRoute) {
     responses["401"] = errorResponse("Missing or invalid token (`UNAUTHORIZED`)");
     responses["403"] = errorResponse("Wrong role or not your data (`FORBIDDEN`)");
-  } else {
-    responses["404"] = errorResponse("Unknown, expired or revoked link (`NOT_FOUND`)");
+  } else if (r.notFound !== false) {
+    responses["404"] = errorResponse(r.notFound ?? "Unknown, expired or revoked link (`NOT_FOUND`)");
   }
-  const limited = method === "post" ? rateLimitedResponse(r.path.replace("/api/", "")) : null;
+  const limited =
+    method === "post"
+      ? (rateLimitedResponse(r.path.replace("/api/", "")) ?? (r.rateLimited ? errorResponse(r.rateLimited) : null))
+      : null;
   if (limited) responses["429"] = limited;
   if (r.upstream) {
     responses["502"] = errorResponse("An upstream service failed (`UPSTREAM_ERROR`)");
@@ -124,7 +132,7 @@ const doc = {
     title: "Vyana API",
     version: "0.1.0",
     description:
-      "HTTP API behind the Vyana web and mobile apps. JSON is snake_case. Every route except the public share link needs `Authorization: Bearer <Supabase access token>`. Errors always use the `ApiErrorBody` shape.\n\nThis file is generated from `packages/shared/src/contracts` by `pnpm docs:openapi`. Do not edit it by hand.",
+      "HTTP API behind the Vyana web and mobile apps. JSON is snake_case. Every route except the public share link and the waitlist join needs `Authorization: Bearer <Supabase access token>`. Errors always use the `ApiErrorBody` shape.\n\nThis file is generated from `packages/shared/src/contracts` by `pnpm docs:openapi`. Do not edit it by hand.",
     license: { name: "MIT", identifier: "MIT" },
   },
   servers: [{ url: "/", description: "Same origin as the web app (local: http://localhost:3000)" }],
@@ -138,6 +146,7 @@ const doc = {
     { name: "Doctors", description: "Doctor verification" },
     { name: "Sharing", description: "Read-only medical ID and timeline links" },
     { name: "Account", description: "Data export and account deletion" },
+    { name: "Plans", description: "Plans and the Family waitlist" },
     { name: "Assistant", description: "AI health assistant chat" },
   ],
   paths,

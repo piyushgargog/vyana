@@ -4,7 +4,7 @@ info:
   title: Vyana API
   version: 0.1.0
   description: |-
-    HTTP API behind the Vyana web and mobile apps. JSON is snake_case. Every route except the public share link needs `Authorization: Bearer <Supabase access token>`. Errors always use the `ApiErrorBody` shape.
+    HTTP API behind the Vyana web and mobile apps. JSON is snake_case. Every route except the public share link and the waitlist join needs `Authorization: Bearer <Supabase access token>`. Errors always use the `ApiErrorBody` shape.
 
     This file is generated from `packages/shared/src/contracts` by `pnpm docs:openapi`. Do not edit it by hand.
   license:
@@ -32,6 +32,8 @@ tags:
     description: Read-only medical ID and timeline links
   - name: Account
     description: Data export and account deletion
+  - name: Plans
+    description: Plans and the Family waitlist
   - name: Assistant
     description: AI health assistant chat
 paths:
@@ -692,6 +694,42 @@ paths:
                 $ref: "#/components/schemas/ApiErrorBody"
         "403":
           description: Wrong role or not your data (`FORBIDDEN`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+  /api/waitlist:
+    post:
+      tags:
+        - Plans
+      summary: Join the Family plan waitlist
+      description: |-
+        Adds one email to the Family waitlist, or answers `already_on_list` when it is already there. The `join_waitlist()` database function is the gate: it lower-cases the address and refuses a second entry. No sign-in: the public plans page form posts here.
+
+        **Who can call it:** anyone (no sign-in).
+      operationId: post_waitlist
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinWaitlistReq"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinWaitlistRes"
+        "400":
+          description: Invalid request body (`BAD_REQUEST`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "429":
+          description: Over the anonymous limit of 30 joins an hour across all callers (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
@@ -1430,6 +1468,30 @@ components:
         - sources_checked
         - cached
         - ai
+      additionalProperties: false
+    JoinWaitlistReq:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        note:
+          type: string
+          maxLength: 200
+      required:
+        - email
+      additionalProperties: false
+    JoinWaitlistRes:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - joined
+            - already_on_list
+      required:
+        - status
       additionalProperties: false
     LabValueCorrectReq:
       type: object
