@@ -132,6 +132,27 @@ describe("missedDosePatternRule", () => {
     expect(d?.payload).toEqual({ item_id: "item-9", missed: 3, suggest: "tell_doctor" });
   });
 
+  it("counts a dose due at 01:00 IST in the IST day it belongs to", () => {
+    // 2026-10-15T19:30:00Z is 01:00 IST on 2026-10-16, the first day of the window.
+    const logs = [
+      { scheduled_for: "2026-10-15T19:30:00Z", status: "missed" as const },
+      log("2026-10-19"),
+      log("2026-10-22"),
+    ];
+    const d = missedDosePatternRule({ ...base, logs });
+    expect(d?.payload).toEqual({ item_id: "item-9", missed: 3, suggest: "tell_doctor" });
+  });
+
+  it("ignores a dose due after midnight IST on the day after today", () => {
+    // 2026-10-22T19:00:00Z is 00:30 IST on 2026-10-23, past today.
+    const logs = [
+      log("2026-10-20"),
+      log("2026-10-21"),
+      { scheduled_for: "2026-10-22T19:00:00Z", status: "missed" as const },
+    ];
+    expect(missedDosePatternRule({ ...base, logs })).toBeNull();
+  });
+
   it("returns null with exactly 2 missed", () => {
     expect(missedDosePatternRule({ ...base, logs: [log("2026-10-20"), log("2026-10-22")] })).toBeNull();
   });

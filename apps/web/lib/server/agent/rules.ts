@@ -1,7 +1,7 @@
 // The decision rules of the care agent: pure functions, no database, no model, no network.
 // Rules decide; a model may only write words later. Each returns null or one proposal draft.
 
-import { addDays, getRefillStatus } from "@vyana/shared";
+import { addDays, getRefillStatus, istDayOf } from "@vyana/shared";
 
 export type ProposalKind = "refill_due" | "lab_recheck" | "missed_dose_pattern";
 
@@ -94,7 +94,7 @@ export function missedDosePatternRule(input: MissedDosePatternInput): ProposalDr
   const { today, itemId, medicineName, logs, hasCaregiver } = input;
   const weekStart = addDays(today, -6);
   const missed = logs.filter((log) => {
-    const day = log.scheduled_for.slice(0, 10);
+    const day = istDayOf(log.scheduled_for);
     return log.status === "missed" && day >= weekStart && day <= today;
   }).length;
   if (missed < 3) return null;
