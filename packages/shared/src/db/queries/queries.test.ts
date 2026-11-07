@@ -612,6 +612,19 @@ describe("timeline", () => {
     expect(t[4]).toMatchObject({ date: "2026-01-02", subtitle: null });
   });
 
+  it("puts an undated item on the India day, not the UTC day", () => {
+    const t = buildTimeline({
+      prescriptions: [],
+      reports: [{ id: "late", report_date: null, created_at: "2026-06-30T19:00:00Z", lab_name: null, summary: null }],
+      appointments: [],
+      conditions: [{ id: "early", diagnosed_on: null, created_at: "2026-01-01T20:00:00Z", name: "Fever", source: "patient" }],
+    });
+    expect(t).toEqual([
+      expect.objectContaining({ id: "late", date: "2026-07-01" }),
+      expect.objectContaining({ id: "early", date: "2026-01-02" }),
+    ]);
+  });
+
   it("loads the four sources in parallel for the signed-in patient", async () => {
     const f = fakeSupabase({
       responses: { prescriptions: [ok([])], lab_reports: [ok([])], appointments: [ok([])], conditions: [ok([])] },
