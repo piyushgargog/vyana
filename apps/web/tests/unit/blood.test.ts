@@ -28,8 +28,6 @@ vi.mock("@/lib/server/supabase-admin", () => ({
 
 const { startBloodJob, pollBloodJob } = await import("@/lib/server/blood");
 
-process.env.JOB_TOKEN_SECRET = "test-secret-that-is-long-enough-1234";
-
 const stockRow = [
   "1",
   "Test Blood Centre<br/>1 Road, Delhi<br/>Phone: 9000000001",
@@ -41,6 +39,9 @@ const stockRow = [
 const fetchCalls: string[] = [];
 
 beforeEach(() => {
+  // The house pattern for the job token in tests (jobs.test.ts, integration/blood.test.ts):
+  // a repeated character, never a literal that reads like a credential.
+  vi.stubEnv("JOB_TOKEN_SECRET", "x".repeat(40));
   rows.clear();
   fetchCalls.length = 0;
   vi.stubGlobal(
@@ -58,6 +59,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
