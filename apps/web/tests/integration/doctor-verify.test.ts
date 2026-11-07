@@ -132,7 +132,7 @@ describe("POST /api/doctors/verify", () => {
     expect(json).toMatchObject({ method: "manual", checked_by: USER_ID, note: "Found in the register." });
   });
 
-  it("stores the values exactly as the admin typed them on approve, spaces and all", async () => {
+  it("stores the trimmed values on approve, spaces and all no longer kept (issue #641)", async () => {
     asAdmin();
     db.rows.doctors = [{ id: OTHER_USER_ID, reg_no: "claimed-1", state_council: "Delhi Medical Council", verification_status: "pending", verified_at: null }];
     const res = await post({
@@ -146,8 +146,9 @@ describe("POST /api/doctors/verify", () => {
     expect(res.status).toBe(200);
     const body = DoctorVerifyRes.parse(await res.json());
     expect(body.status).toBe("verified");
-    // No trimming on the admin side (issue #359): what the admin typed is what the row holds.
-    expect(row(OTHER_USER_ID)).toMatchObject({ reg_no: " DMC/2020/123 ", state_council: " Delhi Medical Council " });
+    // Issue #641 supersedes #359's no-trim rule for these two fields: the contracts trim at
+    // validation, so the row holds the trimmed values, not the surrounding spaces.
+    expect(row(OTHER_USER_ID)).toMatchObject({ reg_no: "DMC/2020/123", state_council: "Delhi Medical Council" });
   });
 
   it("records an admin's rejection as failed and keeps the saved number", async () => {
