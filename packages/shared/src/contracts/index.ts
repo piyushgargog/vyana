@@ -205,6 +205,29 @@ export const AgentDecideRes = z.object({
   undo_seconds: z.number().int().min(0),
 });
 
+// ---------- POST /api/cron/care-agent ---------- (scheduler only, RUNBOOK.md)
+// The loop answers counts only. The contract pins the shape the scheduler reads, so a drift between what the
+// loop returns and what the scheduler expects fails loudly in dev and CI instead of silently (issue #667).
+export const CareAgentLoopRes = z.object({
+  /** Patients looked at this run. */
+  patients: z.number().int().min(0),
+  /** Proposals written this run. */
+  created: z.number().int().min(0),
+  /** Open proposals the database closed as expired at the end of the run. */
+  expired: z.number().int().min(0),
+  /** True when the page cap stopped the run before every patient was read. */
+  capped: z.boolean(),
+});
+
+// ---------- POST /api/cron/missed-doses ---------- (scheduler only, pg_cron)
+// The check answers counts only; same pinning as the care-agent loop above (issue #667).
+export const MissedDoseCheckRes = z.object({
+  /** Overdue doses of patients with a caregiver that were looked at. */
+  checked: z.number().int().min(0),
+  /** Doses for which an alert was recorded and pushed to the caregivers (one count per dose, not per phone). */
+  alerts_sent: z.number().int().min(0),
+});
+
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
 export const PrescriptionExtractReq = z.object({ file_path: z.string() });
@@ -434,6 +457,8 @@ export type AgentProposal = z.infer<typeof AgentProposal>;
 export type AgentProposalsRes = z.infer<typeof AgentProposalsRes>;
 export type AgentDecideReq = z.infer<typeof AgentDecideReq>;
 export type AgentDecideRes = z.infer<typeof AgentDecideRes>;
+export type CareAgentLoopRes = z.infer<typeof CareAgentLoopRes>;
+export type MissedDoseCheckRes = z.infer<typeof MissedDoseCheckRes>;
 export type Plan = z.infer<typeof Plan>;
 export type PlansRes = z.infer<typeof PlansRes>;
 export type JoinWaitlistReq = z.infer<typeof JoinWaitlistReq>;

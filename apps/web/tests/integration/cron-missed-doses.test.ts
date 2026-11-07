@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requireEnv } from "@/lib/server/supabase-admin";
 
-const run = vi.fn(async () => ({ checked: 3, alerts_sent: 2 }));
+const run = vi.fn(async (): Promise<unknown> => ({ checked: 3, alerts_sent: 2 }));
 vi.mock("@/lib/server/supabase-admin", () => ({
   supabaseAdmin: () => ({ marker: "admin" }),
   requireEnv: (name: string) => {
@@ -70,5 +70,14 @@ describe("POST /api/cron/missed-doses", () => {
     const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
     expect(res.status).toBe(500);
     expect((await res.json()).error.code).toBe("INTERNAL");
+  });
+
+  it("refuses a check result that drifted from the contract, instead of passing it on", async () => {
+    // The success shape is validated (issue #667): a result missing `alerts_sent` must fail loudly here,
+    // in dev and CI, not reach the scheduler as a shape it does not expect.
+    run.mockResolvedValueOnce({ checked: 3 });
+    const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("BAD_REQUEST");
   });
 });
