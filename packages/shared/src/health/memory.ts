@@ -108,8 +108,14 @@ function buildLabs(values: MemoryLabValue[], today: string): LabTest[] {
       points: kept.map((r) => ({ date: r.measured_on!, value: r.value!, flag: labFlag(r.flag) })),
     });
   }
-  // The tests measured most recently come first; the cap drops the stalest ones.
-  tests.sort((a, b) => (a.points[a.points.length - 1].date < b.points[b.points.length - 1].date ? 1 : -1));
+  // The tests measured most recently come first; on a tie the name decides, so the order never
+  // depends on the order the rows arrived in (the medicines sort below does the same).
+  tests.sort((a, b) => {
+    const aDate = a.points[a.points.length - 1].date;
+    const bDate = b.points[b.points.length - 1].date;
+    if (aDate !== bDate) return aDate < bDate ? 1 : -1;
+    return a.test_name < b.test_name ? -1 : a.test_name > b.test_name ? 1 : 0;
+  });
   return tests.slice(0, MEMORY_LAB_TESTS);
 }
 
@@ -138,7 +144,14 @@ function buildVitals(vitals: MemoryVital[], today: string): VitalSeries[] {
       })),
     });
   }
-  series.sort((a, b) => (a.points[a.points.length - 1].at < b.points[b.points.length - 1].at ? 1 : -1));
+  // The series read most recently come first; on a tie the type decides, so the order never
+  // depends on the order the rows arrived in.
+  series.sort((a, b) => {
+    const aAt = a.points[a.points.length - 1].at;
+    const bAt = b.points[b.points.length - 1].at;
+    if (aAt !== bAt) return aAt < bAt ? 1 : -1;
+    return a.type < b.type ? -1 : a.type > b.type ? 1 : 0;
+  });
   return series;
 }
 
