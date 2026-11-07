@@ -3,7 +3,7 @@
 // (apps/mobile/src/lib/notifications.ts). Owner: Vaibhav Parmar
 
 import type { DbDoseLog, DbPrescriptionItem } from "../db/types";
-import { addDays, atLocalTime, formatLocalDate } from "./dates";
+import { addDays, atLocalTime, formatLocalDate, parseTimeOfDay } from "./dates";
 import { getRefillStatus, type RefillItem } from "./refill";
 
 export type ReminderKind = "dose" | "refill" | "follow_up";
@@ -63,6 +63,10 @@ export function planDoseReminders(
     for (const item of items) {
       if (!item.active || date < item.start_date || (item.end_date && date > item.end_date)) continue;
       for (const time of item.times) {
+        // A malformed time is skipped, not planned: a rolled over or Invalid Date would schedule a reminder
+        // the phone cannot honour. Shared code is pure, so there is no log here; the server missed-dose
+        // check logs the same skip.
+        if (!parseTimeOfDay(time)) continue;
         const at = atLocalTime(date, time);
         if (at.getTime() <= now.getTime() + 5000) continue;
         const logged = logs.some(

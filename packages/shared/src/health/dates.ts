@@ -36,10 +36,22 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((b.getTime() - a.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-/** A local Date at `hh:mm` on the day `date` (`YYYY-MM-DD`). */
+/** A strict `HH:MM` (24h) time, or null when the text is not one. `99:99`, `24:00`, `ab:cd` and `9:00` are all rejected instead of rolling over into another day or becoming Invalid Date. */
+export function parseTimeOfDay(time: string): { hours: number; minutes: number } | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return { hours, minutes };
+}
+
+/** A local Date at `hh:mm` on the day `date` (`YYYY-MM-DD`). Throws on a malformed time; callers with untrusted times must check `parseTimeOfDay` first. */
 export function atLocalTime(date: string, time: string): Date {
+  const parsed = parseTimeOfDay(time);
+  if (!parsed) throw new RangeError(`Invalid time: ${time}`);
   const d = parseLocalDate(date);
-  d.setHours(Number(time.slice(0, 2)), Number(time.slice(3, 5)), 0, 0);
+  d.setHours(parsed.hours, parsed.minutes, 0, 0);
   return d;
 }
 

@@ -35,6 +35,12 @@ describe("India time", () => {
     expect(istDate(iso("2026-10-12T20:00:00Z"))).toBe("2026-10-13"); // 01:30 the next morning in India
     expect(istDate(iso("2026-10-12T18:29:00Z"))).toBe("2026-10-12");
   });
+
+  it("rejects malformed times instead of rolling them over (#658)", () => {
+    expect(() => istInstant("2026-10-12", "99:99")).toThrow(RangeError);
+    expect(() => istInstant("2026-10-12", "24:00")).toThrow(RangeError);
+    expect(() => istInstant("2026-10-12", "ab:cd")).toThrow(RangeError);
+  });
 });
 
 describe("listOverdueDoses", () => {
@@ -56,6 +62,11 @@ describe("listOverdueDoses", () => {
   it("finds a dose of the evening before when the check runs just after midnight", () => {
     const due = listOverdueDoses([item()], ist("2026-10-13 00:30"));
     expect(due.map((d) => d.due.toISOString())).toEqual([ist("2026-10-12 21:00").toISOString()]);
+  });
+
+  it("skips a malformed time with a log instead of dropping the whole check (#658)", () => {
+    const due = listOverdueDoses([item({ times: ["09:00", "99:99", "ab:cd"] })], ist("2026-10-12 10:00"));
+    expect(due.map((d) => istTime(d.due))).toEqual(["09:00"]);
   });
 
   it("respects the start and end date and skips as-needed medicines", () => {

@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
+import { MISSED_DOSE_GRACE_MINUTES, parseTimeOfDay } from "@vyana/shared";
 import { istDate } from "../dates";
+import { log } from "../log";
 import type { PushMessage, PushResult } from "../push";
 
 /**
@@ -49,10 +50,12 @@ export interface DueDose {
   due: Date;
 }
 
-/** The moment `HH:MM` on `date` (`YYYY-MM-DD`) in India. */
+/** The moment `HH:MM` on `date` (`YYYY-MM-DD`) in India. Throws on a malformed time; callers with untrusted times must check `parseTimeOfDay` first. */
 export function istInstant(date: string, time: string): Date {
+  const parsed = parseTimeOfDay(time);
+  if (!parsed) throw new RangeError(`Invalid time: ${time}`);
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, Number(time.slice(0, 2)), Number(time.slice(3, 5))) - IST_OFFSET_MINUTES * MINUTE);
+  return new Date(Date.UTC(y, m - 1, d, parsed.hours, parsed.minutes) - IST_OFFSET_MINUTES * MINUTE);
 }
 
 /** `HH:MM` in India for a moment. */
@@ -73,6 +76,12 @@ export function listOverdueDoses(items: CareItem[], now: Date): DueDose[] {
     for (const item of items) {
       if (date < item.start_date || (item.end_date && date > item.end_date)) continue;
       for (const time of item.times) {
+        // A malformed time is skipped with a log, not treated as due: a rolled over time never lands in the
+        // grace window, so that medicine would never raise a missed dose alert.
+        if (!parseTimeOfDay(time)) {
+          log({ event: "missed_dose_bad_time", item_id: item.id, time });
+          continue;
+        }
         const due = istInstant(date, time);
         if (due.getTime() > oldest && due.getTime() <= newest) out.push({ item_id: item.id, patient_id: item.patient_id, due });
       }
