@@ -128,7 +128,7 @@ const registrationYear = z.number().int().min(1950).refine((y) => y <= currentRe
 
 // ---------- POST /api/doctors/verify ----------  (role: doctor, verifies self)
 export const DoctorVerifyReq = z.object({
-  reg_no: z.string().min(1).max(40), state_council: z.string().min(2),
+  reg_no: z.string().trim().min(1).max(40), state_council: z.string().trim().min(2),
   year_of_registration: registrationYear.optional(),
 });
 export const DoctorVerifyRes = z.object({
@@ -142,7 +142,7 @@ export const DoctorVerifyRes = z.object({
 // An admin records the outcome of checking a doctor's registration in the public register by hand.
 export const AdminDoctorCheckReq = z.object({
   doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
-  reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
+  reg_no: z.string().trim().min(1).max(40), state_council: z.string().trim().min(2).max(80),
   year: registrationYear.nullable(), note: z.string().max(300),
 });
 
