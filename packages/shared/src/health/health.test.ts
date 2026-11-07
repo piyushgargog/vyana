@@ -12,6 +12,7 @@ import {
   nextOccurrenceOfHour,
   parseDoseUnits,
   parseLocalDate,
+  parseTimeOfDay,
   planDoseReminders,
   planFollowUpReminders,
   planRefillAlerts,
@@ -40,6 +41,19 @@ describe("dates", () => {
     expect(monthsAgo("2026-01-31", 1)).toBe("2025-12-31");
     expect(monthsAgo("2026-10-23", 24)).toBe("2024-10-23");
     expect(monthsAgo("2026-10-23", 0)).toBe("2026-10-23");
+  });
+
+  it("rejects malformed times instead of rolling them over (#658)", () => {
+    expect(parseTimeOfDay("09:00")).toEqual({ hours: 9, minutes: 0 });
+    expect(parseTimeOfDay("00:00")).toEqual({ hours: 0, minutes: 0 });
+    expect(parseTimeOfDay("23:59")).toEqual({ hours: 23, minutes: 59 });
+    expect(parseTimeOfDay("99:99")).toBeNull();
+    expect(parseTimeOfDay("24:00")).toBeNull();
+    expect(parseTimeOfDay("ab:cd")).toBeNull();
+    expect(parseTimeOfDay("9:00")).toBeNull();
+    expect(() => atLocalTime("2026-10-12", "99:99")).toThrow(RangeError);
+    expect(() => atLocalTime("2026-10-12", "24:00")).toThrow(RangeError);
+    expect(() => atLocalTime("2026-10-12", "ab:cd")).toThrow(RangeError);
   });
 });
 
@@ -211,6 +225,11 @@ describe("planDoseReminders", () => {
 
   it("does not remind of a time that has passed or is within 5 seconds", () => {
     expect(planDoseReminders([bd], [], at(12, 21)).map((p) => p.id)[0]).toBe("dose:i-1:2026-10-13T09:00");
+  });
+
+  it("skips a malformed time instead of planning a reminder the phone cannot honour (#658)", () => {
+    const plan = planDoseReminders([{ ...bd, times: ["21:00", "99:99", "ab:cd"] }], [], at(12, 10), { horizonDays: 0 });
+    expect(plan.map((p) => p.id)).toEqual(["dose:i-1:2026-10-12T21:00"]);
   });
 
   it("caps the list so iOS keeps room for the other reminders", () => {
