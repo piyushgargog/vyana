@@ -23,13 +23,16 @@ COPY --from=build /repo/apps/web/public ./apps/web/public
 # their own that vulnerability scanners report (they are not part of the app). Removing them leaves less to patch.
 RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 # Trivy flags zlib 1.3.2-r0 in the node:26-alpine base image (CVE-2026-85091, heap
-# overflow in gz_vacate()) and musl 1.2.6-r2 (CVE-2026-107891, integer overflows
-# in regcomp()). The fixes are already in Alpine main (issue #154).
-# Install unpinned on purpose: the repo is rolling, and exact pins broke the
-# build on 7 Nov 2026 when it retired zlib 1.3.2-r1 and musl 1.2.6-r3 (issue #655).
-# The unpinned install takes the repo's current versions, both newer than the
-# pinned ones, and the Trivy scan in CI keeps guarding the installed versions.
-RUN apk add --no-cache zlib musl musl-utils
+# overflow in gz_vacate()). The fix is already in Alpine main; pin it (issue #154).
+# The pin must name a version the repo still carries: the repo retired 1.3.2-r1
+# on 7 Nov 2026 and moved to 1.4-r0 (issue #655). A bare apk add does not upgrade
+# an installed package, so the pin stays exact. Remove this pin once
+# node:26-alpine ships zlib >= 1.4-r0.
+RUN apk add --no-cache zlib=1.4-r0
+# Trivy flags musl 1.2.6-r2 in the node:26-alpine base image (CVE-2026-107891,
+# integer overflows in regcomp()). The fix is already in Alpine; pin it.
+# Remove this pin once node:26-alpine ships musl >= 1.2.6-r3.
+RUN apk add --no-cache musl=1.2.6-r3 musl-utils=1.2.6-r3
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
