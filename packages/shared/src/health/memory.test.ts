@@ -67,6 +67,23 @@ describe("buildMemory", () => {
     expect(boundary.labs?.map((t) => t.test_name)).toEqual(["Edge"]); // 24 months back is in, a day older is out
   });
 
+  it("orders lab tests and vital series the same way when the latest dates tie", () => {
+    const labs = [lab("Zebra", "2026-10-01", 1), lab("Alpha", "2026-10-01", 2)];
+    const labsForward = buildMemory(src({ labs }), ["labs"], TODAY).labs?.map((t) => t.test_name);
+    const labsReversed = buildMemory(src({ labs: [...labs].reverse() }), ["labs"], TODAY).labs?.map((t) => t.test_name);
+    expect(labsForward).toEqual(["Alpha", "Zebra"]);
+    expect(labsReversed).toEqual(["Alpha", "Zebra"]);
+
+    const vitals = [
+      { type: "weight", value: 70, value2: null, unit: null, measured_at: "2026-10-01T00:00:00Z" },
+      { type: "bp", value: 120, value2: 80, unit: "mmHg", measured_at: "2026-10-01T00:00:00Z" },
+    ];
+    const vitalsForward = buildMemory(src({ vitals }), ["vitals"], TODAY).vitals?.map((s) => s.type);
+    const vitalsReversed = buildMemory(src({ vitals: [...vitals].reverse() }), ["vitals"], TODAY).vitals?.map((s) => s.type);
+    expect(vitalsForward).toEqual(["bp", "weight"]);
+    expect(vitalsReversed).toEqual(["bp", "weight"]);
+  });
+
   it("reads a flag it does not know as unknown", () => {
     const memory = buildMemory(src({ labs: [lab("X", "2026-10-01", 1, { flag: "critical-ish" })] }), ["labs"], TODAY);
     expect(memory.labs?.[0].points[0].flag).toBe("unknown");
