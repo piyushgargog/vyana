@@ -35,7 +35,14 @@ export function checkUploadPath(userId: string, filePath: string): { mime: strin
 }
 
 export async function downloadUpload(bucket: Bucket, filePath: string): Promise<Uint8Array> {
-  const { data, error } = await supabaseAdmin().storage.from(bucket).download(filePath);
+  const storage = supabaseAdmin().storage.from(bucket);
+  // The size is read from the object's metadata first, so an oversize file is refused without
+  // downloading its body. The size is optional in the storage response, so when it is missing
+  // the check below still runs as defence in depth (issue #659).
+  const { data: info, error: infoError } = await storage.info(filePath);
+  if (infoError || !info) throw notFound("That file wasn't found. Please upload it again.");
+  if (info.size !== undefined && info.size > MAX_UPLOAD_BYTES) throw badRequest("The file is larger than 10 MB.");
+  const { data, error } = await storage.download(filePath);
   if (error || !data) throw notFound("That file wasn't found. Please upload it again.");
   if (data.size > MAX_UPLOAD_BYTES) throw badRequest("The file is larger than 10 MB.");
   return new Uint8Array(await data.arrayBuffer());

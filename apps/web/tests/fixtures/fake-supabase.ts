@@ -136,6 +136,10 @@ export const fakeSupabaseModule = {
     from: query,
     storage: {
       from: (bucket: string) => ({
+        info: async (path: string) => {
+          const blob = db.storage.get(`${bucket}/${path}`);
+          return blob ? { data: { size: blob.size }, error: null } : { data: null, error: new Error("Object not found") };
+        },
         download: async (path: string) => {
           const blob = db.storage.get(`${bucket}/${path}`);
           return blob ? { data: blob, error: null } : { data: null, error: new Error("Object not found") };
