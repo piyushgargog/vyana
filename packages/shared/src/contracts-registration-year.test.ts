@@ -35,3 +35,30 @@ describe("registration year", () => {
     expect(now).toBe(ist);
   });
 });
+
+describe("registration details are trimmed", () => {
+  const adminBase = {
+    doctor_id: "00000000-0000-4000-8000-000000000001",
+    decision: "approve",
+    reg_no: "12345",
+    state_council: "Delhi Medical Council",
+    year: null,
+    note: "checked",
+  } as const;
+
+  it("rejects a whitespace-only reg_no or state_council on both paths", () => {
+    expect(DoctorVerifyReq.safeParse({ reg_no: " ", state_council: "Delhi" }).success).toBe(false);
+    expect(DoctorVerifyReq.safeParse({ reg_no: "12345", state_council: "  " }).success).toBe(false);
+    expect(AdminDoctorCheckReq.safeParse({ ...adminBase, reg_no: " " }).success).toBe(false);
+    expect(AdminDoctorCheckReq.safeParse({ ...adminBase, state_council: "  " }).success).toBe(false);
+  });
+
+  it("trims surrounding spaces instead of rejecting the value", () => {
+    const parsed = DoctorVerifyReq.safeParse({ reg_no: " 12345 ", state_council: " Delhi " });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.reg_no).toBe("12345");
+      expect(parsed.data.state_council).toBe("Delhi");
+    }
+  });
+});
