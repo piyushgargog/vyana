@@ -105,10 +105,14 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
   });
 
   // Every pair of known medicines the table does not cover is said to be not checked.
+  // The first lookup already knows which pairs it covers: each hit names the two medicines it
+  // covers, so the uncovered pairs come from that hit list instead of a second lookup per pair.
+  const covered = new Set(tableHits.map((h) => [...h.medicines].sort().join("|")));
   const uncovered: string[] = [];
   for (let i = 0; i < known.length; i++) {
     for (let j = i + 1; j < known.length; j++) {
-      if (lookupInteractions([joined(known[i]), joined(known[j])]).length === 0) uncovered.push(`${known[i].name} + ${known[j].name}`);
+      const pair = [joined(known[i]), joined(known[j])].sort().join("|");
+      if (!covered.has(pair)) uncovered.push(`${known[i].name} + ${known[j].name}`);
     }
   }
   for (const pair of uncovered.slice(0, MAX_PAIRS)) notChecked.push(`${pair} (not in the reviewed list yet)`);
