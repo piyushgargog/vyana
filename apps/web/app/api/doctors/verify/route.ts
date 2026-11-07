@@ -1,7 +1,14 @@
+import { z } from "zod";
 import { AdminDoctorCheckReq, DoctorVerifyReq, DoctorVerifyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { adminCheckDoctor, submitDoctorRegistration } from "@/lib/server/doctor-verify";
-import { badRequest, forbidden, jsonRes, withRoute } from "@/lib/server/errors";
+import { badRequest, forbidden, jsonRes, parseBody, withRoute } from "@/lib/server/errors";
+
+/**
+ * DoctorVerifyReq plus the admin-only `decision` key, only so the route can refuse a doctor sending an admin's
+ * check (issue #359): a plain DoctorVerifyReq parse would strip the key before the route could see it.
+ */
+const DoctorVerifyReqDetectDecision = DoctorVerifyReq.extend({ decision: z.unknown().optional() });
 
 // A doctor sends their registration details; an admin records a check done by hand (issue #344).
 export const maxDuration = 30;
@@ -16,21 +23,18 @@ export const POST = withRoute("doctors/verify", async (req, ctx) => {
   if (role !== "admin" && role !== "doctor") {
     throw forbidden();
   }
-  let raw: unknown;
-  try {
-    raw = await req.json();
-  } catch {
-    throw badRequest("Request body must be valid JSON");
-  }
+  // The body is read through parseBody (issue #666), so the size cap it enforces applies to this route
+  // too once it lands (PR #542), instead of this route reading an unbounded body with req.json().
   let res;
   if (role === "admin") {
-    res = await adminCheckDoctor(authed, AdminDoctorCheckReq.parse(raw));
+    res = await adminCheckDoctor(authed, await parseBody(req, AdminDoctorCheckReq));
   } else {
+    const body = await parseBody(req, DoctorVerifyReqDetectDecision);
     // A `decision` belongs to an admin's check; a doctor only sends their own registration details.
-    if (raw !== null && typeof raw === "object" && "decision" in raw) {
+    if ("decision" in body) {
       throw badRequest("Only an admin can record a check. Send your registration number and state council.");
     }
-    res = await submitDoctorRegistration(authed, DoctorVerifyReq.parse(raw));
+    res = await submitDoctorRegistration(authed, DoctorVerifyReq.parse(body));
   }
   return jsonRes(DoctorVerifyRes, res);
 }, { rateLimit: rateLimitOf("lookup") });
