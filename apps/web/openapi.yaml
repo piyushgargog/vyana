@@ -1549,6 +1549,7 @@ components:
       properties:
         file_path:
           type: string
+          minLength: 1
       required:
         - file_path
       additionalProperties: false
@@ -1696,6 +1697,7 @@ components:
       properties:
         file_path:
           type: string
+          minLength: 1
         report_date:
           type: string
           pattern: ^\d{4}-\d{2}-\d{2}$

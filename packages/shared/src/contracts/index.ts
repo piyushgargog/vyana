@@ -207,7 +207,7 @@ export const AgentDecideRes = z.object({
 
 // ---------- POST /api/prescriptions/extract ----------
 // client first uploads the file to bucket "prescriptions" at {user_id}/{uuid}.{ext}
-export const PrescriptionExtractReq = z.object({ file_path: z.string() });
+export const PrescriptionExtractReq = z.object({ file_path: z.string().min(1) });
 export const PrescriptionExtractRes = z.object({
   prescription_id: z.guid(),
   doctor_name: z.string().nullable(),
@@ -220,7 +220,7 @@ export const PrescriptionExtractRes = z.object({
 
 // ---------- POST /api/reports/analyze ----------
 // client first uploads the file to bucket "lab-reports" at {user_id}/{uuid}.{ext}
-export const ReportAnalyzeReq = z.object({ file_path: z.string(), report_date: isoDate.optional() });
+export const ReportAnalyzeReq = z.object({ file_path: z.string().min(1), report_date: isoDate.optional() });
 export const ReportAnalyzeRes = z.object({
   report_id: z.guid(),
   lab_name: z.string().nullable(),
