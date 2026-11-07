@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const run = vi.fn(async () => ({ patients: 12, created: 3, expired: 1 }));
+const run = vi.fn(async (): Promise<unknown> => ({ patients: 12, created: 3, expired: 1, capped: false }));
 vi.mock("@/lib/server/supabase-admin", () => ({
   supabaseAdmin: () => ({ marker: "admin" }),
   requireEnv: (name: string) => {
@@ -28,10 +28,19 @@ describe("POST /api/cron/care-agent", () => {
   it("runs the loop for the scheduler and returns its counts", async () => {
     const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ patients: 12, created: 3, expired: 1 });
+    expect(await res.json()).toEqual({ patients: 12, created: 3, expired: 1, capped: false });
     expect(run).toHaveBeenCalledTimes(1);
     const [client] = run.mock.calls[0] as unknown as [{ marker: string }];
     expect(client.marker).toBe("admin"); // the service-role client
+  });
+
+  it("refuses a loop result that drifted from the contract, instead of passing it on", async () => {
+    // The success shape is validated (issue #667): a result missing `capped` must fail loudly here,
+    // in dev and CI, not reach the scheduler as a shape it does not expect.
+    run.mockResolvedValueOnce({ patients: 12, created: 3, expired: 1 });
+    const res = await call({ "x-cron-secret": "s3cret-value-for-tests" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("BAD_REQUEST");
   });
 
   it("refuses a call without the secret (401), before touching the database", async () => {

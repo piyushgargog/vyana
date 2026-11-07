@@ -1,6 +1,7 @@
+import { MissedDoseCheckRes } from "@vyana/shared";
 import { requireCronSecret } from "@/lib/server/data/cron-auth";
 import { runMissedDoseCheck } from "@/lib/server/data/missed-doses";
-import { withRoute } from "@/lib/server/errors";
+import { withRoute, jsonRes } from "@/lib/server/errors";
 import { sendPush } from "@/lib/server/push";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 
@@ -11,5 +12,5 @@ export const maxDuration = 60;
 export const POST = withRoute("cron/missed-doses", async (req) => {
   requireCronSecret(req);
   const result = await runMissedDoseCheck(supabaseAdmin(), sendPush);
-  return Response.json(result);
+  return jsonRes(MissedDoseCheckRes, result);
 });
