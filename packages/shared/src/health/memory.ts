@@ -158,7 +158,23 @@ function buildMedicines(items: MemoryMedicineItem[], today: string): Medicine[] 
       start: i.start_date ?? istDayOf(i.created_at),
       end: i.end_date,
     }))
-    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.name < b.name ? -1 : 1));
+    // Start day, then name; on a full tie the order keeps going through the rest of the row
+    // (strength, dose, frequency, end) until it is total, so the order never depends on the
+    // order the rows arrived in. A bare 0 on a full tie would leave that to the input order,
+    // because a stable sort keeps tied rows where they were.
+    .sort((a, b) => {
+      for (const [x, y] of [
+        [a.start, b.start],
+        [a.name, b.name],
+        [a.strength ?? "", b.strength ?? ""],
+        [a.dose ?? "", b.dose ?? ""],
+        [a.frequency ?? "", b.frequency ?? ""],
+        [a.end ?? "", b.end ?? ""],
+      ] as const) {
+        if (x !== y) return x < y ? -1 : 1;
+      }
+      return 0;
+    });
 }
 
 function buildAdherence(logs: MemoryDoseLog[], today: string): Adherence {
