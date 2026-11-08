@@ -2,7 +2,7 @@ import "server-only";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
 import { isOnDomain, isWebMock } from "./domains";
-import { decodeEntities, readTextCapped } from "./fetch-page";
+import { decodeEntities, readTextCapped, stripTags } from "./fetch-page";
 
 /**
  * Health topic search of MedlinePlus (US National Library of Medicine), a free public web service (ADR-072). It replaces the
@@ -19,17 +19,6 @@ export interface TopicResult {
 const ENDPOINT = "https://wsearch.nlm.nih.gov/ws/query";
 const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; topic search)";
 const MAX_BYTES = 1_500_000;
-
-const stripTags = (s: string): string => {
-  let out = "";
-  let inTag = false;
-  for (const ch of s) {
-    if (ch === "<") inTag = true;
-    else if (ch === ">") inTag = false;
-    else if (!inTag) out += ch;
-  }
-  return out;
-};
 
 /** The content of `<content name="...">...</content>` inside one document block, as plain text. */
 function contentOf(block: string, name: string): string {

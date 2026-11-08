@@ -50,6 +50,12 @@ describe("parseRow", () => {
     expect(bank?.name).toBe("Bank &lt;b&gt; &amp; Co");
   });
 
+  it("decodes the entities the old partial decoder left behind (&nbsp;, numeric and named)", () => {
+    const bank = parseRow(row("City&nbsp;Hospital<br/>1 Road &#x2013; Block A &rarr; Wing B<br/>Phone: 9000000001", "Available, B-Ve:5"), area, "c", at);
+    expect(bank?.name).toBe("City Hospital");
+    expect(bank?.address).toBe("1 Road \u2013 Block A \u2192 Wing B");
+  });
+
   it("returns null for rows that are not a table row or hold no stock", () => {
     expect(parseRow("nope", area, "c", at)).toBeNull();
     expect(parseRow(["1", "x"], area, "c", at)).toBeNull();
