@@ -2,15 +2,11 @@
  * Emergency warning signs (PLAN §2A rule 4, DESIGN §10). Fixed rules run in code BEFORE any model call, so an
  * emergency is never missed because a model misread it. Used by triage, the assistant and care plans.
  *
- * Every rule comes from the source below, written as English, Hindi and Hinglish phrases. Matching is deliberately
+ * Every rule comes from "Recognizing medical emergencies" (MedlinePlus, U.S. National Library of Medicine),
+ * https://medlineplus.gov/ency/article/001927.htm, written as English, Hindi and Hinglish phrases. Matching is deliberately
  * cautious: a false alarm only shows the 108 notice, a miss could cost a life, so negations ("no chest pain")
  * still match. Changing a rule needs a PROGRESS.md entry and a safety eval re-run (EVALUATION §6).
  */
-
-export const RED_FLAG_SOURCE = {
-  title: "Recognizing medical emergencies (MedlinePlus, U.S. National Library of Medicine)",
-  url: "https://medlineplus.gov/ency/article/001927.htm",
-} as const;
 
 export interface RedFlagRule {
   id: string;
