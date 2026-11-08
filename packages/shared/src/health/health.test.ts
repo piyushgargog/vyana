@@ -16,6 +16,7 @@ import {
   planFollowUpReminders,
   planRefillAlerts,
   sortPlanned,
+  takenDosesCap,
   type DoseReminderItem,
   type RefillItem,
 } from "./index";
@@ -86,6 +87,19 @@ describe("parseDoseUnits", () => {
     expect(parseDoseUnits("as directed")).toBe(1);
     expect(parseDoseUnits("0 tablets")).toBe(1);
     expect(parseDoseUnits("1/0 tablet")).toBe(1);
+  });
+});
+
+describe("takenDosesCap", () => {
+  it("is the pack size over the units per dose, plus one of margin", () => {
+    expect(takenDosesCap({ dose: "1 tablet", quantity_total: 10 })).toBe(11);
+    expect(takenDosesCap({ dose: "2 tablets", quantity_total: 10 })).toBe(6);
+    expect(takenDosesCap({ dose: "1/2 tablet", quantity_total: 10 })).toBe(21);
+    expect(takenDosesCap({ dose: "500 mg", quantity_total: 30 })).toBe(31); // a strength counts as 1 unit
+  });
+
+  it("is null when the pack size is unknown, so no taken row is needed", () => {
+    expect(takenDosesCap({ dose: "1 tablet", quantity_total: null })).toBeNull();
   });
 });
 

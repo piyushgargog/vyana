@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CarePlan, findLastDone } from "@vyana/shared";
+import { CarePlan, findLastDone, takenDosesCap } from "@vyana/shared";
 import { istDate } from "../dates";
 import {
   labRecheckRule,
@@ -132,9 +132,11 @@ async function draftsForPatient(
 
   // Two reads of the dose log, because the rules ask different questions:
   // - missed doses: only the last 14 days (the rule looks at 7; 14 leaves room for the timezone edge and a late run);
-  // - refill: every dose TAKEN from the active pack, because the rule subtracts them from the pack size. A 14 day
-  //   window would count too few, show more days left than there are, and the refill alert would come late. The
-  //   read is bounded by the pack (about one row per dose of an active item), not by the patient's history.
+  // - refill: the taken doses of the active pack, because the rule subtracts them from the pack size. A 14 day
+  //   window would count too few, show more days left than there are, and the refill alert would come late.
+  //   The read is capped per item at takenDosesCap: once the taken count reaches the pack size the units
+  //   left are zero, so rows past the cap cannot change the answer, and an item with no pack size needs
+  //   no taken row at all (the refill rule never fires for it).
   const itemIds = items.map((i) => i.id);
   const since = new Date(now.getTime() - LOG_WINDOW_DAYS * DAY_MS).toISOString();
   const logs =
@@ -143,12 +145,19 @@ async function draftsForPatient(
       : await readChunked<LogRow>(itemIds, (part) =>
           sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
         );
-  const takenLogs =
-    items.length === 0
-      ? []
-      : await readChunked<LogRow>(itemIds, (part) =>
-          sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).eq("status", "taken"),
-        );
+  const takenLogs: LogRow[] = [];
+  for (const item of items) {
+    const cap = takenDosesCap(item);
+    if (cap === null) continue;
+    const { data, error } = await sb
+      .from("dose_logs")
+      .select("item_id, scheduled_for, status")
+      .eq("item_id", item.id)
+      .eq("status", "taken")
+      .limit(cap);
+    if (error) throw error;
+    takenLogs.push(...((data ?? []) as LogRow[]));
+  }
   const logsOf = (itemId: string) => logs.filter((l) => l.item_id === itemId);
   const takenOf = (itemId: string) => takenLogs.filter((l) => l.item_id === itemId);
 
