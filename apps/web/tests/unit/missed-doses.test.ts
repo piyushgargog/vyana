@@ -95,6 +95,14 @@ describe("findMissedDoses", () => {
     expect(r.missed[0].due.toISOString()).toBe(ist("2026-10-12 09:00").toISOString());
   });
 
+  it("an exact log belongs to its own dose when two doses are five minutes apart", () => {
+    const twoDoses = item({ times: ["09:00", "09:05"] });
+    const laterLog = { item_id: "i-1", scheduled_for: ist("2026-10-12 09:05").toISOString(), status: "taken" };
+    const r = findMissedDoses([twoDoses], [laterLog], [], now);
+    expect(r.missed).toHaveLength(1);
+    expect(r.missed[0].due.toISOString()).toBe(ist("2026-10-12 09:00").toISOString());
+  });
+
   it("still counts a dose the patient logged as missed, so the caregiver hears about it", () => {
     const missedLog = { item_id: "i-1", scheduled_for: dueAt.toISOString(), status: "missed" };
     expect(findMissedDoses([item()], [missedLog], [], now).missed).toHaveLength(1);
