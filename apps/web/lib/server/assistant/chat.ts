@@ -10,7 +10,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 import { Language, type ChatBody } from "@vyana/shared";
-import { finishAiRun, providerOf, startAiRun } from "../ai";
+import { finishAiRun, fallbackOf, providerOf, startAiRun } from "../ai";
 import type { AuthedUser } from "../auth";
 import { badRequest, notFound } from "../errors";
 import { getModel, isLlmMock, modelName } from "../llm";
@@ -115,6 +115,9 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   // The reply streams after the route has logged its line, so the AI run is recorded here.
   const started = Date.now();
   let tokens = { input_tokens: null as number | null, output_tokens: null as number | null };
+  // The model that really answered (ADR-056): a fallback may have answered any step of the tool loop, not only the
+  // last one, so every step's metadata is read in `execute` and the run row is updated in `onEnd`.
+  let model = modelName("text");
   const runId = await startAiRun(
     { feature: "assistant_chat", userId: user.id, promptVersion: ASSISTANT_PROMPT_VERSION, inputRef: `chat_sessions/${sessionId}`, sources: [] },
     "text",
@@ -168,6 +171,14 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
       } catch {
         /* the reply is already on its way; usage is only for our own cost record */
       }
+      // A step that cannot be read leaves the primary name.
+      try {
+        const steps = await result.steps;
+        const fallback = steps.map((s) => fallbackOf(s.providerMetadata)).find(Boolean);
+        if (fallback) model = `fallback:${fallback}`;
+      } catch {
+        /* the reply is already on its way; the run keeps the primary name */
+      }
       if (failed) return;
       const note = guard.closingNotes();
       if (note) writeText(writer, "vyana-note", note);
@@ -180,7 +191,8 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
         output: { text: guard.text, notes: guard.notes, removed_urls: guard.removed, emergency_notice: emergency },
         sources: guard.sources,
         status,
-        usage: { provider: providerOf(modelName("text")), ...tokens, latency_ms: Date.now() - started },
+        model,
+        usage: { provider: providerOf(model), ...tokens, latency_ms: Date.now() - started },
       });
       log({ event: "assistant_reply", status, links: guard.sources.length, removed: guard.removed.length });
       if (failed || isAborted) return; // nothing half-written is saved

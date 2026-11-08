@@ -57,6 +57,12 @@ export function providerOf(model: string): string | null {
   return provider && provider !== "none" ? provider : null;
 }
 
+/** The fallback model that really answered, read from a result's provider metadata (ADR-056), or null. */
+export function fallbackOf(metadata: unknown): string | null {
+  const used = (metadata as { [POOL_KEY]?: { fallback?: string } } | undefined)?.[POOL_KEY]?.fallback;
+  return used ?? null;
+}
+
 async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback: string | null; tokens: Pick<AiUsage, "input_tokens" | "output_tokens"> }> {
   const call = () =>
     generateText({
@@ -70,8 +76,7 @@ async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback:
   for (let attempt = 1; ; attempt++) {
     try {
       const result = await call();
-      const used = (result.providerMetadata?.[POOL_KEY] as { fallback?: string } | undefined)?.fallback;
-      return { object: result.output as T, fallback: used ?? null, tokens: { input_tokens: result.usage?.inputTokens ?? null, output_tokens: result.usage?.outputTokens ?? null } };
+      return { object: result.output as T, fallback: fallbackOf(result.providerMetadata), tokens: { input_tokens: result.usage?.inputTokens ?? null, output_tokens: result.usage?.outputTokens ?? null } };
     } catch (err) {
       if (NoObjectGeneratedError.isInstance(err) && attempt === 1) {
         log({ event: "ai_retry", feature: input.feature });
@@ -121,13 +126,13 @@ export async function startAiRun(input: RunRecord, kind: ModelKind): Promise<str
 
 export async function finishAiRun(
   runId: string | null,
-  result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage },
+  result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage; model?: string },
 ): Promise<void> {
   if (!runId) return;
   try {
     const { error } = await supabaseAdmin()
       .from("ai_runs")
-      .update({ output_json: result.output, sources: result.sources, status: result.status, ...(result.usage ?? {}) })
+      .update({ output_json: result.output, sources: result.sources, status: result.status, ...(result.model ? { model: result.model } : {}), ...(result.usage ?? {}) })
       .eq("id", runId);
     if (error) throw error;
   } catch {

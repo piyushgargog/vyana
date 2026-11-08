@@ -189,6 +189,16 @@ describe("failover (retryable failures only)", () => {
     expect(await meta()).toEqual({ fallback: "groq:small-model" });
   });
 
+  it("marks a streamed result the same way, so a streamed chat reply records the fallback too (#691)", async () => {
+    vi.stubEnv("GROQ_API_KEYS", "k1,k2");
+    vi.stubEnv("LLM_FALLBACKS", "groq:small-model");
+    const meta = async () => (await streamText({ model: getModel("text"), prompt: "hi", maxRetries: 0 }).providerMetadata)?.vyana_pool;
+    expect(await meta()).toBeUndefined(); // the primary answered
+    script.set("groq|k1|main-model", 429);
+    script.set("groq|k2|main-model", 429);
+    expect(await meta()).toEqual({ fallback: "groq:small-model" });
+  });
+
   it("classifies errors", () => {
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 413 }))).toBe(true);
     expect(isRetryable(new APICallError({ message: "m", url: "u", requestBodyValues: {}, statusCode: 429 }))).toBe(true);
