@@ -80,6 +80,13 @@ describe("parseDoseUnits", () => {
     expect(parseDoseUnits("2")).toBe(2);
   });
 
+  it("reads a mixed fraction dose as the whole number plus the fraction", () => {
+    expect(parseDoseUnits("1 1/2 tablets")).toBe(1.5);
+    expect(parseDoseUnits("2 1/4 tablets")).toBe(2.25);
+    expect(parseDoseUnits("1 1/2 tablet")).toBe(1.5);
+    expect(parseDoseUnits("1 1/2 mg")).toBe(1); // a strength, not a count
+  });
+
   it("counts a dose it cannot read as 1", () => {
     expect(parseDoseUnits(null)).toBe(1);
     expect(parseDoseUnits("")).toBe(1);

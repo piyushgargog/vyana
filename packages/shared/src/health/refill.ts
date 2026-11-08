@@ -24,8 +24,8 @@ const COUNTABLE_UNITS = new Set([
 ]);
 
 /**
- * Units in one dose, from text such as "1 tablet", "2 tablets", "5 ml", "1/2 tablet" or "0.5 tablet".
- * A number counts only when a countable unit follows it (or nothing does). A strength such as
+ * Units in one dose, from text such as "1 tablet", "2 tablets", "5 ml", "1/2 tablet", "1 1/2 tablets"
+ * or "0.5 tablet". A number counts only when a countable unit follows it (or nothing does). A strength such as
  * "500 mg", "650mg", "40 mg OD", "2 g" or "10 IU" is how strong the medicine is, not how many to take,
  * so it counts as 1. A dose that cannot be read counts as 1.
  */
@@ -35,9 +35,13 @@ export function parseDoseUnits(dose: string | null | undefined): number {
 
   let value: number;
   let rest: string;
+  const mixed = text.match(/^(\d{1,3})\s+(\d{1,3})\s{0,3}\/\s{0,3}(\d{1,3})/);
   const fraction = text.match(/^(\d{1,3})\s{0,3}\/\s{0,3}(\d{1,3})/);
   const number = text.match(/^(\d{1,4}(?:\.\d{1,3})?)/);
-  if (fraction) {
+  if (mixed) {
+    value = Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+    rest = text.slice(mixed[0].length);
+  } else if (fraction) {
     value = Number(fraction[1]) / Number(fraction[2]);
     rest = text.slice(fraction[0].length);
   } else if (number) {
