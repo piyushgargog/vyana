@@ -1,5 +1,6 @@
 import "server-only";
 import { log } from "./log";
+import { firstRow } from "./rpc";
 import { supabaseAdmin } from "./supabase-admin";
 
 /** One limit: at most `max` calls per user in each window of `windowSeconds`, counted in the bucket named `bucket`. */
@@ -68,7 +69,7 @@ export async function checkRateLimit(userId: string, limit: RateLimit, now: Date
     });
     const { data, error } = await Promise.race([Promise.resolve(call), timeout]);
     if (error) throw error;
-    const row = (Array.isArray(data) ? data[0] : data) as CounterRow | null | undefined;
+    const row = firstRow<CounterRow>(data);
     if (!row || typeof row.allowed !== "boolean" || typeof row.remaining !== "number" || Number.isNaN(Date.parse(row.reset_at))) {
       throw new Error("unexpected answer from hit_rate_limit");
     }
