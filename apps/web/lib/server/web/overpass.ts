@@ -5,6 +5,7 @@ import { reverseGeocode } from "../geo";
 import { log } from "../log";
 import { supabaseAdmin } from "../supabase-admin";
 import { isWebMock } from "./domains";
+import { readTextCapped } from "./fetch-page";
 
 /**
  * Hospitals near a point (SPEC §5, ADR-072): one request to the public OpenStreetMap Overpass service (about a second),
@@ -16,6 +17,8 @@ import { isWebMock } from "./domains";
 const ENDPOINT = "https://overpass-api.de/api/interpreter";
 const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; nearby hospitals)";
 const TIMEOUT_MS = 12_000;
+// The query caps its answer at 60 elements, so a real answer is far smaller; anything past this is not an answer we use.
+const MAX_BYTES = 1_000_000;
 const RADIUS_M = 5000;
 const KEEP = 8;
 const FALLBACK_KM = 60;
@@ -99,7 +102,12 @@ async function fromOverpass(lat: number, lng: number): Promise<Hospital[]> {
       log({ event: "overpass_not_ok", status: res.status });
       return [];
     }
-    return parseOverpass(await res.json(), { lat, lng });
+    const text = await readTextCapped(res, MAX_BYTES);
+    if (text === null) {
+      log({ event: "overpass_too_large" });
+      return [];
+    }
+    return parseOverpass(JSON.parse(text) as unknown, { lat, lng });
   } catch (err) {
     log({ event: "overpass_failed", error: err instanceof Error ? err.name : "Error" });
     return [];

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { log } from "./log";
 import { isWebMock } from "./web/domains";
+import { readTextCapped } from "./web/fetch-page";
 
 /**
  * Reverse geocoding with OpenStreetMap Nominatim (SPEC §5). Its usage policy asks for an identifying
@@ -11,6 +12,8 @@ import { isWebMock } from "./web/domains";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/reverse";
 const TIMEOUT_MS = 5000;
+// Nominatim answers one small object; anything past this is not an answer we use.
+const MAX_BYTES = 100_000;
 
 const Reverse = z.object({
   address: z
@@ -37,7 +40,12 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return null;
-    const parsed = Reverse.safeParse(await res.json());
+    const text = await readTextCapped(res, MAX_BYTES);
+    if (text === null) {
+      log({ event: "reverse_geocode_too_large" });
+      return null;
+    }
+    const parsed = Reverse.safeParse(JSON.parse(text));
     const a = parsed.success ? parsed.data.address : undefined;
     if (!a) return null;
     const local = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.city_district;
