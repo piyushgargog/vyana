@@ -73,6 +73,13 @@ describe("findNearbyHospitals", () => {
     expect(fetchFn.mock.calls.length).toBe(calls);
   });
 
+  it("answers no hospitals when the Overpass answer is over the cap", async () => {
+    const huge = json({ ...FIXTURE, padding: "x".repeat(2_000_000) });
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (url) => (String(url).includes("overpass") ? huge : json({ address: { suburb: "Connaught Place", city: "Delhi" } }))));
+    const first = await findNearbyHospitals(28.6139, 77.209);
+    expect(first.hospitals).toEqual([]);
+  });
+
   it("falls back to the seeded table when Overpass answers 503", async () => {
     vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (url) => (String(url).includes("overpass") ? json({}, 503) : json({}))));
     db.rows.hospitals = [

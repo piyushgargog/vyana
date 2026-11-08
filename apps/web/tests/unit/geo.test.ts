@@ -27,4 +27,11 @@ describe("reverseGeocode", () => {
     expect(await reverseGeocode(28.6, 77.2)).toBe("[mock] Preet Vihar, Delhi");
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("returns null when the Nominatim answer is over the cap", async () => {
+    vi.stubEnv("WEB_MOCK", "0");
+    const huge = JSON.stringify({ address: { suburb: "Preet Vihar", city: "Delhi" }, padding: "x".repeat(200_000) });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(huge, { status: 200, headers: { "content-type": "application/json" } })));
+    expect(await reverseGeocode(28.64, 77.29)).toBeNull();
+  });
 });
