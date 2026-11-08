@@ -114,15 +114,10 @@ function lastLab(test: string, rows: LabRow[]): { date: string; reportId: string
   if (date === null) return null;
   const onThatDate = rows.filter((r) => r.measured_on === date);
   const exact = onThatDate.find((r) => r.test_name.toLowerCase() === test.toLowerCase());
-  // The same loose match `findLastDone` uses: a plan "HbA1c" is "Glycated Haemoglobin (HbA1c)"
-  // in the report. (This one-line normalise mirrors `normaliseTestName` in shared; issue #540
-  // moves that helper into a shared home, where this match should live too.)
-  const wanted = test.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const matched = onThatDate.find((r) => {
-    if (wanted.length < 4) return r.test_name.toLowerCase() === test.trim().toLowerCase();
-    const key = r.test_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return key.length >= 4 && (key === wanted || key.includes(wanted) || wanted.includes(key));
-  });
+  // The row that produced the date, asked of the same matcher: a plan "HbA1c" is "Glycated
+  // Haemoglobin (HbA1c)" in the report, and reusing `findLastDone` keeps the date and the
+  // report from diverging if the match rule changes.
+  const matched = onThatDate.find((r) => findLastDone(test, { [r.test_name.toLowerCase()]: r.measured_on }) === date);
   return { date, reportId: (exact ?? matched ?? onThatDate[0])?.report_id ?? null };
 }
 
