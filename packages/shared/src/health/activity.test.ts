@@ -195,6 +195,20 @@ describe("buildTrendCharts", () => {
     expect(glucose.latest).toMatchObject({ text: "118 mg/dL (random)", day: TODAY, from: "Pixel Watch" });
   });
 
+  it("shows no average on the glucose label: fasting and random are different measurements", () => {
+    const [glucose] = buildTrendCharts(
+      [],
+      [
+        reading({ type: "sugar_fasting", value: 95, unit: "mg/dL", measured_at: "2026-10-21T01:00:00.000Z" }),
+        reading({ type: "sugar_random", value: 118, unit: "mg/dL", measured_at: "2026-10-21T20:00:00.000Z" }),
+      ],
+      7,
+      TODAY,
+    );
+    expect(glucose.label).toBe("Glucose, last 7 days");
+    expect(glucose.latest).toMatchObject({ text: "118 mg/dL (random)" });
+  });
+
   it("leaves readings outside the range out of the chart", () => {
     const charts = buildTrendCharts([], [reading({ measured_at: "2026-09-01T02:30:00.000Z" })], 7, TODAY);
     expect(charts).toEqual([]);
