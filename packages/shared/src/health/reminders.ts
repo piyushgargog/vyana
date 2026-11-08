@@ -141,15 +141,15 @@ function normaliseTestName(name: string): string {
 /**
  * When a care plan test was last measured. `lastDone` is keyed by the lab's own test name, which rarely
  * equals the plan's: "HbA1c" in the plan is "Glycated Haemoglobin (HbA1c)" in the report. Names match when
- * one contains the other (ignoring case, spaces and punctuation, at least 4 characters); the latest date wins.
+ * one contains the other (ignoring case, spaces and punctuation, at least 3 characters); the latest date wins.
  */
 export function findLastDone(test: string, lastDone: Record<string, string>): string | null {
   const wanted = normaliseTestName(test);
-  if (wanted.length < 4) return lastDone[test.trim().toLowerCase()] ?? null;
+  if (wanted.length < 3) return lastDone[test.trim().toLowerCase()] ?? null;
   let best: string | null = null;
   for (const [name, date] of Object.entries(lastDone)) {
     const key = normaliseTestName(name);
-    if (key.length < 4) continue;
+    if (key.length < 3) continue;
     if ((key === wanted || key.includes(wanted) || wanted.includes(key)) && (best === null || date > best)) best = date;
   }
   return best;
