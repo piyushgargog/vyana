@@ -4,6 +4,9 @@ import { OTHER_TOKEN, USER_ID, VALID_TOKEN, db, fakeSupabaseModule, resetDb } fr
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
+const { logSpy } = vi.hoisted(() => ({ logSpy: vi.fn() }));
+vi.mock("@/lib/server/log", () => ({ log: logSpy, newRequestId: () => "test-request-id" }));
+
 const { POST: extract } = await import("@/app/api/prescriptions/extract/route");
 const { POST: analyze } = await import("@/app/api/reports/analyze/route");
 const { POST: correct } = await import("@/app/api/reports/values/correct/route");
@@ -24,6 +27,7 @@ beforeEach(() => {
   vi.stubEnv("WEB_MOCK", "1");
   vi.stubEnv("LLM_MOCK", "1");
   resetDb();
+  logSpy.mockClear();
   db.rows.profiles[0].allergies = ["Metformin"];
 });
 afterEach(() => {
@@ -72,6 +76,18 @@ describe("POST /api/prescriptions/extract", () => {
     const res = await post(extract, { file_path: path });
     expect(res.status).toBe(500);
     expect(db.rows.prescriptions ?? []).toHaveLength(0);
+  });
+
+  it("logs it when the rollback delete fails too, instead of staying silent", async () => {
+    upload("prescriptions", path);
+    db.failInsert.add("prescription_items");
+    db.failDelete.add("prescriptions");
+    const res = await post(extract, { file_path: path });
+    expect(res.status).toBe(500);
+    expect(db.rows.prescriptions ?? []).toHaveLength(1); // the header stays: the rollback itself failed
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "prescription_rollback_failed", prescription_id: (db.rows.prescriptions[0] as { id: string }).id }),
+    );
   });
 
   it("only reads the user's own files of allowed types", async () => {

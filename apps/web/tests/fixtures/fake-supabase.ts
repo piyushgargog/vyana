@@ -23,6 +23,8 @@ export const db = {
   storage: new Map<string, Blob>(),
   /** Tables whose next insert fails (to test rollbacks). */
   failInsert: new Set<string>(),
+  /** Tables whose next delete fails (to test rollback failures). */
+  failDelete: new Set<string>(),
   /** Tables whose next update fails with a unique violation (23505), as the database guard of migration 0022 answers. */
   failUpdate: new Set<string>(),
   /** What is_doctor_of answers: "doctorId:patientId" pairs. */
@@ -41,6 +43,7 @@ export function resetDb() {
   db.inserts.length = 0;
   db.storage.clear();
   db.failInsert.clear();
+  db.failDelete.clear();
   db.failUpdate.clear();
   db.doctorOf.clear();
 }
@@ -113,6 +116,10 @@ function query(name: string) {
         return resolve({ data: null, error: null });
       }
       if (pendingDelete) {
+        if (db.failDelete.has(name)) {
+          db.failDelete.delete(name);
+          return resolve({ data: null, error: new Error(`delete from ${name} failed`) } as unknown as { data: Row[] | null; error: null });
+        }
         const gone = new Set(matching());
         rows[name] = table(name).filter((r) => !gone.has(r));
         return resolve({ data: null, error: null });

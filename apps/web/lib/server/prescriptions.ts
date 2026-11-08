@@ -4,6 +4,7 @@ import { z } from "zod";
 import { DEFAULT_TIMES, PrescriptionItem, isoDate, type PrescriptionExtractRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
+import { log } from "./log";
 import { RX_EXTRACT_PROMPT_VERSION, RX_EXTRACT_SYSTEM, rxExtractPrompt } from "./prompts/documents";
 import { redact, restore } from "./safety/redact";
 import { evidenceFound, field, hasNumber } from "./safety/verbatim";
@@ -286,8 +287,9 @@ export async function extractPrescription(
     }));
     const { data: itemRows, error: itemError } = await sb.from("prescription_items").insert(rows).select("id");
     if (itemError || !itemRows) {
-      // Nothing half-saved (SPEC §3 step 6).
-      await sb.from("prescriptions").delete().eq("id", prescriptionId);
+      // Nothing half-saved (SPEC §3 step 6): the header goes too, and a rollback that fails is logged, not silent (#709).
+      const { error: rollbackError } = await sb.from("prescriptions").delete().eq("id", prescriptionId);
+      if (rollbackError) log({ event: "prescription_rollback_failed", prescription_id: prescriptionId });
       throw itemError ?? new Error("prescription items not saved");
     }
     ids = (itemRows as { id: string }[]).map((r) => r.id);
