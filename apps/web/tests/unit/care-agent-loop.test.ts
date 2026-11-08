@@ -12,6 +12,8 @@ type Row = Record<string, unknown>;
  */
 function memoryDb(seed: Record<string, Row[]>) {
   const tables: Record<string, Row[]> = JSON.parse(JSON.stringify(seed));
+  /** Rows each select returned per table, so a test can prove a read stayed bounded. */
+  const reads: Record<string, number> = {};
   const table = (name: string) => (tables[name] ??= []);
   const time = (v: unknown) => new Date(String(v)).getTime();
 
@@ -49,6 +51,7 @@ function memoryDb(seed: Record<string, Row[]>) {
           if (orderCol) rows = [...rows].sort((a, b) => String(a[orderCol as string]).localeCompare(String(b[orderCol as string])));
           if (slice) rows = rows.slice(slice[0], slice[1] + 1);
           if (limitN !== null) rows = rows.slice(0, limitN);
+          reads[name] = (reads[name] ?? 0) + rows.length;
           return resolve({ data: rows.map((r) => ({ ...r })), error: null });
         },
       };
@@ -67,7 +70,7 @@ function memoryDb(seed: Record<string, Row[]>) {
       return Promise.resolve({ data: count, error: null });
     },
   };
-  return { sb: client as unknown as SupabaseClient, tables, table };
+  return { sb: client as unknown as SupabaseClient, tables, table, reads };
 }
 
 const now = istInstant("2026-10-22", "10:30"); // India, so "today" in the loop is 2026-10-22
@@ -232,6 +235,23 @@ describe("runCareAgentLoop", () => {
     const db = world({ dose_logs: old });
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(1);
     expect(db.table("agent_proposals")[0]).toMatchObject({ kind: "refill_due" });
+  });
+
+  it("reads only the taken rows the refill count can still use, over years of taken logs", async () => {
+    // A 10-tablet pack taken daily for three years: 1095 taken rows, the last fortnight
+    // inside the missed-dose window.
+    const years = Array.from({ length: 1095 }, (_, i) => ({
+      item_id: "i-1",
+      scheduled_for: new Date(Date.UTC(2023, 9, 22) + i * 86_400_000).toISOString(),
+      status: "taken",
+    }));
+    const db = world({ dose_logs: years });
+    const result = await runCareAgentLoop(db.sb, now);
+    expect(result.created).toBe(1);
+    expect(db.table("agent_proposals")[0]).toMatchObject({ kind: "refill_due" });
+    // The refill read is capped at the pack (10 tablets, 1 a dose, plus one of margin = 11 rows);
+    // the missed-dose read only looks at the last 14 days. The loop never reads the years of rows.
+    expect(db.reads["dose_logs"]).toBeLessThanOrEqual(11 + 14);
   });
 
   it("ignores missed doses older than 14 days for the missed-dose pattern", async () => {

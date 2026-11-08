@@ -84,3 +84,15 @@ export function getRefillStatus(item: RefillItem, doseLogs: Pick<DbDoseLog, "ite
   const due = unitsLeft === 0 || (daysLeft !== null && daysLeft <= item.refill_alert_days);
   return { units_left: unitsLeft, days_left: daysLeft, refill_due: due };
 }
+
+/**
+ * The most taken doses that can still change the refill answer for this item. Once the taken
+ * count reaches the pack size the units left are zero whatever else was taken, so a reader
+ * that caps its taken-log read at this number gets the same answer as one that reads them all.
+ * One extra dose of margin covers the rounding of the pack size over the units per dose. Null
+ * when the pack size is unknown: then the refill rule never fires and no taken row is needed.
+ */
+export function takenDosesCap(item: Pick<RefillItem, "dose" | "quantity_total">): number | null {
+  if (item.quantity_total === null || item.quantity_total === undefined) return null;
+  return Math.max(1, Math.ceil(item.quantity_total / parseDoseUnits(item.dose)) + 1);
+}
