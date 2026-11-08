@@ -100,7 +100,9 @@ async function listPatients(sb: SupabaseClient): Promise<{ ids: string[]; capped
 /**
  * The last time a follow-up test was measured, and the report that holds that result (the rule's
  * evidence). The date is matched the way the reminders match it (`findLastDone`: names compare
- * ignoring case, spaces and punctuation); the report is the newest row on that date.
+ * ignoring case, spaces and punctuation); the report is the row that produced that date, matched
+ * the same way, not the first row measured that day — two tests measured the same day must not
+ * cite each other's report.
  */
 function lastLab(test: string, rows: LabRow[]): { date: string; reportId: string | null } | null {
   const byName: Record<string, string> = {};
@@ -112,7 +114,11 @@ function lastLab(test: string, rows: LabRow[]): { date: string; reportId: string
   if (date === null) return null;
   const onThatDate = rows.filter((r) => r.measured_on === date);
   const exact = onThatDate.find((r) => r.test_name.toLowerCase() === test.toLowerCase());
-  return { date, reportId: (exact ?? onThatDate[0])?.report_id ?? null };
+  // The row that produced the date, asked of the same matcher: a plan "HbA1c" is "Glycated
+  // Haemoglobin (HbA1c)" in the report, and reusing `findLastDone` keeps the date and the
+  // report from diverging if the match rule changes.
+  const matched = onThatDate.find((r) => findLastDone(test, { [r.test_name.toLowerCase()]: r.measured_on }) === date);
+  return { date, reportId: (exact ?? matched ?? onThatDate[0])?.report_id ?? null };
 }
 
 /** Every draft the three rules return for one patient, from only the rows they need. */
