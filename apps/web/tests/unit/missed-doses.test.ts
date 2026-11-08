@@ -77,13 +77,22 @@ describe("findMissedDoses", () => {
     expect(r.missed.map((m) => m.item_id)).toEqual(["i-1"]);
   });
 
-  it("does not count a dose with a taken or skipped log within 30 minutes", () => {
+  it("does not count a dose with a taken or skipped log for that same time, allowing a few minutes for clock skew", () => {
     const log = (minutes: number, status = "taken") => ({ item_id: "i-1", scheduled_for: new Date(dueAt.getTime() + minutes * 60_000).toISOString(), status });
     expect(findMissedDoses([item()], [log(0, "skipped")], [], now).missed).toHaveLength(0);
     expect(findMissedDoses([item()], [log(0)], [], now).missed).toHaveLength(0);
-    expect(findMissedDoses([item()], [log(-30)], [], now).missed).toHaveLength(0);
-    expect(findMissedDoses([item()], [log(30)], [], now).missed).toHaveLength(0);
-    expect(findMissedDoses([item()], [log(31)], [], now).missed).toHaveLength(1);
+    expect(findMissedDoses([item()], [log(-5)], [], now).missed).toHaveLength(0);
+    expect(findMissedDoses([item()], [log(5)], [], now).missed).toHaveLength(0);
+    expect(findMissedDoses([item()], [log(6)], [], now).missed).toHaveLength(1);
+    expect(findMissedDoses([item()], [log(30)], [], now).missed).toHaveLength(1);
+  });
+
+  it("a taken log for a later dose does not clear an earlier dose of the same medicine", () => {
+    const twoDoses = item({ times: ["09:00", "09:30"] });
+    const laterLog = { item_id: "i-1", scheduled_for: ist("2026-10-12 09:30").toISOString(), status: "taken" };
+    const r = findMissedDoses([twoDoses], [laterLog], [], now);
+    expect(r.missed).toHaveLength(1);
+    expect(r.missed[0].due.toISOString()).toBe(ist("2026-10-12 09:00").toISOString());
   });
 
   it("still counts a dose the patient logged as missed, so the caregiver hears about it", () => {
