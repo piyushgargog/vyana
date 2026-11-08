@@ -61,6 +61,12 @@ describe("htmlToText", () => {
   it("drops tags and keeps the text between them", () => {
     expect(stripTags("<b>one</b> two <i>three</i>")).toBe("one two three");
     expect(stripTags("plain text")).toBe("plain text");
+    expect(stripTags("2 < 3 > 1")).toBe("2 < 3 > 1");
+    expect(stripTags("a < b")).toBe("a < b");
+  });
+
+  it("decodes an entity only once, even when it names an ampersand", () => {
+    expect(htmlToText("<p>A &#38;lt; B &amp;lt; C</p>").text).toBe("A &lt; B &lt; C");
   });
 
   it("reads one tagged string with mixed entities the same through both readers", () => {
@@ -72,7 +78,7 @@ describe("htmlToText", () => {
       "2026-10-21T10:00:00.000Z",
     );
     const topics = parseTopics(
-      `<?xml version="1.0"?><nlmSearchResult><list><document url="https://medlineplus.gov/city-hospital.html"><content name="title">&lt;b&gt;City&nbsp;Hospital &amp; Care&lt;/b&gt;</content><content name="FullSummary">Care</content></document></list></nlmSearchResult>`,
+      `<?xml version="1.0"?><nlmSearchResult><list><document url="https://medlineplus.gov/city-hospital.html"><content name="title">&lt;b&gt;City&#160;Hospital &amp; Care&lt;/b&gt;</content><content name="FullSummary">Care</content></document></list></nlmSearchResult>`,
       5,
     );
     expect(bank?.name).toBe("City Hospital & Care");

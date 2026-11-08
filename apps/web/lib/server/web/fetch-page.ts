@@ -44,30 +44,41 @@ function codePoint(n: number): string {
   return Number.isInteger(n) && n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : "";
 }
 
-/** Drops `<...>` markup from a short string, keeping the text between tags. A character loop, not a regex, so a stray `<` in text cannot eat the rest of the string. */
+/** Drops `<...>` markup from a short string, keeping the text between tags. A character loop, not a regex. A `<` only opens a tag when it looks like one (a letter, `/`, `!` or `?` follows), so comparison text such as `2 < 3` stays, and a stray `<` at the end is kept as text. */
 export function stripTags(s: string): string {
   let out = "";
   let inTag = false;
-  for (const ch of s) {
-    if (ch === "<") inTag = true;
-    else if (ch === ">") inTag = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!inTag && ch === "<" && /[a-zA-Z/?!]/.test(s[i + 1] ?? "")) inTag = true;
+    else if (inTag && ch === ">") inTag = false;
     else if (!inTag) out += ch;
   }
   return out;
 }
 
+/** Decodes entities in one pass, so a decoded `&` is never decoded again: `&#38;lt;` ends as the text `&lt;`, not `<`. */
 export function decodeEntities(s: string): string {
-  // `&amp;` last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice.
-  return s
-    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h: string) => codePoint(parseInt(h, 16)))
-    .replace(/&#(\d{1,7});/g, (_, d: string) => codePoint(Number(d)))
-    .replace(/&([a-z]{2,8});/g, (m, name: string) => NAMED[name] ?? m)
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;|&apos;/g, "'")
-    .replace(/&amp;/g, "&");
+  return s.replace(/&#[xX]([0-9a-fA-F]{1,6});|&#(\d{1,7});|&([a-z]{2,8});/g, (m, hex: string, dec: string, name: string) => {
+    if (hex !== undefined) return codePoint(parseInt(hex, 16));
+    if (dec !== undefined) return codePoint(Number(dec));
+    switch (name) {
+      case "nbsp":
+        return " ";
+      case "lt":
+        return "<";
+      case "gt":
+        return ">";
+      case "quot":
+        return '"';
+      case "apos":
+        return "'";
+      case "amp":
+        return "&";
+      default:
+        return NAMED[name] ?? m;
+    }
+  });
 }
 
 const tidy = (s: string) => decodeEntities(s).replace(/[ \t\r\f\v]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();

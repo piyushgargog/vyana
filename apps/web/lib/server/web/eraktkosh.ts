@@ -141,7 +141,7 @@ export async function resolveAreas(city: string): Promise<Area[]> {
 
 // ---------------------------------------------------------------- rows
 
-/** Tags dropped by the shared stripper, entities decoded by the shared decoder (`&amp;` last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice). */
+/** Tags dropped by the shared stripper, entities decoded once by the shared decoder. */
 const cleanText = (html: string): string => decodeEntities(stripTags(html)).replace(/\s+/g, " ").trim();
 
 /**
