@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // ai_runs inserts land here; `failInsert` simulates a database error.
 const inserts: Record<string, unknown>[] = [];
+const updates: Record<string, unknown>[] = [];
 let failInsert = false;
 vi.mock("@/lib/server/supabase-admin", () => ({
   supabaseAdmin: () => ({
@@ -16,6 +17,12 @@ vi.mock("@/lib/server/supabase-admin", () => ({
             return { data: { id: "run-1" }, error: null };
           },
         }),
+      }),
+      update: (row: Record<string, unknown>) => ({
+        eq: async () => {
+          updates.push(row);
+          return { error: null };
+        },
       }),
     }),
   }),
@@ -45,7 +52,7 @@ vi.mock("@/lib/server/llm", async (orig) => ({
     }),
 }));
 
-const { runAi, UNREADABLE_MESSAGE } = await import("@/lib/server/ai");
+const { runAi, UNREADABLE_MESSAGE, fallbackOf, finishAiRun, startAiRun } = await import("@/lib/server/ai");
 const { getModel } = await vi.importActual<typeof import("@/lib/server/llm")>("@/lib/server/llm");
 
 const schema = z.object({ name: z.string(), phone: z.string().nullable() });
@@ -62,6 +69,7 @@ const base = {
 
 beforeEach(() => {
   inserts.length = 0;
+  updates.length = 0;
   calls.length = 0;
   replies = [];
   failInsert = false;
@@ -133,5 +141,36 @@ describe("getModel", () => {
     vi.stubEnv("LLM_PROVIDER", "made-up-provider");
     vi.stubEnv("LLM_MODEL", "some-model");
     expect(() => getModel("vision")).toThrow("isn't configured");
+  });
+});
+
+describe("fallbackOf", () => {
+  it("reads the fallback key from the pool metadata, and nothing when the primary answered", () => {
+    expect(fallbackOf({ vyana_pool: { fallback: "groq:small-model" } })).toBe("groq:small-model");
+    expect(fallbackOf({})).toBeNull();
+    expect(fallbackOf(undefined)).toBeNull();
+  });
+});
+
+describe("finishAiRun", () => {
+  const record = { feature: "assistant_chat", userId: "u1", promptVersion: "assistant@1", inputRef: "chat_sessions/s1", sources: [] };
+
+  it("writes the model that really answered onto the run row (#691)", async () => {
+    const runId = await startAiRun(record, "text");
+    expect(runId).toBe("run-1");
+    await finishAiRun(runId, { output: { text: "hi" }, sources: [], status: "ok", model: "fallback:groq:small-model", usage: { provider: "groq", input_tokens: 1, output_tokens: 1, latency_ms: 2 } });
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toMatchObject({ model: "fallback:groq:small-model", status: "ok", provider: "groq" });
+  });
+
+  it("leaves the model column alone when no model is given", async () => {
+    await finishAiRun("run-1", { output: { text: "hi" }, sources: [], status: "ok" });
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).not.toHaveProperty("model");
+  });
+
+  it("does nothing without a run id", async () => {
+    await finishAiRun(null, { output: { text: "hi" }, sources: [], status: "ok", model: "fallback:groq:small-model" });
+    expect(updates).toHaveLength(0);
   });
 });

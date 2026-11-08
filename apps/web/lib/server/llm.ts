@@ -232,7 +232,23 @@ export function getModel(kind: ModelKind, options: { data?: DataClass } = {}): L
         try {
           return await doStream();
         } catch (err) {
-          return fallBack(err, params.abortSignal?.aborted === true, (m) => m.doStream(params));
+          // The stream result carries no provider metadata of its own: the stamp rides on the `finish` part, which
+          // is where streamText reads a step's provider metadata from, the same key the generate path stamps.
+          const stamp = (r: Awaited<ReturnType<typeof doStream>>, c: Candidate) => ({
+            ...r,
+            stream: r.stream.pipeThrough(
+              new TransformStream({
+                transform(part, controller) {
+                  controller.enqueue(
+                    part.type === "finish"
+                      ? { ...part, providerMetadata: { ...part.providerMetadata, [POOL_KEY]: { fallback: label(c) } } }
+                      : part,
+                  );
+                },
+              }),
+            ),
+          });
+          return fallBack(err, params.abortSignal?.aborted === true, (m, c) => m.doStream(params).then((r) => stamp(r, c)));
         }
       },
     },
