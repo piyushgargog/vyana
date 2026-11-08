@@ -6,5 +6,5 @@ import "server-only";
  */
 export function firstRow<T>(data: unknown): T | null {
   const row = Array.isArray(data) ? data[0] : data;
-  return row && typeof row === "object" ? (row as T) : null;
+  return row && typeof row === "object" && !Array.isArray(row) ? (row as T) : null;
 }

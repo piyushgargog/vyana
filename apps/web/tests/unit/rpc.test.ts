@@ -26,4 +26,8 @@ describe("firstRow", () => {
     expect(firstRow(["not a row"])).toBeNull();
     expect(firstRow(42)).toBeNull();
   });
+
+  it("returns null for a nested array answer", () => {
+    expect(firstRow([[{ id: 1 }]])).toBeNull();
+  });
 });
