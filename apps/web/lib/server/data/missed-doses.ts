@@ -116,6 +116,35 @@ export function firstName(fullName: string | null | undefined): string | null {
 
 const chunks = <T>(list: T[]): T[][] => Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, i) => list.slice(i * CHUNK, (i + 1) * CHUNK));
 
+/** One PostgREST request answers at most 1000 rows, so a read that must see every row pages by the id cursor. */
+const LINK_PAGE = 1000;
+
+/**
+ * Every row of one filtered query, paged by the id cursor (the same shape as the care agent loop's
+ * readPaged): the cursor only moves forward, so a row is never skipped or repeated, and the loop ends
+ * only on an empty page. A short page is not "done" — the server may clamp the limit below this —
+ * only an empty page is. `id` is the table's primary key, so it is always present in the rows the
+ * query selects.
+ */
+async function readPaged<T extends { id: string }>(
+  query: (cursor: string | null) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  let cursor: string | null = null;
+  for (;;) {
+    const { data, error } = await query(cursor);
+    if (error) throw error;
+    const rows = data ?? [];
+    if (rows.length === 0) return out;
+    out.push(...rows);
+    const lastId = rows[rows.length - 1].id;
+    if (typeof lastId !== "string" || lastId.length === 0) {
+      throw new Error("missed-dose check: a paged read returned a row without an id");
+    }
+    cursor = lastId;
+  }
+}
+
 /** Runs a query for many ids, `CHUNK` ids per request (a long `in (...)` list overflows a URL), and joins the rows. */
 async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
   const out: T[] = [];
@@ -146,9 +175,14 @@ export interface MissedDoseResult {
  * and the claim is released if the push service cannot be reached, so the next run tries again.
  */
 export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, now: Date = new Date()): Promise<MissedDoseResult> {
-  const { data: links, error: linkError } = await sb.from("care_links").select("patient_id, caregiver_id").eq("status", "active");
-  if (linkError) throw linkError;
-  if (!links || links.length === 0) return { checked: 0, alerts_sent: 0 };
+  // Every active care link, paged past the server's 1000-row cap: one unbounded request would
+  // silently stop at the cap and the patients past the cut would never be checked for missed doses.
+  const links = await readPaged<{ id: string; patient_id: string; caregiver_id: string }>((cursor) => {
+    let query = sb.from("care_links").select("id, patient_id, caregiver_id").eq("status", "active");
+    if (cursor !== null) query = query.gt("id", cursor);
+    return query.order("id").limit(LINK_PAGE);
+  });
+  if (links.length === 0) return { checked: 0, alerts_sent: 0 };
 
   const caregiversOf = new Map<string, string[]>();
   for (const l of links as { patient_id: string; caregiver_id: string }[]) {
