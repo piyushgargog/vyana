@@ -19,8 +19,8 @@ export const GRACE_MINUTES = MISSED_DOSE_GRACE_MINUTES;
  */
 export const CATCH_UP_MINUTES = 180;
 
-/** A dose log counts for a due dose when it is for the same medicine and within this many minutes of it. */
-const LOG_MATCH_MINUTES = 30;
+/** A dose log counts for the due dose it was written for, with this much slack for clock skew between the phone and the server. A wider window let one log stand in for a neighbouring dose of the same medicine (issue #741). */
+const LOG_SKEW_MINUTES = 5;
 const CHUNK = 100;
 const MINUTE = 60_000;
 
@@ -83,10 +83,11 @@ export function listOverdueDoses(items: CareItem[], now: Date): DueDose[] {
 
 /**
  * Of the overdue doses, those that were not handled and not alerted yet. A dose is handled when the patient logged
- * it as `taken` or `skipped` within 30 minutes of its time; no log, or a log saying `missed`, leaves it open, so a
- * caregiver also hears about a dose the patient says they missed (decided by Piyush, 13 Oct). It was alerted when
- * a `missed_dose_alerts` row exists for exactly that medicine and time. `checked` is how many overdue doses were
- * looked at.
+ * it as `taken` or `skipped` for that same scheduled time (a few minutes of slack for clock skew), matched
+ * closest first; one log stands for one dose, so a log for a later dose never clears an earlier one. No log, or a
+ * it open, so a caregiver also hears about a dose the patient says they missed (decided by Piyush, 13 Oct). It was
+ * alerted when a `missed_dose_alerts` row exists for exactly that medicine and time. `checked` is how many overdue
+ * doses were looked at.
  */
 export function findMissedDoses(
   items: CareItem[],
@@ -96,15 +97,27 @@ export function findMissedDoses(
 ): { checked: number; missed: DueDose[] } {
   const overdue = listOverdueDoses(items, now);
   const alerted = new Set(alerts.map((a) => `${a.item_id}|${new Date(a.scheduled_for).getTime()}`));
-  const missed = overdue.filter((dose) => {
-    if (alerted.has(`${dose.item_id}|${dose.due.getTime()}`)) return false;
-    return !logs.some(
-      (log) =>
-        log.status !== "missed" &&
-        log.item_id === dose.item_id &&
-        Math.abs(new Date(log.scheduled_for).getTime() - dose.due.getTime()) <= LOG_MATCH_MINUTES * MINUTE,
-    );
+  // Match logs to doses closest first, one log per dose: an exact log belongs to its own dose even
+  // when a neighbouring dose is within the skew window, so a 09:05 log never clears a 09:00 dose.
+  const pairs: { diff: number; log: number; dose: number }[] = [];
+  overdue.forEach((dose, d) => {
+    logs.forEach((log, i) => {
+      if (log.status === "missed" || log.item_id !== dose.item_id) return;
+      const diff = Math.abs(new Date(log.scheduled_for).getTime() - dose.due.getTime());
+      if (diff <= LOG_SKEW_MINUTES * MINUTE) pairs.push({ diff, log: i, dose: d });
+    });
   });
+  pairs.sort((a, b) => a.diff - b.diff);
+  const usedLogs = new Set<number>();
+  const handled = new Set<number>();
+  for (const pair of pairs) {
+    if (usedLogs.has(pair.log) || handled.has(pair.dose)) continue;
+    usedLogs.add(pair.log);
+    handled.add(pair.dose);
+  }
+  const missed = overdue.filter(
+    (dose, d) => !alerted.has(`${dose.item_id}|${dose.due.getTime()}`) && !handled.has(d),
+  );
   return { checked: overdue.length, missed };
 }
 
@@ -165,7 +178,7 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   if (overdue.length === 0) return { checked: 0, alerts_sent: 0 };
 
   const itemIds = [...new Set(overdue.map((d) => d.item_id))];
-  const since = new Date(Math.min(...overdue.map((d) => d.due.getTime())) - LOG_MATCH_MINUTES * MINUTE).toISOString();
+  const since = new Date(Math.min(...overdue.map((d) => d.due.getTime())) - LOG_SKEW_MINUTES * MINUTE).toISOString();
   const [logs, alerts] = await Promise.all([
     readChunked<DoseLogRef>(itemIds, (part) =>
       sb.from("dose_logs").select("item_id, scheduled_for, status").in("item_id", part).gte("scheduled_for", since),
