@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKETS } from "@vyana/shared";
+import { bearerToken } from "../auth";
 import { forbidden, upstream } from "../errors";
 
 /** The private buckets; every file is kept under `{user_id}/` (supabase/migrations/0003_storage.sql). */
@@ -275,8 +276,8 @@ export function lastSignInSeconds(accessToken: string): number | null {
  * asks for the password again and retries.
  */
 export function requireRecentLogin(req: Request, now: Date = new Date()): void {
-  const [scheme, token] = (req.headers.get("authorization") ?? "").split(" ");
-  const at = scheme?.toLowerCase() === "bearer" && token ? lastSignInSeconds(token) : null;
+  const token = bearerToken(req);
+  const at = token ? lastSignInSeconds(token) : null;
   if (at === null || now.getTime() / 1000 - at > RECENT_LOGIN_MINUTES * 60) {
     throw forbidden("For your safety, sign in again to delete your account.");
   }

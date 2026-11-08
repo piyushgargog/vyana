@@ -20,7 +20,8 @@ export interface AuthedUser {
   sb: SupabaseClient;
 }
 
-function bearerToken(req: Request): string | null {
+/** The access token of an `Authorization: Bearer <token>` header, or null when it is missing or not a bearer token. */
+export function bearerToken(req: Request): string | null {
   const header = req.headers.get("authorization");
   if (!header) return null;
   const [scheme, token] = header.split(" ");
