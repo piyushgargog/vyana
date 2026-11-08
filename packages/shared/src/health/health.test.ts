@@ -310,6 +310,10 @@ describe("findLastDone", () => {
     expect(findLastDone("Vitamin D", lastDone)).toBeNull();
   });
 
+  it("matches a three letter test name against the long lab name", () => {
+    expect(findLastDone("TSH", { "thyroid stimulating hormone (tsh)": "2026-08-01" })).toBe("2026-08-01");
+  });
+
   it("does not match on very short names", () => {
     expect(findLastDone("T3", { "free t3 hormone": "2026-08-01", t3: "2026-01-01" })).toBe("2026-01-01");
     expect(findLastDone("Fe", { ferritin: "2026-08-01" })).toBeNull();
@@ -317,6 +321,11 @@ describe("findLastDone", () => {
 
   it("is used by the follow-up reminders", () => {
     const plan = planFollowUpReminders("cp-1", [{ test: "HbA1c", every_days: 90 }], { "glycated haemoglobin (hba1c)": "2026-08-01" }, "2026-01-01", at(12, 12));
+    expect(plan[0].at.getTime()).toBe(at(30, 10).getTime()); // 2026-08-01 + 90 days, not 2026-01-01 + 90
+  });
+
+  it("dates a TSH follow-up from the last measurement, not the approval date", () => {
+    const plan = planFollowUpReminders("cp-1", [{ test: "TSH", every_days: 90 }], { "thyroid stimulating hormone (tsh)": "2026-08-01" }, "2026-01-01", at(12, 12));
     expect(plan[0].at.getTime()).toBe(at(30, 10).getTime()); // 2026-08-01 + 90 days, not 2026-01-01 + 90
   });
 });
