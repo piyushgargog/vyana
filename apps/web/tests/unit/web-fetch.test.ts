@@ -3,8 +3,9 @@ import { fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
-const { fetchPage, htmlToText } = await import("@/lib/server/web/fetch-page");
+const { fetchPage, htmlToText, stripTags } = await import("@/lib/server/web/fetch-page");
 const { parseTopics, searchHealthTopics } = await import("@/lib/server/web/medlineplus");
+const { parseRow } = await import("@/lib/server/web/eraktkosh");
 const { isOnDomain, isTrustedHealthUrl } = await import("@/lib/server/web/domains");
 
 const ALLOWED = ["medlineplus.gov", "nhs.uk"];
@@ -55,6 +56,27 @@ describe("htmlToText", () => {
 
   it("decodes numeric and common named entities once, and ignores nonsense ones", () => {
     expect(htmlToText("<p>A &#8594; B &rarr; C &#x2013; D &unknown; E &#1114112; F &amp;lt;</p>").text).toBe("A \u2192 B \u2192 C \u2013 D &unknown; E F &lt;");
+  });
+
+  it("drops tags and keeps the text between them", () => {
+    expect(stripTags("<b>one</b> two <i>three</i>")).toBe("one two three");
+    expect(stripTags("plain text")).toBe("plain text");
+  });
+
+  it("reads one tagged string with mixed entities the same through both readers", () => {
+    const area = { label: "Delhi", stateCode: "97", districtCode: "-1", mustContain: null };
+    const bank = parseRow(
+      ["1", "<b>City&nbsp;Hospital &amp; Care</b><br/>1 Road<br/>Phone: 9000000001", "Govt.", "Available, B-Ve:5", "2026-10-21 15:46:50"],
+      area,
+      "Whole Blood",
+      "2026-10-21T10:00:00.000Z",
+    );
+    const topics = parseTopics(
+      `<?xml version="1.0"?><nlmSearchResult><list><document url="https://medlineplus.gov/city-hospital.html"><content name="title">&lt;b&gt;City&nbsp;Hospital &amp; Care&lt;/b&gt;</content><content name="FullSummary">Care</content></document></list></nlmSearchResult>`,
+      5,
+    );
+    expect(bank?.name).toBe("City Hospital & Care");
+    expect(topics[0]?.title).toBe("City Hospital & Care");
   });
 
   it("does not hang or throw on broken markup", () => {

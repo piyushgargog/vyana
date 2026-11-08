@@ -2,6 +2,7 @@ import "server-only";
 import type { BloodBank, BloodComponent, BloodGroup } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
+import { decodeEntities, stripTags } from "./fetch-page";
 
 /**
  * e-RaktKosh (NHM / C-DAC) blood stock, read the way its own public page reads it (ADR-072): three GET calls that answer JSON
@@ -140,24 +141,8 @@ export async function resolveAreas(city: string): Promise<Area[]> {
 
 // ---------------------------------------------------------------- rows
 
-const cleanText = (html: string): string => {
-  let out = "";
-  let inTag = false;
-  for (const ch of html) {
-    if (ch === "<") inTag = true;
-    else if (ch === ">") inTag = false;
-    else if (!inTag) out += ch;
-  }
-  // `&amp;` is decoded last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice.
-  return out
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-};
+/** Tags dropped by the shared stripper, entities decoded by the shared decoder (`&amp;` last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice). */
+const cleanText = (html: string): string => decodeEntities(stripTags(html)).replace(/\s+/g, " ").trim();
 
 /**
  * "Available, B-Ve:16" → 16. Anything else (for example "Not Available") has no count. We always ask for one blood group, so the cell

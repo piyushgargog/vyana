@@ -44,6 +44,18 @@ function codePoint(n: number): string {
   return Number.isInteger(n) && n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : "";
 }
 
+/** Drops `<...>` markup from a short string, keeping the text between tags. A character loop, not a regex, so a stray `<` in text cannot eat the rest of the string. */
+export function stripTags(s: string): string {
+  let out = "";
+  let inTag = false;
+  for (const ch of s) {
+    if (ch === "<") inTag = true;
+    else if (ch === ">") inTag = false;
+    else if (!inTag) out += ch;
+  }
+  return out;
+}
+
 export function decodeEntities(s: string): string {
   // `&amp;` last, so "&amp;lt;" ends as the text "&lt;" and is not decoded twice.
   return s
