@@ -6,7 +6,7 @@ import { z } from "zod";
 
 /**
  * The LLM output shape of one extracted field (§2A rule 1): the value the model read, wrapped with the exact
- * source text it quotes as evidence. `verifyEvidence` / `evidenceFound` below check that evidence afterwards.
+ * source text it quotes as evidence. `evidenceFound` below checks that evidence afterwards.
  */
 export const field = <T extends z.ZodTypeAny>(value: T) => z.object({ value: value.nullable(), evidence: z.string().nullable() });
 
@@ -31,39 +31,6 @@ export function evidenceFound(docText: string, evidence: string | null | undefin
   if (!evidence) return false;
   const needle = normalizeText(evidence);
   return needle.length > 0 && normalizeText(docText).includes(needle);
-}
-
-export interface EvidenceField<V> {
-  value: V | null;
-  evidence: string | null | undefined;
-}
-
-/**
- * Checks every field against the document. A field whose evidence is missing or not found loses its value,
- * and the row is marked `needs_review` so a human confirms it.
- */
-export function verifyEvidence<F extends Record<string, unknown>>(
-  docText: string,
-  fields: { [K in keyof F]: EvidenceField<F[K]> },
-): { values: { [K in keyof F]: F[K] | null }; failed: (keyof F)[]; needs_review: boolean } {
-  const doc = normalizeText(docText);
-  const values = {} as { [K in keyof F]: F[K] | null };
-  const failed: (keyof F)[] = [];
-  for (const key of Object.keys(fields) as (keyof F)[]) {
-    const { value, evidence } = fields[key];
-    if (value === null) {
-      values[key] = null;
-      continue;
-    }
-    const needle = evidence ? normalizeText(evidence) : "";
-    if (needle && doc.includes(needle)) {
-      values[key] = value;
-    } else {
-      values[key] = null;
-      failed.push(key);
-    }
-  }
-  return { values, failed, needs_review: failed.length > 0 };
 }
 
 /**

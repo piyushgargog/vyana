@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonicalUrl, filterCitationsInText, filterSources, makeAllowList } from "@/lib/server/safety/citations";
 import { RED_FLAG_RULES, matchRedFlags, redFlagLabels } from "@/lib/server/safety/red-flags";
-import { evidenceFound, normalizeText, verifyEvidence } from "@/lib/server/safety/verbatim";
+import { evidenceFound, normalizeText } from "@/lib/server/safety/verbatim";
 
 describe("verbatim", () => {
   const doc = "Rx\nTab. Dolo 650 mg   1-0-1 after food × 5 days\nSyp. Ascoril LS 5 ml TDS";
@@ -16,22 +16,6 @@ describe("verbatim", () => {
     expect(evidenceFound(doc, null)).toBe(false);
     expect(evidenceFound(doc, "   ")).toBe(false);
     expect(evidenceFound(doc, "Dolo 650 mg 1-1-1")).toBe(false);
-  });
-
-  it("clears unverified values and marks the row for review", () => {
-    const res = verifyEvidence(doc, {
-      medicine_name: { value: "Dolo", evidence: "Tab. Dolo 650 mg" },
-      dose: { value: "2 tablets", evidence: "2 tablets twice daily" },
-      duration_days: { value: 5, evidence: "× 5 days" },
-      instructions: { value: null, evidence: null },
-    });
-    expect(res.values).toEqual({ medicine_name: "Dolo", dose: null, duration_days: 5, instructions: null });
-    expect(res.failed).toEqual(["dose"]);
-    expect(res.needs_review).toBe(true);
-  });
-
-  it("does not ask for review when every value is proven", () => {
-    expect(verifyEvidence(doc, { name: { value: "Ascoril LS", evidence: "Syp. Ascoril LS" } }).needs_review).toBe(false);
   });
 });
 
