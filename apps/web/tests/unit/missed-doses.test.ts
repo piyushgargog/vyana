@@ -122,12 +122,18 @@ function memoryDb(seed: Record<string, Row[]>) {
       let op: "select" | "delete" | "upsert" = "select";
       let upserts: Row[] = [];
       let ignoreDuplicates = false;
+      let limitN: number | null = null;
+      let sortCol: string | null = null;
+      let sortAsc = true;
       const same = (a: Row, b: Row) => a.item_id === b.item_id && time(a.scheduled_for) === time(b.scheduled_for);
       const chain = {
         select: () => chain,
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), chain),
         in: (c: string, list: unknown[]) => (filters.push((r) => list.includes(r[c])), chain),
         gte: (c: string, v: unknown) => (filters.push((r) => time(r[c]) >= time(v)), chain),
+        gt: (c: string, v: unknown) => (filters.push((r) => String(r[c] ?? "") > String(v)), chain),
+        order: (c: string, opts: { ascending?: boolean } = {}) => ((sortCol = c), (sortAsc = opts.ascending ?? true), chain),
+        limit: (n: number) => ((limitN = n), chain),
         delete: () => ((op = "delete"), chain),
         upsert: (rows: Row[], opts: { ignoreDuplicates?: boolean }) => ((op = "upsert"), (upserts = rows), (ignoreDuplicates = !!opts.ignoreDuplicates), chain),
         then: (resolve: (v: { data: Row[] | null; error: null }) => unknown) => {
@@ -149,7 +155,17 @@ function memoryDb(seed: Record<string, Row[]>) {
             }
             return resolve({ data: inserted, error: null });
           }
-          return resolve({ data: table(name).filter((r) => filters.every((f) => f(r))).map((r) => ({ ...r })), error: null });
+          const rows = table(name).filter((r) => filters.every((f) => f(r)));
+          if (sortCol) {
+            const col = sortCol;
+            rows.sort((a, b) => {
+              const av = String(a[col] ?? "");
+              const bv = String(b[col] ?? "");
+              return sortAsc ? (av < bv ? -1 : av > bv ? 1 : 0) : av > bv ? -1 : av < bv ? 1 : 0;
+            });
+          }
+          // One PostgREST request answers at most 1000 rows: a read with no limit is silently cut there.
+          return resolve({ data: rows.slice(0, limitN ?? 1000).map((r) => ({ ...r })), error: null });
         },
       };
       return chain;
@@ -162,7 +178,7 @@ const ok = (n: number): PushResult => ({ sent: n, failed: 0, invalidTokens: [] }
 
 function world(extra: Record<string, Row[]> = {}) {
   return memoryDb({
-    care_links: [{ patient_id: "p-1", caregiver_id: "c-1", status: "active" }],
+    care_links: [{ id: "link-1", patient_id: "p-1", caregiver_id: "c-1", status: "active" }],
     prescription_items: [{ id: "i-1", patient_id: "p-1", times: ["09:00", "21:00"], start_date: "2026-10-01", end_date: null, active: true }],
     dose_logs: [],
     missed_dose_alerts: [],
@@ -240,7 +256,7 @@ describe("runMissedDoseCheck", () => {
   it("does nothing for a patient without an active caregiver", async () => {
     const send = vi.fn(async () => ok(0));
     expect(await runMissedDoseCheck(world({ care_links: [] }).sb, send, now)).toEqual({ checked: 0, alerts_sent: 0 });
-    expect(await runMissedDoseCheck(world({ care_links: [{ patient_id: "p-1", caregiver_id: "c-1", status: "revoked" }] }).sb, send, now)).toEqual({
+    expect(await runMissedDoseCheck(world({ care_links: [{ id: "link-1", patient_id: "p-1", caregiver_id: "c-1", status: "revoked" }] }).sb, send, now)).toEqual({
       checked: 0,
       alerts_sent: 0,
     });
@@ -250,8 +266,8 @@ describe("runMissedDoseCheck", () => {
   it("sends to every phone of every caregiver but counts one alert for the dose", async () => {
     const db = world({
       care_links: [
-        { patient_id: "p-1", caregiver_id: "c-1", status: "active" },
-        { patient_id: "p-1", caregiver_id: "c-2", status: "active" },
+        { id: "link-1", patient_id: "p-1", caregiver_id: "c-1", status: "active" },
+        { id: "link-2", patient_id: "p-1", caregiver_id: "c-2", status: "active" },
       ],
       push_tokens: [
         { user_id: "c-1", token: "ExponentPushToken[a]" },
@@ -328,6 +344,26 @@ describe("runMissedDoseCheck", () => {
     }
   });
 
+  it("still checks the patient past the 1000th active care link (#693)", async () => {
+    const pad = (n: number) => String(n).padStart(4, "0");
+    const links = Array.from({ length: 1001 }, (_, i) => ({
+      id: `link-${pad(i + 1)}`,
+      patient_id: `p-${pad(i + 1)}`,
+      caregiver_id: "c-1",
+      status: "active",
+    }));
+    const db = world({
+      care_links: links,
+      // Only the last link's patient has a medicine due: it sits past the server's 1000-row cap.
+      prescription_items: [{ id: "i-1001", patient_id: "p-1001", times: ["09:00"], start_date: "2026-10-01", end_date: null, active: true }],
+      profiles: [{ id: "p-1001", full_name: "Aryan Sharma" }],
+    });
+    const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    expect(await runMissedDoseCheck(db.sb, send, now)).toEqual({ checked: 1, alerts_sent: 1 });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0][0]).toMatchObject({ to: "ExponentPushToken[care1]", data: { patient_id: "p-1001", item_id: "i-1001" } });
+  });
+
   it("shows only the first name on the lock screen", async () => {
     const db = world({ profiles: [{ id: "p-1", full_name: "  Aryan Kumar Sharma " }] });
     const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
@@ -340,7 +376,7 @@ describe("runMissedDoseCheck", () => {
   it("handles each patient of a large family list, reading ids 100 at a time", async () => {
     const patients = Array.from({ length: 205 }, (_, i) => `p-${i}`);
     const db = memoryDb({
-      care_links: patients.map((p) => ({ patient_id: p, caregiver_id: "c-1", status: "active" })),
+      care_links: patients.map((p, i) => ({ id: `link-${String(i).padStart(3, "0")}`, patient_id: p, caregiver_id: "c-1", status: "active" })),
       prescription_items: patients.map((p, i) => ({ id: `i-${i}`, patient_id: p, times: ["09:00"], start_date: "2026-10-01", end_date: null, active: true })),
       dose_logs: [],
       missed_dose_alerts: [],
