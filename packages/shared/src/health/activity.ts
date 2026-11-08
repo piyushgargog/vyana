@@ -286,6 +286,14 @@ function spotChart(
     metric === "bp" && last.reading.value2 !== null
       ? `${last.reading.value}/${last.reading.value2} ${last.reading.unit}`
       : `${last.reading.value} ${last.reading.unit}${kind ? ` (${kind})` : ""}`;
+  // Fasting and random glucose are different measurements, so one average across both
+  // would be a number that means nothing. The glucose label names the range only; the
+  // latest reading still names its kind. Splitting the two kinds into separate series
+  // is a product call for Piyush, not part of this fix.
+  const label =
+    metric === "glucose"
+      ? `${SPOT_TITLES[metric]}, last ${range} days`
+      : `${SPOT_TITLES[metric]}, last ${range} days, average ${Math.round(avg ?? 0)} ${unit}`;
   return {
     metric,
     title: SPOT_TITLES[metric],
@@ -300,7 +308,7 @@ function spotChart(
       at: last.reading.measured_at,
       from: sourceLabel(last.reading.source, last.reading.device_name),
     },
-    label: `${SPOT_TITLES[metric]}, last ${range} days, average ${Math.round(avg ?? 0)} ${unit}`,
+    label,
   };
 }
 
