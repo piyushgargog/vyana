@@ -130,7 +130,41 @@ describe("verifyRx", () => {
       "2026-10-12",
     );
     expect(rx.items).toEqual([]);
-    expect(rx.warnings[0]).toContain("line 1");
+    expect(rx.warnings.join(" ")).toContain("line 1");
+    expect(rx.anyReview).toBe(true);
+  });
+
+  it("warns when the prescription date cannot be read, instead of quietly using today (#694)", () => {
+    const rx = verifyRx(
+      {
+        doctor_name: none(),
+        diagnosis: none(),
+        issued_on: f("2026-10-01", "issued 1 Oct"), // not in the text, so the date is unreadable
+        items: [item({ medicine_name: f("Metformin", "Tab. Metformin 500 mg") })],
+      },
+      text,
+      map,
+      "2026-10-12",
+    );
+    expect(rx.issued_on).toBe("2026-10-12");
+    expect(rx.warnings.join(" ")).toContain("Couldn't read the prescription date, so today is used for now. Please check the date.");
+    expect(rx.anyReview).toBe(true);
+  });
+
+  it("warns when the prescription date is written in a form the code cannot use", () => {
+    const rx = verifyRx(
+      {
+        doctor_name: none(),
+        diagnosis: none(),
+        issued_on: f("10/10/2026", "Date: 10/10/2026"),
+        items: [item({ medicine_name: f("Metformin", "Tab. Metformin 500 mg") })],
+      },
+      "Dr. [NAME_1], MBBS\nDate: 10/10/2026\nDiagnosis: Type 2 Diabetes\n1. Tab. Metformin 500 mg 1-0-1 after food x 30 days",
+      map,
+      "2026-10-12",
+    );
+    expect(rx.issued_on).toBe("2026-10-12");
+    expect(rx.warnings.join(" ")).toContain("Couldn't read the prescription date");
     expect(rx.anyReview).toBe(true);
   });
 

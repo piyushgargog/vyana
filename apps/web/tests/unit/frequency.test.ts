@@ -61,7 +61,7 @@ const rx = (frequency: ReturnType<typeof f<RxLlm["items"][number]["frequency"]["
   const out: RxLlm = {
     doctor_name: none(),
     diagnosis: none(),
-    issued_on: none(),
+    issued_on: f("2026-10-13", "Date: 2026-10-13"),
     items: [
       {
         medicine_name: f("Metformin", "Metformin"),
@@ -81,7 +81,7 @@ const rx = (frequency: ReturnType<typeof f<RxLlm["items"][number]["frequency"]["
 };
 
 describe("verifyRx uses the code's reading of the schedule", () => {
-  const text = "Tab Metformin 500 mg 1-0-1 after food 30 days";
+  const text = "Date: 2026-10-13\nTab Metformin 500 mg 1-0-1 after food 30 days";
 
   it("the live failure: the model said OD for 1-0-1, the code makes it BD and asks the patient to check", () => {
     const res = rx(f("OD", "1-0-1"), text);
