@@ -91,10 +91,15 @@ export interface VerifiedItem extends Omit<PrescriptionItem, "id"> {
 export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, today: string) {
   const warnings: string[] = [];
   const back = (s: string | null) => (s === null ? null : restore(s, map).trim());
-  const issuedRaw = proven(text, out.issued_on);
-  const issued_on = issuedRaw && isoDate.safeParse(issuedRaw).success ? issuedRaw : today;
-  const items: VerifiedItem[] = [];
   let anyReview = false;
+  const issuedRaw = proven(text, out.issued_on);
+  const issuedDate = issuedRaw && isoDate.safeParse(issuedRaw).success ? issuedRaw : null;
+  const issued_on = issuedDate ?? today;
+  if (!issuedDate) {
+    warnings.push("Couldn't read the prescription date, so today is used for now. Please check the date.");
+    anyReview = true;
+  }
+  const items: VerifiedItem[] = [];
 
   out.items.forEach((it, i) => {
     const name = back(proven(text, it.medicine_name));
