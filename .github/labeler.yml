@@ -6,6 +6,8 @@ frontend:
           - "apps/web/components/**"
           - "apps/mobile/src/app/**"
           - "apps/mobile/src/components/**"
+          - "apps/mobile/eas.json"
+          - "apps/mobile/app.json"
 database:
   - changed-files:
       - any-glob-to-any-file:
@@ -15,6 +17,7 @@ database:
           - "packages/shared/src/providers/**"
           - "apps/web/lib/supabase/**"
           - "apps/mobile/src/lib/**"
+          - "packages/shared/src/constants.ts"
 backend:
   - changed-files:
       - any-glob-to-any-file:
@@ -22,7 +25,9 @@ backend:
           - "apps/web/lib/server/**"
           - "packages/shared/src/contracts/**"
           - "packages/shared/src/api/**"
+          - "packages/shared/src/hooks/api/**"
           - "packages/shared/src/mocks/**"
+          - "apps/web/proxy.ts"
 ci:
   - changed-files:
       - any-glob-to-any-file: [".github/**"]
