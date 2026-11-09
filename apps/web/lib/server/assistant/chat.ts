@@ -17,7 +17,7 @@ import { getModel, isLlmMock, modelName } from "../llm";
 import { log } from "../log";
 import { findDosePatterns } from "../safety/blocklists";
 import { matchRedFlags } from "../safety/red-flags";
-import { redact } from "../safety/redact";
+import { knownNamesOf, redact } from "../safety/redact";
 import { ReplyGuard } from "./guard";
 import { scriptedAssistantModel } from "./mock-model";
 import { ASSISTANT_PROMPT_VERSION, EMERGENCY_NOTICE, assistantSystemPrompt } from "./system-prompt";
@@ -110,7 +110,7 @@ export async function assistantChat(authed: AuthedUser, body: ChatBody): Promise
   if (saveError) throw saveError;
 
   const emergency = matchRedFlags(question).length > 0;
-  const { messages, placeholders } = redactHistory(turns, profile.full_name ? [profile.full_name] : []);
+  const { messages, placeholders } = redactHistory(turns, knownNamesOf(profile.full_name));
   const guard = new ReplyGuard({ language, placeholders, doseQuestion: isDoseQuestion(question) });
   // The reply streams after the route has logged its line, so the AI run is recorded here.
   const started = Date.now();

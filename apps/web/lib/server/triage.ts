@@ -6,7 +6,7 @@ import type { AuthedUser } from "./auth";
 import { log } from "./log";
 import { TRIAGE_PROMPT_VERSION, TRIAGE_SYSTEM, triagePrompt } from "./prompts/triage";
 import { matchRedFlags, redFlagLabels } from "./safety/red-flags";
-import { redact } from "./safety/redact";
+import { knownNamesOf, redact } from "./safety/redact";
 import { supabaseAdmin } from "./supabase-admin";
 
 /**
@@ -93,7 +93,7 @@ export async function triage({ user, profile }: AuthedUser, body: TriageReq): Pr
 
   // 2. The model only classifies, from redacted text and our department list.
   const allowed = await allowedDepartments();
-  const knownNames = profile.full_name ? [profile.full_name] : [];
+  const knownNames = knownNamesOf(profile.full_name);
   const symptoms = redact(body.symptoms, { knownNames }).text;
   const duration = body.duration ? redact(body.duration, { knownNames }).text : undefined;
 
