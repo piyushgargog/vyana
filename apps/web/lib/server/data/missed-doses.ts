@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MISSED_DOSE_GRACE_MINUTES } from "@vyana/shared";
 import { istDate } from "../dates";
-import type { PushMessage, PushResult } from "../push";
+import { PartialPushError, type PushMessage, type PushResult } from "../push";
 
 /**
  * The medicine times in the database are wall-clock times in India (no daylight saving, UTC+5:30), and the
@@ -129,6 +129,9 @@ async function readChunked<T>(ids: string[], query: (part: string[]) => PromiseL
 
 export type PushSender = (messages: PushMessage[]) => Promise<PushResult>;
 
+/** A message is one dose on one phone: the dose it is about, plus the token it went to. */
+const messageKey = (m: PushMessage) => `${m.data?.item_id ?? ""}|${m.data?.scheduled_for ?? ""}|${m.to}`;
+
 export interface MissedDoseResult {
   /** Overdue doses of patients with a caregiver that were looked at. */
   checked: number;
@@ -223,8 +226,16 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   try {
     pushed = await send(messages);
   } catch (error) {
-    // Could not reach the push service: give the doses back so the next run tries again.
-    for (const m of claimed) {
+    // The push service failed after some chunks went out: keep the doses whose messages were all
+    // accepted, and give back only the rest, so the next run does not send the same alert twice.
+    // A plain throw means nothing is known to have gone out, so every dose is given back.
+    const sentKeys = new Set((error instanceof PartialPushError ? error.partial.sentMessages : []).map((m) => messageKey(m)));
+    const unsent = claimed.filter((m) =>
+      messages.some(
+        (msg) => msg.data?.item_id === m.item_id && msg.data?.scheduled_for === m.due.toISOString() && !sentKeys.has(messageKey(msg)),
+      ),
+    );
+    for (const m of unsent) {
       await sb.from("missed_dose_alerts").delete().eq("item_id", m.item_id).eq("scheduled_for", m.due.toISOString());
     }
     throw error;

@@ -1,5 +1,5 @@
 import "server-only";
-import { upstream } from "./errors";
+import { AppError } from "./errors";
 
 /** Expo's push service: one POST with up to 100 messages. */
 export const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -24,6 +24,20 @@ export interface PushResult {
   failed: number;
   /** Tokens that no longer work (app uninstalled, token expired) or are not Expo tokens: delete them. */
   invalidTokens: string[];
+  /** The messages the push service accepted, so a caller can tell which ones went out. */
+  sentMessages: PushMessage[];
+}
+
+/**
+ * Thrown when the push service fails after some messages were already accepted. `partial` reports
+ * what went out before the failure, so the caller releases only the messages that did not go out
+ * instead of sending the whole batch again.
+ */
+export class PartialPushError extends AppError {
+  constructor(public readonly partial: PushResult) {
+    super("UPSTREAM_ERROR", "The push service did not answer.", 502);
+    this.name = "PartialPushError";
+  }
 }
 
 export function isExpoPushToken(token: string): boolean {
@@ -38,15 +52,17 @@ interface Ticket {
 
 /**
  * Sends push notifications through Expo, 100 at a time. A network error or a non-2xx answer from Expo
- * throws (502), so the caller can try again later. A refusal of a single message does not throw: it is
- * counted, and a dead token (`DeviceNotRegistered`) is returned in `invalidTokens`.
+ * throws (502), so the caller can try again later. When a later chunk fails, the throw is a
+ * `PartialPushError` carrying the messages the earlier chunks already delivered, so the caller can keep
+ * those and retry only the rest. A refusal of a single message does not throw: it is counted, and a dead
+ * token (`DeviceNotRegistered`) is returned in `invalidTokens`.
  *
  * Never put health details in `title` or `body`: they show on a locked screen. If Expo's "enhanced push
  * security" is on, set `EXPO_ACCESS_TOKEN`.
  */
 export async function sendPush(messages: PushMessage[], options: { fetch?: typeof fetch } = {}): Promise<PushResult> {
   const doFetch = options.fetch ?? fetch;
-  const result: PushResult = { sent: 0, failed: 0, invalidTokens: [] };
+  const result: PushResult = { sent: 0, failed: 0, invalidTokens: [], sentMessages: [] };
 
   const valid: PushMessage[] = [];
   for (const m of messages) {
@@ -68,17 +84,19 @@ export async function sendPush(messages: PushMessage[], options: { fetch?: typeo
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {
-      throw upstream("The push service did not answer.");
+      throw new PartialPushError(result);
     }
-    if (!res.ok) throw upstream("The push service refused the request.");
+    if (!res.ok) throw new PartialPushError(result);
 
     const json = (await res.json().catch(() => null)) as { data?: Ticket[] } | null;
     const tickets = json?.data;
-    if (!Array.isArray(tickets) || tickets.length !== chunk.length) throw upstream("The push service sent an unexpected answer.");
+    if (!Array.isArray(tickets) || tickets.length !== chunk.length) throw new PartialPushError(result);
 
     tickets.forEach((ticket, index) => {
-      if (ticket.status === "ok") result.sent++;
-      else if (ticket.details?.error === "DeviceNotRegistered") result.invalidTokens.push(chunk[index].to);
+      if (ticket.status === "ok") {
+        result.sent++;
+        result.sentMessages.push(chunk[index]);
+      } else if (ticket.details?.error === "DeviceNotRegistered") result.invalidTokens.push(chunk[index].to);
       else result.failed++;
     });
   }
