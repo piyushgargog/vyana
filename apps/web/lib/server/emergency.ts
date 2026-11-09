@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmergencySosReq, EmergencySosRes, Hospital } from "@vyana/shared";
 import { log } from "./log";
+import { readRows } from "./rows";
 import { supabaseAdmin } from "./supabase-admin";
 import { findNearbyHospitals } from "./web/overpass";
 
@@ -43,11 +44,12 @@ export async function startSos(
 
   const [nearby, contacts] = await Promise.all([
     nearbyWithin(body.lat, body.lng),
-    sb
-      .from("emergency_contacts")
-      .select("name, phone")
-      .eq("patient_id", user.id)
-      .then(({ data }) => ((data ?? []) as { name: string; phone: string }[]).map((c) => ({ name: c.name, phone: c.phone }))),
+    readRows<{ name: string; phone: string }>(
+      sb.from("emergency_contacts").select("name, phone").eq("patient_id", user.id),
+    )
+      // The request is already made: a contacts read that fails still answers with no contacts.
+      .catch(() => [] as { name: string; phone: string }[])
+      .then((rows) => rows.map((c) => ({ name: c.name, phone: c.phone }))),
   ]);
 
   const { error: updateError } = await supabaseAdmin()

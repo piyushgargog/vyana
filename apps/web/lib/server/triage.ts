@@ -7,6 +7,7 @@ import { log } from "./log";
 import { TRIAGE_PROMPT_VERSION, TRIAGE_SYSTEM, triagePrompt } from "./prompts/triage";
 import { matchRedFlags, redFlagLabels } from "./safety/red-flags";
 import { redact } from "./safety/redact";
+import { readRows } from "./rows";
 import { supabaseAdmin } from "./supabase-admin";
 
 /**
@@ -67,9 +68,12 @@ export function matchDepartments(names: string[], allowed: string[]): string[] {
 
 /** Distinct department names from the seeded hospitals (public data). */
 async function allowedDepartments(): Promise<string[]> {
-  const { data, error } = await supabaseAdmin().from("departments").select("name");
-  if (error) log({ event: "triage_departments_failed" });
-  const names = [...new Set(((data ?? []) as { name: string }[]).map((d) => d.name.trim()).filter(Boolean))].sort();
+  // A departments read that fails still answers with the default department only.
+  const departments = await readRows<{ name: string }>(supabaseAdmin().from("departments").select("name")).catch(() => {
+    log({ event: "triage_departments_failed" });
+    return [] as { name: string }[];
+  });
+  const names = [...new Set(departments.map((d) => d.name.trim()).filter(Boolean))].sort();
   return names.includes(DEFAULT_DEPARTMENT) ? names : [...names, DEFAULT_DEPARTMENT];
 }
 
