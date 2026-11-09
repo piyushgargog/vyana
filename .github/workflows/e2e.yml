@@ -35,6 +35,10 @@ jobs:
           E2E_PASSWORD_PATIENT: ${{ secrets.E2E_PASSWORD_PATIENT }}
           E2E_PASSWORD_DOCTOR: ${{ secrets.E2E_PASSWORD_DOCTOR }}
       - name: Upload traces and screenshots on failure
+        # Traces record network activity, so a failure artifact can carry the signed-in
+        # demo session tokens until they expire. The accounts are demo only and the
+        # artifacts are readable only by people with repo access, but keep the retention
+        # short (3 days) so the exposure window stays small. (Issue #721.)
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -42,4 +46,4 @@ jobs:
           path: |
             test-results/
             playwright-report/
-          retention-days: 7
+          retention-days: 3
