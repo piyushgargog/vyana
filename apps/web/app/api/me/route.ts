@@ -1,6 +1,6 @@
 import { OkRes } from "@vyana/shared";
-import { requireUser } from "@/lib/server/auth";
-import { deleteMyAccount, requireRecentLogin } from "@/lib/server/data/account";
+import { requireRecentLogin, requireUser } from "@/lib/server/auth";
+import { deleteMyAccount } from "@/lib/server/data/account";
 import { jsonRes, NO_STORE, withRoute } from "@/lib/server/errors";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 

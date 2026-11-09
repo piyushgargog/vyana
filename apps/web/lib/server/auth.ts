@@ -1,7 +1,8 @@
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { forbidden, unauthorized } from "./errors";
-import { supabaseAdmin, supabaseForUser } from "./supabase-admin";
+import { requireEnv, supabaseAdmin, supabaseForUser } from "./supabase-admin";
 
 export type Role = "patient" | "doctor" | "admin";
 
@@ -61,4 +62,53 @@ async function authenticate(req: Request): Promise<AuthedUser> {
 /** Wrong role → 403 `FORBIDDEN`. */
 export function requireRole(profile: Profile, ...roles: Role[]): void {
   if (!roles.includes(profile.role)) throw forbidden();
+}
+
+/**
+ * Scheduled jobs call their route without a user token. They send the shared secret in the
+ * `x-cron-secret` header (the same value as the `CRON_SECRET` environment variable); anything else is a 401.
+ * The comparison takes the same time whatever the guess, and a missing `CRON_SECRET` is a deploy bug (500),
+ * never an open route.
+ */
+export function requireCronSecret(req: Request): void {
+  const expected = requireEnv("CRON_SECRET");
+  const given = req.headers.get("x-cron-secret");
+  if (!given) throw unauthorized("Missing cron secret");
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(expected).digest();
+  if (!timingSafeEqual(a, b)) throw unauthorized("Wrong cron secret");
+}
+
+/** Deleting an account asks for a sign-in this recent (the contract says "requires a recent login"). */
+export const RECENT_LOGIN_MINUTES = 15;
+
+/** When the user last signed in, in seconds since 1970, from the claims of their access token; null if there is none. */
+export function lastSignInSeconds(accessToken: string): number | null {
+  const payload = accessToken.split(".")[1];
+  if (!payload) return null;
+  let claims: { iat?: unknown; amr?: unknown };
+  try {
+    claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+  // `amr` lists how and when the session was signed in; it survives a refresh of the token, `iat` does not.
+  const times = Array.isArray(claims.amr)
+    ? claims.amr.map((a: { timestamp?: unknown }) => a?.timestamp).filter((t): t is number => typeof t === "number")
+    : [];
+  if (times.length > 0) return Math.max(...times);
+  return typeof claims.iat === "number" ? claims.iat : null;
+}
+
+/**
+ * A stolen or forgotten session must not be able to delete an account: the access token is already verified by
+ * `requireUser`, and this asks that the user signed in within `RECENT_LOGIN_MINUTES`. Otherwise 403, and the app
+ * asks for the password again and retries.
+ */
+export function requireRecentLogin(req: Request, now: Date = new Date()): void {
+  const [scheme, token] = (req.headers.get("authorization") ?? "").split(" ");
+  const at = scheme?.toLowerCase() === "bearer" && token ? lastSignInSeconds(token) : null;
+  if (at === null || now.getTime() / 1000 - at > RECENT_LOGIN_MINUTES * 60) {
+    throw forbidden("For your safety, sign in again to delete your account.");
+  }
 }

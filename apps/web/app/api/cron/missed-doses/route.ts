@@ -1,4 +1,4 @@
-import { requireCronSecret } from "@/lib/server/data/cron-auth";
+import { requireCronSecret } from "@/lib/server/auth";
 import { runMissedDoseCheck } from "@/lib/server/data/missed-doses";
 import { withRoute } from "@/lib/server/errors";
 import { sendPush } from "@/lib/server/push";
