@@ -102,6 +102,7 @@ vi.mock("@/lib/server/supabase-admin", () => ({
 }));
 
 const account = await import("@/lib/server/data/account");
+const auth = await import("@/lib/server/auth");
 const { GET: exportGet } = await import("@/app/api/me/export/route");
 const { DELETE: deleteMe } = await import("@/app/api/me/route");
 const { supabaseAdmin } = await import("@/lib/server/supabase-admin");
@@ -264,14 +265,14 @@ describe("exportMyData", () => {
 
 describe("lastSignInSeconds", () => {
   it("takes the latest sign-in time of the session", () => {
-    expect(account.lastSignInSeconds(jwt({ iat: 500, amr: [{ method: "password", timestamp: 100 }, { method: "otp", timestamp: 300 }] }))).toBe(300);
+    expect(auth.lastSignInSeconds(jwt({ iat: 500, amr: [{ method: "password", timestamp: 100 }, { method: "otp", timestamp: 300 }] }))).toBe(300);
   });
   it("uses iat without amr, and ignores an amr without times", () => {
-    expect(account.lastSignInSeconds(jwt({ iat: 500 }))).toBe(500);
-    expect(account.lastSignInSeconds(jwt({ iat: 500, amr: [{ method: "password" }] }))).toBe(500);
+    expect(auth.lastSignInSeconds(jwt({ iat: 500 }))).toBe(500);
+    expect(auth.lastSignInSeconds(jwt({ iat: 500, amr: [{ method: "password" }] }))).toBe(500);
   });
   it("is null for something that is not a token", () => {
-    for (const bad of ["", "abc", "a.b", "a.%%%.c", `a.${Buffer.from("not json").toString("base64url")}.c`]) expect(account.lastSignInSeconds(bad)).toBeNull();
+    for (const bad of ["", "abc", "a.b", "a.%%%.c", `a.${Buffer.from("not json").toString("base64url")}.c`]) expect(auth.lastSignInSeconds(bad)).toBeNull();
   });
 });
 

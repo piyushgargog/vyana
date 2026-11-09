@@ -1,5 +1,5 @@
 import { runCareAgentLoop } from "@/lib/server/agent/loop";
-import { requireCronSecret } from "@/lib/server/data/cron-auth";
+import { requireCronSecret } from "@/lib/server/auth";
 import { withRoute } from "@/lib/server/errors";
 import { supabaseAdmin } from "@/lib/server/supabase-admin";
 

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKETS } from "@vyana/shared";
-import { forbidden, upstream } from "../errors";
+import { upstream } from "../errors";
 
 /** The private buckets; every file is kept under `{user_id}/` (supabase/migrations/0003_storage.sql). */
 const FILE_BUCKETS = [BUCKETS.prescriptions, BUCKETS.labReports] as const;
@@ -15,9 +15,6 @@ const SIGNED_URL_SECONDS = 60 * 60;
 const SIGN_BATCH = 100;
 const REMOVE_BATCH = 100;
 const FOLDER_DEPTH = 3;
-
-/** Deleting an account asks for a sign-in this recent (the contract says "requires a recent login"). */
-export const RECENT_LOGIN_MINUTES = 15;
 
 export interface ExportTable {
   table: string;
@@ -249,35 +246,4 @@ export async function deleteMyAccount(sb: SupabaseClient, userId: string): Promi
   // An account that is already gone is the state the user asked for.
   if (error && !(error.status === 404 || error.code === "user_not_found")) throw error;
   return { files_removed: filesRemoved };
-}
-
-/** When the user last signed in, in seconds since 1970, from the claims of their access token; null if there is none. */
-export function lastSignInSeconds(accessToken: string): number | null {
-  const payload = accessToken.split(".")[1];
-  if (!payload) return null;
-  let claims: { iat?: unknown; amr?: unknown };
-  try {
-    claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
-  // `amr` lists how and when the session was signed in; it survives a refresh of the token, `iat` does not.
-  const times = Array.isArray(claims.amr)
-    ? claims.amr.map((a: { timestamp?: unknown }) => a?.timestamp).filter((t): t is number => typeof t === "number")
-    : [];
-  if (times.length > 0) return Math.max(...times);
-  return typeof claims.iat === "number" ? claims.iat : null;
-}
-
-/**
- * A stolen or forgotten session must not be able to delete an account: the access token is already verified by
- * `requireUser`, and this asks that the user signed in within `RECENT_LOGIN_MINUTES`. Otherwise 403, and the app
- * asks for the password again and retries.
- */
-export function requireRecentLogin(req: Request, now: Date = new Date()): void {
-  const [scheme, token] = (req.headers.get("authorization") ?? "").split(" ");
-  const at = scheme?.toLowerCase() === "bearer" && token ? lastSignInSeconds(token) : null;
-  if (at === null || now.getTime() / 1000 - at > RECENT_LOGIN_MINUTES * 60) {
-    throw forbidden("For your safety, sign in again to delete your account.");
-  }
 }
