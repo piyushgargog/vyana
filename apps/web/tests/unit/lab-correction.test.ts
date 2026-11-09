@@ -52,6 +52,7 @@ describe("LabValueCorrectReq", () => {
     expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 1e308 }).success).toBe(false);
     expect(LabValueCorrectReq.safeParse({ value_id: ID, value: -1e308 }).success).toBe(false);
     expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 1e9 }).success).toBe(true);
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: -1e9 }).success).toBe(true);
     expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 10_000_000 }).success).toBe(true);
   });
 });
