@@ -19,6 +19,7 @@ export interface TopicResult {
 const ENDPOINT = "https://wsearch.nlm.nih.gov/ws/query";
 const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; topic search)";
 const MAX_BYTES = 1_500_000;
+const TIMEOUT_MS = 10_000;
 
 const stripTags = (s: string): string => {
   let out = "";
@@ -75,7 +76,7 @@ export async function searchHealthTopics(query: string, limit = 5): Promise<Topi
     const hit = await cached<TopicResult[]>(`mlp:topics:${normalizeKeyPart(term)}:${limit}`, "mlp_search", TTL.day, async () => {
       const res = await fetch(`${ENDPOINT}?db=healthTopics&retmax=${limit}&term=${encodeURIComponent(term)}`, {
         headers: { "User-Agent": USER_AGENT, Accept: "application/xml,text/xml" },
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (!res.ok) return null;
       const xml = await readTextCapped(res, MAX_BYTES);

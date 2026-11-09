@@ -206,7 +206,10 @@ export async function runMissedDoseCheck(sb: SupabaseClient, send: PushSender, n
   const profiles = await readChunked<{ id: string; full_name: string | null }>(patientIds, (part) =>
     sb.from("profiles").select("id, full_name").in("id", part),
   );
-  for (const p of profiles) if (firstName(p.full_name)) names.set(p.id, firstName(p.full_name) as string);
+  for (const p of profiles) {
+    const name = firstName(p.full_name);
+    if (name) names.set(p.id, name);
+  }
 
   // No medicine name, no condition and only the first name: a locked screen shows this text.
   const messages: PushMessage[] = claimed.flatMap((m) =>
