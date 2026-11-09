@@ -232,10 +232,12 @@ export const ReportAnalyzeRes = z.object({
 });
 
 // ---------- POST /api/reports/values/correct ---------- (P23, ADR-062)
+/** The largest magnitude a corrected lab value may have: lab values vary wildly by test, so this only rejects absurd magnitudes like 1e308, never a real reading. */
+export const LAB_VALUE_CORRECTION_MAX = 1e9;
 export const LabValueCorrectReq = z
   .object({
     value_id: z.guid(),
-    value: z.number().finite().nullable(),
+    value: z.number().finite().min(-LAB_VALUE_CORRECTION_MAX).max(LAB_VALUE_CORRECTION_MAX).nullable(),
     value_text: z.string().trim().min(1).max(60).nullable().optional(), // a written result, e.g. "Negative"
     unit: z.string().trim().min(1).max(20).nullable().optional(),       // omitted = keep the stored unit
   })

@@ -47,4 +47,12 @@ describe("LabValueCorrectReq", () => {
     expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 5 }).success).toBe(true);
     expect(LabValueCorrectReq.safeParse({ value_id: "x", value: 5 }).success).toBe(false);
   });
+
+  it("rejects absurd magnitudes but keeps real readings", () => {
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 1e308 }).success).toBe(false);
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: -1e308 }).success).toBe(false);
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 1e9 }).success).toBe(true);
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: -1e9 }).success).toBe(true);
+    expect(LabValueCorrectReq.safeParse({ value_id: ID, value: 10_000_000 }).success).toBe(true);
+  });
 });
