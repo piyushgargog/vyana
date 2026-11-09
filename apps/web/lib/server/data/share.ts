@@ -60,6 +60,23 @@ async function rows<T>(query: PromiseLike<{ data: unknown; error: unknown }>): P
 }
 
 /**
+ * Every row of one query, past the hosted 1000-row cap: PostgREST answers at most 1000 rows to a
+ * read with no limit, so a long list would silently stop there. Pages of 1000 in the query's own
+ * order until a short page, the same shape as the account export's readAll.
+ */
+const SHARE_PAGE = 1000;
+async function readAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += SHARE_PAGE) {
+    const { data, error } = await page(from, from + SHARE_PAGE - 1);
+    if (error) throw error;
+    const part = (data ?? []) as T[];
+    out.push(...part);
+    if (part.length < SHARE_PAGE) return out;
+  }
+}
+
+/**
  * The read-only record behind a share link (`GET /api/share/[token]`, no sign-in). The link is the proof: it
  * must exist, not be turned off and not be past `expires_at`, otherwise this throws a 404.
  *
@@ -92,16 +109,29 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   const today = istDate(now);
   const scopes: ShareScope[] = (row.scopes ?? []).filter(isShareScope);
 
+  // The profile lists page past the hosted 1000-row cap (issue #743): one unbounded read would
+  // silently drop a patient's conditions, medicines or contacts past 1000 rows.
   const [profile, conditions, items, contacts] = await Promise.all([
     rows<{ full_name: string | null; dob: string | null; blood_group: string | null; allergies: string[] | null }>(
       sb.from("profiles").select("full_name, dob, blood_group, allergies").eq("id", patient),
     ),
-    rows<{ name: string }>(sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at")),
-    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
-      sb.from("prescription_items").select("medicine_name, strength, dose, frequency, start_date, end_date, created_at").eq("patient_id", patient).eq("active", true).order("created_at"),
+    readAll<{ name: string }>((from, to) =>
+      sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at").range(from, to),
+    ),
+    readAll<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
+      (from, to) =>
+        sb
+          .from("prescription_items")
+          .select("medicine_name, strength, dose, frequency, start_date, end_date, created_at")
+          .eq("patient_id", patient)
+          .eq("active", true)
+          .order("created_at")
+          .range(from, to),
     ),
     row.kind === "medical_id"
-      ? rows<{ name: string; phone: string }>(sb.from("emergency_contacts").select("name, phone").eq("patient_id", patient).order("created_at"))
+      ? readAll<{ name: string; phone: string }>((from, to) =>
+          sb.from("emergency_contacts").select("name, phone").eq("patient_id", patient).order("created_at").range(from, to),
+        )
       : Promise.resolve([] as { name: string; phone: string }[]),
   ]);
 

@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { isoDate, Language, type LabValue, type LabValueCorrectReq, type LabValueCorrectRes, type ReportAnalyzeRes } from "@vyana/shared";
 import { runAi } from "./ai";
@@ -165,6 +166,28 @@ type LabValueRow = {
   flag: LabValue["flag"];
 };
 
+/**
+ * Every value of one report, paged past the hosted 1000-row cap in the stored order (issue #743):
+ * one unbounded read would silently stop at 1000 rows and the corrected report would rebuild its
+ * summary from a cut-off value list. Pages of 1000 until a short page.
+ */
+const REPORT_PAGE = 1000;
+export async function readReportValues(sb: SupabaseClient, reportId: string): Promise<LabValueRow[]> {
+  const out: LabValueRow[] = [];
+  for (let from = 0; ; from += REPORT_PAGE) {
+    const { data, error } = await sb
+      .from("lab_values")
+      .select("id, report_id, patient_id, test_name, value, value_text, unit, ref_low, ref_high, flag")
+      .eq("report_id", reportId)
+      .order("created_at")
+      .range(from, from + REPORT_PAGE - 1);
+    if (error) throw error;
+    const part = (data ?? []) as LabValueRow[];
+    out.push(...part);
+    if (part.length < REPORT_PAGE) return out;
+  }
+}
+
 /** The corrected value: the patient's reading, the stored range, and a flag computed in code (§2A rule 4). */
 export function applyCorrection(row: LabValueRow, body: LabValueCorrectReq): LabValue {
   const value = body.value;
@@ -204,13 +227,8 @@ export async function correctLabValue({ sb, user }: Pick<AuthedUser, "sb" | "use
   if (updateError) throw updateError;
 
   // Every value of the report, with this one replaced, for the summary and the saved extraction.
-  const { data: rest, error: restError } = await admin
-    .from("lab_values")
-    .select("id, report_id, patient_id, test_name, value, value_text, unit, ref_low, ref_high, flag")
-    .eq("report_id", row.report_id)
-    .order("created_at");
-  if (restError) throw restError;
-  const values = ((rest ?? []) as LabValueRow[]).map((r) => (r.id === row.id ? next : { ...r }) as LabValue);
+  const rest = await readReportValues(admin, row.report_id);
+  const values = rest.map((r) => (r.id === row.id ? next : { ...r }) as LabValue);
   const summary = templateSummary(values);
   const followUps = followUpsOf(values);
 
