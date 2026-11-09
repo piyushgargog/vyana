@@ -41,10 +41,17 @@ jobs:
       - name: Start web and take screenshots
         run: |
           pnpm --filter @vyana/web start &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          ready=0
           for _ in $(seq 1 30); do
-            if curl --silent --fail http://localhost:3000/ > /dev/null; then break; fi
+            if curl --silent --fail http://localhost:3000/ > /dev/null; then ready=1; break; fi
             sleep 2
           done
+          if [ "$ready" -eq 0 ]; then
+            echo "error: web server did not become ready at http://localhost:3000/ within 60 seconds" >&2
+            exit 1
+          fi
           mkdir -p pr-screenshots
           pnpm exec playwright screenshot --viewport-size=390,844 --full-page --wait-for-timeout=2000 http://localhost:3000/ pr-screenshots/home-390.png
           pnpm exec playwright screenshot --viewport-size=1366,900 --full-page --wait-for-timeout=2000 http://localhost:3000/ pr-screenshots/home-1366.png
