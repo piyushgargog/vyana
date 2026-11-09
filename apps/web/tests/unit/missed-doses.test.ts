@@ -13,6 +13,7 @@ import {
 } from "@/lib/server/data/missed-doses";
 import { istDate } from "@/lib/server/dates";
 import type { PushMessage, PushResult } from "@/lib/server/push";
+import { PartialPushError } from "@/lib/server/push";
 
 const iso = (s: string) => new Date(s);
 /** A moment given as India time, `YYYY-MM-DD HH:MM`. */
@@ -158,7 +159,7 @@ function memoryDb(seed: Record<string, Row[]>) {
   return { sb: client as unknown as SupabaseClient, tables, requests, table };
 }
 
-const ok = (n: number): PushResult => ({ sent: n, failed: 0, invalidTokens: [] });
+const ok = (n: number): PushResult => ({ sent: n, failed: 0, invalidTokens: [], sentMessages: [] });
 
 function world(extra: Record<string, Row[]> = {}) {
   return memoryDb({
@@ -287,9 +288,32 @@ describe("runMissedDoseCheck", () => {
     expect(await runMissedDoseCheck(db.sb, send, ist("2026-10-12 10:45"))).toEqual({ checked: 1, alerts_sent: 1 });
   });
 
+  it("keeps the doses whose push already went out when the send fails halfway, and retries only the rest", async () => {
+    const patients = Array.from({ length: 150 }, (_, i) => `p-${i}`);
+    const db = memoryDb({
+      care_links: patients.map((p) => ({ patient_id: p, caregiver_id: "c-1", status: "active" })),
+      prescription_items: patients.map((p, i) => ({ id: `i-${i}`, patient_id: p, times: ["09:00"], start_date: "2026-10-01", end_date: null, active: true })),
+      dose_logs: [],
+      missed_dose_alerts: [],
+      push_tokens: [{ user_id: "c-1", token: "ExponentPushToken[care1]" }],
+      profiles: patients.map((p) => ({ id: p, full_name: p })),
+    });
+    // The first chunk of 100 went out, then the push service failed.
+    const failingSend = vi.fn(async (messages: PushMessage[]) => {
+      const sent = messages.slice(0, 100);
+      throw new PartialPushError({ sent: 100, failed: 0, invalidTokens: [], sentMessages: sent });
+    });
+    await expect(runMissedDoseCheck(db.sb, failingSend, now)).rejects.toBeInstanceOf(PartialPushError);
+    expect(db.table("missed_dose_alerts")).toHaveLength(100);
+
+    const send = vi.fn(async (messages: PushMessage[]) => ok(messages.length));
+    expect(await runMissedDoseCheck(db.sb, send, ist("2026-10-12 10:45"))).toEqual({ checked: 150, alerts_sent: 50 });
+    expect(send.mock.calls[0][0]).toHaveLength(50);
+  });
+
   it("does not count an alert nobody received: when every ticket failed the dose is given back and tried again", async () => {
     const db = world();
-    const refused = vi.fn(async (): Promise<PushResult> => ({ sent: 0, failed: 1, invalidTokens: [] }));
+    const refused = vi.fn(async (): Promise<PushResult> => ({ sent: 0, failed: 1, invalidTokens: [], sentMessages: [] }));
     expect(await runMissedDoseCheck(db.sb, refused, now)).toEqual({ checked: 1, alerts_sent: 0 });
     expect(db.table("missed_dose_alerts")).toHaveLength(0);
 
@@ -305,7 +329,7 @@ describe("runMissedDoseCheck", () => {
         { user_id: "c-1", token: "ExponentPushToken[alive]" },
       ],
     });
-    const send = vi.fn(async (): Promise<PushResult> => ({ sent: 1, failed: 0, invalidTokens: ["ExponentPushToken[dead]"] }));
+    const send = vi.fn(async (): Promise<PushResult> => ({ sent: 1, failed: 0, invalidTokens: ["ExponentPushToken[dead]"], sentMessages: [] }));
     expect(await runMissedDoseCheck(db.sb, send, now)).toEqual({ checked: 1, alerts_sent: 1 });
     expect(db.table("push_tokens").map((t) => t.token)).toEqual(["ExponentPushToken[alive]"]);
     expect(db.table("missed_dose_alerts")).toHaveLength(1);

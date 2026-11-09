@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { EXPO_PUSH_URL, isExpoPushToken, sendPush, type PushMessage } from "@/lib/server/push";
+import { EXPO_PUSH_URL, isExpoPushToken, PartialPushError, sendPush, type PushMessage } from "@/lib/server/push";
 import { AppError } from "@/lib/server/errors";
 
 const token = (n: number) => `ExponentPushToken[abc${n}]`;
@@ -28,7 +28,7 @@ describe("sendPush", () => {
   it("posts the messages to Expo with a sound, high priority and the channel", async () => {
     const fetchMock = expo();
     const result = await sendPush([message(1), message(2)], { fetch: fetchMock });
-    expect(result).toEqual({ sent: 2, failed: 0, invalidTokens: [] });
+    expect(result).toEqual({ sent: 2, failed: 0, invalidTokens: [], sentMessages: [message(1), message(2)] });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(EXPO_PUSH_URL);
@@ -43,6 +43,7 @@ describe("sendPush", () => {
     const result = await sendPush(Array.from({ length: 250 }, (_, i) => message(i)), { fetch: fetchMock });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(result.sent).toBe(250);
+    expect(result.sentMessages).toHaveLength(250);
   });
 
   it("returns dead tokens so they can be deleted, and counts other refusals", async () => {
@@ -54,19 +55,19 @@ describe("sendPush", () => {
           : ok,
     );
     const result = await sendPush([message(1), message(2), message(3)], { fetch: fetchMock });
-    expect(result).toEqual({ sent: 1, failed: 1, invalidTokens: [token(1)] });
+    expect(result).toEqual({ sent: 1, failed: 1, invalidTokens: [token(1)], sentMessages: [message(3)] });
   });
 
   it("does not send to a string that is not an Expo token, and reports it as invalid", async () => {
     const fetchMock = expo();
     const result = await sendPush([{ ...message(1), to: "not-a-token" }, message(2)], { fetch: fetchMock });
-    expect(result).toEqual({ sent: 1, failed: 0, invalidTokens: ["not-a-token"] });
+    expect(result).toEqual({ sent: 1, failed: 0, invalidTokens: ["not-a-token"], sentMessages: [message(2)] });
     expect(JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body))).toHaveLength(1);
   });
 
   it("makes no request when there is nothing to send", async () => {
     const fetchMock = expo();
-    expect(await sendPush([], { fetch: fetchMock })).toEqual({ sent: 0, failed: 0, invalidTokens: [] });
+    expect(await sendPush([], { fetch: fetchMock })).toEqual({ sent: 0, failed: 0, invalidTokens: [], sentMessages: [] });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -84,5 +85,22 @@ describe("sendPush", () => {
 
     const notJson = vi.fn(async () => new Response("<html>", { status: 200 })) as unknown as typeof fetch;
     await expect(sendPush([message(1)], { fetch: notJson })).rejects.toMatchObject({ status: 502 });
+  });
+
+  it("reports what went out when a later chunk fails, so the caller can keep those and retry only the rest", async () => {
+    const fetchMock = vi.fn(async () => {
+      if (fetchMock.mock.calls.length === 1) return Response.json({ data: Array.from({ length: 100 }, () => ok) });
+      throw new TypeError("fetch failed");
+    }) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
+    const messages = Array.from({ length: 150 }, (_, i) => message(i));
+    const error = await sendPush(messages, { fetch: fetchMock }).then(
+      () => null,
+      (e) => e,
+    );
+    expect(error).toBeInstanceOf(PartialPushError);
+    expect(error).toMatchObject({ status: 502 });
+    expect(error.partial.sent).toBe(100);
+    expect(error.partial.sentMessages).toEqual(messages.slice(0, 100));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
