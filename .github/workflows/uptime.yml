@@ -46,11 +46,14 @@ jobs:
           # site at all (a runner-side failure: the runner's network, a curl timeout, a DNS
           # failure). Only site failures count toward the two-in-a-row incident rule (issue #722).
           # A curl that fails outright answers 000; any other code means the site answered.
+          # curl prints the 000 itself through --write-out, so the fallback only covers a
+          # curl that prints nothing at all; assigning it on failure keeps the value 000
+          # instead of doubling it to 000000.
           # A site failure on either check wins over an unreachable one on the other.
           site_failed=false
           unreachable=false
           page=$(mktemp)
-          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$page" --write-out '%{http_code}' "$SITE/" || echo 000)
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$page" --write-out '%{http_code}' "$SITE/") || code=000
           if [ "$code" = "000" ]; then
             echo "::error::The front page could not be reached (curl failed)"
             unreachable=true
@@ -63,7 +66,7 @@ jobs:
 
           api=$(mktemp)
           token=$(printf '0%.0s' $(seq 1 48))
-          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$api" --write-out '%{http_code}' "$SITE/api/share/$token" || echo 000)
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$api" --write-out '%{http_code}' "$SITE/api/share/$token") || code=000
           if [ "$code" = "000" ]; then
             echo "::error::The API could not be reached (curl failed)"
             unreachable=true
@@ -130,7 +133,10 @@ jobs:
             echo "First failed check: no incident yet."
             exit 0
           fi
-          if gh run view "$prev_id" --log 2>/dev/null | grep -q "uptime-outcome: unreachable"; then
+          # Plain grep, not grep -q: grep -q stops reading on the first match, which can
+          # close the pipe while gh is still writing and turn the pipeline into a failure
+          # under pipefail. Reading the whole log keeps gh's exit clean.
+          if gh run view "$prev_id" --log 2>/dev/null | grep "uptime-outcome: unreachable" > /dev/null; then
             echo "Previous failure was runner-side: no incident yet."
             exit 0
           fi
