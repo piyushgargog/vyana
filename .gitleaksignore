@@ -1,3 +1,9 @@
 # gitleaks false positive: in this old commit the rule joined the empty placeholder lines "OPENROUTER_API_KEY=" and
 # "HF_TOKEN=" of apps/web/.env.example into one "key=value". There is no secret there (both values are empty).
 5472e88692f6547e1ae2b3dee93849680ae8677a:apps/web/.env.example:generic-api-key:28
+# Fake test value in the first commit of PR #696, since replaced by "x".repeat(40) in the test: not a real credential.
+63051ea4c5b91a77ad9a6f0acf729af80df445aa:apps/web/tests/unit/blood.test.ts:generic-api-key:31
+
+# gitleaks false positive: a fake JWT literal used as test data in the E2E trace-scrubber test in this one
+# commit; the token is invented test data (not a real credential) and was split into parts in the next commit.
+27bb0824706b14b7459b397b2c5e7193e3b72e9f:.github/scripts/test_scrub_e2e_traces.py:generic-api-key:31
