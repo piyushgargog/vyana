@@ -7,6 +7,9 @@ packages:
 overrides:
   react: 19.2.3
   react-dom: 19.2.3
+  # node-forge 1.4.0 carries 11 advisories, all patched in >=1.4.1 (issue #726).
+  # @expo/cli still resolves 1.4.0, so force the patched line here.
+  node-forge: ^1.4.1
 
 allowBuilds:
   sharp: false
@@ -38,7 +41,5 @@ minimumReleaseAgeExclude:
 # from this file, not from package.json. See SECURITY.md "Accepted risks".
 auditConfig:
   ignoreGhsas:
-    - GHSA-86w9-cpqp-85rv # node-forge, via @expo/cli
-    - GHSA-vfj7-8cjw-p6xm # braces, via metro/eslint
     - GHSA-w5hq-g745-h8pq # uuid, via @expo/config-plugins
     - GHSA-vcc3-ghjq-m6fr # decode-uri-component, via expo-router
