@@ -15,6 +15,7 @@ import {
 } from "@vyana/shared";
 import { notFound } from "../errors";
 import { istDate } from "../dates";
+import { readRows } from "../rows";
 
 /** `share_links.token` is 24 random bytes as hex. Anything else cannot be a token, so it never reaches the database. */
 export const SHARE_TOKEN_FORMAT = /^[0-9a-f]{48}$/;
@@ -52,13 +53,6 @@ interface LinkRow {
   scopes: string[] | null;
 }
 
-/** Runs a query and returns its rows typed as `T` (the service client has no table types, so an embedded `hospitals(name)` is checked by the tests). */
-async function rows<T>(query: PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> {
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as T[];
-}
-
 /**
  * The read-only record behind a share link (`GET /api/share/[token]`, no sign-in). The link is the proof: it
  * must exist, not be turned off and not be past `expires_at`, otherwise this throws a 404.
@@ -93,15 +87,15 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
   const scopes: ShareScope[] = (row.scopes ?? []).filter(isShareScope);
 
   const [profile, conditions, items, contacts] = await Promise.all([
-    rows<{ full_name: string | null; dob: string | null; blood_group: string | null; allergies: string[] | null }>(
+    readRows<{ full_name: string | null; dob: string | null; blood_group: string | null; allergies: string[] | null }>(
       sb.from("profiles").select("full_name, dob, blood_group, allergies").eq("id", patient),
     ),
-    rows<{ name: string }>(sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at")),
-    rows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
+    readRows<{ name: string }>(sb.from("conditions").select("name").eq("patient_id", patient).eq("active", true).order("created_at")),
+    readRows<{ medicine_name: string; strength: string | null; dose: string | null; frequency: string; start_date: string | null; end_date: string | null; created_at: string }>(
       sb.from("prescription_items").select("medicine_name, strength, dose, frequency, start_date, end_date, created_at").eq("patient_id", patient).eq("active", true).order("created_at"),
     ),
     row.kind === "medical_id"
-      ? rows<{ name: string; phone: string }>(sb.from("emergency_contacts").select("name, phone").eq("patient_id", patient).order("created_at"))
+      ? readRows<{ name: string; phone: string }>(sb.from("emergency_contacts").select("name, phone").eq("patient_id", patient).order("created_at"))
       : Promise.resolve([] as { name: string; phone: string }[]),
   ]);
 
@@ -126,13 +120,13 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
 
   if (row.kind === "timeline") {
     const [prescriptions, reports, appointments, timelineConditions] = await Promise.all([
-      rows<TimelineSources["prescriptions"][number]>(
+      readRows<TimelineSources["prescriptions"][number]>(
         sb.from("prescriptions").select("id, issued_on, diagnosis, doctor_name, source").eq("patient_id", patient).order("issued_on", { ascending: false }).limit(TIMELINE_ROWS),
       ),
-      rows<TimelineSources["reports"][number]>(
+      readRows<TimelineSources["reports"][number]>(
         sb.from("lab_reports").select("id, report_date, created_at, lab_name, summary").eq("patient_id", patient).order("created_at", { ascending: false }).limit(TIMELINE_ROWS),
       ),
-      rows<TimelineSources["appointments"][number]>(
+      readRows<TimelineSources["appointments"][number]>(
         sb
           .from("appointments")
           .select("id, appointment_date, token_no, status, reason, hospitals(name), departments(name)")
@@ -140,7 +134,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
           .order("appointment_date", { ascending: false })
           .limit(TIMELINE_ROWS),
       ),
-      rows<TimelineSources["conditions"][number]>(
+      readRows<TimelineSources["conditions"][number]>(
         sb.from("conditions").select("id, diagnosed_on, created_at, name, source").eq("patient_id", patient).order("created_at", { ascending: false }).limit(TIMELINE_ROWS),
       ),
     ]);
@@ -159,12 +153,12 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
     const [labs, vitals, doseLogs] = await Promise.all([
       scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
       scopes.includes("vitals")
-        ? rows<MemoryVital>(
+        ? readRows<MemoryVital>(
             sb.from("vitals").select("type, value, value2, unit, measured_at").eq("patient_id", patient).order("measured_at", { ascending: false }).limit(MEMORY_VITAL_ROWS),
           )
         : Promise.resolve([] as MemoryVital[]),
       scopes.includes("adherence")
-        ? rows<MemoryDoseLog>(
+        ? readRows<MemoryDoseLog>(
             sb
               .from("dose_logs")
               .select("scheduled_for, status")
@@ -196,7 +190,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
  * fill the whole cap and starve every other test out of the graph.
  */
 async function fetchLabs(sb: SupabaseClient, patient: string): Promise<MemoryLabValue[]> {
-  const recent = await rows<{ test_name: string }>(
+  const recent = await readRows<{ test_name: string }>(
     sb.from("lab_values").select("test_name").eq("patient_id", patient).order("measured_on", { ascending: false }).limit(MEMORY_VITAL_ROWS),
   );
   const names: string[] = [];
@@ -206,7 +200,7 @@ async function fetchLabs(sb: SupabaseClient, patient: string): Promise<MemoryLab
   }
   const perTest = await Promise.all(
     names.map((name) =>
-      rows<MemoryLabValue>(
+      readRows<MemoryLabValue>(
         sb
           .from("lab_values")
           .select("test_name, value, unit, flag, ref_low, ref_high, measured_on")

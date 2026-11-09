@@ -6,6 +6,7 @@ import { badRequest, forbidden } from "./errors";
 import { log } from "./log";
 import { saltsFor } from "./safety/brand-salts";
 import { TABLE_ADVICE, lookupInteractions } from "./safety/interactions-table";
+import { readRows } from "./rows";
 import { supabaseAdmin } from "./supabase-admin";
 
 /**
@@ -59,9 +60,9 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
 
   // The patient's medicines, read through RLS (the patient's own, or a doctor's patient).
   const query = sb.from("prescription_items").select("medicine_name, strength").eq("patient_id", patientId);
-  const { data, error } = await (body.prescription_id ? query.eq("prescription_id", body.prescription_id) : query.eq("active", true));
-  if (error) throw error;
-  const rows = (data ?? []) as { medicine_name: string; strength: string | null }[];
+  const rows = await readRows<{ medicine_name: string; strength: string | null }>(
+    body.prescription_id ? query.eq("prescription_id", body.prescription_id) : query.eq("active", true),
+  );
 
   const known: Medicine[] = [];
   const notChecked: string[] = [];

@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKETS } from "@vyana/shared";
 import { forbidden, upstream } from "../errors";
+import { readRows } from "../rows";
 
 /** The private buckets; every file is kept under `{user_id}/` (supabase/migrations/0003_storage.sql). */
 const FILE_BUCKETS = [BUCKETS.prescriptions, BUCKETS.labReports] as const;
@@ -106,9 +107,7 @@ async function readAll(
 ): Promise<{ rows: Row[]; truncated: boolean }> {
   const rows: Row[] = [];
   for (let from = 0; from < MAX_ROWS_PER_TABLE; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw error;
-    const part = (data ?? []) as Row[];
+    const part = await readRows<Row>(page(from, from + PAGE - 1));
     rows.push(...part);
     if (part.length < PAGE) return { rows, truncated: false };
   }
@@ -151,9 +150,7 @@ export async function listUserFiles(
   const files: { path: string; size: number | null; created_at: string | null }[] = [];
   const walk = async (folder: string, depth: number): Promise<void> => {
     for (let offset = 0; files.length < limit; offset += PAGE) {
-      const { data, error } = await sb.storage.from(bucket).list(folder, { limit: PAGE, offset, sortBy: { column: "name", order: "asc" } });
-      if (error) throw error;
-      const entries = (data ?? []) as StorageEntry[];
+      const entries = await readRows<StorageEntry>(sb.storage.from(bucket).list(folder, { limit: PAGE, offset, sortBy: { column: "name", order: "asc" } }));
       for (const entry of entries) {
         if (files.length >= limit) return;
         if (entry.id === null) {
@@ -194,12 +191,16 @@ export async function exportMyData(sb: SupabaseClient, user: ExportUser, now: Da
     }
     for (let i = 0; i < found.length; i += SIGN_BATCH) {
       const part = found.slice(i, i + SIGN_BATCH);
-      const { data, error } = await sb.storage.from(bucket).createSignedUrls(
-        part.map((f) => f.path),
-        SIGNED_URL_SECONDS,
+      const urls = new Map(
+        (
+          await readRows<{ path: string; signedUrl: string }>(
+            sb.storage.from(bucket).createSignedUrls(
+              part.map((f) => f.path),
+              SIGNED_URL_SECONDS,
+            ),
+          )
+        ).map((d) => [d.path, d.signedUrl]),
       );
-      if (error) throw error;
-      const urls = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
       for (const f of part) files.push({ bucket, path: f.path, size: f.size, created_at: f.created_at, download_url: urls.get(f.path) ?? null });
     }
   }

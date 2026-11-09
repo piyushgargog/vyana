@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { tool } from "ai";
 import { z } from "zod";
 import { log } from "../log";
+import { readRows } from "../rows";
 import { pharmacySearchLinks } from "@vyana/shared";
 import { TRUSTED_HEALTH_DOMAINS, isTrustedHealthUrl } from "../web/domains";
 import { fetchPage } from "../web/fetch-page";
@@ -62,17 +63,29 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
       description: "The user's active medicines from their saved prescriptions.",
       inputSchema: z.object({}),
       execute: async () => {
-        const { data, error } = await sb
-          .from("prescription_items")
-          .select("medicine_name, strength, form, dose, frequency, times, with_food, start_date, end_date")
-          .eq("patient_id", userId)
-          .eq("active", true);
-        if (error) return failed("Your medicines couldn't be loaded.");
+        const medicines = await readRows<{
+          medicine_name: string;
+          strength: string | null;
+          form: string;
+          dose: string | null;
+          frequency: string;
+          times: string[];
+          with_food: string;
+          start_date: string;
+          end_date: string | null;
+        }>(
+          sb
+            .from("prescription_items")
+            .select("medicine_name, strength, form, dose, frequency, times, with_food, start_date, end_date")
+            .eq("patient_id", userId)
+            .eq("active", true),
+        ).catch(() => null);
+        if (medicines === null) return failed("Your medicines couldn't be loaded.");
         // The reply may read these back to the patient; any other dose is held back (ADR-065).
-        for (const m of (data ?? []) as { strength: string | null; dose: string | null; frequency: string | null }[]) {
+        for (const m of medicines) {
           guard.allowOwnDoses([m.strength, m.dose, m.frequency]);
         }
-        return { medicines: data ?? [] };
+        return { medicines };
       },
     }),
 
@@ -80,13 +93,24 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
       description: "The user's latest 30 lab test values, newest first. Flags (low / normal / high) were computed from the report's reference range.",
       inputSchema: z.object({}),
       execute: async () => {
-        const { data, error } = await sb
-          .from("lab_values")
-          .select("test_name, value, value_text, unit, ref_low, ref_high, flag, measured_on")
-          .eq("patient_id", userId)
-          .order("measured_on", { ascending: false })
-          .limit(30);
-        return error ? failed("Your lab values couldn't be loaded.") : { lab_values: data ?? [] };
+        const labValues = await readRows<{
+          test_name: string;
+          value: number | null;
+          value_text: string | null;
+          unit: string | null;
+          ref_low: number | null;
+          ref_high: number | null;
+          flag: string;
+          measured_on: string | null;
+        }>(
+          sb
+            .from("lab_values")
+            .select("test_name, value, value_text, unit, ref_low, ref_high, flag, measured_on")
+            .eq("patient_id", userId)
+            .order("measured_on", { ascending: false })
+            .limit(30),
+        ).catch(() => null);
+        return labValues === null ? failed("Your lab values couldn't be loaded.") : { lab_values: labValues };
       },
     }),
 
@@ -94,8 +118,10 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
       description: "The health conditions saved in the user's records (by them or their doctor).",
       inputSchema: z.object({}),
       execute: async () => {
-        const { data, error } = await sb.from("conditions").select("name, diagnosed_on, active, source").eq("patient_id", userId);
-        return error ? failed("Your conditions couldn't be loaded.") : { conditions: data ?? [] };
+        const conditions = await readRows<{ name: string; diagnosed_on: string | null; active: boolean; source: string }>(
+          sb.from("conditions").select("name, diagnosed_on, active, source").eq("patient_id", userId),
+        ).catch(() => null);
+        return conditions === null ? failed("Your conditions couldn't be loaded.") : { conditions };
       },
     }),
 
