@@ -25,6 +25,7 @@
     "@vyana/shared": "workspace:*",
     "ai": "^7.0.137",
     "lucide-react": "^1.56.0",
+    "mariadb": "3.5.5",
     "motion": "^14.2.0",
     "next": "16.4.1",
     "react": "19.2.3",
