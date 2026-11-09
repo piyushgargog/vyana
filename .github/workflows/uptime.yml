@@ -1,8 +1,10 @@
 name: Uptime
 
 # Checks the live site every 15 minutes. One failed check fails the run (GitHub emails the repository owner). After
-# TWO failed checks in a row it opens one issue labelled `incident` (or adds a comment to the one that is open),
-# and it closes that issue when the site answers again. (ADR-067, after DocuLens.)
+# TWO site failures in a row it opens one issue labelled `incident` (or adds a comment to the one that is open),
+# and it closes that issue when the site answers again. (ADR-067, after DocuLens.) A run that fails only because
+# the check could not reach the site at all (a runner-side failure) never opens an incident: only a site that
+# answers wrongly counts toward the two-in-a-row rule (issue #722).
 #
 # There is no health route yet, so the API check asks for a share link that cannot exist: the server must answer
 # 404 NOT_FOUND, which it only does after it has asked the database (a broken database gives 500).
@@ -39,31 +41,62 @@ jobs:
         id: check
         run: |
           ok=true
+          # A run can fail for two different reasons, and the incident step must tell them apart:
+          # the site itself answered wrongly (a site failure) or the check could not reach the
+          # site at all (a runner-side failure: the runner's network, a curl timeout, a DNS
+          # failure). Only site failures count toward the two-in-a-row incident rule (issue #722).
+          # A curl that fails outright answers 000; any other code means the site answered.
+          # curl prints the 000 itself through --write-out, so the fallback only covers a
+          # curl that prints nothing at all; assigning it on failure keeps the value 000
+          # instead of doubling it to 000000.
+          # A site failure on either check wins over an unreachable one on the other.
+          site_failed=false
+          unreachable=false
           page=$(mktemp)
-          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$page" --write-out '%{http_code}' "$SITE/" || echo 000)
-          if [ "$code" = "200" ] && grep -q "Vyana" "$page"; then
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$page" --write-out '%{http_code}' "$SITE/") || code=000
+          if [ "$code" = "000" ]; then
+            echo "::error::The front page could not be reached (curl failed)"
+            unreachable=true
+          elif [ "$code" = "200" ] && grep -q "Vyana" "$page"; then
             echo "front page: ok"
           else
             echo "::error::The front page answered HTTP $code (or does not say Vyana)"
-            ok=false
+            site_failed=true
           fi
 
           api=$(mktemp)
           token=$(printf '0%.0s' $(seq 1 48))
-          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$api" --write-out '%{http_code}' "$SITE/api/share/$token" || echo 000)
-          if [ "$code" = "404" ] && grep -q "NOT_FOUND" "$api"; then
+          code=$(curl --silent --show-error --max-time 20 --retry 3 --retry-delay 10 --output "$api" --write-out '%{http_code}' "$SITE/api/share/$token") || code=000
+          if [ "$code" = "000" ]; then
+            echo "::error::The API could not be reached (curl failed)"
+            unreachable=true
+          elif [ "$code" = "404" ] && grep -q "NOT_FOUND" "$api"; then
             echo "API: ok (404 NOT_FOUND, so the server reached its database)"
           else
             echo "::error::The API answered HTTP $code instead of 404 NOT_FOUND"
-            ok=false
+            site_failed=true
           fi
+          if [ "$site_failed" = "true" ]; then
+            kind=site-failure
+            ok=false
+          elif [ "$unreachable" = "true" ]; then
+            kind=unreachable
+            ok=false
+          else
+            kind=ok
+          fi
+          # The next run reads this line from this run's logs to tell whether this run's
+          # failure was a site failure or a runner-side one.
+          echo "uptime-outcome: $kind"
           echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "failure-kind=$kind" >> "$GITHUB_OUTPUT"
 
       - name: Incident issue
         # A pull request only tests the checks; it never opens or closes an issue.
         if: github.event_name != 'pull_request'
         env:
           OK: ${{ steps.check.outputs.ok }}
+          KIND: ${{ steps.check.outputs.failure-kind }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -79,10 +112,32 @@ jobs:
             exit 0
           fi
 
-          # The previous finished run of this workflow: two failures in a row make an incident.
-          previous=$(gh run list --workflow uptime.yml --status completed --limit 1 --json conclusion --jq '.[0].conclusion // empty')
-          if [ "$previous" != "failure" ]; then
+          # A runner-side failure (the check could not reach the site at all) is not a site
+          # failure: it does not count toward the two-in-a-row rule, so it never opens an
+          # incident on its own. The run still fails (the step below), so the owner hears
+          # about it. (Issue #722.)
+          if [ "$KIND" = "unreachable" ]; then
+            echo "Runner-side failure: the site could not be reached. No incident."
+            exit 0
+          fi
+
+          # The previous finished run of this workflow: two site failures in a row make an
+          # incident. A previous run whose failure was runner-side does not count, so read its
+          # outcome from its logs. A run with no outcome line (from before this change, or one
+          # that failed before the check ran) counts as a site failure, which keeps the old
+          # behaviour for those runs.
+          previous=$(gh run list --workflow uptime.yml --status completed --limit 1 --json conclusion,databaseId --jq '.[0] // empty')
+          prev_conclusion=$(echo "$previous" | jq -r '.conclusion // empty')
+          prev_id=$(echo "$previous" | jq -r '.databaseId // empty')
+          if [ "$prev_conclusion" != "failure" ]; then
             echo "First failed check: no incident yet."
+            exit 0
+          fi
+          # Plain grep, not grep -q: grep -q stops reading on the first match, which can
+          # close the pipe while gh is still writing and turn the pipeline into a failure
+          # under pipefail. Reading the whole log keeps gh's exit clean.
+          if gh run view "$prev_id" --log 2>/dev/null | grep "uptime-outcome: unreachable" > /dev/null; then
+            echo "Previous failure was runner-side: no incident yet."
             exit 0
           fi
           if [ -n "$open" ]; then
