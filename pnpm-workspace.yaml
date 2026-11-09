@@ -7,6 +7,9 @@ packages:
 overrides:
   react: 19.2.3
   react-dom: 19.2.3
+  # basic-ftp 5.x is the only copy get-uri accepts, and it carries GHSA-c475 (issue #729).
+  # 6.x keeps the Client surface get-uri uses (access, lastMod, list, downloadTo, close).
+  basic-ftp: ^6.2.1
 
 allowBuilds:
   sharp: false
