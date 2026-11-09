@@ -24,6 +24,11 @@ export interface RedactOptions {
   knownNames?: string[];
 }
 
+/** The caller's own name as the redaction list: the name, or nothing when it is missing (issue #731). */
+export function knownNamesOf(fullName: string | null | undefined): string[] {
+  return fullName ? [fullName] : [];
+}
+
 class Redactor {
   private readonly byValue = new Map<string, string>();
   private readonly counts = new Map<PlaceholderKind, number>();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { redact, restore } from "@/lib/server/safety/redact";
+import { knownNamesOf, redact, restore } from "@/lib/server/safety/redact";
 
 const values = (map: Record<string, string>) => Object.values(map);
 
@@ -114,5 +114,20 @@ describe("restore", () => {
 
   it("leaves text without placeholders unchanged", () => {
     expect(restore("no placeholders here", { "[NAME_1]": "X" })).toBe("no placeholders here");
+  });
+});
+
+describe("knownNamesOf", () => {
+  it("wraps the caller's name in a list, and gives nothing when the name is missing", () => {
+    expect(knownNamesOf("Aryan Sharma")).toEqual(["Aryan Sharma"]);
+    expect(knownNamesOf(null)).toEqual([]);
+    expect(knownNamesOf(undefined)).toEqual([]);
+    expect(knownNamesOf("")).toEqual([]);
+  });
+
+  it("feeds redact so the caller's name is removed from the text", () => {
+    const { text } = redact("My name is Aryan Sharma", { knownNames: knownNamesOf("Aryan Sharma") });
+    expect(text).not.toContain("Aryan Sharma");
+    expect(text).toContain("[NAME_1]");
   });
 });
