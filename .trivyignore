@@ -1,10 +1,13 @@
-# Dev-toolchain audit exceptions (issue #154, 2026-10-14).
-# node-forge, braces, uuid and decode-uri-component reach us only through the
-# Expo/mobile dev toolchain and the web devDependencies (eslint). None of them
-# is in the production web image (Next.js standalone output). No patched version
-# exists upstream yet. Re-check on Dependabot alerts; remove an ignore when a
-# patched version exists.
-GHSA-86w9-cpqp-85rv
-GHSA-vfj7-8cjw-p6xm
+# Dev-toolchain audit exceptions (issue #154, 2026-10-14; status re-checked
+# 2026-11-09, issue #726). uuid reaches us only through dev tooling
+# (@expo/cli, metro, eslint, @lhci/cli). decode-uri-component reaches the
+# mobile app at runtime through expo-router and query-string (see issue #727).
+# Neither is in the production web image (Next.js standalone output). Both have
+# a patched version upstream, but the installed copies are older majors, so the
+# ignores stay until the bumps land (uuid 12.0.1, decode-uri-component 0.5.0).
+# node-forge and braces are gone from this file: node-forge is forced to
+# ^1.4.1 by pnpm.overrides, and the braces advisory was withdrawn on
+# 2026-10-23. Re-check on Dependabot alerts; remove an ignore when the
+# installed version is patched.
 GHSA-w5hq-g745-h8pq
 GHSA-vcc3-ghjq-m6fr
