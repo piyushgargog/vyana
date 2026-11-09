@@ -91,6 +91,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
       - name: SBOM (SPDX)
+        if: always()
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
           image: vyana-web:ci
@@ -98,10 +99,12 @@ jobs:
           output-file: sbom.spdx.json
           upload-artifact: false
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
         with:
           name: sbom
           path: sbom.spdx.json
       - name: Boot the image with no capabilities and check it
+        if: always()
         run: |
           docker run -d --name app --cap-drop ALL --security-opt no-new-privileges \
             --memory 1g --pids-limit 256 -p 127.0.0.1:3000:3000 \
