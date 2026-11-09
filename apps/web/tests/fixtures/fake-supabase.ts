@@ -55,6 +55,7 @@ function query(name: string) {
   let pendingUpdate: Row | null = null;
   let pendingDelete = false;
   let limitN = Infinity;
+  let slice: [number, number] | null = null;
   const notNull: string[] = [];
   const matching = () => table(name).filter((r) => filters.every(([c, v]) => r[c] === v) && notNull.every((c) => r[c] != null));
 
@@ -66,6 +67,8 @@ function query(name: string) {
     gt: (_col: string, value: string) => ((gtExpires = value), chain),
     order: () => chain,
     limit: (n: number) => ((limitN = n), chain),
+    // PostgREST offset window: rows from..to inclusive, like the real client.
+    range: (from: number, to: number) => ((slice = [from, to]), chain),
     maybeSingle: async () => {
       if (name === "web_cache") {
         const key = filters.find(([c]) => c === "key")?.[1] as string;
@@ -117,7 +120,9 @@ function query(name: string) {
         rows[name] = table(name).filter((r) => !gone.has(r));
         return resolve({ data: null, error: null });
       }
-      return resolve({ data: matching().slice(0, limitN), error: null });
+      let matched = matching();
+      if (slice) matched = matched.slice(slice[0], slice[1] + 1);
+      return resolve({ data: matched.slice(0, limitN), error: null });
     },
   };
   return chain;
