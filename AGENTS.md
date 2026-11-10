@@ -18,6 +18,15 @@ Read this before changing anything in this repository.
 - After changing a contract, run `pnpm docs:openapi` and commit `apps/web/openapi.yaml`. CI fails if it is stale.
 - Update the mocks in `packages/shared/src/mocks` in the same change.
 
+## Where new server code goes
+
+`apps/web/lib/server` has four homes. New code goes to the home that matches its idea, so the next reader checks one place.
+
+- `assistant/` holds the chat assistant: chat, guard, tools, mock model, and its system prompt.
+- `agent/` holds the care agent: loop and rules. The names are close, do not mix them.
+- `prompts/` holds the triage, care plan and documents prompts, one file per prompt. The documents file holds two prompts, transcribe and prescription extract.
+- `data/` holds the row readers shared by routes and jobs: account, cron auth, missed doses, share. Domain logic that is not a row reader stays at the top level, one file per idea, the way `safety/` is one folder for safety.
+
 ## Ownership
 
 Only edit files your human owns (see `.github/CODEOWNERS`). If you need a change elsewhere, write the exact request for your human to pass on.
