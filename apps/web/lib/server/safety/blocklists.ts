@@ -6,14 +6,12 @@
  * hit costs a retry; a miss could tell a patient they have a disease or how much medicine to take.
  */
 
+import { normalizeText, tokenizeSafetyText } from "./text";
+
 export interface BlocklistHit {
   /** What matched, as written in the text. */
   text: string;
   rule: string;
-}
-
-function lower(s: string): string {
-  return s.normalize("NFKC").toLowerCase();
 }
 
 /** Finds every match of the global regex and records it under `rule`. */
@@ -41,7 +39,7 @@ const DIAGNOSIS_PHRASES: [RegExp, string][] = [
 const YOU_WORDS = new Set(["aapko", "आपको"]);
 const IS_WORDS = new Set(["hai", "hain", "है", "हैं"]);
 function findYouHaveX(t: string, hits: BlocklistHit[]) {
-  const words = t.split(/[^\p{L}\p{M}\p{N}-]+/u).filter(Boolean);
+  const words = tokenizeSafetyText(t);
   for (let i = 0; i < words.length; i++) {
     const startsYou = YOU_WORDS.has(words[i]) || (words[i] === "aap" && words[i + 1] === "ko");
     if (!startsYou) continue;
@@ -96,11 +94,11 @@ export interface DiagnosisCheck {
  * reported as disease mentions.
  */
 export function checkDiagnosisLanguage(text: string, allowedConditions: string[] = []): DiagnosisCheck {
-  const t = lower(text);
+  const t = normalizeText(text);
   const phrases: BlocklistHit[] = [];
   for (const [re, rule] of DIAGNOSIS_PHRASES) collect(t, re, rule, phrases);
   findYouHaveX(t, phrases);
-  const allowed = allowedConditions.map(lower);
+  const allowed = allowedConditions.map(normalizeText);
   const diseases: BlocklistHit[] = [];
   for (const [re, term] of DISEASE_REGEXES) {
     if (allowed.some((a) => a.includes(term) || term.includes(a))) continue;
@@ -143,7 +141,13 @@ export interface DoseCheckOptions {
 
 /** Dose amounts, counts, schedules and dose-change advice. */
 export function findDosePatterns(text: string, opts: DoseCheckOptions = {}): BlocklistHit[] {
-  const t = lower(text);
+  // The OD / BD pattern is anchored to line ends ($, multiline), so dose patterns run on text normalized
+  // line by line: the same shared normalizer, with line breaks kept. Diagnosis phrases above run on the
+  // fully collapsed text instead, so a sentence split across lines still matches.
+  const t = text
+    .split("\n")
+    .map((line) => normalizeText(line))
+    .join("\n");
   const hits: BlocklistHit[] = [];
   for (const [re, rule, kind] of DOSE_PATTERNS) {
     if (kind === "measure" && opts.allowMeasures) continue;

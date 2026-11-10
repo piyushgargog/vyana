@@ -11,6 +11,7 @@
  */
 
 import { INTERACTION_TABLE, SALT_ALIASES, expandSalts, normalizeSalt } from "./interactions-table";
+import { tokenizeSafetyText } from "./text";
 
 export interface BrandSalts {
   brand: string;
@@ -78,15 +79,6 @@ export const KNOWN_SALTS: ReadonlySet<string> = new Set([
 const FORM_WORDS = new Set(["tablet", "tablets", "tab", "tabs", "capsule", "capsules", "cap", "caps", "syrup", "syp", "injection", "inj", "drops", "suspension", "cream", "gel", "sr", "er", "cr", "od", "ds", "duo", "forte", "plus", "advance"]);
 const isStrength = (w: string) => /\d/.test(w) || /^(?:mg|mcg|g|ml|iu|%)$/.test(w);
 
-function words(s: string): string[] {
-  return s
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[()[\],+/]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
 export interface SaltMatch {
   salts: string[];
   via: "bracket" | "brand" | "salt";
@@ -103,7 +95,7 @@ export function saltsFor(name: string): SaltMatch | null {
     if (salts.length) return { salts, via: "bracket" };
   }
 
-  const w = words(name).filter((x) => !isStrength(x));
+  const w = tokenizeSafetyText(name).filter((x) => !isStrength(x));
   let best: BrandSalts | null = null;
   for (const b of BRAND_SALTS) {
     const m = b.match.split(" ");

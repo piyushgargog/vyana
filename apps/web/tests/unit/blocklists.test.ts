@@ -41,6 +41,10 @@ describe("diagnosis language", () => {
     expect(checkDiagnosisLanguage(text)).toEqual({ phrases: [], diseases: [] });
   });
 
+  it("matches a diagnosis sentence split across lines", () => {
+    expect(hasDiagnosisLanguage("You are\nsuffering from this.")).toBe(true);
+  });
+
   it("matches whole words only", () => {
     expect(hasDiagnosisLanguage("He paid the strokes of the oar")).toBe(false);
     expect(hasDiagnosisLanguage("cancelled the appointment")).toBe(false);
@@ -63,6 +67,8 @@ describe("dose patterns", () => {
     "2.5 mg at night",
     "5 ml syrup",
     "2 teaspoons of syrup",
+    // OD at the end of a line still counts: the pattern is anchored to line ends.
+    "Take 1 tablet OD\nMorning and night",
   ];
   it.each(doses)("flags %j", (text) => {
     expect(hasDosePattern(text)).toBe(true);
