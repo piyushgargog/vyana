@@ -2,6 +2,7 @@
 // Owner: Vaibhav Parmar
 
 import { DEFAULT_TIMES, type FrequencyType } from "../../constants";
+import { HhMmPattern } from "../../contracts";
 import type { Json, TablesInsert } from "../database.types";
 import type { DbPrescription, DbPrescriptionItem } from "../types";
 import { DbError, requireUserId, toLocalDate, unwrap, unwrapOrNull, type Sb } from "./helpers";
@@ -30,8 +31,6 @@ export type CreateDoctorPrescriptionResult = {
   condition_id: string | null;
 };
 
-const TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d$/;
-
 /**
  * Checks the medicines of an e-prescription before anything is written, and fills in the reminder
  * times of the frequency (`DEFAULT_TIMES`) when the doctor gave none. A prescription saved without
@@ -45,7 +44,7 @@ export function prepareDoctorItems(items: DoctorPrescriptionItem[]): DoctorPresc
     if (!item.medicine_name || item.medicine_name.trim() === "") throw fail("the name is missing");
     if (!(item.frequency in DEFAULT_TIMES)) throw fail(`unknown frequency "${item.frequency}"`);
     const times = item.times && item.times.length > 0 ? item.times : DEFAULT_TIMES[item.frequency as FrequencyType];
-    for (const t of times) if (!TIME_FORMAT.test(t)) throw fail(`"${t}" is not a time like 09:00`);
+    for (const t of times) if (!HhMmPattern.test(t)) throw fail(`"${t}" is not a time like 09:00`);
     if (item.quantity_total != null && item.quantity_total <= 0) throw fail("the quantity must be more than 0");
     if (item.refill_alert_days != null && item.refill_alert_days < 0) throw fail("refill_alert_days cannot be negative");
     return { ...item, medicine_name: item.medicine_name.trim(), times };
