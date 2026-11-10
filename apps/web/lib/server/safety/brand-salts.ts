@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Brand → salt for the interaction check (ADR-046): common Indian brands, each checked against its product page.
  * Pure data + lookup, no I/O.

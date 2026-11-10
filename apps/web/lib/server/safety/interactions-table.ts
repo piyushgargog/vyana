@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Layer 1 of the interaction check (PLAN §2A, ADR-033): a small curated table of well-known interactions,
  * matched in code before any web search or model. Pure data + lookup, no I/O.

@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Citation filter (PLAN §2A rule 1, DESIGN §10): the app may only show links that our own Search/Fetch
  * calls returned in this request. Any other URL the model writes is removed. Pure functions, no I/O.
