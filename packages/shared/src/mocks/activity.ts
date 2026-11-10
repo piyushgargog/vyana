@@ -37,10 +37,3 @@ export const activityMockReadings: DeviceSpotReading[] = [
   { type: "weight", value: 70.4, value2: null, unit: "kg", measured_at: at(1, "01:20:00"), source: "health_connect", device_name: "Pixel Watch" },
   { type: "weight", value: 70.9, value2: null, unit: "kg", measured_at: at(9, "01:25:00"), source: "health_connect", device_name: "Pixel Watch" },
 ];
-
-/** The same screens with nothing recorded: the empty state. */
-export const activityEmptyMock: { today: string; days: DailyActivityRow[]; readings: DeviceSpotReading[] } = {
-  today: activityMockToday,
-  days: [],
-  readings: [],
-};
