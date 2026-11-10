@@ -1,7 +1,8 @@
 // The decision rules of the care agent: pure functions, no database, no model, no network.
 // Rules decide; a model may only write words later. Each returns null or one proposal draft.
 
-import { addDays, getRefillStatus } from "@vyana/shared";
+import { addDays, getRefillStatus, isValidLocalDate } from "@vyana/shared";
+import { log } from "../log";
 
 export type ProposalKind = "refill_due" | "lab_recheck" | "missed_dose_pattern";
 
@@ -69,6 +70,10 @@ export function labRecheckRule(input: LabRecheckInput): ProposalDraft | null {
   const { test, every_days } = followUp;
   if (!Number.isInteger(every_days) || every_days < 7 || every_days > 730) return null;
   if (lastMeasuredOn === null) return null;
+  if (!isValidLocalDate(lastMeasuredOn)) {
+    log({ event: "lab_recheck_bad_date", test });
+    return null;
+  }
   const due = addDays(lastMeasuredOn, every_days);
   if (today < due) return null;
   return {

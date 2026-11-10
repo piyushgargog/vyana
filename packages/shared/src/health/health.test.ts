@@ -7,6 +7,7 @@ import {
   findLastDone,
   formatLocalDate,
   getRefillStatus,
+  isValidLocalDate,
   MAX_DOSE_REMINDERS,
   monthsAgo,
   nextOccurrenceOfHour,
@@ -40,6 +41,20 @@ describe("dates", () => {
     expect(monthsAgo("2026-01-31", 1)).toBe("2025-12-31");
     expect(monthsAgo("2026-10-23", 24)).toBe("2024-10-23");
     expect(monthsAgo("2026-10-23", 0)).toBe("2026-10-23");
+  });
+
+  it("rejects malformed dates instead of rolling them over", () => {
+    expect(() => parseLocalDate("2026-13-40")).toThrow(RangeError);
+    expect(() => parseLocalDate("2026-02-30")).toThrow(RangeError);
+    expect(() => parseLocalDate("ab-cd-ef")).toThrow(RangeError);
+    expect(() => parseLocalDate("2026-02-29")).toThrow(RangeError); // 2026 is not a leap year
+    expect(() => addDays("2026-13-40", 1)).toThrow(RangeError);
+    expect(formatLocalDate(parseLocalDate("2024-02-29"))).toBe("2024-02-29");
+    expect(isValidLocalDate("2026-10-12")).toBe(true);
+    expect(isValidLocalDate("2026-13-40")).toBe(false);
+    expect(isValidLocalDate("2026-02-30")).toBe(false);
+    expect(isValidLocalDate("ab-cd-ef")).toBe(false);
+    expect(isValidLocalDate("2026-2-3")).toBe(false);
   });
 });
 
@@ -141,6 +156,14 @@ describe("getRefillStatus", () => {
   it("does not ask to reorder a medicine that is switched off or whose course is over", () => {
     expect(getRefillStatus({ ...metformin, active: false }, taken(28), today).refill_due).toBe(false);
     expect(getRefillStatus({ ...metformin, end_date: "2026-10-10" }, taken(28), today).refill_due).toBe(false);
+  });
+
+  it("ignores a malformed end date instead of failing the whole status", () => {
+    expect(getRefillStatus({ ...metformin, end_date: "2026-13-40" }, taken(28), today)).toEqual({
+      units_left: 2,
+      days_left: 1,
+      refill_due: true,
+    });
   });
 
   it("does not ask to reorder when the course ends before the pack would run out", () => {
@@ -293,6 +316,12 @@ describe("planFollowUpReminders", () => {
     const plan = planFollowUpReminders("cp-1", [{ test: " hbA1C ", every_days: 30 }, { test: "x", every_days: 0 }], { hba1c: "2026-10-01" }, "2026-01-01", at(12, 12));
     expect(plan).toHaveLength(1);
     expect(plan[0].at.getTime()).toBe(at(31, 10).getTime());
+  });
+
+  it("skips a test whose last measurement date is malformed, and keeps the other tests", () => {
+    const plan = planFollowUpReminders("cp-1", tests, { hba1c: "2026-13-40" }, "2026-09-01", at(12, 12));
+    expect(plan.find((p) => p.id === "followup:cp-1:hba1c")).toBeUndefined();
+    expect(plan.find((p) => p.id === "followup:cp-1:lipid profile")).not.toBeUndefined();
   });
 });
 

@@ -294,5 +294,8 @@ describe("ageFromDob", () => {
     expect(ageFromDob("", today)).toBeNull();
     expect(ageFromDob("not-a-date", today)).toBeNull();
     expect(ageFromDob("2030-01-01", today)).toBeNull();
+    expect(ageFromDob("1990-13-40", today)).toBeNull();
+    expect(ageFromDob("1990-02-30", today)).toBeNull();
+    expect(ageFromDob("ab-cd-ef", today)).toBeNull();
   });
 });

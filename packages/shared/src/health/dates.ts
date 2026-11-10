@@ -1,8 +1,29 @@
 // packages/shared/src/health/dates.ts
 // Local calendar-day helpers for the reminder planners (pure, no I/O). Owner: Vaibhav Parmar
 
-/** `YYYY-MM-DD` as a Date at local midnight. */
+/**
+ * Strict check for a `YYYY-MM-DD` date: the shape, a month from 1 to 12, and a day that exists in
+ * that month and year (29 Feb only in a leap year). `new Date` alone rolls an out of range month or
+ * day into the next month, so every helper below funnels through this check first.
+ */
+export function isValidLocalDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  if (m < 1 || m > 12 || d < 1) return false;
+  return d <= new Date(y, m, 0).getDate();
+}
+
+/**
+ * `YYYY-MM-DD` as a Date at local midnight. Throws a RangeError on a malformed date instead of
+ * rolling it over, so a legacy row or a direct database write can never plan a dose on a day that
+ * never existed. Callers that read dates from the database guard with isValidLocalDate first and
+ * skip the bad row.
+ */
 export function parseLocalDate(date: string): Date {
+  if (!isValidLocalDate(date)) throw new RangeError("Invalid YYYY-MM-DD date");
   const [y, m, d] = date.split("-").map(Number);
   return new Date(y, m - 1, d);
 }

@@ -3,7 +3,7 @@
 // Owner: Vaibhav Parmar
 
 import type { DbDoseLog, DbPrescriptionItem } from "../db/types";
-import { daysBetween, formatLocalDate } from "./dates";
+import { daysBetween, formatLocalDate, isValidLocalDate } from "./dates";
 
 export type RefillItem = Pick<DbPrescriptionItem, "id" | "dose" | "times" | "quantity_total" | "refill_alert_days" | "active" | "end_date">;
 
@@ -75,7 +75,7 @@ export function getRefillStatus(item: RefillItem, doseLogs: Pick<DbDoseLog, "ite
   if (!item.active) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false };
 
   const todayText = formatLocalDate(today);
-  if (item.end_date) {
+  if (item.end_date && isValidLocalDate(item.end_date)) {
     const daysToEnd = daysBetween(todayText, item.end_date);
     if (daysToEnd < 0) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // course is over
     if (daysLeft !== null && daysToEnd < daysLeft) return { units_left: unitsLeft, days_left: daysLeft, refill_due: false }; // finishes first
