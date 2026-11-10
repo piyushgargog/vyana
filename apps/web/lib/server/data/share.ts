@@ -4,6 +4,7 @@ import {
   buildMemory,
   buildTimeline,
   isShareScope,
+  isValidLocalDate,
   MEMORY_LAB_POINTS,
   MEMORY_LAB_TESTS,
   type MemoryDoseLog,
@@ -15,6 +16,7 @@ import {
 } from "@vyana/shared";
 import { notFound } from "../errors";
 import { istDate } from "../dates";
+import { log } from "../log";
 
 /** `share_links.token` is 24 random bytes as hex. Anything else cannot be a token, so it never reaches the database. */
 export const SHARE_TOKEN_FORMAT = /^[0-9a-f]{48}$/;
@@ -36,8 +38,11 @@ const MEMORY_DOSE_ROWS = 1000;
  */
 export function ageFromDob(dob: string | null, now: Date): number | null {
   if (!dob) return null;
+  if (!isValidLocalDate(dob)) {
+    log({ event: "age_from_dob_invalid" });
+    return null;
+  }
   const [y, m, d] = dob.split("-").map(Number);
-  if (!y || !m || !d) return null;
   const [ty, tm, td] = istDate(now).split("-").map(Number);
   let age = ty - y;
   if (tm < m || (tm === m && td < d)) age--;

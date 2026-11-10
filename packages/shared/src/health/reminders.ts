@@ -3,7 +3,7 @@
 // (apps/mobile/src/lib/notifications.ts). Owner: Vaibhav Parmar
 
 import type { DbDoseLog, DbPrescriptionItem } from "../db/types";
-import { addDays, atLocalTime, formatLocalDate } from "./dates";
+import { addDays, atLocalTime, formatLocalDate, isValidLocalDate } from "./dates";
 import { getRefillStatus, type RefillItem } from "./refill";
 
 export type ReminderKind = "dose" | "refill" | "follow_up";
@@ -173,6 +173,7 @@ export function planFollowUpReminders(
   for (const { test, every_days } of tests) {
     if (!(every_days > 0)) continue;
     const base = findLastDone(test, lastDone) ?? approvedOn;
+    if (!isValidLocalDate(base)) continue; // a malformed legacy date skips this test, not the whole plan
     const due = addDays(base, every_days);
     const dueAt = atLocalTime(due, `${String(REMINDER_HOUR.followUp).padStart(2, "0")}:00`);
     const at = due > today && dueAt.getTime() > now.getTime() ? dueAt : nextOccurrenceOfHour(now, REMINDER_HOUR.followUp);

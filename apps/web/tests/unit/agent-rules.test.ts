@@ -90,6 +90,12 @@ describe("labRecheckRule", () => {
     expect(labRecheckRule({ ...base, lastMeasuredOn: null })).toBeNull();
   });
 
+  it("returns null when the last date is malformed, instead of planning on a rolled over date", () => {
+    expect(labRecheckRule({ ...base, lastMeasuredOn: "2026-13-40" })).toBeNull();
+    expect(labRecheckRule({ ...base, lastMeasuredOn: "2026-02-30" })).toBeNull();
+    expect(labRecheckRule({ ...base, lastMeasuredOn: "ab-cd-ef" })).toBeNull();
+  });
+
   it("uses 'unknown' when there is no report id", () => {
     expect(labRecheckRule({ ...base, reportId: null })?.evidence[0].id).toBe("unknown");
   });
