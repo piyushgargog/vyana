@@ -1,5 +1,6 @@
 import "server-only";
-import { TTL, cached, normalizeKeyPart } from "../cache";
+import { normalizeName } from "@vyana/shared";
+import { TTL, cached } from "../cache";
 import { log } from "../log";
 import { isOnDomain, isWebMock } from "./domains";
 import { decodeEntities, readTextCapped } from "./fetch-page";
@@ -72,7 +73,7 @@ export async function searchHealthTopics(query: string, limit = 5): Promise<Topi
     return [1, 2, 3].slice(0, limit).map((n) => ({ title: `[mock] ${term} (${n})`, url: `https://medlineplus.gov/${slug}-${n}.html`, snippet: `[mock] Topic ${n} for "${term}".` }));
   }
   try {
-    const hit = await cached<TopicResult[]>(`mlp:topics:${normalizeKeyPart(term)}:${limit}`, "mlp_search", TTL.day, async () => {
+    const hit = await cached<TopicResult[]>(`mlp:topics:${normalizeName(term, "collapse")}:${limit}`, "mlp_search", TTL.day, async () => {
       const res = await fetch(`${ENDPOINT}?db=healthTopics&retmax=${limit}&term=${encodeURIComponent(term)}`, {
         headers: { "User-Agent": USER_AGENT, Accept: "application/xml,text/xml" },
         signal: AbortSignal.timeout(10_000),

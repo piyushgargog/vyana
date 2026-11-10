@@ -11,6 +11,8 @@
  * Changing the table needs a PROGRESS.md entry and a team review (EVALUATION §6 "Interactions table").
  */
 
+import { normalizeName } from "@vyana/shared";
+
 export interface TableSource {
   title: string;
   url: string;
@@ -188,7 +190,7 @@ export function normalizeSalt(name: string): string {
 
 /** Splits "Sulfamethoxazole + Trimethoprim" or "co-trimoxazole" into its salts, normalized. */
 export function expandSalts(name: string): string[] {
-  const n = name.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+  const n = normalizeName(name, "collapse");
   if (COMBINATIONS[n]) return COMBINATIONS[n];
   // Replace separators first, then split: no backtracking-prone regex on user input.
   return n

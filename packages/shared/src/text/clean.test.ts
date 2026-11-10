@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cleanInlineText } from "./clean";
+import { cleanInlineText, normalizeName } from "./clean";
 
 describe("cleanInlineText", () => {
   it("collapses whitespace, trims and caps the length", () => {
@@ -20,5 +20,20 @@ describe("cleanInlineText", () => {
       expect(performance.now() - started).toBeLessThan(500);
       expect(result.length).toBeLessThanOrEqual(80);
     }
+  });
+});
+
+describe("normalizeName", () => {
+  it("strips all whitespace and folds case and compatibility characters by default", () => {
+    expect(normalizeName("  Cardiology ")).toBe("cardiology");
+    expect(normalizeName("General  Medicine")).toBe("generalmedicine");
+    expect(normalizeName("Ｃａｒｄｉｏｌｏｇｙ")).toBe("cardiology");
+    expect(normalizeName("Metformin\t500 mg\n")).toBe("metformin500mg");
+  });
+
+  it("keeps single spaces with collapse, so spaced names stay distinct from joined ones", () => {
+    expect(normalizeName("  New   Delhi ", "collapse")).toBe("new delhi");
+    expect(normalizeName("new delhi", "collapse")).not.toBe(normalizeName("newdelhi", "collapse"));
+    expect(normalizeName("Ｄｏｌｏ   650", "collapse")).toBe("dolo 650");
   });
 });
