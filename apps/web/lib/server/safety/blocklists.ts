@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Output checks for AI text (PLAN §2A rules 1 and 6, DESIGN §10): the app never diagnoses and never gives a dose.
  * Used on lab summaries, triage advice, care plans and assistant replies. Pure functions, no I/O.

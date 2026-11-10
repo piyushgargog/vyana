@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Curated red flags per condition (PLAN §2A, ADR-044): the warning signs a care plan always shows for a condition,
  * whatever the fetched pages say. Pure data + lookup, no I/O.

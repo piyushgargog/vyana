@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Privacy before AI (PLAN §2A rule 9, ADR-032): replaces personal identifiers in text with placeholders before
  * the text goes to any model. Pure functions, no I/O.

@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Emergency warning signs (PLAN §2A rule 4, DESIGN §10). Fixed rules run in code BEFORE any model call, so an
  * emergency is never missed because a model misread it. Used by triage, the assistant and care plans.

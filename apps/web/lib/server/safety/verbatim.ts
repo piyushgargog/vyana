@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Evidence check (PLAN §2A rule 1, DESIGN §10): a value the model extracted is kept only when the exact
  * source text it cites appears in the document. Pure functions, no I/O.

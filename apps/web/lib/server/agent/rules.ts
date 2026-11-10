@@ -1,3 +1,5 @@
+import "server-only";
+
 // The decision rules of the care agent: pure functions, no database, no model, no network.
 // Rules decide; a model may only write words later. Each returns null or one proposal draft.
 
