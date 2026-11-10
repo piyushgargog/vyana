@@ -15,6 +15,7 @@ Read this before changing anything in this repository.
 ## Contracts
 
 - API shapes live in `packages/shared/src/contracts` (Zod). JSON is snake_case, matching the DB columns.
+- Model output schemas (the shapes a model or an upstream service returns, like `RxLlm` or `TriageLlm`) live next to their caller in `apps/web/lib/server`, not in contracts. Contracts hold API shapes only.
 - After changing a contract, run `pnpm docs:openapi` and commit `apps/web/openapi.yaml`. CI fails if it is stale.
 - Update the mocks in `packages/shared/src/mocks` in the same change.
 
