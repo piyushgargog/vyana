@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { AiMeta, Interaction, InteractionsReq, InteractionsRes, SourceLink } from "@vyana/shared";
+import { medicineLabel } from "@vyana/shared";
 import type { AuthedUser } from "./auth";
 import { badRequest, forbidden } from "./errors";
 import { log } from "./log";
@@ -24,7 +25,6 @@ interface Medicine {
   salts: string[];
 }
 
-const display = (r: { medicine_name: string; strength: string | null }) => (r.strength ? `${r.medicine_name} ${r.strength}` : r.medicine_name);
 const meta = (): AiMeta => ({ model: "none", prompt_version: INTERACTIONS_VERSION, generated_at: new Date().toISOString() });
 const joined = (m: Medicine) => m.salts.join(" + ");
 
@@ -66,7 +66,7 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
   const known: Medicine[] = [];
   const notChecked: string[] = [];
   for (const r of rows) {
-    const name = display(r);
+    const name = medicineLabel(r);
     if (known.some((m) => m.name === name)) continue;
     const match = saltsFor(r.medicine_name);
     if (match) known.push({ name, salts: match.salts });

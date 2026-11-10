@@ -1,12 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
+import { istInstant, istTime } from "@vyana/shared";
 import {
   CATCH_UP_MINUTES,
   findMissedDoses,
   firstName,
   GRACE_MINUTES,
-  istInstant,
-  istTime,
   listOverdueDoses,
   runMissedDoseCheck,
   type CareItem,

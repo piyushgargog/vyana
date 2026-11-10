@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cleanInlineText } from "./clean";
+import { cleanInlineText, normaliseTestName } from "./clean";
 
 describe("cleanInlineText", () => {
   it("collapses whitespace, trims and caps the length", () => {
@@ -20,5 +20,13 @@ describe("cleanInlineText", () => {
       expect(performance.now() - started).toBeLessThan(500);
       expect(result.length).toBeLessThanOrEqual(80);
     }
+  });
+});
+
+describe("normaliseTestName", () => {
+  it("reduces a test name to lower-case letters and digits", () => {
+    expect(normaliseTestName("HbA1c")).toBe("hba1c");
+    expect(normaliseTestName("Hb A1c")).toBe("hba1c");
+    expect(normaliseTestName("Glycated Haemoglobin (HbA1c)")).toBe("glycatedhaemoglobinhba1c");
   });
 });
