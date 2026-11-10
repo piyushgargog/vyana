@@ -1,5 +1,6 @@
 import "server-only";
 import type { LanguageModel } from "ai";
+import { medicineLabel } from "@vyana/shared";
 
 /**
  * The assistant's model when `LLM_MOCK=1` (SPEC §11): a fixed script, so the whole chat path (tools, link filter,
@@ -46,7 +47,7 @@ function answer(toolName: string, value: unknown): string {
   if (toolName === "get_my_medicines") {
     const meds = (value as { medicines?: { medicine_name: string; strength: string | null }[] }).medicines ?? [];
     if (!meds.length) return "[mock] You have no active medicines saved in Vyana.";
-    return `[mock] Your active medicines: ${meds.map((m) => (m.strength ? `${m.medicine_name} ${m.strength}` : m.medicine_name)).join(", ")}.`;
+    return `[mock] Your active medicines: ${meds.map((m) => medicineLabel(m)).join(", ")}.`;
   }
   const first = (value as { results?: { title: string; url: string }[] }).results?.[0];
   if (!first) return "[mock] I couldn't find a trusted source for this. Please ask your doctor.";

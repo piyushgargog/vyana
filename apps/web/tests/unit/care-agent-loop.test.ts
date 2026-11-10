@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
+import { istInstant } from "@vyana/shared";
 import { runCareAgentLoop } from "@/lib/server/agent/loop";
-import { istInstant } from "@/lib/server/data/missed-doses";
 
 type Row = Record<string, unknown>;
 

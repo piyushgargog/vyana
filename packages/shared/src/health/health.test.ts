@@ -7,6 +7,8 @@ import {
   findLastDone,
   formatLocalDate,
   getRefillStatus,
+  istInstant,
+  istTime,
   MAX_DOSE_REMINDERS,
   monthsAgo,
   nextOccurrenceOfHour,
@@ -40,6 +42,12 @@ describe("dates", () => {
     expect(monthsAgo("2026-01-31", 1)).toBe("2025-12-31");
     expect(monthsAgo("2026-10-23", 24)).toBe("2024-10-23");
     expect(monthsAgo("2026-10-23", 0)).toBe("2026-10-23");
+  });
+
+  it("converts India wall-clock times to moments and back", () => {
+    expect(istInstant("2026-10-12", "09:00").toISOString()).toBe("2026-10-12T03:30:00.000Z");
+    expect(istInstant("2026-10-12", "00:15").toISOString()).toBe("2026-10-11T18:45:00.000Z");
+    expect(istTime(new Date("2026-10-12T03:30:00Z"))).toBe("09:00");
   });
 });
 

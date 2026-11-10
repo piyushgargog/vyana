@@ -3,6 +3,7 @@
 // Owner: Vaibhav Parmar
 
 import { cleanInlineText } from "../text/clean";
+import { medicineLabel } from "./medicines";
 
 /**
  * The QR holds plain text, so any phone camera shows it as it is, with no app and no internet: a first responder reads
@@ -59,7 +60,7 @@ export function buildMedicalIdQr(
   maxLength: number = MEDICAL_ID_MAX_LENGTH,
 ): string {
   const medicines = meds
-    .map((m) => cleanInlineText(m.strength ? `${m.medicine_name} ${m.strength}` : m.medicine_name, 80))
+    .map((m) => cleanInlineText(medicineLabel(m), 80))
     .filter((m) => m !== "")
     .slice(0, 30);
   const allergies = profile.allergies.map((a) => cleanInlineText(a, 60)).filter((a) => a !== "").slice(0, 20);
