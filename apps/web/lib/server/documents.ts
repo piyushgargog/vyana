@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { AiMeta } from "@vyana/shared";
 import { runAi } from "./ai";
 import { badRequest, forbidden, notFound, upstream } from "./errors";
-import { isLlmMock } from "./llm";
 import { log } from "./log";
+import { isLlmMock } from "./mock";
 import { TRANSCRIBE_PROMPT_VERSION, TRANSCRIBE_SYSTEM, transcribePrompt } from "./prompts/documents";
 import { supabaseAdmin } from "./supabase-admin";
 

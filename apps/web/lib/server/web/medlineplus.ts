@@ -1,7 +1,8 @@
 import "server-only";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
-import { isOnDomain, isWebMock } from "./domains";
+import { isWebMock } from "../mock";
+import { isOnDomain } from "./domains";
 import { decodeEntities, readTextCapped } from "./fetch-page";
 
 /**

@@ -35,6 +35,3 @@ export const isTrustedHealthUrl = (url: string): boolean => isOnAnyDomain(url, T
 
 /** The sites a care plan may quote. */
 export const CARE_PLAN_DOMAINS: readonly string[] = ["mohfw.gov.in", "icmr.gov.in", "who.int", "nhs.uk", "medlineplus.gov", "nhm.gov.in"];
-
-/** Tests and local development: no network, fixture pages. Every title starts with "[mock]" so fixtures are never mistaken for real pages. */
-export const isWebMock = (): boolean => process.env.WEB_MOCK === "1";

@@ -3,8 +3,8 @@ import type { EmergencyNearbyRes, Hospital } from "@vyana/shared";
 import { TTL, cached } from "../cache";
 import { reverseGeocode } from "../geo";
 import { log } from "../log";
+import { isWebMock } from "../mock";
 import { supabaseAdmin } from "../supabase-admin";
-import { isWebMock } from "./domains";
 
 /**
  * Hospitals near a point (SPEC §5, ADR-072): one request to the public OpenStreetMap Overpass service (about a second),
