@@ -7,6 +7,8 @@
  * still match. Changing a rule needs a PROGRESS.md entry and a safety eval re-run (EVALUATION §6).
  */
 
+import { normalizeSafetyWord, tokenizeSafetyText } from "./text";
+
 export const RED_FLAG_SOURCE = {
   title: "Recognizing medical emergencies (MedlinePlus, U.S. National Library of Medicine)",
   url: "https://medlineplus.gov/ency/article/001927.htm",
@@ -138,19 +140,14 @@ export const RED_FLAG_RULES: readonly RedFlagRule[] = [
   },
 ];
 
-/** Lowercase, NFKC, drop apostrophes ("can't" → "cant"), split into words (Latin and Devanagari). */
+/** Lowercase, NFKC, drop apostrophes ("can't" → "cant"), split into words (Latin and Devanagari). One shared tokenizer, see ./text. */
 export function tokenize(text: string): string[] {
-  return text
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .split(/[^\p{L}\p{M}\p{N}]+/u)
-    .filter(Boolean);
+  return tokenizeSafetyText(text);
 }
 
 /** A term matches a word exactly, or as its start when the term has 4+ characters ("breath" → "breathing"). */
 function hasTerm(words: string[], term: string): boolean {
-  const t = term.normalize("NFKC");
+  const t = normalizeSafetyWord(term);
   return words.some((w) => w === t || (t.length >= 4 && w.startsWith(t)));
 }
 

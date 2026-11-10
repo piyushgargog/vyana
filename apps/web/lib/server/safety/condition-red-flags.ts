@@ -10,6 +10,8 @@
  * Changing the list needs a PROGRESS.md entry and a team review (EVALUATION §6 "Care plan red flags").
  */
 
+import { tokenizeSafetyText } from "./text";
+
 export interface RedFlagSource {
   title: string;
   url: string;
@@ -176,17 +178,9 @@ export const CONDITION_RED_FLAGS: readonly ConditionRedFlags[] = [
   },
 ];
 
-function words(s: string): string[] {
-  return s
-    .normalize("NFKC")
-    .toLowerCase()
-    .split(/[^\p{L}\p{M}\p{N}]+/u)
-    .filter(Boolean);
-}
-
 /** True when every word of `phrase` appears, in order and next to each other, among `name`'s words. */
 function hasPhrase(nameWords: string[], phrase: string): boolean {
-  const p = words(phrase);
+  const p = tokenizeSafetyText(phrase);
   if (!p.length) return false;
   for (let i = 0; i + p.length <= nameWords.length; i++) {
     if (p.every((w, j) => nameWords[i + j] === w)) return true;
@@ -196,6 +190,6 @@ function hasPhrase(nameWords: string[], phrase: string): boolean {
 
 /** The curated entries for a condition name ("Type 2 Diabetes with high BP" → diabetes + high blood pressure). */
 export function redFlagsForCondition(name: string): ConditionRedFlags[] {
-  const nameWords = words(name);
+  const nameWords = tokenizeSafetyText(name);
   return CONDITION_RED_FLAGS.filter((c) => c.match.some((m) => hasPhrase(nameWords, m)));
 }
