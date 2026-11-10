@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { DEFAULT_TIMES, PrescriptionItem, isoDate, type PrescriptionExtractRes } from "@vyana/shared";
+import { DEFAULT_TIMES, HhMmPattern, PrescriptionItem, isoDate, type PrescriptionExtractRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import { checkUploadPath, downloadUpload, readDocumentText } from "./documents";
 import { RX_EXTRACT_PROMPT_VERSION, RX_EXTRACT_SYSTEM, rxExtractPrompt } from "./prompts/documents";
@@ -39,8 +39,6 @@ export const RxLlm = z.object({
 });
 export type RxLlm = z.infer<typeof RxLlm>;
 type Field<T> = { value: T | null; evidence: string | null };
-
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const todayIst = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
@@ -115,7 +113,7 @@ export function verifyRx(out: RxLlm, text: string, map: Record<string, string>, 
     const quantity = proven(text, it.quantity_total);
     const instructions = back(proven(text, it.instructions));
     const timesRaw = proven(text, it.times) ?? [];
-    const times = timesRaw.filter((t) => HHMM.test(t));
+    const times = timesRaw.filter((t) => HhMmPattern.test(t));
 
     const failed: string[] = [];
     const missedWhenGiven = (f: Field<unknown>, got: unknown, label: string) => {

@@ -7,6 +7,7 @@ export const ApiErrorBody = z.object({ error: z.object({ code: ErrorCode, messag
 
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);       // YYYY-MM-DD
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/);                  // HH:MM 24h
+export const HhMmPattern = /^([01]\d|2[0-3]):[0-5]\d$/;  // HH:MM 24h, hours 00-23 and minutes 00-59
 
 // ---------- AI accuracy & safety (plan §2A) ----------
 export const Language = z.enum(["en","hi","hinglish"]);
