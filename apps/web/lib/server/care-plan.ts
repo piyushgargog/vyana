@@ -196,6 +196,7 @@ export async function generateCarePlan(authed: AuthedUser, body: GenerateCarePla
   if (asPatient && condition.patient_id !== user.id) throw notFound("This condition was not found.");
   if (asPatient && condition.source !== "patient") throw forbidden("Your doctor prepares the care plan for this condition.");
 
+  // The patient's profile row is not necessarily the caller's, so the server reads it as admin after the ownership check above.
   const admin = supabaseAdmin();
   const { data: patient } = await admin.from("profiles").select("preferred_language").eq("id", condition.patient_id).maybeSingle();
   const language = body.language ?? Language.catch("en").parse((patient as { preferred_language?: unknown } | null)?.preferred_language);

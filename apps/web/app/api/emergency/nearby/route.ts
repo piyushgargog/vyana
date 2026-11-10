@@ -8,12 +8,12 @@ import { findNearbyHospitals } from "@/lib/server/web/overpass";
 export const maxDuration = 30;
 
 export const POST = withRoute("emergency/nearby", async (req, ctx) => {
-  const { user } = await requireUser(req);
+  const { user, sb } = await requireUser(req);
   ctx.userId = user.id;
   const body = await parseBody(req, EmergencyNearbyReq);
   let res: EmergencyNearbyRes;
   try {
-    res = await findNearbyHospitals(body.lat, body.lng);
+    res = await findNearbyHospitals(body.lat, body.lng, sb);
   } catch (err) {
     // Never 5xx here: the SOS screen must keep working and still shows 108 (SPEC §5).
     log({ event: "nearby_failed", error: err instanceof Error ? err.name : "Error" });

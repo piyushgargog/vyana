@@ -74,6 +74,7 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
   }
 
   // A saved result for the same medicines, less than a week old.
+  // interaction_checks has no insert or update policy for a signed-in user (migration 0002), so the saved result is read and written through the admin client.
   const admin = supabaseAdmin();
   // SHA-256: the key is built from health data (medicine names).
   const medicinesKey = createHash("sha256").update(JSON.stringify(known.map((m) => `${m.name}|${m.salts.join("+")}`).sort())).digest("hex");

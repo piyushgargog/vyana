@@ -5,7 +5,8 @@ import { supabaseAdmin } from "./supabase-admin";
 
 /**
  * Postgres cache for public web data (DESIGN §5). Only public results (prices, hospitals, NMC records,
- * search results) go in here, never patient data, so every user can share an entry.
+ * search results) go in here, never patient data, so every user can share an entry. web_cache has no
+ * policy (migration 0002), so only the service role can read or write it.
  */
 
 export const TTL = {

@@ -47,6 +47,7 @@ async function authenticate(req: Request): Promise<AuthedUser> {
   const token = bearerToken(req);
   if (!token) throw unauthorized();
 
+  // Only the service-role key turns a bearer token into a user, so the check runs as admin.
   const { data, error } = await supabaseAdmin().auth.getUser(token);
   if (error || !data.user) throw unauthorized("Your session has expired. Sign in again.");
 

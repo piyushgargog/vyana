@@ -85,6 +85,7 @@ async function generate<T>(input: RunAiInput<T>): Promise<{ object: T; fallback:
 
 type RunRecord = Pick<RunAiBase<unknown>, "feature" | "userId" | "promptVersion" | "inputRef" | "sources">;
 
+/** Records one AI run. ai_runs lets a signed-in user update only status and report_note (migration 0002), so the server writes runs as admin. */
 async function recordRun(input: RunRecord, model: string, object: unknown, status: AiRunStatus, usage?: AiUsage): Promise<string | null> {
   try {
     const { data, error } = await supabaseAdmin()
@@ -124,6 +125,7 @@ export async function finishAiRun(
   result: { output: unknown; sources: SourceLink[]; status: AiRunStatus; usage?: AiUsage },
 ): Promise<void> {
   if (!runId) return;
+  // The output and token counts are not columns a signed-in user may update (migration 0002), so this goes through the admin client.
   try {
     const { error } = await supabaseAdmin()
       .from("ai_runs")

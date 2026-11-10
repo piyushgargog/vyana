@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Language, type AiMeta, type TriageReq, type TriageRes } from "@vyana/shared";
 import { runAi } from "./ai";
 import type { AuthedUser } from "./auth";
@@ -7,7 +8,6 @@ import { log } from "./log";
 import { TRIAGE_PROMPT_VERSION, TRIAGE_SYSTEM, triagePrompt } from "./prompts/triage";
 import { matchRedFlags, redFlagLabels } from "./safety/red-flags";
 import { redact } from "./safety/redact";
-import { supabaseAdmin } from "./supabase-admin";
 
 /**
  * Symptom triage (SPEC §15, PLAN §2A, ADR-045): fixed red-flag rules first, then the model only picks urgency and
@@ -65,9 +65,9 @@ export function matchDepartments(names: string[], allowed: string[]): string[] {
   return out.slice(0, MAX_DEPARTMENTS);
 }
 
-/** Distinct department names from the seeded hospitals (public data). */
-async function allowedDepartments(): Promise<string[]> {
-  const { data, error } = await supabaseAdmin().from("departments").select("name");
+/** Distinct department names from the seeded hospitals (public data, any signed-in user may read them). */
+async function allowedDepartments(sb: SupabaseClient): Promise<string[]> {
+  const { data, error } = await sb.from("departments").select("name");
   if (error) log({ event: "triage_departments_failed" });
   const names = [...new Set(((data ?? []) as { name: string }[]).map((d) => d.name.trim()).filter(Boolean))].sort();
   return names.includes(DEFAULT_DEPARTMENT) ? names : [...names, DEFAULT_DEPARTMENT];
@@ -75,7 +75,7 @@ async function allowedDepartments(): Promise<string[]> {
 
 const meta = (model: string, promptVersion: string): AiMeta => ({ model, prompt_version: promptVersion, generated_at: new Date().toISOString() });
 
-export async function triage({ user, profile }: AuthedUser, body: TriageReq): Promise<TriageRes> {
+export async function triage({ user, profile, sb }: AuthedUser, body: TriageReq): Promise<TriageRes> {
   const language = body.language ?? Language.catch("en").parse(profile.preferred_language);
 
   // 1. Fixed rules first: no model is involved in an emergency (§2A rule 4).
@@ -92,7 +92,7 @@ export async function triage({ user, profile }: AuthedUser, body: TriageReq): Pr
   }
 
   // 2. The model only classifies, from redacted text and our department list.
-  const allowed = await allowedDepartments();
+  const allowed = await allowedDepartments(sb);
   const knownNames = profile.full_name ? [profile.full_name] : [];
   const symptoms = redact(body.symptoms, { knownNames }).text;
   const duration = body.duration ? redact(body.duration, { knownNames }).text : undefined;
