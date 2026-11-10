@@ -35,6 +35,7 @@ export function checkUploadPath(userId: string, filePath: string): { mime: strin
 }
 
 export async function downloadUpload(bucket: Bucket, filePath: string): Promise<Uint8Array> {
+  // Private buckets are read by the server with the service role (migration 0003); clients view files through signed URLs.
   const { data, error } = await supabaseAdmin().storage.from(bucket).download(filePath);
   if (error || !data) throw notFound("That file wasn't found. Please upload it again.");
   if (data.size > MAX_UPLOAD_BYTES) throw badRequest("The file is larger than 10 MB.");

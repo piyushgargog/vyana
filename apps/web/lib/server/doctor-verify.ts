@@ -34,6 +34,7 @@ export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: D
   if (error) throw error;
   if (!doctor) throw notFound("Complete your doctor profile first.");
 
+  // Verification fields are guarded by trg_check_doctor_verification_update (migration 0002): only the server or an admin may set them.
   const admin = supabaseAdmin();
   const checkedAt = new Date().toISOString();
   const row = doctor as DoctorRow;
@@ -67,6 +68,7 @@ export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: D
 
 /** An admin records the outcome of checking a doctor's registration in the public register by hand. */
 export async function adminCheckDoctor({ user }: AuthedUser, body: AdminDoctorCheckReq): Promise<DoctorVerifyRes> {
+  // Verification fields are guarded by trg_check_doctor_verification_update (migration 0002): only the server or an admin may set them.
   const admin = supabaseAdmin();
   const checkedAt = new Date().toISOString();
 

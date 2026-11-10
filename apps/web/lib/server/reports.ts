@@ -196,6 +196,7 @@ export async function correctLabValue({ sb, user }: Pick<AuthedUser, "sb" | "use
 
   const next = applyCorrection(row, body);
   const before = { value: row.value, value_text: row.value_text, unit: row.unit, flag: row.flag };
+  // lab_values has no update policy for a signed-in user (migration 0002), so the correction is written as admin after the ownership check above.
   const admin = supabaseAdmin();
   const { error: updateError } = await admin
     .from("lab_values")
@@ -248,6 +249,7 @@ export async function analyzeReport(
   const user = { id: authed.user.id, fullName: authed.profile.full_name, language: Language.catch("en").parse(authed.profile.preferred_language) };
   const { mime } = checkUploadPath(user.id, filePath);
   const bytes = await downloadUpload("lab-reports", filePath);
+  // lab_reports has no insert policy for a signed-in user (migration 0002), so the server creates the row as admin.
   const admin = supabaseAdmin();
 
   // Created first so the app can show progress (SPEC §4 step 2).

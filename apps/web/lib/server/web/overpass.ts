@@ -1,9 +1,9 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmergencyNearbyRes, Hospital } from "@vyana/shared";
 import { TTL, cached } from "../cache";
 import { reverseGeocode } from "../geo";
 import { log } from "../log";
-import { supabaseAdmin } from "../supabase-admin";
 import { isWebMock } from "./domains";
 
 /**
@@ -106,9 +106,9 @@ async function fromOverpass(lat: number, lng: number): Promise<Hospital[]> {
   }
 }
 
-/** The seeded hospitals table, nearest first, within 60 km. */
-async function fromTable(lat: number, lng: number): Promise<Hospital[]> {
-  const { data, error } = await supabaseAdmin().from("hospitals").select("name, address, phone, lat, lng").not("lat", "is", null).not("lng", "is", null);
+/** The seeded hospitals table, nearest first, within 60 km. Any signed-in user may read it. */
+async function fromTable(lat: number, lng: number, sb: SupabaseClient): Promise<Hospital[]> {
+  const { data, error } = await sb.from("hospitals").select("name, address, phone, lat, lng").not("lat", "is", null).not("lng", "is", null);
   if (error || !data) return [];
   const rows = data as { name: string; address: string | null; phone: string | null; lat: number; lng: number }[];
   return rows
@@ -138,7 +138,7 @@ const MOCK_HOSPITAL: Hospital = {
 };
 
 /** Never throws: any failure is an empty list, and an empty answer is not cached. */
-export async function findNearbyHospitals(lat: number, lng: number): Promise<EmergencyNearbyRes> {
+export async function findNearbyHospitals(lat: number, lng: number, sb: SupabaseClient): Promise<EmergencyNearbyRes> {
   try {
     const hit = await cached<{ area: string | null; hospitals: Hospital[] }>(`nearby:v2:${lat.toFixed(2)}:${lng.toFixed(2)}`, "nearby", TTL.day, async () => {
       const area = await reverseGeocode(lat, lng);
@@ -146,7 +146,7 @@ export async function findNearbyHospitals(lat: number, lng: number): Promise<Eme
       if (isWebMock()) hospitals = [MOCK_HOSPITAL];
       else {
         hospitals = await fromOverpass(lat, lng);
-        if (hospitals.length === 0) hospitals = await fromTable(lat, lng);
+        if (hospitals.length === 0) hospitals = await fromTable(lat, lng, sb);
       }
       return hospitals.length > 0 ? { area, hospitals } : null;
     });

@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { VALID_TOKEN, db, fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
 const { findNearbyHospitals, haversineKm, parseOverpass } = await import("@/lib/server/web/overpass");
+
+/** The caller's client, backed by the same in-memory rows as the admin client. */
+const sb = fakeSupabaseModule.supabaseForUser(VALID_TOKEN) as unknown as SupabaseClient;
 
 const FROM = { lat: 28.6139, lng: 77.209 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -62,13 +66,13 @@ describe("findNearbyHospitals", () => {
   it("asks Overpass once per ~1 km area, says who it is, and caches the answer", async () => {
     const fetchFn = vi.fn<typeof fetch>(async (url) => (String(url).includes("overpass") ? json(FIXTURE) : json({ address: { suburb: "Connaught Place", city: "Delhi" } })));
     vi.stubGlobal("fetch", fetchFn);
-    const first = await findNearbyHospitals(28.6139, 77.209);
+    const first = await findNearbyHospitals(28.6139, 77.209, sb);
     expect(first.hospitals.map((h) => h.name)).toEqual(["First Hospital", "Second Hospital"]);
     expect(first.cached).toBe(false);
     const call = fetchFn.mock.calls.find(([u]) => String(u).includes("overpass"))!;
     expect((call[1]?.headers as Record<string, string>)["User-Agent"]).toContain("Vyana");
     const calls = fetchFn.mock.calls.length;
-    const second = await findNearbyHospitals(28.6141, 77.2092);
+    const second = await findNearbyHospitals(28.6141, 77.2092, sb);
     expect(second.cached).toBe(true);
     expect(fetchFn.mock.calls.length).toBe(calls);
   });
@@ -81,7 +85,7 @@ describe("findNearbyHospitals", () => {
       { name: "Table Nowhere", address: null, phone: null, lat: null, lng: null },
       { name: "Table Other City", address: null, phone: null, lat: 19.07, lng: 72.87 },
     ];
-    const res = await findNearbyHospitals(28.6139, 77.209);
+    const res = await findNearbyHospitals(28.6139, 77.209, sb);
     expect(res.hospitals.map((h) => h.name)).toEqual(["Table Near", "Table Far"]);
     expect(res.hospitals[0]).toMatchObject({ has_emergency: null, has_icu: null, source_url: null });
   });
@@ -89,7 +93,7 @@ describe("findNearbyHospitals", () => {
   it("never throws: no map answer and an empty table give an empty list, which is not cached", async () => {
     vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => { throw new Error("network down"); }));
     db.rows.hospitals = [];
-    expect(await findNearbyHospitals(12.97, 77.59)).toEqual({ area: null, hospitals: [], cached: false });
+    expect(await findNearbyHospitals(12.97, 77.59, sb)).toEqual({ area: null, hospitals: [], cached: false });
     expect(db.web_cache.size).toBe(0);
   });
 });

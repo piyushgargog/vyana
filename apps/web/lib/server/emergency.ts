@@ -17,9 +17,9 @@ export const ARRIVING_AFTER_MS = 60_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Nearby hospitals within the SOS time budget; an empty list on timeout or error (SOS must never fail). */
-async function nearbyWithin(lat: number, lng: number): Promise<{ area: string | null; hospitals: Hospital[] }> {
+async function nearbyWithin(lat: number, lng: number, sb: SupabaseClient): Promise<{ area: string | null; hospitals: Hospital[] }> {
   const timeout = sleep(NEARBY_BUDGET_MS).then(() => ({ area: null, hospitals: [] as Hospital[] }));
-  const lookup = findNearbyHospitals(lat, lng).catch(() => ({ area: null, hospitals: [] as Hospital[] }));
+  const lookup = findNearbyHospitals(lat, lng, sb).catch(() => ({ area: null, hospitals: [] as Hospital[] }));
   return Promise.race([lookup, timeout]);
 }
 
@@ -27,13 +27,18 @@ export function smsBody(fullName: string | null, lat: number, lng: number): stri
   return `EMERGENCY: ${fullName?.trim() || "A Vyana user"} needs help. Location: https://maps.google.com/?q=${lat},${lng}. Sent from Vyana.`;
 }
 
+/**
+ * The writes go through the admin client the route passes in: patients cannot write emergency_requests
+ * themselves (RLS). The contacts read goes through the caller's own client.
+ */
 export async function startSos(
   user: { id: string; fullName: string | null },
   sb: SupabaseClient,
+  admin: SupabaseClient,
   body: EmergencySosReq,
 ): Promise<EmergencySosRes> {
   const eta = 8 + Math.floor(Math.random() * 8); // 8–15 min, simulated
-  const { data: row, error } = await supabaseAdmin()
+  const { data: row, error } = await admin
     .from("emergency_requests")
     .insert({ patient_id: user.id, lat: body.lat, lng: body.lng, note: body.note ?? null, status: "requested", eta_minutes: eta })
     .select("id")
@@ -42,7 +47,7 @@ export async function startSos(
   const requestId = (row as { id: string }).id;
 
   const [nearby, contacts] = await Promise.all([
-    nearbyWithin(body.lat, body.lng),
+    nearbyWithin(body.lat, body.lng, sb),
     sb
       .from("emergency_contacts")
       .select("name, phone")
@@ -50,7 +55,7 @@ export async function startSos(
       .then(({ data }) => ((data ?? []) as { name: string; phone: string }[]).map((c) => ({ name: c.name, phone: c.phone }))),
   ]);
 
-  const { error: updateError } = await supabaseAdmin()
+  const { error: updateError } = await admin
     .from("emergency_requests")
     .update({ area: nearby.area, hospitals_json: nearby.hospitals })
     .eq("id", requestId);
