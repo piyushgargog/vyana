@@ -24,7 +24,7 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
-    labels: ["dependencies", "npm"]
+    labels: ["dependencies"]
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -39,7 +39,7 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "ci(deps)"
-    labels: ["dependencies", "github-actions"]
+    labels: ["dependencies"]
 
   # The Dockerfile (the base images of the web build and run stages).
   - package-ecosystem: docker
@@ -55,7 +55,7 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
-    labels: ["dependencies", "docker"]
+    labels: ["dependencies"]
 
   # docker-compose.yml (the Caddy image).
   - package-ecosystem: docker-compose
@@ -71,4 +71,4 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
-    labels: ["dependencies", "docker"]
+    labels: ["dependencies"]
