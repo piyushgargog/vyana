@@ -1,6 +1,7 @@
 import "server-only";
 import type { BloodBank, BloodComponent, BloodGroup } from "@vyana/shared";
-import { TTL, cached, normalizeKeyPart } from "../cache";
+import { normalizeName } from "@vyana/shared";
+import { TTL, cached } from "../cache";
 import { log } from "../log";
 
 /**
@@ -118,7 +119,7 @@ export async function districtIndex(): Promise<DistrictEntry[]> {
   return hit?.value ?? [];
 }
 
-const norm = (s: string) => normalizeKeyPart(s).replace(/[^a-z0-9 -]/g, "");
+const norm = (s: string) => normalizeName(s, "collapse").replace(/[^a-z0-9 -]/g, "");
 
 /** The city the person typed → up to three areas of the source (a district, or a whole union territory). */
 export async function resolveAreas(city: string): Promise<Area[]> {

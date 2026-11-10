@@ -1,7 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { BloodSearchReq, type BloodBank, type BloodSearchRes, type BloodSearchSource } from "@vyana/shared";
-import { normalizeKeyPart } from "./cache";
+import { BloodSearchReq, normalizeName, type BloodBank, type BloodSearchRes, type BloodSearchSource } from "@vyana/shared";
 import { openJobForUser, sealJob } from "./jobs";
 import { type Area, type AreaResult, resolveAreas, searchArea } from "./web/eraktkosh";
 
@@ -24,11 +23,11 @@ const NEARBY_CITIES: Record<string, string[]> = {
 };
 const MAX_AREAS = 4;
 
-const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeKeyPart(r.city)}`;
+const bloodQuery = (r: BloodSearchReq) => `${r.blood_group.toLowerCase()} · ${r.component} · ${normalizeName(r.city, "collapse")}`;
 
 /** The searched city first, then nearby cities; a name that matches no district of the source is dropped. */
 export async function bloodAreas(city: string): Promise<Area[]> {
-  const names = [city, ...(NEARBY_CITIES[normalizeKeyPart(city)] ?? [])];
+  const names = [city, ...(NEARBY_CITIES[normalizeName(city, "collapse")] ?? [])];
   const resolved = await Promise.all(names.map((n) => resolveAreas(n)));
   const seen = new Set<string>();
   const areas: Area[] = [];

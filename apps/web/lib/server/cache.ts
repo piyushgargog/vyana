@@ -16,11 +16,6 @@ export const TTL = {
 
 const inFlight = new Map<string, Promise<{ value: unknown; cached: boolean } | null>>();
 
-/** Lowercase, trim and collapse spaces, so the same input typed differently lands on one key. */
-export function normalizeKeyPart(s: string): string {
-  return s.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
-}
-
 export function sha1(s: string): string {
   return createHash("sha1").update(s).digest("hex");
 }

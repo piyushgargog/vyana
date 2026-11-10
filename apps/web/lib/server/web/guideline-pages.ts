@@ -1,5 +1,6 @@
 import "server-only";
-import { TTL, cached, normalizeKeyPart } from "../cache";
+import { normalizeName } from "@vyana/shared";
+import { TTL, cached } from "../cache";
 import { CARE_PLAN_DOMAINS, isOnAnyDomain, isOnDomain, isWebMock } from "./domains";
 import { fetchPage, registerMockPage } from "./fetch-page";
 import { searchHealthTopics } from "./medlineplus";
@@ -45,7 +46,7 @@ const MOCK_PAGE = [
 
 /** Up to 3 trusted guideline pages for a condition; an empty list when none could be found or read (the caller says "ask your doctor"). */
 export async function guidelinePages(condition: string): Promise<Page[]> {
-  const hit = await cached<Page[]>(`careplan_pages:v3:${normalizeKeyPart(condition)}`, "care_plan_pages", TTL.day, async () => {
+  const hit = await cached<Page[]>(`careplan_pages:v3:${normalizeName(condition, "collapse")}`, "care_plan_pages", TTL.day, async () => {
     const topics = await searchHealthTopics(condition, MAX_PAGES);
     const urls = topics.map((t) => t.url).filter((u) => isOnAnyDomain(u, CARE_PLAN_DOMAINS)).slice(0, MAX_PAGES);
     if (!urls.length) return null;

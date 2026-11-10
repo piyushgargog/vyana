@@ -27,7 +27,8 @@ vi.mock("@/lib/server/supabase-admin", () => ({
   }),
 }));
 
-const { cached, normalizeKeyPart } = await import("@/lib/server/cache");
+const { cached } = await import("@/lib/server/cache");
+const { normalizeName } = await import("@vyana/shared");
 
 beforeEach(() => {
   rows.clear();
@@ -68,8 +69,8 @@ describe("cached", () => {
   });
 });
 
-describe("normalizeKeyPart", () => {
+describe("normalizeName with collapse", () => {
   it("makes the same input typed differently produce one key", () => {
-    expect(normalizeKeyPart("  Dolo   650 ")).toBe(normalizeKeyPart("dolo 650"));
+    expect(normalizeName("  Dolo   650 ", "collapse")).toBe(normalizeName("dolo 650", "collapse"));
   });
 });
