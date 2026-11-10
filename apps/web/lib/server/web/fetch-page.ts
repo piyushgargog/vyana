@@ -1,7 +1,8 @@
 import "server-only";
 import { TTL, cached, sha1 } from "../cache";
 import { log } from "../log";
-import { isOnAnyDomain, isWebMock } from "./domains";
+import { isWebMock } from "../mock";
+import { isOnAnyDomain } from "./domains";
 
 /**
  * Reads one public web page as text (ADR-072). Only hosts on the caller's allow-list, https only, every redirect checked

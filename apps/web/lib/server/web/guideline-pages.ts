@@ -1,6 +1,7 @@
 import "server-only";
 import { TTL, cached, normalizeKeyPart } from "../cache";
-import { CARE_PLAN_DOMAINS, isOnAnyDomain, isOnDomain, isWebMock } from "./domains";
+import { isWebMock } from "../mock";
+import { CARE_PLAN_DOMAINS, isOnAnyDomain, isOnDomain } from "./domains";
 import { fetchPage, registerMockPage } from "./fetch-page";
 import { searchHealthTopics } from "./medlineplus";
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { log } from "./log";
-import { isWebMock } from "./web/domains";
+import { isWebMock } from "./mock";
 
 /**
  * Reverse geocoding with OpenStreetMap Nominatim (SPEC §5). Its usage policy asks for an identifying

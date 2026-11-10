@@ -3,8 +3,9 @@ import { NoObjectGeneratedError, Output, generateText, type ModelMessage } from 
 import type { z } from "zod";
 import type { AiMeta, SourceLink } from "@vyana/shared";
 import { upstream } from "./errors";
-import { POOL_KEY, getModel, isLlmMock, modelName, type DataClass, type ModelKind } from "./llm";
+import { POOL_KEY, getModel, modelName, type DataClass, type ModelKind } from "./llm";
 import { log } from "./log";
+import { isLlmMock } from "./mock";
 import { supabaseAdmin } from "./supabase-admin";
 
 /**

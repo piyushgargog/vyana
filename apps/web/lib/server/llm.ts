@@ -3,6 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { wrapLanguageModel, type LanguageModel, type LanguageModelMiddleware } from "ai";
 import { AppError } from "./errors";
+import { isLlmMock } from "./mock";
 import { log } from "./log";
 
 /**
@@ -24,8 +25,6 @@ export type ModelKind = "vision" | "text";
  * (public web pages, a condition name), so any wired provider may answer it.
  */
 export type DataClass = "patient" | "public";
-
-export const isLlmMock = () => process.env.LLM_MOCK === "1";
 
 /** The configured primary model id, for `ai_runs` and `AiMeta`. */
 export function modelName(kind: ModelKind): string {
