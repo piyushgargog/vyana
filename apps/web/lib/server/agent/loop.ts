@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CarePlan, findLastDone } from "@vyana/shared";
+import { CarePlan, DAY_MS, findLastDone } from "@vyana/shared";
 import { istDate } from "../dates";
 import {
   labRecheckRule,
@@ -26,7 +26,6 @@ export const MAX_PAGES = 50;
 /** The missed-dose rule looks at the last 7 days; 14 leaves room for the timezone edge and a late run. */
 const LOG_WINDOW_DAYS = 14;
 const CHUNK = 100;
-const DAY_MS = 86_400_000;
 
 /** The rule that wrote a proposal, in the versioned shape the table already uses (0017 tests). */
 const RULE_IDS: Record<ProposalDraft["kind"], string> = {

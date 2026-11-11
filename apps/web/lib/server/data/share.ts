@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildMemory,
   buildTimeline,
+  DAY_MS,
   isShareScope,
   MEMORY_LAB_POINTS,
   MEMORY_LAB_TESTS,
@@ -155,7 +156,7 @@ export async function loadSharedRecord(sb: SupabaseClient, token: string, now: D
     // Only the scopes that are on are read, in parallel, each capped; buildMemory applies the
     // windows (labs 24 months, vitals 12, adherence 30 days). The medicines are the active items
     // already read for the profile, so that scope needs no query of its own.
-    const doseWindowStart = new Date(new Date(`${today}T00:00:00+05:30`).getTime() - 29 * 24 * 60 * 60 * 1000).toISOString();
+    const doseWindowStart = new Date(new Date(`${today}T00:00:00+05:30`).getTime() - 29 * DAY_MS).toISOString();
     const [labs, vitals, doseLogs] = await Promise.all([
       scopes.includes("labs") ? fetchLabs(sb, patient) : Promise.resolve([] as MemoryLabValue[]),
       scopes.includes("vitals")

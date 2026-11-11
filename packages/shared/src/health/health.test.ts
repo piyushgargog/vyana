@@ -4,6 +4,7 @@ import {
   addDays,
   atLocalTime,
   daysBetween,
+  DAY_MS,
   findLastDone,
   formatLocalDate,
   getRefillStatus,
@@ -25,6 +26,7 @@ const at = (day: number, hh: number, mm = 0) => new Date(2026, 9, day, hh, mm);
 
 describe("dates", () => {
   it("adds days across month ends and counts calendar days", () => {
+    expect(DAY_MS).toBe(86_400_000);
     expect(addDays("2026-10-30", 3)).toBe("2026-11-02");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
     expect(daysBetween("2026-10-12", "2026-10-15")).toBe(3);

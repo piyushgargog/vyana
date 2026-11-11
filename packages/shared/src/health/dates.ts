@@ -1,6 +1,9 @@
 // packages/shared/src/health/dates.ts
 // Local calendar-day helpers for the reminder planners (pure, no I/O). Owner: Vaibhav Parmar
 
+/** One day in milliseconds, the single spelling every day length in the codebase uses. */
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** `YYYY-MM-DD` as a Date at local midnight. */
 export function parseLocalDate(date: string): Date {
   const [y, m, d] = date.split("-").map(Number);
@@ -33,7 +36,7 @@ export function monthsAgo(date: string, months: number): string {
 export function daysBetween(from: string, to: string): number {
   const a = parseLocalDate(from);
   const b = parseLocalDate(to);
-  return Math.round((b.getTime() - a.getTime()) / (24 * 60 * 60 * 1000));
+  return Math.round((b.getTime() - a.getTime()) / DAY_MS);
 }
 
 /** A local Date at `hh:mm` on the day `date` (`YYYY-MM-DD`). */

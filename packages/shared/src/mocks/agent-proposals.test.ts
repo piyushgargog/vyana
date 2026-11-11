@@ -6,6 +6,7 @@ import {
   resetAgentProposalsMock,
   visibleProposals,
 } from "./agent-proposals";
+import { DAY_MS } from "../health/dates";
 
 beforeEach(() => resetAgentProposalsMock());
 
@@ -21,7 +22,7 @@ describe("care agent proposal mocks (#304)", () => {
   });
 
   it("visibleProposals honours an explicit clock for expiry", () => {
-    const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const future = new Date(Date.now() + 10 * DAY_MS);
     expect(visibleProposals(future)).toEqual([]);
   });
 

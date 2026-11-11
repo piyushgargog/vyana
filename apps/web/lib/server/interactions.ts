@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { AiMeta, Interaction, InteractionsReq, InteractionsRes, SourceLink } from "@vyana/shared";
+import { DAY_MS } from "@vyana/shared";
 import type { AuthedUser } from "./auth";
 import { badRequest, forbidden } from "./errors";
 import { log } from "./log";
@@ -84,7 +85,7 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
     .eq("medicines_key", medicinesKey)
     .maybeSingle();
   const savedRow = saved as { id: string; result_json: InteractionsRes; created_at: string } | null;
-  if (savedRow && Date.now() - new Date(savedRow.created_at).getTime() < RESULT_DAYS * 24 * 60 * 60 * 1000) {
+  if (savedRow && Date.now() - new Date(savedRow.created_at).getTime() < RESULT_DAYS * DAY_MS) {
     return { ...savedRow.result_json, not_checked: notChecked, cached: true };
   }
 

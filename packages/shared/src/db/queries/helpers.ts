@@ -5,6 +5,7 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "../database.types";
+import { DAY_MS } from "../../health/dates";
 
 /** Every query function takes the Supabase client as its first argument. */
 export type Sb = SupabaseClient<Database>;
@@ -73,5 +74,5 @@ export function startOfNextLocalDay(date: string): string {
 
 /** ISO timestamp for `days` days before now. */
 export function daysAgoIso(days: number, now: Date = new Date()): string {
-  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+  return new Date(now.getTime() - days * DAY_MS).toISOString();
 }
