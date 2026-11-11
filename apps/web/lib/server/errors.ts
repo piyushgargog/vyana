@@ -55,6 +55,10 @@ function isTimeout(err: unknown): boolean {
   return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
 }
 
+/** True when the database refused a save as a duplicate (Postgres 23505). */
+export const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === "object" && err !== null && (err as { code?: unknown }).code === "23505";
+
 /**
  * Maps any thrown error to the documented error shape (SPEC §0). `headers` adds headers the caller must keep on
  * the error too (the share page's 404 carries its no-store headers); an `AppError`'s own headers win on a clash.

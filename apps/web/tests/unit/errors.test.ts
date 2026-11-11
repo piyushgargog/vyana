@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ApiErrorBody } from "@vyana/shared";
-import { AppError, jsonRes, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
+import { AppError, isUniqueViolation, jsonRes, notFound, parseBody, toErrorResponse, withRoute } from "@/lib/server/errors";
 
 const call = (handler: Parameters<typeof withRoute>[1], body?: string) =>
   withRoute("test", handler)(new Request("http://localhost/api/test", { method: "POST", body }), undefined);
@@ -118,5 +118,16 @@ describe("jsonRes", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: "yes" });
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("isUniqueViolation", () => {
+  it("is true only for an object carrying code 23505", () => {
+    expect(isUniqueViolation({ code: "23505" })).toBe(true);
+    expect(isUniqueViolation({ code: "23503" })).toBe(false);
+    expect(isUniqueViolation({ code: 23505 })).toBe(false);
+    expect(isUniqueViolation({})).toBe(false);
+    expect(isUniqueViolation(null)).toBe(false);
+    expect(isUniqueViolation("23505")).toBe(false);
   });
 });
