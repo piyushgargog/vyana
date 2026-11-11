@@ -152,12 +152,13 @@ describe("buildMemory", () => {
     ]);
   });
 
-  it("counts adherence over exactly the last 30 days in India, with a percent of what was logged", () => {
+  it("counts adherence over exactly the last 30 days in India, with a percent of what was taken or missed", () => {
     const memory = buildMemory(
       src({
         adherence: [
           { scheduled_for: "2026-10-13T03:30:00Z", status: "taken" }, // 09:00 IST today
           { scheduled_for: "2026-10-12T03:30:00Z", status: "missed" },
+          { scheduled_for: "2026-10-11T03:30:00Z", status: "skipped" }, // a choice, left out of the percent
           { scheduled_for: "2026-08-01T03:30:00Z", status: "taken" }, // outside the window
           { scheduled_for: "2026-10-13T04:30:00Z", status: "due" }, // not a logged outcome
         ],
@@ -169,7 +170,23 @@ describe("buildMemory", () => {
     expect(memory.adherence?.days[0].date).toBe("2026-09-14");
     expect(memory.adherence?.days[29]).toEqual({ date: "2026-10-13", taken: 1, missed: 0, skipped: 0 });
     expect(memory.adherence?.days[28]).toEqual({ date: "2026-10-12", taken: 0, missed: 1, skipped: 0 });
+    expect(memory.adherence?.days[27]).toEqual({ date: "2026-10-11", taken: 0, missed: 0, skipped: 1 });
     expect(memory.adherence?.percent_taken).toBe(50);
     expect(buildMemory(empty, ["adherence"], TODAY).adherence?.percent_taken).toBeNull();
+  });
+
+  it("leaves a skipped dose out of the percent, so one taken and one skipped reads 100 percent", () => {
+    const memory = buildMemory(
+      src({
+        adherence: [
+          { scheduled_for: "2026-10-13T03:30:00Z", status: "taken" },
+          { scheduled_for: "2026-10-13T04:30:00Z", status: "skipped" },
+        ],
+      }),
+      ["adherence"],
+      TODAY,
+    );
+    expect(memory.adherence?.days[29]).toEqual({ date: "2026-10-13", taken: 1, missed: 0, skipped: 1 });
+    expect(memory.adherence?.percent_taken).toBe(100);
   });
 });
