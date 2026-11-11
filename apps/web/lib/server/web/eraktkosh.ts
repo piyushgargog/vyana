@@ -2,6 +2,8 @@ import "server-only";
 import type { BloodBank, BloodComponent, BloodGroup } from "@vyana/shared";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
+import { fetchOutbound } from "./fetch-outbound";
+import { readTextCapped } from "./fetch-page";
 
 /**
  * e-RaktKosh (NHM / C-DAC) blood stock, read the way its own public page reads it (ADR-072): three GET calls that answer JSON
@@ -12,7 +14,6 @@ import { log } from "../log";
 
 export const ERAKTKOSH_PAGE = "https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/stockAvailability.cnt";
 const ENDPOINT = "https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/nearbyBB.cnt";
-const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; cached lookups of the public stock page)";
 const TIMEOUT_MS = 12_000;
 const MAX_BYTES = 2_000_000;
 const MAX_BANKS_PER_AREA = 15;
@@ -73,17 +74,18 @@ interface DistrictEntry {
 /** One answer of the source, or null when it did not answer — the shape the other files under `web/` use: log and return null. */
 async function getJson(query: string): Promise<unknown | null> {
   try {
-    const res = await fetch(`${ENDPOINT}?${query}`, {
-      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+    const res = await fetchOutbound(`${ENDPOINT}?${query}`, {
+      headers: { Accept: "application/json" },
       redirect: "follow",
+      timeoutMs: TIMEOUT_MS,
+      userAgentDetail: "cached lookups of the public stock page",
     });
     if (!res.ok) {
       log({ event: "eraktkosh_http", status: res.status });
       return null;
     }
-    const text = await res.text();
-    if (text.length > MAX_BYTES) {
+    const text = await readTextCapped(res, MAX_BYTES);
+    if (text === null) {
       log({ event: "eraktkosh_too_large" });
       return null;
     }

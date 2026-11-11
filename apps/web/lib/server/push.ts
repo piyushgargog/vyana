@@ -1,10 +1,12 @@
 import "server-only";
 import { upstream } from "./errors";
+import { fetchOutbound, readJsonCapped } from "./web/fetch-outbound";
 
 /** Expo's push service: one POST with up to 100 messages. */
 export const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const CHUNK_SIZE = 100;
 const TIMEOUT_MS = 10_000;
+const MAX_BYTES = 1_000_000;
 
 export interface PushMessage {
   /** An Expo push token: `ExponentPushToken[...]`. */
@@ -61,18 +63,20 @@ export async function sendPush(messages: PushMessage[], options: { fetch?: typeo
 
     let res: Response;
     try {
-      res = await doFetch(EXPO_PUSH_URL, {
+      res = await fetchOutbound(EXPO_PUSH_URL, {
         method: "POST",
         headers,
         body: JSON.stringify(chunk.map((m) => ({ ...m, sound: "default", priority: "high" }))),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        timeoutMs: TIMEOUT_MS,
+        userAgentDetail: "push notifications",
+        fetchImpl: doFetch,
       });
     } catch {
       throw upstream("The push service did not answer.");
     }
     if (!res.ok) throw upstream("The push service refused the request.");
 
-    const json = (await res.json().catch(() => null)) as { data?: Ticket[] } | null;
+    const json = await readJsonCapped<{ data?: Ticket[] }>(res, MAX_BYTES);
     const tickets = json?.data;
     if (!Array.isArray(tickets) || tickets.length !== chunk.length) throw upstream("The push service sent an unexpected answer.");
 

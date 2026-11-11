@@ -5,6 +5,7 @@ import { reverseGeocode } from "../geo";
 import { log } from "../log";
 import { supabaseAdmin } from "../supabase-admin";
 import { isWebMock } from "./domains";
+import { fetchOutbound, readJsonCapped } from "./fetch-outbound";
 
 /**
  * Hospitals near a point (SPEC §5, ADR-072): one request to the public OpenStreetMap Overpass service (about a second),
@@ -14,8 +15,8 @@ import { isWebMock } from "./domains";
  */
 
 const ENDPOINT = "https://overpass-api.de/api/interpreter";
-const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; nearby hospitals)";
 const TIMEOUT_MS = 12_000;
+const MAX_BYTES = 3_000_000;
 const RADIUS_M = 5000;
 const KEEP = 8;
 const FALLBACK_KM = 60;
@@ -89,17 +90,19 @@ async function fromOverpass(lat: number, lng: number): Promise<Hospital[]> {
   try {
     const at = `${lat.toFixed(4)},${lng.toFixed(4)}`;
     const query = `[out:json][timeout:20];(node["amenity"="hospital"](around:${RADIUS_M},${at});way["amenity"="hospital"](around:${RADIUS_M},${at}););out center tags 60;`;
-    const res = await fetch(ENDPOINT, {
+    const res = await fetchOutbound(ENDPOINT, {
       method: "POST",
-      headers: { "User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      timeoutMs: TIMEOUT_MS,
+      userAgentDetail: "nearby hospitals",
     });
     if (!res.ok) {
       log({ event: "overpass_not_ok", status: res.status });
       return [];
     }
-    return parseOverpass(await res.json(), { lat, lng });
+    const json = await readJsonCapped<unknown>(res, MAX_BYTES);
+    return json === null ? [] : parseOverpass(json, { lat, lng });
   } catch (err) {
     log({ event: "overpass_failed", error: err instanceof Error ? err.name : "Error" });
     return [];
