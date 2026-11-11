@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CarePlan, findLastDone } from "@vyana/shared";
 import { istDate } from "../dates";
+import { isUniqueViolation } from "../errors";
 import {
   labRecheckRule,
   missedDosePatternRule,
@@ -257,7 +258,7 @@ export async function runCareAgentLoop(sb: SupabaseClient, now: Date = new Date(
       if (error) {
         // A proposal with this key was written between the read and this insert (a second run
         // at the same moment): the unique index refused it, which is the dedupe working.
-        if ((error as { code?: string }).code === "23505") continue;
+        if (isUniqueViolation(error)) continue;
         throw error;
       }
       open.add(draft.dedupe_key);

@@ -247,4 +247,14 @@ describe("runCareAgentLoop", () => {
     });
     expect((await runCareAgentLoop(db.sb, now)).created).toBe(0);
   });
+
+  it("two runs at the same moment write one proposal between them, and neither throws", async () => {
+    // One run reads the open proposals before the other inserts, so the second insert meets the
+    // table's unique index (23505) and is skipped instead of throwing. The counts are summed
+    // because either run may be the one that writes, but exactly one proposal exists.
+    const db = world();
+    const [first, second] = await Promise.all([runCareAgentLoop(db.sb, now), runCareAgentLoop(db.sb, now)]);
+    expect(first.created + second.created).toBe(1);
+    expect(db.table("agent_proposals")).toHaveLength(1);
+  });
 });

@@ -2,7 +2,7 @@ import "server-only";
 import type { AdminDoctorCheckReq, DoctorVerifyReq, DoctorVerifyRes } from "@vyana/shared";
 import type { AuthedUser } from "./auth";
 import { councilKey, normalizeRegNo } from "./doctor-register";
-import { badRequest, notFound } from "./errors";
+import { badRequest, isUniqueViolation, notFound } from "./errors";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
 
@@ -19,10 +19,6 @@ interface DoctorRow {
   year_of_registration: number | null;
   verification_status: DoctorVerifyRes["status"];
 }
-
-/** True when the database refused a save as a duplicate (Postgres 23505) — here, the verified-registration guard of migration 0022. */
-const isUniqueViolation = (err: unknown): boolean =>
-  typeof err === "object" && err !== null && (err as { code?: unknown }).code === "23505";
 
 /** A doctor sends their registration details. Stays `pending` until an admin checks them. */
 export async function submitDoctorRegistration({ sb, user }: AuthedUser, body: DoctorVerifyReq): Promise<DoctorVerifyRes> {
