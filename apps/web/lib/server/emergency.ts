@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmergencySosReq, EmergencySosRes, Hospital } from "@vyana/shared";
+import { sleep } from "@vyana/shared";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
 import { findNearbyHospitals } from "./web/overpass";
@@ -13,8 +14,6 @@ import { findNearbyHospitals } from "./web/overpass";
 const NEARBY_BUDGET_MS = 8000;
 export const DISPATCHED_AFTER_MS = 20_000;
 export const ARRIVING_AFTER_MS = 60_000;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Nearby hospitals within the SOS time budget; an empty list on timeout or error (SOS must never fail). */
 async function nearbyWithin(lat: number, lng: number): Promise<{ area: string | null; hospitals: Hospital[] }> {
