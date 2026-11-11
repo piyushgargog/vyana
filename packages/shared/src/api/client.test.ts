@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { emergencyNearbyMock, shareMock } from "../mocks";
+import { emergencyNearbyMock, resetAgentProposalsMock, resetWaitlistMock, shareMock } from "../mocks";
 import { ApiError, createApiClient, type ApiClientOptions } from "./client";
 
 const json = (status: number, body: unknown) =>
@@ -8,6 +8,10 @@ const json = (status: number, body: unknown) =>
 
 function client(fetchImpl: ApiClientOptions["fetch"], token: string | null = "tok-123") {
   return createApiClient({ baseUrl: "https://api.example.com/", getAccessToken: async () => token, fetch: fetchImpl });
+}
+
+function mockClient() {
+  return createApiClient({ baseUrl: "", getAccessToken: async () => null, useMocks: true, mockDelayMs: [0, 0], fetch: vi.fn() });
 }
 
 describe("createApiClient", () => {
@@ -69,6 +73,71 @@ describe("createApiClient", () => {
     expect(res).toEqual(emergencyNearbyMock);
     expect(res).not.toBe(emergencyNearbyMock);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("lists proposals with GET and decides one with POST and the validated body", async () => {
+    const fetchMock = vi.fn(async () => json(200, { proposals: [] }));
+    const api = client(fetchMock);
+    await api.agentProposals.list();
+    const [listUrl, listInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(listUrl).toBe("https://api.example.com/api/agent/proposals");
+    expect(listInit.method).toBe("GET");
+
+    fetchMock.mockResolvedValueOnce(json(200, { status: "approved", result_text: "Done", undo_seconds: 0 }));
+    const res = await api.agentProposals.decide({ id: "proposal-refill-metformin", decision: "approve" });
+    expect(res.status).toBe("approved");
+    const [decideUrl, decideInit] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(decideUrl).toBe("https://api.example.com/api/agent/proposals/decide");
+    expect(decideInit.method).toBe("POST");
+    expect(JSON.parse(decideInit.body as string)).toEqual({ id: "proposal-refill-metformin", decision: "approve" });
+  });
+
+  it("decides a proposal through the shared mock path and settles the card", async () => {
+    resetAgentProposalsMock();
+    const api = mockClient();
+    const before = await api.agentProposals.list();
+    expect(before.proposals.find((p) => p.id === "proposal-refill-metformin")?.status).toBe("pending");
+    const res = await api.agentProposals.decide({ id: "proposal-refill-metformin", decision: "approve" });
+    expect(res.status).toBe("approved");
+    expect(res.result_text).toBe("Reminder added for Monday 9:00");
+    const after = await api.agentProposals.list();
+    expect(after.proposals.find((p) => p.id === "proposal-refill-metformin")).toBeUndefined();
+    resetAgentProposalsMock();
+  });
+
+  it("returns a copy of the decide answer in mock mode", async () => {
+    resetAgentProposalsMock();
+    const api = mockClient();
+    const first = await api.agentProposals.decide({ id: "proposal-refill-metformin", decision: "approve" });
+    first.result_text = "mutated";
+    const second = await api.agentProposals.decide({ id: "proposal-refill-metformin", decision: "approve" });
+    expect(second.result_text).toBe("Reminder added for Monday 9:00");
+    resetAgentProposalsMock();
+  });
+
+  it("returns a copy of the proposal list in mock mode", async () => {
+    resetAgentProposalsMock();
+    const api = mockClient();
+    const first = await api.agentProposals.list();
+    const target = first.proposals.find((p) => p.id === "proposal-refill-metformin");
+    expect(target).toBeDefined();
+    if (target) target.title = "mutated";
+    const second = await api.agentProposals.list();
+    expect(second.proposals.find((p) => p.id === "proposal-refill-metformin")?.title).toBe("Your metformin pack: 30 tablets");
+    resetAgentProposalsMock();
+  });
+
+  it("joins the waitlist through the shared mock path and remembers the email", async () => {
+    resetWaitlistMock();
+    const api = mockClient();
+    expect(await api.waitlist.join({ email: "a@example.com" })).toEqual({ status: "joined" });
+    expect(await api.waitlist.join({ email: "a@example.com" })).toEqual({ status: "already_on_list" });
+    resetWaitlistMock();
+  });
+
+  it("validates the waitlist body in mock mode before answering", async () => {
+    const api = mockClient();
+    await expect(api.waitlist.join({ email: "not-an-email" })).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
   });
 
   it("trims any number of trailing slashes from the base URL", () => {

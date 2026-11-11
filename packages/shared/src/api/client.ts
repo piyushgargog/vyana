@@ -111,14 +111,14 @@ const STATUS_CODES: Record<number, string> = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-type RequestSpec<Res> = {
+type RequestSpec<Res, Req = unknown> = {
   method: "GET" | "POST" | "DELETE";
   path: string;
   resSchema: ZodType<Res>;
-  /** A mock value, or a thunk producing one — a thunk is only called in mock mode, so a
+  /** A mock value, or a thunk producing one from the validated body — a thunk is only called in mock mode, so a
    *  mock with side effects (a store write) never runs against the real API. */
-  mock: Res | (() => Res);
-  body?: { schema: ZodType<unknown>; value: unknown };
+  mock: Res | ((body: Req) => Res);
+  body?: { schema: ZodType<Req>; value: unknown };
   auth?: boolean;
 };
 
@@ -133,8 +133,8 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async function request<Res>({ method, path, resSchema, mock, body, auth = true }: RequestSpec<Res>): Promise<Res> {
-    let payload: unknown;
+  async function request<Res, Req = unknown>({ method, path, resSchema, mock, body, auth = true }: RequestSpec<Res, Req>): Promise<Res> {
+    let payload: Req | undefined;
     if (body) {
       const req = body.schema.safeParse(body.value);
       if (!req.success) {
@@ -146,7 +146,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     if (opts.useMocks) {
       await sleep(minDelay + Math.random() * (maxDelay - minDelay));
       // Copy so a screen that mutates the result never changes the shared fixture.
-      const mockValue = typeof mock === "function" ? (mock as () => Res)() : mock;
+      const mockValue = typeof mock === "function" ? (mock as (body: Req) => Res)(payload as Req) : mock;
       return resSchema.parse(JSON.parse(JSON.stringify(mockValue)));
     }
 
@@ -202,31 +202,17 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return parsed.data;
   }
 
-  const post = <Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, value: Req, mock: Res | (() => Res)) =>
-    request({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
+  const post = <Req, Res>(path: string, reqSchema: ZodType<Req>, resSchema: ZodType<Res>, value: Req, mock: Res | ((body: Req) => Res)) =>
+    request<Res, Req>({ method: "POST", path, resSchema, mock, body: { schema: reqSchema, value } });
 
   return {
     agentProposals: {
       // Mock mode uses the stateful in-memory store (not the copied static fixture), so an approve
       // or reject actually settles the card for the rest of the session (#304, mock-first).
-      list: async () => {
-        if (opts.useMocks) {
-          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
-          return AgentProposalsRes.parse(JSON.parse(JSON.stringify(mocks.agentProposalsMock())));
-        }
-        return request({ method: "GET", path: "/api/agent/proposals", resSchema: AgentProposalsRes, mock: () => mocks.agentProposalsMock() });
-      },
-      decide: async (body) => {
-        const req = AgentDecideReq.safeParse(body);
-        if (!req.success) {
-          throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
-        }
-        if (opts.useMocks) {
-          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
-          return AgentDecideRes.parse(mocks.agentDecideMock(req.data));
-        }
-        return post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, req.data, () => mocks.agentDecideMock(req.data));
-      },
+      list: () =>
+        request({ method: "GET", path: "/api/agent/proposals", resSchema: AgentProposalsRes, mock: () => mocks.agentProposalsMock() }),
+      decide: (body) =>
+        post("/api/agent/proposals/decide", AgentDecideReq, AgentDecideRes, body, (req) => mocks.agentDecideMock(req)),
     },
     blood: {
       search: (body) => post("/api/blood/search", BloodSearchReq, BloodSearchRes, body, mocks.bloodJobRunningMock),
@@ -246,17 +232,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     },
     waitlist: {
       // Mock mode uses the store so "already on the list" works within the session.
-      join: async (body) => {
-        const req = JoinWaitlistReq.safeParse(body);
-        if (!req.success) {
-          throw new ApiError("BAD_REQUEST", req.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "), 400);
-        }
-        if (opts.useMocks) {
-          await sleep(minDelay + Math.random() * (maxDelay - minDelay));
-          return JoinWaitlistRes.parse(mocks.joinWaitlistMock(req.data));
-        }
-        return post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, req.data, () => mocks.joinWaitlistMock(req.data));
-      },
+      join: (body) => post("/api/waitlist", JoinWaitlistReq, JoinWaitlistRes, body, (req) => mocks.joinWaitlistMock(req)),
     },
     aiUsage: {
       today: () =>
