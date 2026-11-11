@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { log } from "./log";
+import { fetchOutbound, readJsonCapped } from "./web/fetch-outbound";
 import { isWebMock } from "./web/domains";
 
 /**
@@ -11,6 +12,7 @@ import { isWebMock } from "./web/domains";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/reverse";
 const TIMEOUT_MS = 5000;
+const MAX_BYTES = 1_000_000;
 
 const Reverse = z.object({
   address: z
@@ -32,12 +34,13 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
   if (isWebMock()) return "[mock] Preet Vihar, Delhi";
   try {
     const url = `${NOMINATIM}?format=jsonv2&zoom=14&addressdetails=1&lat=${lat}&lon=${lng}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "vyana-health/1.0", "Accept-Language": "en" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+    const res = await fetchOutbound(url, {
+      headers: { "Accept-Language": "en" },
+      timeoutMs: TIMEOUT_MS,
+      userAgentDetail: "reverse geocoding",
     });
     if (!res.ok) return null;
-    const parsed = Reverse.safeParse(await res.json());
+    const parsed = Reverse.safeParse(await readJsonCapped<unknown>(res, MAX_BYTES));
     const a = parsed.success ? parsed.data.address : undefined;
     if (!a) return null;
     const local = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.city_district;

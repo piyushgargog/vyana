@@ -2,6 +2,7 @@ import "server-only";
 import { TTL, cached, normalizeKeyPart } from "../cache";
 import { log } from "../log";
 import { isOnDomain, isWebMock } from "./domains";
+import { fetchOutbound } from "./fetch-outbound";
 import { decodeEntities, readTextCapped } from "./fetch-page";
 
 /**
@@ -17,7 +18,7 @@ export interface TopicResult {
 }
 
 const ENDPOINT = "https://wsearch.nlm.nih.gov/ws/query";
-const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; topic search)";
+const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 1_500_000;
 
 const stripTags = (s: string): string => {
@@ -73,9 +74,10 @@ export async function searchHealthTopics(query: string, limit = 5): Promise<Topi
   }
   try {
     const hit = await cached<TopicResult[]>(`mlp:topics:${normalizeKeyPart(term)}:${limit}`, "mlp_search", TTL.day, async () => {
-      const res = await fetch(`${ENDPOINT}?db=healthTopics&retmax=${limit}&term=${encodeURIComponent(term)}`, {
-        headers: { "User-Agent": USER_AGENT, Accept: "application/xml,text/xml" },
-        signal: AbortSignal.timeout(10_000),
+      const res = await fetchOutbound(`${ENDPOINT}?db=healthTopics&retmax=${limit}&term=${encodeURIComponent(term)}`, {
+        headers: { Accept: "application/xml,text/xml" },
+        timeoutMs: TIMEOUT_MS,
+        userAgentDetail: "topic search",
       });
       if (!res.ok) return null;
       const xml = await readTextCapped(res, MAX_BYTES);

@@ -2,6 +2,7 @@ import "server-only";
 import { TTL, cached, sha1 } from "../cache";
 import { log } from "../log";
 import { isOnAnyDomain, isWebMock } from "./domains";
+import { fetchOutbound } from "./fetch-outbound";
 
 /**
  * Reads one public web page as text (ADR-072). Only hosts on the caller's allow-list, https only, every redirect checked
@@ -20,7 +21,6 @@ interface CachedPage extends FetchedPage {
   finalUrl: string;
 }
 
-const USER_AGENT = "Vyana/1.2 (+https://vyanahealth.app; patient health app; reads public health pages)";
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 3_000_000;
 const MAX_REDIRECTS = 4;
@@ -164,10 +164,11 @@ async function download(url: string, allowed: readonly string[]): Promise<{ html
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (!current.startsWith("https://") || !isOnAnyDomain(current, allowed)) return null;
-    const res = await fetch(current, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html,text/plain;q=0.9" },
+    const res = await fetchOutbound(current, {
+      headers: { Accept: "text/html,text/plain;q=0.9" },
       redirect: "manual",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      timeoutMs: TIMEOUT_MS,
+      userAgentDetail: "reads public health pages",
     });
     if (res.status >= 300 && res.status < 400) {
       const next = res.headers.get("location");

@@ -14,7 +14,7 @@ describe("reverseGeocode", () => {
     expect(await reverseGeocode(28.64, 77.29)).toBe("Preet Vihar, Delhi");
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("nominatim.openstreetmap.org/reverse");
-    expect((init.headers as Record<string, string>)["User-Agent"]).toBe("vyana-health/1.0");
+    expect((init.headers as Record<string, string>)["User-Agent"]).toBe("Vyana/1.2 (+https://vyanahealth.app; patient health app; reverse geocoding)");
   });
 
   it("returns null on failure and makes no call in mock mode", async () => {

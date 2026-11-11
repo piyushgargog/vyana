@@ -4,6 +4,7 @@ import { fakeSupabaseModule, resetDb } from "../fixtures/fake-supabase";
 vi.mock("@/lib/server/supabase-admin", () => fakeSupabaseModule);
 
 const { fetchPage, htmlToText } = await import("@/lib/server/web/fetch-page");
+const { fetchOutbound, readJsonCapped, userAgent } = await import("@/lib/server/web/fetch-outbound");
 const { parseTopics, searchHealthTopics } = await import("@/lib/server/web/medlineplus");
 const { isOnDomain, isTrustedHealthUrl } = await import("@/lib/server/web/domains");
 
@@ -167,5 +168,28 @@ describe("MedlinePlus topic search", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));
     expect(await searchHealthTopics("asthma", 3)).toEqual([]);
     expect(await searchHealthTopics("a", 3)).toEqual([]); // too short to search
+  });
+});
+
+describe("fetchOutbound", () => {
+  it("sends one User-Agent with the caller detail, and a timeout", async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
+    const res = await fetchOutbound("https://example.com/x", { fetchImpl: fetchFn, timeoutMs: 5000, userAgentDetail: "nearby hospitals" });
+    expect(res.status).toBe(200);
+    const init = fetchFn.mock.calls[0]?.[1] as RequestInit;
+    expect((init.headers as Record<string, string>)["User-Agent"]).toBe("Vyana/1.2 (+https://vyanahealth.app; patient health app; nearby hospitals)");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("builds the shared stem with no detail", () => {
+    expect(userAgent("")).toBe("Vyana/1.2 (+https://vyanahealth.app; patient health app)");
+  });
+});
+
+describe("readJsonCapped", () => {
+  it("parses JSON and refuses a body that is too big or is not JSON", async () => {
+    expect(await readJsonCapped(Response.json({ a: 1 }), 100)).toEqual({ a: 1 });
+    expect(await readJsonCapped(new Response("{}", { headers: { "content-length": "99999" } }), 100)).toBeNull();
+    expect(await readJsonCapped(new Response("not json"), 100)).toBeNull();
   });
 });
