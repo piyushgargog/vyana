@@ -43,6 +43,11 @@ describe("buildQrMatrix", () => {
     expect(decode(buildQrMatrix("आर्यन शर्मा, B+, पेनिसिलिन"))).toBe("आर्यन शर्मा, B+, पेनिसिलिन");
   });
 
+  it("reads back emoji, accented text and combining marks, as UTF-8", () => {
+    const text = "Aryan 😀, café, é, ＡＢＣ";
+    expect(decode(buildQrMatrix(text))).toBe(text);
+  });
+
   it("reads back a one-character text and a long one", () => {
     expect(decode(buildQrMatrix("A"))).toBe("A");
     const long = "x".repeat(600);
