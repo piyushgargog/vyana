@@ -1,7 +1,7 @@
 import { AdminDoctorCheckReq, DoctorVerifyReq, DoctorVerifyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
 import { adminCheckDoctor, submitDoctorRegistration } from "@/lib/server/doctor-verify";
-import { badRequest, forbidden, jsonRes, withRoute } from "@/lib/server/errors";
+import { badRequest, enforceRateLimit, forbidden, jsonRes, withRoute } from "@/lib/server/errors";
 
 // A doctor sends their registration details; an admin records a check done by hand (issue #344).
 export const maxDuration = 30;
@@ -32,5 +32,6 @@ export const POST = withRoute("doctors/verify", async (req, ctx) => {
     }
     res = await submitDoctorRegistration(authed, DoctorVerifyReq.parse(raw));
   }
+  await enforceRateLimit(req, ctx);
   return jsonRes(DoctorVerifyRes, res);
 }, { rateLimit: rateLimitOf("lookup") });

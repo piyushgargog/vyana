@@ -42,6 +42,10 @@ export interface RouteContext {
   requestId: string;
   userId?: string;
   cache?: "hit" | "miss";
+  /** The route's rate limit, set by withRoute from its `rateLimit` option. */
+  rateLimit?: RateLimit;
+  /** Set once the call has been counted, so a second count in the same request is a no-op. */
+  rateLimited?: boolean;
 }
 
 type Handler<P> = (req: Request, ctx: RouteContext, params: P) => Promise<Response>;
@@ -76,10 +80,12 @@ export function toErrorResponse(err: unknown, requestId: string, headers: Record
  * export const POST = withRoute("care-plan", async (req, ctx) => { ... });
  * ```
  *
- * With `rateLimit` the route counts as a call of the signed-in user before the handler runs: the sign-in check comes
- * first (an unknown caller never uses up a counter), then the counter, then the handler, so an over-limit request
- * never reaches a model or a web agent. Over the limit: 429 `RATE_LIMITED` with `Retry-After`. If the counter cannot
- * be reached the request goes through (fail open, logged). See `lib/server/rate-limit.ts`.
+ * With `rateLimit` the route counts as a call of the signed-in user, but only once the handler says so: the handler
+ * calls `enforceRateLimit` after the body parses and the role check passes and before the work, so a request that
+ * ends in 400 or 403 never touches the counter, while an over-limit request still never reaches a model or a web
+ * agent. The sign-in check comes first (an unknown caller never uses up a counter). Over the limit: 429
+ * `RATE_LIMITED` with `Retry-After`. If the counter cannot be reached the request goes through (fail open, logged).
+ * See `lib/server/rate-limit.ts`.
  *
  * ```ts
  * export const POST = withRoute("triage", handler, { rateLimit: rateLimitOf("ai_other") });
@@ -91,12 +97,11 @@ export interface RouteOptions {
 
 export function withRoute<P = unknown>(route: string, handler: Handler<P>, options: RouteOptions = {}) {
   return async (req: Request, params: P): Promise<Response> => {
-    const ctx: RouteContext = { requestId: newRequestId() };
+    const ctx: RouteContext = { requestId: newRequestId(), rateLimit: options.rateLimit };
     const started = Date.now();
     let res: Response;
     let error: unknown;
     try {
-      if (options.rateLimit) await enforceRateLimit(req, ctx, options.rateLimit);
       res = await handler(req, ctx, params);
     } catch (err) {
       error = err;
@@ -116,14 +121,22 @@ export function withRoute<P = unknown>(route: string, handler: Handler<P>, optio
   };
 }
 
-/** Signs the caller in, counts the call, and throws 429 when it is over the limit. */
-async function enforceRateLimit(req: Request, ctx: RouteContext, limit: RateLimit): Promise<void> {
+/**
+ * Counts one call of the signed-in user in the route's bucket and throws 429 when it is over the limit. A handler
+ * calls this after the body parses and the role check passes and before the work, so a request that ends in 400 or
+ * 403 never touches the counter. Calling it twice in one request counts once.
+ */
+export async function enforceRateLimit(req: Request, ctx: RouteContext): Promise<void> {
+  const limit = ctx.rateLimit;
+  if (!limit) throw new Error("enforceRateLimit called on a route with no rateLimit option");
+  if (ctx.rateLimited) return;
   // Imported here, not at the top: auth.ts imports this file for its errors.
   const { requireUser } = await import("./auth");
   const { checkRateLimit } = await import("./rate-limit");
   const { user } = await requireUser(req); // remembered per request: the handler's own call does not ask Supabase again
   ctx.userId = user.id;
   const verdict = await checkRateLimit(user.id, limit);
+  ctx.rateLimited = true;
   if (verdict && !verdict.allowed) throw rateLimited(verdict.retryAfterSeconds);
 }
 
