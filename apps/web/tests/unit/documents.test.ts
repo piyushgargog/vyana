@@ -96,6 +96,29 @@ describe("verifyRx", () => {
     expect(rx.anyReview).toBe(false);
   });
 
+  it("rolls the end date across month and year boundaries", () => {
+    const run = (date: string, days: number) =>
+      verifyRx(
+        {
+          doctor_name: none(),
+          diagnosis: none(),
+          issued_on: f(date, `Date: ${date}`),
+          items: [
+            item({
+              medicine_name: f("Metformin", "Tab. Metformin 500 mg"),
+              frequency: f("BD", "1-0-1"),
+              duration_days: f(days, `x ${days} days`),
+            }),
+          ],
+        },
+        `Date: ${date}\n1. Tab. Metformin 500 mg 1-0-1 after food x ${days} days`,
+        map,
+        date,
+      );
+    expect(run("2026-01-30", 5).items[0]).toMatchObject({ start_date: "2026-01-30", end_date: "2026-02-03" });
+    expect(run("2026-12-30", 5).items[0]).toMatchObject({ start_date: "2026-12-30", end_date: "2027-01-03" });
+  });
+
   it("never keeps a dose, frequency or duration that isn't written", () => {
     const rx = verifyRx(
       {
