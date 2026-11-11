@@ -170,17 +170,20 @@ function buildAdherence(logs: MemoryDoseLog[], today: string): Adherence {
     byDate.set(day.date, day);
   }
   let taken = 0;
-  let logged = 0;
+  let missed = 0;
   for (const log of logs) {
     const day = byDate.get(istDayOf(log.scheduled_for));
     if (!day) continue;
     if (log.status === "taken" || log.status === "missed" || log.status === "skipped") {
       day[log.status]++;
-      logged++;
       if (log.status === "taken") taken++;
+      if (log.status === "missed") missed++;
     }
   }
-  return { days, percent_taken: logged === 0 ? null : Math.round((taken / logged) * 100) };
+  // A skipped dose is a choice, so it is left out of the percent, the same rule computeAdherence
+  // in db/queries/doses.ts documents; with nothing taken or missed the percentage is null.
+  const due = taken + missed;
+  return { days, percent_taken: due === 0 ? null : Math.round((taken / due) * 100) };
 }
 
 /**
