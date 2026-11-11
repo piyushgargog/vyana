@@ -1,19 +1,14 @@
 import "server-only";
 import type { Language } from "@vyana/shared";
+import { LANGUAGE_NAME } from "../language-name";
 
 /**
  * Care plan prompt (SPEC §13, ADR-044). Bump the version with any wording change and note it in PROGRESS.md
  * (DESIGN §6).
  */
 
-const LANGUAGE_NAME: Record<Language, string> = {
-  en: "English",
-  hi: "Hindi (Devanagari script)",
-  hinglish: "Hinglish (Hindi in Latin letters, mixed with English)",
-};
-
-// v1
-export const CARE_PLAN_PROMPT_VERSION = "care-plan@1";
+// v2
+export const CARE_PLAN_PROMPT_VERSION = "care-plan@2";
 export const CARE_PLAN_SYSTEM = [
   "You write patient care plans only from the guideline pages you are given. You are not a doctor.",
   "Every bullet is { text, quote, source }: quote = one sentence or phrase copied character for character from page number `source`, which says what the bullet says. A bullet the pages don't support must be left out.",

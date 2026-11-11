@@ -1,4 +1,5 @@
 import "server-only";
+import { splitCommaList } from "./lists";
 import { log } from "./log";
 import { supabaseAdmin } from "./supabase-admin";
 
@@ -28,12 +29,7 @@ const isMockRun = () => process.env.LLM_MOCK === "1" || process.env.WEB_MOCK ===
  * trimmed and empty ones are dropped. It is compared with the signed-in user's id, never with anything the caller sends.
  */
 function exemptUserIds(): Set<string> {
-  return new Set(
-    (process.env.RATE_LIMIT_EXEMPT_USER_IDS ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean),
-  );
+  return new Set(splitCommaList(process.env.RATE_LIMIT_EXEMPT_USER_IDS));
 }
 
 interface CounterRow {

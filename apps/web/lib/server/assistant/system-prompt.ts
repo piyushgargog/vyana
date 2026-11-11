@@ -1,5 +1,6 @@
 import "server-only";
 import type { Language } from "@vyana/shared";
+import { LANGUAGE_NAME } from "../language-name";
 
 /**
  * Assistant instructions (PLAN §6.4) and the fixed texts the server adds itself (ADR-043). The fixed texts are
@@ -7,12 +8,6 @@ import type { Language } from "@vyana/shared";
  */
 
 export const ASSISTANT_PROMPT_VERSION = "assistant@1";
-
-const LANGUAGE_NAME: Record<Language, string> = {
-  en: "English",
-  hi: "Hindi (Devanagari script)",
-  hinglish: "Hinglish (Hindi written in Latin letters, mixed with English)",
-};
 
 export function assistantSystemPrompt(language: Language, opts: { emergency: boolean }): string {
   return [

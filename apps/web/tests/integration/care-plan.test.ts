@@ -52,7 +52,7 @@ describe("POST /api/care-plan", () => {
 
     const saved = db.rows.care_plans[0];
     expect(saved).toMatchObject({ id: body.care_plan_id, patient_id: USER_ID, condition_id: CONDITION_ID, status: "patient_generated", language: "en" });
-    expect(db.rows.ai_runs[0]).toMatchObject({ feature: "care_plan", status: "needs_review", prompt_version: "care-plan@1" });
+    expect(db.rows.ai_runs[0]).toMatchObject({ feature: "care_plan", status: "needs_review", prompt_version: "care-plan@2" });
   });
 
   it("writes a draft when the patient's doctor asks, in the patient's language", async () => {

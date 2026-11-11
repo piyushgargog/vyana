@@ -1,4 +1,5 @@
 import "server-only";
+import { LANGUAGE_NAME } from "../language-name";
 
 /**
  * Prompts for reading prescriptions and lab reports (SPEC §3, §4, ADR-041). Bump a version with any wording change
@@ -52,13 +53,13 @@ export function reportExtractPrompt(text: string): string {
   ].join("\n");
 }
 
-// v1
-export const REPORT_SUMMARY_PROMPT_VERSION = "report-summary@1";
+// v2
+export const REPORT_SUMMARY_PROMPT_VERSION = "report-summary@2";
 export const REPORT_SUMMARY_SYSTEM =
   "You explain lab results to a patient in plain, calm language. Never name a disease or condition, never say what the patient has, " +
   "never suggest medicines or doses, never tell them which test to get. Only restate which values are within or outside their range. " +
   "End with: Please discuss these results with your doctor.";
 export function reportSummaryPrompt(rows: string[], language: "en" | "hi" | "hinglish"): string {
-  const lang = language === "hi" ? "Hindi" : language === "hinglish" ? "Hinglish (Hindi in Latin letters)" : "English";
+  const lang = LANGUAGE_NAME[language];
   return [`Write 3 to 6 short sentences in ${lang} about these results. Return { "summary": "..." }.`, "", ...rows].join("\n");
 }
