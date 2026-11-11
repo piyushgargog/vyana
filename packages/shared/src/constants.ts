@@ -60,7 +60,8 @@ export const MEAL_DESCRIPTION_MAX = 200;
 export const MEAL_CALORIES_MAX = 5000;
 
 // Per-user limits on the AI and web-agent routes (issue #138). The counters are in the database (migration 0012,
-// `hit_rate_limit`); the API checks them after the sign-in check and before any model or web-agent call.
+// `hit_rate_limit`); the API checks them after the sign-in check, the body parse and the role check, and before any
+// model or web-agent call, so a request that ends in 400 or 403 never uses up a count (issue #853).
 export const RATE_LIMITS = {
   /** The assistant chat. */
   ai_chat: { windowSeconds: 10 * 60, max: 20 },

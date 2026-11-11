@@ -1,6 +1,6 @@
 import { EmergencyNearbyReq, EmergencyNearbyRes, rateLimitOf } from "@vyana/shared";
 import { requireUser } from "@/lib/server/auth";
-import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
+import { enforceRateLimit, jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { log } from "@/lib/server/log";
 import { findNearbyHospitals } from "@/lib/server/web/overpass";
 
@@ -11,6 +11,7 @@ export const POST = withRoute("emergency/nearby", async (req, ctx) => {
   const { user } = await requireUser(req);
   ctx.userId = user.id;
   const body = await parseBody(req, EmergencyNearbyReq);
+  await enforceRateLimit(req, ctx);
   let res: EmergencyNearbyRes;
   try {
     res = await findNearbyHospitals(body.lat, body.lng);

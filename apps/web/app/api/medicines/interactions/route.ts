@@ -1,6 +1,6 @@
 import { InteractionsReq, InteractionsRes, rateLimitOf } from "@vyana/shared";
 import { requireRole, requireUser } from "@/lib/server/auth";
-import { jsonRes, parseBody, withRoute } from "@/lib/server/errors";
+import { enforceRateLimit, jsonRes, parseBody, withRoute } from "@/lib/server/errors";
 import { checkInteractions } from "@/lib/server/interactions";
 
 // Pure table lookup over the reviewed list of well-known interactions; no model call.
@@ -11,6 +11,7 @@ export const POST = withRoute("medicines/interactions", async (req, ctx) => {
   ctx.userId = authed.user.id;
   requireRole(authed.profile, "patient", "doctor");
   const body = await parseBody(req, InteractionsReq);
+  await enforceRateLimit(req, ctx);
   const res = await checkInteractions(authed, body);
   return jsonRes(InteractionsRes, res);
 }, { rateLimit: rateLimitOf("ai_other") });

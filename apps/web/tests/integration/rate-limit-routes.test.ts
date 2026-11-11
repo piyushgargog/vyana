@@ -24,7 +24,7 @@ vi.mock("@/lib/server/supabase-admin", () => ({
   requireEnv: (name: string) => process.env[name] ?? "",
 }));
 
-const { withRoute } = await import("@/lib/server/errors");
+const { badRequest, enforceRateLimit, forbidden, withRoute } = await import("@/lib/server/errors");
 const { requireUser } = await import("@/lib/server/auth");
 
 const ran = vi.fn();
@@ -32,8 +32,24 @@ const LIMITED = withRoute(
   "test/limited",
   async (req, ctx) => {
     const { user } = await requireUser(req); // a route asks again: the answer is remembered for this request
+    await enforceRateLimit(req, ctx); // after the body parses and the role check passes, before the work
     ran(ctx.userId, user.id);
     return Response.json({ ok: true });
+  },
+  { rateLimit: rateLimitOf("ai_other") },
+);
+// A handler that fails validation (400) or the role check (403) before it ever counts the call.
+const BAD = withRoute(
+  "test/bad",
+  async () => {
+    throw badRequest();
+  },
+  { rateLimit: rateLimitOf("ai_other") },
+);
+const FORBIDDEN_ROUTE = withRoute(
+  "test/forbidden",
+  async () => {
+    throw forbidden();
   },
   { rateLimit: rateLimitOf("ai_other") },
 );
@@ -75,6 +91,27 @@ describe("a route with a rate limit", () => {
   it("asks Supabase who the caller is once, not once for the limit and once for the handler", async () => {
     await LIMITED(request(`Bearer ${VALID}`), undefined);
     expect(getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("never counts a request that ends in 400 or 403: the counter is not touched", async () => {
+    expect((await BAD(request(`Bearer ${VALID}`), undefined)).status).toBe(400);
+    expect((await FORBIDDEN_ROUTE(request(`Bearer ${VALID}`), undefined)).status).toBe(403);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("counts once even when the handler calls the counter twice", async () => {
+    const twice = withRoute(
+      "test/twice",
+      async (req, ctx) => {
+        await requireUser(req);
+        await enforceRateLimit(req, ctx);
+        await enforceRateLimit(req, ctx);
+        return Response.json({ ok: true });
+      },
+      { rateLimit: rateLimitOf("ai_other") },
+    );
+    expect((await twice(request(`Bearer ${VALID}`), undefined)).status).toBe(200);
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("answers 429 over the limit, with a plain message and Retry-After, and never runs the handler", async () => {
@@ -145,7 +182,9 @@ describe("the routes of the app", () => {
     // withRoute("name", ...) or withRoute<RouteContext<"/api/x/[id]">>("name", ...)
     const name = /withRoute(?:<[\s\S]*?>>)?\(\s*"([^"]+)"/.exec(source)?.[1] ?? "";
     const bucket = /rateLimit:\s*rateLimitOf\("([a-z_]+)"\)/.exec(source)?.[1] ?? null;
-    return { file: relative(API, file).replaceAll("\\", "/"), name, bucket };
+    // A limited route counts the call after the body parses and the role check passes (issue #853).
+    const counts = /await enforceRateLimit\(req, ctx\);/.test(source);
+    return { file: relative(API, file).replaceAll("\\", "/"), name, bucket, counts };
   });
 
   it("are all read (every route file uses withRoute)", () => {
@@ -156,6 +195,10 @@ describe("the routes of the app", () => {
   it("limit exactly the routes in RATE_LIMITED_ROUTES, each in its bucket", () => {
     const limited = Object.fromEntries(found.filter((f) => f.bucket).map((f) => [f.name, f.bucket]));
     expect(limited).toEqual(RATE_LIMITED_ROUTES);
+  });
+
+  it("count the call in the handler, after validation and before the work", () => {
+    for (const f of found.filter((f) => f.bucket)) expect(f.counts, f.file).toBe(true);
   });
 
   it("only name buckets that exist", () => {
