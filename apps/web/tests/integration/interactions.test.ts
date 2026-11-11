@@ -65,11 +65,18 @@ describe("POST /api/medicines/interactions", () => {
     expect(db.rows.ai_runs ?? []).toHaveLength(0); // no model is called any more
   });
 
-  it("returns the saved result for the same medicines", async () => {
-    await post();
+  it("returns the saved result for the same medicines, with the same not checked warnings", async () => {
+    const fresh = InteractionsRes.parse(await (await post()).json());
     const again = InteractionsRes.parse(await (await post()).json());
     expect(again.cached).toBe(true);
     expect(again.interactions).toHaveLength(1);
+    // The cached answer keeps the pairs the table never reviewed, not just the unknown medicines.
+    expect(again.not_checked).toEqual(fresh.not_checked);
+    expect(again.not_checked).toEqual([
+      "Shelcal 500 mg",
+      "Ecosprin 75 mg + Clopilet 75 mg (not in the reviewed list yet)",
+      "Ecosprin 75 mg + Omez 20 mg (not in the reviewed list yet)",
+    ]);
   });
 
   it("checks only one prescription when asked", async () => {
