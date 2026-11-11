@@ -1,6 +1,7 @@
 // Typed client for the Vyana API routes, used by the web and mobile apps.
 // Every request body is checked against its ...Req schema and every response against its ...Res schema.
 import type { ZodType } from "zod";
+import { sleep } from "../time";
 
 import {
   AgentDecideReq,
@@ -108,8 +109,6 @@ const STATUS_CODES: Record<number, string> = {
   502: "UPSTREAM_ERROR",
   504: "UPSTREAM_TIMEOUT",
 };
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type RequestSpec<Res> = {
   method: "GET" | "POST" | "DELETE";
