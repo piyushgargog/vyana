@@ -11,8 +11,7 @@ import {
   type AgentDecideRes,
   type AgentProposal,
 } from "../contracts";
-
-const DAY = 24 * 60 * 60 * 1000;
+import { DAY_MS } from "../health/dates";
 const iso = (fromNowMs: number) => new Date(Date.now() + fromNowMs).toISOString();
 
 function fixtures(): AgentProposal[] {
@@ -27,7 +26,7 @@ function fixtures(): AgentProposal[] {
         { label: "Pack size from your prescription", detail: "30 tablets" },
       ],
       created_at: iso(-2 * 60 * 60 * 1000),
-      expires_at: iso(3 * DAY),
+      expires_at: iso(3 * DAY_MS),
       status: "pending",
     },
     {
@@ -40,7 +39,7 @@ function fixtures(): AgentProposal[] {
         { label: "Reports added since then", detail: "None" },
       ],
       created_at: iso(-5 * 60 * 60 * 1000),
-      expires_at: iso(6 * DAY),
+      expires_at: iso(6 * DAY_MS),
       status: "pending",
     },
     {
@@ -53,7 +52,7 @@ function fixtures(): AgentProposal[] {
         { label: "Caregiver on your record", detail: "Linked family member" },
       ],
       created_at: iso(-26 * 60 * 60 * 1000),
-      expires_at: iso(2 * DAY),
+      expires_at: iso(2 * DAY_MS),
       status: "pending",
     },
     {
@@ -62,8 +61,8 @@ function fixtures(): AgentProposal[] {
       title: "Your vitamin D may have run out",
       reason: "This suggestion has expired, so it is never shown.",
       evidence: [{ label: "Pack size from your prescription", detail: "8 tablets, finished last week" }],
-      created_at: iso(-9 * DAY),
-      expires_at: iso(-1 * DAY),
+      created_at: iso(-9 * DAY_MS),
+      expires_at: iso(-1 * DAY_MS),
       status: "pending",
     },
   ];

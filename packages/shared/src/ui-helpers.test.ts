@@ -6,6 +6,7 @@ import {
   shareLinkSubtitle,
   telHref,
 } from "./ui-helpers";
+import { DAY_MS } from "./health/dates";
 
 const NOW = new Date("2026-10-21T12:00:00Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -26,8 +27,8 @@ describe("relativeTime", () => {
 
   it("floors days and falls back to a date after 30 days", () => {
     expect(relativeTime(ago(24 * 3_600_000), NOW)).toBe("1 d ago");
-    expect(relativeTime(ago(29.6 * 86_400_000), NOW)).toBe("29 d ago");
-    const old = relativeTime(ago(45 * 86_400_000), NOW);
+    expect(relativeTime(ago(29.6 * DAY_MS), NOW)).toBe("29 d ago");
+    const old = relativeTime(ago(45 * DAY_MS), NOW);
     expect(old).not.toContain("ago");
     expect(old).toContain("2026");
   });
