@@ -7,20 +7,12 @@
 
 import qrcode from "qrcode-generator";
 
-/** UTF-8 bytes of a text. (The library's own conversion keeps only the low byte of each character, which ruins Hindi.) */
-function utf8Bytes(text: string): number[] {
-  const bytes: number[] = [];
-  for (const char of text) {
-    const cp = char.codePointAt(0) as number;
-    if (cp < 0x80) bytes.push(cp);
-    else if (cp < 0x800) bytes.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f));
-    else if (cp < 0x10000) bytes.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
-    else bytes.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
-  }
-  return bytes;
-}
+/** UTF-8 bytes of a text, from the platform encoder. (The library's own conversion keeps only the low byte of each character, which ruins Hindi.) */
+const utf8Bytes = (text: string): number[] => Array.from(new TextEncoder().encode(text));
 
 // Names and allergies can be in Hindi, so the text goes in as UTF-8 (what phone scanners expect).
+// Byte mode reads this one global, and the library offers no per-call hook, so the assignment is
+// deliberate: importing this module sets the encoder for the whole process.
 qrcode.stringToBytes = utf8Bytes;
 
 /** How much damage the code survives: L 7%, M 15%, Q 25%, H 30%. Lower levels hold more text in fewer, bigger squares. */
