@@ -3,6 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { wrapLanguageModel, type LanguageModel, type LanguageModelMiddleware } from "ai";
 import { AppError } from "./errors";
+import { splitCommaList } from "./lists";
 import { log } from "./log";
 
 /**
@@ -67,16 +68,11 @@ const notConfigured = () => new AppError("INTERNAL", "The AI feature isn't confi
 const notAvailable = () => new AppError("INTERNAL", "The AI feature isn't available right now. Please try again later.", 500);
 
 const isProvider = (p: string): p is Provider => (SUPPORTED_PROVIDERS as readonly string[]).includes(p);
-const splitList = (v: string | undefined) =>
-  (v ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 
 /** Every key of a provider: the single key plus the comma separated list, without duplicates. */
 export function keysFor(provider: Provider): string[] {
   const name = KEY_VAR[provider];
-  return [...new Set([...splitList(process.env[name]), ...splitList(process.env[`${name}S`])])];
+  return [...new Set([...splitCommaList(process.env[name]), ...splitCommaList(process.env[`${name}S`])])];
 }
 
 /** Round-robin start per provider, so several keys share the load (a free-tier limit is per account). */
@@ -100,7 +96,7 @@ interface Candidate {
 /** `provider:model` entries; the model id may itself contain colons. */
 function parseEntries(value: string | undefined): { provider: Provider; id: string }[] {
   const out: { provider: Provider; id: string }[] = [];
-  for (const entry of splitList(value)) {
+  for (const entry of splitCommaList(value)) {
     const at = entry.indexOf(":");
     const provider = entry.slice(0, at);
     const id = entry.slice(at + 1);
