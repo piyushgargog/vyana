@@ -59,14 +59,15 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
     }),
 
     get_my_medicines: tool({
-      description: "The user's active medicines from their saved prescriptions.",
+      description: "The user's active medicines from their saved prescriptions, up to 30.",
       inputSchema: z.object({}),
       execute: async () => {
         const { data, error } = await sb
           .from("prescription_items")
           .select("medicine_name, strength, form, dose, frequency, times, with_food, start_date, end_date")
           .eq("patient_id", userId)
-          .eq("active", true);
+          .eq("active", true)
+          .limit(30);
         if (error) return failed("Your medicines couldn't be loaded.");
         // The reply may read these back to the patient; any other dose is held back (ADR-065).
         for (const m of (data ?? []) as { strength: string | null; dose: string | null; frequency: string | null }[]) {
@@ -91,10 +92,10 @@ export function assistantTools({ userId, sb, guard }: ToolContext) {
     }),
 
     get_my_conditions: tool({
-      description: "The health conditions saved in the user's records (by them or their doctor).",
+      description: "The health conditions saved in the user's records (by them or their doctor), up to 30.",
       inputSchema: z.object({}),
       execute: async () => {
-        const { data, error } = await sb.from("conditions").select("name, diagnosed_on, active, source").eq("patient_id", userId);
+        const { data, error } = await sb.from("conditions").select("name, diagnosed_on, active, source").eq("patient_id", userId).limit(30);
         return error ? failed("Your conditions couldn't be loaded.") : { conditions: data ?? [] };
       },
     }),

@@ -185,6 +185,39 @@ describe("assistant tools", () => {
     guard.clean(`${out.results[0].url} `);
     expect(guard.removed).toEqual([]);
   });
+
+  it("caps the medicine and condition reads at 30 like the lab values read", async () => {
+    const tables: Record<string, unknown[]> = {
+      prescription_items: Array.from({ length: 35 }, (_, i) => ({ medicine_name: `Med ${i}`, strength: null, dose: null, frequency: null })),
+      conditions: Array.from({ length: 35 }, (_, i) => ({ name: `Condition ${i}`, diagnosed_on: null, active: true, source: "self" })),
+    };
+    const limits: Record<string, number | null> = {};
+    const sb = {
+      from: (table: string) => {
+        const rows = tables[table] ?? [];
+        let limit: number | null = null;
+        const q = {
+          select: () => q,
+          eq: () => q,
+          order: () => q,
+          limit: (n: number) => {
+            limit = n;
+            limits[table] = n;
+            return q;
+          },
+          then: (resolve: (value: unknown) => void) => resolve({ data: limit === null ? rows : rows.slice(0, limit), error: null }),
+        };
+        return q;
+      },
+    } as never;
+    const t = assistantTools({ userId: "u1", sb, guard: guardFor() });
+    const meds = (await t.get_my_medicines.execute!({}, opts)) as { medicines: unknown[] };
+    expect(meds.medicines).toHaveLength(30);
+    expect(limits.prescription_items).toBe(30);
+    const conds = (await t.get_my_conditions.execute!({}, opts)) as { conditions: unknown[] };
+    expect(conds.conditions).toHaveLength(30);
+    expect(limits.conditions).toBe(30);
+  });
 });
 
 describe("isDoseQuestion", () => {
