@@ -201,6 +201,26 @@ describe("planDoseReminders", () => {
     expect(ids).toEqual(["dose:i-1:2026-10-13T21:00"]);
   });
 
+  it("a taken log for a later dose does not silence the reminder for an earlier dose of the same medicine", () => {
+    const twoDoses = { ...bd, times: ["09:00", "09:30"] };
+    const laterLog = { item_id: "i-1", scheduled_for: at(12, 9, 30).toISOString(), status: "taken" as const };
+    const ids = planDoseReminders([twoDoses], [laterLog], at(12, 8), { horizonDays: 0 }).map((p) => p.id);
+    expect(ids).toEqual(["dose:i-1:2026-10-12T09:00"]);
+  });
+
+  it("an exact log belongs to its own dose when two doses are five minutes apart", () => {
+    const twoDoses = { ...bd, times: ["09:00", "09:05"] };
+    const laterLog = { item_id: "i-1", scheduled_for: at(12, 9, 5).toISOString(), status: "taken" as const };
+    const ids = planDoseReminders([twoDoses], [laterLog], at(12, 8), { horizonDays: 0 }).map((p) => p.id);
+    expect(ids).toEqual(["dose:i-1:2026-10-12T09:00"]);
+  });
+
+  it("a log half an hour from a dose no longer silences it", () => {
+    const log = { item_id: "i-1", scheduled_for: at(12, 9, 30).toISOString(), status: "taken" as const };
+    const ids = planDoseReminders([bd], [log], at(12, 8), { horizonDays: 0 }).map((p) => p.id);
+    expect(ids).toEqual(["dose:i-1:2026-10-12T09:00", "dose:i-1:2026-10-12T21:00"]);
+  });
+
   it("respects the start date, the end date, switched-off and as-needed medicines", () => {
     const now = at(12, 10);
     expect(planDoseReminders([{ ...bd, start_date: "2026-10-14" }], [], now, { horizonDays: 2 }).map((p) => p.id)[0]).toBe("dose:i-1:2026-10-14T09:00");

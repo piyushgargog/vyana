@@ -33,8 +33,8 @@ export const MAX_DOSE_REMINDERS = 48;
 export const MAX_REFILL_ALERTS = 8;
 export const MAX_FOLLOW_UPS = 8;
 
-/** A logged dose silences the reminder for the same medicine when it is within this many minutes of it. */
-const LOGGED_WINDOW_MINUTES = 30;
+/** A dose log counts for the dose it was written for, with this much slack for clock skew between the phone and the server. A wider window let one log stand in for a neighbouring dose of the same medicine (issue #775). */
+const LOG_SKEW_MINUTES = 5;
 
 const FOOD: Record<DbPrescriptionItem["with_food"], string> = { before: "before food", after: "after food", any: "" };
 
@@ -44,8 +44,9 @@ function medicineLabel(item: Pick<DbPrescriptionItem, "medicine_name" | "strengt
 
 /**
  * The next dose reminders of the active medicines, nearest first. A dose that is already logged
- * (taken or skipped) within 30 minutes of its time gets no reminder, so marking it taken and
- * planning again removes it.
+ * (taken or skipped) for that same scheduled time gets no reminder, so marking it taken and
+ * planning again removes it. A log counts for one dose only, matched closest first, so a log for
+ * a later dose never silences the reminder for an earlier one.
  */
 export function planDoseReminders(
   items: DoseReminderItem[],
@@ -56,8 +57,7 @@ export function planDoseReminders(
   const horizon = options.horizonDays ?? 7;
   const max = options.max ?? MAX_DOSE_REMINDERS;
   const today = formatLocalDate(now);
-  const planned: PlannedNotification[] = [];
-
+  const slots: { item: DoseReminderItem; date: string; time: string; at: Date }[] = [];
   for (let offset = 0; offset <= horizon; offset++) {
     const date = addDays(today, offset);
     for (const item of items) {
@@ -65,25 +65,45 @@ export function planDoseReminders(
       for (const time of item.times) {
         const at = atLocalTime(date, time);
         if (at.getTime() <= now.getTime() + 5000) continue;
-        const logged = logs.some(
-          (log) =>
-            log.item_id === item.id &&
-            (log.status === "taken" || log.status === "skipped") &&
-            Math.abs(new Date(log.scheduled_for).getTime() - at.getTime()) <= LOGGED_WINDOW_MINUTES * 60 * 1000
-        );
-        if (logged) continue;
-        const food = FOOD[item.with_food];
-        planned.push({
-          id: `dose:${item.id}:${date}T${time}`,
-          kind: "dose",
-          at,
-          title: "Time for your medicine",
-          body: options.showNames ? [medicineLabel(item), item.dose, food].filter(Boolean).join(" · ") : `Your ${time} dose is due. Tap to log it.`,
-          data: { kind: "dose", item_id: item.id, scheduled_for: at.toISOString() },
-        });
+        slots.push({ item, date, time, at });
       }
     }
   }
+
+  // Match logs to slots closest first, one log per slot: an exact log belongs to its own dose even
+  // when a neighbouring dose is within the skew window, so a 09:05 log never clears a 09:00 dose.
+  const pairs: { diff: number; log: number; slot: number }[] = [];
+  slots.forEach((slot, s) => {
+    logs.forEach((log, i) => {
+      if (log.item_id !== slot.item.id || (log.status !== "taken" && log.status !== "skipped")) return;
+      const diff = Math.abs(new Date(log.scheduled_for).getTime() - slot.at.getTime());
+      if (diff <= LOG_SKEW_MINUTES * 60 * 1000) pairs.push({ diff, log: i, slot: s });
+    });
+  });
+  pairs.sort((a, b) => a.diff - b.diff);
+  const usedLogs = new Set<number>();
+  const handled = new Set<number>();
+  for (const pair of pairs) {
+    if (usedLogs.has(pair.log) || handled.has(pair.slot)) continue;
+    usedLogs.add(pair.log);
+    handled.add(pair.slot);
+  }
+
+  const planned: PlannedNotification[] = [];
+  slots.forEach((slot, s) => {
+    if (handled.has(s)) return;
+    const food = FOOD[slot.item.with_food];
+    planned.push({
+      id: `dose:${slot.item.id}:${slot.date}T${slot.time}`,
+      kind: "dose",
+      at: slot.at,
+      title: "Time for your medicine",
+      body: options.showNames
+        ? [medicineLabel(slot.item), slot.item.dose, food].filter(Boolean).join(" · ")
+        : `Your ${slot.time} dose is due. Tap to log it.`,
+      data: { kind: "dose", item_id: slot.item.id, scheduled_for: slot.at.toISOString() },
+    });
+  });
   return planned.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, max);
 }
 
