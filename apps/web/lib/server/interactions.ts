@@ -85,7 +85,11 @@ export async function checkInteractions(authed: AuthedUser, body: InteractionsRe
     .maybeSingle();
   const savedRow = saved as { id: string; result_json: InteractionsRes; created_at: string } | null;
   if (savedRow && Date.now() - new Date(savedRow.created_at).getTime() < RESULT_DAYS * 24 * 60 * 60 * 1000) {
-    return { ...savedRow.result_json, not_checked: notChecked, cached: true };
+    // Keep the saved warnings: the fresh list holds only medicines the table does not know, while the saved list also
+    // holds the pairs the table never reviewed. A medicine unknown now that was not unknown then is merged in.
+    const merged = [...(savedRow.result_json.not_checked ?? [])];
+    for (const name of notChecked) if (!merged.includes(name)) merged.push(name);
+    return { ...savedRow.result_json, not_checked: merged, cached: true };
   }
 
   // The reviewed table, in code.
