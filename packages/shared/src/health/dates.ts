@@ -43,7 +43,17 @@ export function atLocalTime(date: string, time: string): Date {
   return d;
 }
 
-/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. India is UTC+5:30 all year (no daylight saving). */
+/** India is UTC+5:30 all year (no daylight saving). */
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
+/** The India calendar day (`YYYY-MM-DD`) of a stored timestamp. */
 export function istDayOf(timestamp: string): string {
-  return new Date(new Date(timestamp).getTime() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
+  return new Date(new Date(timestamp).getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** The next midnight in India (Asia/Kolkata), as an ISO instant — when today's count resets. */
+export function nextIstMidnight(from: Date = new Date()): string {
+  const ist = new Date(from.getTime() + IST_OFFSET_MS);
+  const next = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1, 0, 0, 0);
+  return new Date(next - IST_OFFSET_MS).toISOString();
 }
