@@ -15,7 +15,6 @@ import {
   ORS_URL,
   RATE_LIMITED_ROUTES,
   RATE_LIMITS,
-  rateLimitOf,
   SHARE_LINK_MAX_TTL_HOURS,
   REALTIME,
   VITAL_UNITS,
@@ -97,14 +96,18 @@ describe("Scope v2 constants", () => {
       ai_chat: { windowSeconds: 600, max: 20 },
       ai_document: { windowSeconds: 3600, max: 10 },
       ai_other: { windowSeconds: 3600, max: 20 },
-      agent: { windowSeconds: 3600, max: 10 },
       lookup: { windowSeconds: 600, max: 20 },
       public: { windowSeconds: 600, max: 30 },
     });
-    expect(rateLimitOf("agent")).toEqual({ bucket: "agent", windowSeconds: 3600, max: 10 });
   });
 
-  it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
+  it("has no bucket without a route using it (issue #788)", () => {
+    for (const bucket of Object.keys(RATE_LIMITS)) {
+      expect(Object.values(RATE_LIMITED_ROUTES), bucket).toContain(bucket);
+    }
+  });
+
+  it("limits the routes that start AI work, and never SOS or the polling of a job", () => {
     expect(Object.keys(RATE_LIMITED_ROUTES).sort()).toEqual([
       "assistant/chat", "blood/search", "care-plan", "doctors/verify", "emergency/nearby",
       "medicines/interactions", "prescriptions/extract", "reports/analyze", "reports/values/correct", "triage",
