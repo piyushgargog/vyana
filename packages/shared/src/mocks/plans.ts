@@ -12,6 +12,9 @@ import {
   type JoinWaitlistRes,
   type Plan,
 } from "../contracts";
+import { nextIstMidnight } from "../health/dates";
+
+export { nextIstMidnight };
 
 export const freePlanMock: Plan = {
   slug: "free",
@@ -55,14 +58,6 @@ export function joinWaitlistMock(body: JoinWaitlistReq): JoinWaitlistRes {
 
 export function resetWaitlistMock() {
   joinedEmails.clear();
-}
-
-/** The next midnight in India (Asia/Kolkata), as an ISO instant — when today's count resets. */
-export function nextIstMidnight(from: Date = new Date()): string {
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(from.getTime() + IST_OFFSET_MS);
-  const next = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1, 0, 0, 0);
-  return new Date(next - IST_OFFSET_MS).toISOString();
 }
 
 /** Today's AI usage for the demo patient: a few answers used, the Free plan's limit. */

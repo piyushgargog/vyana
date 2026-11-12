@@ -9,6 +9,7 @@ import {
   getRefillStatus,
   MAX_DOSE_REMINDERS,
   monthsAgo,
+  nextIstMidnight,
   nextOccurrenceOfHour,
   parseDoseUnits,
   parseLocalDate,
@@ -40,6 +41,13 @@ describe("dates", () => {
     expect(monthsAgo("2026-01-31", 1)).toBe("2025-12-31");
     expect(monthsAgo("2026-10-23", 24)).toBe("2024-10-23");
     expect(monthsAgo("2026-10-23", 0)).toBe("2026-10-23");
+  });
+
+  it("nextIstMidnight is the coming 00:00 in India, as a UTC instant", () => {
+    // 2026-10-21 20:00 UTC is 2026-10-22 01:30 IST, so the reset is 2026-10-23 00:00 IST.
+    expect(nextIstMidnight(new Date("2026-10-21T20:00:00.000Z"))).toBe("2026-10-22T18:30:00.000Z");
+    // Exactly at midnight IST, the next reset is a full day away.
+    expect(nextIstMidnight(new Date("2026-10-21T18:30:00.000Z"))).toBe("2026-10-22T18:30:00.000Z");
   });
 });
 

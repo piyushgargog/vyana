@@ -1,16 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { nextIstMidnight } from "@vyana/shared";
 import { AppError, rateLimited } from "./errors";
 import { log } from "./log";
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /** Seconds from `now` until the next 00:00 in Asia/Kolkata (UTC+5:30, no daylight saving), at least 1. */
 export function secondsUntilIstMidnight(now: Date = new Date()): number {
-  const ist = now.getTime() + IST_OFFSET_MS;
-  const msIntoDay = ((ist % DAY_MS) + DAY_MS) % DAY_MS;
-  return Math.max(1, Math.ceil((DAY_MS - msIntoDay) / 1000));
+  return Math.max(1, Math.ceil((new Date(nextIstMidnight(now)).getTime() - now.getTime()) / 1000));
 }
 
 const firstRow = (data: unknown): Record<string, unknown> | null => {
