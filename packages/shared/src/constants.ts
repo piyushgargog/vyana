@@ -72,6 +72,8 @@ export const RATE_LIMITS = {
   agent: { windowSeconds: 60 * 60, max: 10 },
   /** Reading a public source for the user (blood bank stock): cached, cheap, but polite to the source. */
   lookup: { windowSeconds: 10 * 60, max: 20 },
+  /** Doctor registration and admin checks: a doctor's own flow, kept apart from blood search (issue #787). */
+  verify: { windowSeconds: 10 * 60, max: 20 },
   /** Nearby emergency hospitals. SOS itself is never limited. */
   public: { windowSeconds: 10 * 60, max: 30 },
 } as const;
@@ -90,6 +92,6 @@ export const RATE_LIMITED_ROUTES: Record<string, RateLimitBucket> = {
   triage: "ai_other",
   "medicines/interactions": "ai_other",
   "blood/search": "lookup",
-  "doctors/verify": "lookup",
+  "doctors/verify": "verify",
   "emergency/nearby": "public",
 };

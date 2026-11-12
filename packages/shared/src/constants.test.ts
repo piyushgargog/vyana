@@ -99,9 +99,17 @@ describe("Scope v2 constants", () => {
       ai_other: { windowSeconds: 3600, max: 20 },
       agent: { windowSeconds: 3600, max: 10 },
       lookup: { windowSeconds: 600, max: 20 },
+      verify: { windowSeconds: 600, max: 20 },
       public: { windowSeconds: 600, max: 30 },
     });
     expect(rateLimitOf("agent")).toEqual({ bucket: "agent", windowSeconds: 3600, max: 10 });
+    expect(rateLimitOf("verify")).toEqual({ bucket: "verify", windowSeconds: 600, max: 20 });
+  });
+
+  it("gives blood search and doctor verify separate counters (issue #787)", () => {
+    expect(RATE_LIMITED_ROUTES["blood/search"]).toBe("lookup");
+    expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("verify");
+    expect(RATE_LIMITED_ROUTES["blood/search"]).not.toBe(RATE_LIMITED_ROUTES["doctors/verify"]);
   });
 
   it("limits the routes that start AI or web-agent work, and never SOS or the polling of a job", () => {
@@ -110,7 +118,7 @@ describe("Scope v2 constants", () => {
       "medicines/interactions", "prescriptions/extract", "reports/analyze", "reports/values/correct", "triage",
     ]);
     expect(RATE_LIMITED_ROUTES["emergency/sos"]).toBeUndefined();
-    expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("lookup");
+    expect(RATE_LIMITED_ROUTES["doctors/verify"]).toBe("verify");
     for (const bucket of Object.values(RATE_LIMITED_ROUTES)) expect(RATE_LIMITS[bucket]).toBeDefined();
   });
 

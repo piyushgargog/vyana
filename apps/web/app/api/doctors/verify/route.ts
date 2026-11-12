@@ -33,4 +33,4 @@ export const POST = withRoute("doctors/verify", async (req, ctx) => {
     res = await submitDoctorRegistration(authed, DoctorVerifyReq.parse(raw));
   }
   return jsonRes(DoctorVerifyRes, res);
-}, { rateLimit: rateLimitOf("lookup") });
+}, { rateLimit: rateLimitOf("verify") });
