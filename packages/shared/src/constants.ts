@@ -59,8 +59,8 @@ export const MEAL_DESCRIPTION_MAX = 200;
 /** The most calories one entry may have: a typo like 3000000 is refused instead of ruining a day's total. */
 export const MEAL_CALORIES_MAX = 5000;
 
-// Per-user limits on the AI and web-agent routes (issue #138). The counters are in the database (migration 0012,
-// `hit_rate_limit`); the API checks them after the sign-in check and before any model or web-agent call.
+// Per-user limits on the AI routes (issue #138). The counters are in the database (migration 0012,
+// `hit_rate_limit`); the API checks them after the sign-in check and before any model call.
 export const RATE_LIMITS = {
   /** The assistant chat. */
   ai_chat: { windowSeconds: 10 * 60, max: 20 },
@@ -68,8 +68,6 @@ export const RATE_LIMITS = {
   ai_document: { windowSeconds: 60 * 60, max: 10 },
   /** Care plan, symptom check and interaction check. */
   ai_other: { windowSeconds: 60 * 60, max: 20 },
-  /** Anything that starts a web agent or a live-web search for the user. */
-  agent: { windowSeconds: 60 * 60, max: 10 },
   /** Reading a public source for the user (blood bank stock): cached, cheap, but polite to the source. */
   lookup: { windowSeconds: 10 * 60, max: 20 },
   /** Nearby emergency hospitals. SOS itself is never limited. */
