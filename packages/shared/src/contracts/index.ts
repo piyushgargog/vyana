@@ -62,7 +62,7 @@ export const SourceLink = z.object({ title: z.string(), url: z.string() });
 // never "available": a row is what a public source page showed at `fetched_at`.
 export const BloodGroup = z.enum(["A+","A-","B+","B-","AB+","AB-","O+","O-"]);
 export const BloodComponent = z.enum(["whole_blood","red_cells","platelets","plasma"]);
-export const BloodSearchReq = z.object({ blood_group: BloodGroup, component: BloodComponent, city: z.string().min(2).max(60) });
+export const BloodSearchReq = z.object({ blood_group: BloodGroup, component: BloodComponent, city: z.string().trim().min(2).max(60) });
 export const BloodBank = z.object({
   name: z.string(),
   address: z.string().nullable(),
@@ -91,10 +91,10 @@ export const BloodRequest = z.object({
   blood_group: BloodGroup,
   component: BloodComponent,
   units: z.number().int().min(1).max(10),
-  hospital_name: z.string().min(2),
-  city: z.string().min(2),
-  contact_name: z.string().min(1),
-  contact_phone: z.string().min(5),
+  hospital_name: z.string().trim().min(2),
+  city: z.string().trim().min(2),
+  contact_name: z.string().trim().min(1),
+  contact_phone: z.string().trim().min(5),
   status: BloodRequestStatus,
   note: z.string().max(500).nullable(),
   created_at: z.string(),
@@ -108,7 +108,7 @@ export const EmergencyNearbyReq = z.object({ lat: Lat, lng: Lng });
 export const EmergencyNearbyRes = z.object({ area: z.string().nullable(), hospitals: z.array(Hospital), cached: z.boolean() });
 
 // ---------- POST /api/emergency/sos ----------
-export const EmergencySosReq = z.object({ lat: Lat, lng: Lng, note: z.string().max(500).optional() });
+export const EmergencySosReq = z.object({ lat: Lat, lng: Lng, note: z.string().trim().max(500).optional() });
 export const EmergencySosRes = z.object({
   request_id: z.guid(),
   status: z.enum(["requested","dispatched","arriving","completed","cancelled"]),
@@ -143,7 +143,7 @@ export const DoctorVerifyRes = z.object({
 export const AdminDoctorCheckReq = z.object({
   doctor_id: z.guid(), decision: z.enum(["approve","reject"]),
   reg_no: z.string().min(1).max(40), state_council: z.string().min(2).max(80),
-  year: registrationYear.nullable(), note: z.string().max(300),
+  year: registrationYear.nullable(), note: z.string().trim().min(1).max(300),
 });
 
 // ---------- Plans, waitlist and AI usage (v1.3, #305) ----------
@@ -163,7 +163,7 @@ export const PlansRes = z.object({
 });
 export const JoinWaitlistReq = z.object({
   email: z.string().email(),
-  note: z.string().max(200).optional(),
+  note: z.string().trim().max(200).optional(),
 });
 export const JoinWaitlistRes = z.object({
   status: z.enum(["joined", "already_on_list"]),
@@ -291,10 +291,10 @@ export const InteractionsRes = z.object({
 
 // ---------- POST /api/triage ----------  (never names a disease)
 export const TriageReq = z.object({
-  symptoms: z.string().min(3).max(1000),
+  symptoms: z.string().trim().min(3).max(1000),
   age: z.number().int().min(0).max(120).optional(),
   sex: z.enum(["male","female","other"]).optional(),
-  duration: z.string().max(100).optional(),
+  duration: z.string().trim().max(100).optional(),
   language: Language.optional(),
 });
 export const TriageRes = z.object({

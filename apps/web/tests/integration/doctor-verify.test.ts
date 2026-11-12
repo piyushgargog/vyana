@@ -221,7 +221,7 @@ describe("POST /api/doctors/verify", () => {
   it("answers 404 when an admin checks a doctor who does not exist", async () => {
     asAdmin();
     db.rows.doctors = [];
-    const res = await post({ doctor_id: OTHER_USER_ID, decision: "approve", reg_no: "1", state_council: "Delhi Medical Council", year: null, note: "" });
+    const res = await post({ doctor_id: OTHER_USER_ID, decision: "approve", reg_no: "1", state_council: "Delhi Medical Council", year: null, note: "checked" });
     expect(res.status).toBe(404);
   });
 
