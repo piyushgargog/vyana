@@ -107,8 +107,17 @@ describe("labRecheckRule", () => {
     const b = labRecheckRule(base);
     const c = labRecheckRule({ ...base, lastMeasuredOn: "2026-06-01" });
     expect(a?.dedupe_key).toBe(b?.dedupe_key);
-    expect(a?.dedupe_key).toBe("lab:zedlab panel:2026-10-22");
+    expect(a?.dedupe_key).toBe("lab:zedlabpanel:2026-10-22");
     expect(c?.dedupe_key).not.toBe(a?.dedupe_key);
+  });
+
+  it("dedupe key is the same for two spellings of one test name", () => {
+    const a = labRecheckRule({ ...base, followUp: { test: "HbA1c", every_days: 90 } });
+    const b = labRecheckRule({ ...base, followUp: { test: "HbA1c (Glycated Haemoglobin)", every_days: 90 } });
+    const c = labRecheckRule({ ...base, followUp: { test: "Hb A1c", every_days: 90 } });
+    expect(a?.dedupe_key).toBe("lab:hba1c:2026-10-22");
+    expect(b?.dedupe_key).toBe(a?.dedupe_key);
+    expect(c?.dedupe_key).toBe(a?.dedupe_key);
   });
 
   it("title and reason never use banned words", () => {

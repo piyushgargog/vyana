@@ -1,7 +1,12 @@
 // The decision rules of the care agent: pure functions, no database, no model, no network.
 // Rules decide; a model may only write words later. Each returns null or one proposal draft.
 
-import { addDays, getRefillStatus } from "@vyana/shared";
+import { addDays, getRefillStatus, normaliseTestName } from "@vyana/shared";
+
+/** The test name as a dedupe key part: a bracketed expansion names the same test, so it is dropped before normalising. */
+function keyTestName(test: string): string {
+  return normaliseTestName(test.replace(/\([^)]*\)/g, ""));
+}
 
 export type ProposalKind = "refill_due" | "lab_recheck" | "missed_dose_pattern";
 
@@ -75,7 +80,7 @@ export function labRecheckRule(input: LabRecheckInput): ProposalDraft | null {
     kind: "lab_recheck",
     title: "Time to repeat your " + test + " check",
     reason: `Your care plan says to repeat it every ${every_days} days, and the last result in Vyana is from ${lastMeasuredOn}.`,
-    dedupe_key: "lab:" + test.toLowerCase() + ":" + due,
+    dedupe_key: "lab:" + keyTestName(test) + ":" + due,
     expires_in_days: 14,
     evidence: [{ table: "lab_reports", id: reportId ?? "unknown", label: "Last " + test + " result" }],
     payload: { test, due_on: due },

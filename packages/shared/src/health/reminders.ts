@@ -134,7 +134,7 @@ export function planRefillAlerts(
 export type FollowUpTest = { test: string; every_days: number };
 
 /** A test name reduced to lower-case letters and digits, so "HbA1c" and "Hb A1c" compare equal. */
-function normaliseTestName(name: string): string {
+export function normaliseTestName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
