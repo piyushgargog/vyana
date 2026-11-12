@@ -425,7 +425,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorBody"
         "429":
-          description: Over the limit of 20 calls per user in 10 minutes, shared with the other routes of the `lookup` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
+          description: Over the limit of 20 calls per user in 10 minutes, shared with the other routes of the `verify` group (`RATE_LIMITED`). Wait for the number of seconds in the `Retry-After` header
           content:
             application/json:
               schema:
